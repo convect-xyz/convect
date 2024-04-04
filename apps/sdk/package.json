@@ -1,0 +1,19 @@
+{
+  "name": "@ingest/sdk",
+  "version": "1.0.9",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "abitype": "^0.10.3",
+    "drizzle-orm": "^0.29.3",
+    "viem": "^2.0.6",
+    "drizzle-kit": "^0.20.11"
+  },
+  "devDependencies": {},
+  "description": ""
+}
