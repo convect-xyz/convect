@@ -101,7 +101,7 @@ export const projects = createTable(
   {
     id: varchar("id", { length: 255 }).notNull().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
-    repository: varchar("repository", { length: 255 }).notNull(),
+    repositoryId: integer("repositoryId").notNull(),
     userId: varchar("userId", { length: 255 })
       .notNull()
       .references(() => users.id),
@@ -122,6 +122,7 @@ export const deployments = createTable(
     projectId: varchar("projectId", { length: 255 })
       .notNull()
       .references(() => projects.id),
+    branch: varchar("branchId", { length: 255 }).notNull(),
   },
   (deployments) => ({
     userIdIdx: index("deployment_projectId_idx").on(deployments.projectId),

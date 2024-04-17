@@ -3,11 +3,21 @@ import {
   Signature,
   Signatures,
 } from "abitype/dist/types/human-readable/types/signatures";
-import { Error } from "abitype/dist/types/types";
-import { Narrow } from "viem";
+import { Address, Narrow } from "viem";
+
+type Error<T extends string | string[]> = T extends string
+  ? [
+      // Surrounding with array to prevent `T` from being widened to `string`
+      `Error: ${T}`,
+    ]
+  : {
+      [K in keyof T]: T[K] extends infer Message extends string
+        ? `Error: ${Message}`
+        : never;
+    };
 
 export type S<
-  TSignature extends string | readonly string[] | readonly unknown[]
+  TSignature extends string | readonly string[] | readonly unknown[],
 > = Narrow<TSignature> &
   (
     | (TSignature extends string
@@ -19,25 +29,34 @@ export type S<
         ? TSignature extends readonly [] // empty array
           ? Error<"At least one signature required.">
           : string[] extends TSignature
-          ? unknown
-          : Signatures<TSignature>
+            ? unknown
+            : Signatures<TSignature>
         : never)
   );
 
 export class Log<
   TAbiEvent extends AbiEvent,
-  TOptional extends true | false = false
+  TOptional extends true | false = false,
 > {
-  #options: { event: TAbiEvent; optional: TOptional };
+  private _event: TAbiEvent;
+  private _origin: Address;
+  private _optional: TOptional;
 
-  constructor(options: { event: TAbiEvent; optional: TOptional }) {
-    this.#options = options;
+  constructor(options: {
+    event: TAbiEvent;
+    origin: Address;
+    optional: TOptional;
+  }) {
+    this._event = options.event;
+    this._optional = options.optional;
+    this._origin = options.origin;
   }
 
   optional() {
     const c = new Log({
-      ...this.#options,
+      event: this._event,
       optional: true,
+      origin: this._origin,
     });
 
     return c;
@@ -45,9 +64,9 @@ export class Log<
 }
 
 export function log<
-  const TSignature extends string | readonly string[] | readonly unknown[]
->(signature: S<TSignature>) {
-  const parsedSignature = parseAbiItem(signature);
+  const TSignature extends string | readonly string[] | readonly unknown[],
+>(options: { signature: S<TSignature>; origin: Address }) {
+  const parsedSignature = parseAbiItem(options.signature);
   if (parsedSignature.type !== "event") {
     throw new Error("Only events supported");
   }
@@ -58,5 +77,6 @@ export function log<
   >({
     event: parsedSignature,
     optional: false,
+    origin: options.origin,
   });
 }
