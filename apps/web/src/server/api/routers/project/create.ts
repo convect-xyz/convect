@@ -1,43 +1,29 @@
-import { Octokit } from "octokit";
 import { v4 } from "uuid";
 import { z } from "zod";
 import { env } from "~/env";
 import { protectedProcedure } from "~/server/api/trpc";
 import { projects } from "~/server/db/schema";
+import { octokitMiddleware } from "../../middleware";
 
 export const createProject = protectedProcedure
-  .input(z.object({ repoName: z.string() }))
+  .input(z.object({ repositoryId: z.number() }))
   .output(
     z.object({
       id: z.string(),
     }),
   )
+  .use(octokitMiddleware)
   .mutation(async ({ ctx, input }) => {
-    const account = await ctx.db.query.accounts.findFirst({
-      where: (accounts, { eq }) => eq(accounts.userId, ctx.session.user.id),
-    });
-    if (!account) {
-      throw new Error("account not found");
-    }
-
-    const octokit = new Octokit({
-      auth: account.access_token,
-    });
-
-    const owner = ctx.session.user.name!;
-    const repo = input.repoName;
-
-    const repository = await octokit.request("GET /repos/{owner}/{repo}", {
-      owner,
-      repo,
+    const repository = await ctx.octokit.request("GET /repositories/{id}/", {
+      id: input.repositoryId,
       headers: {
         "X-GitHub-Api-Version": "2022-11-28",
       },
     });
 
-    await octokit.request("POST /repos/{owner}/{repo}/hooks", {
-      owner,
-      repo,
+    await ctx.octokit.request("POST /repos/{owner}/{repo}/hooks", {
+      owner: repository.data.owner.login,
+      repo: repository.data.name,
       active: true,
       events: ["push"],
       config: {
@@ -56,7 +42,7 @@ export const createProject = protectedProcedure
       .values({
         id: v4(),
         name: repository.data.name,
-        repository: repository.data.name,
+        repositoryId: input.repositoryId,
         userId: ctx.session.user.id,
       })
       .returning({ id: projects.id });

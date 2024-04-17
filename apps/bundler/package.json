@@ -11,6 +11,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.549.0",
+    "@aws-sdk/client-s3": "^3.549.0",
+    "@aws-sdk/client-sns": "^3.549.0",
+    "@aws-sdk/client-sqs": "^3.549.0",
     "@types/aws-lambda": "^8.10.134",
     "@vercel/kv": "^1.0.1",
     "async-lock": "^1.4.1",
@@ -18,12 +22,15 @@
     "bullmq": "^5.1.8",
     "dotenv": "^16.3.1",
     "drizzle-orm": "^0.29.3",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
     "octokit": "^3.1.2",
     "postgres": "^3.4.3",
-    "viem": "^2.0.10"
+    "viem": "^2.9.16"
   },
   "devDependencies": {
     "@types/async-lock": "^1.4.2",
+    "@types/file-saver": "^2.0.7",
     "drizzle-kit": "^0.20.12",
     "esbuild": "^0.19.11"
   },

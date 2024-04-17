@@ -1,6 +1,6 @@
-import { Octokit } from "octokit";
 import { z } from "zod";
 import { protectedProcedure } from "~/server/api/trpc";
+import { octokitMiddleware } from "../../middleware";
 
 export const getInstallations = protectedProcedure
   .output(
@@ -12,19 +12,9 @@ export const getInstallations = protectedProcedure
       }),
     ),
   )
+  .use(octokitMiddleware)
   .query(async ({ ctx }) => {
-    const account = await ctx.db.query.accounts.findFirst({
-      where: (accounts, { eq }) => eq(accounts.userId, ctx.session.user.id),
-    });
-    if (!account) {
-      throw new Error("account not found");
-    }
-
-    const octokit = new Octokit({
-      auth: account.access_token,
-    });
-
-    return octokit
+    return ctx.octokit
       .request("GET /user/installations", {
         headers: {
           "X-GitHub-Api-Version": "2022-11-28",

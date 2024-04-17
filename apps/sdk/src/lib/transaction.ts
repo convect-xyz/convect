@@ -1,10 +1,10 @@
 import { Log } from "./log";
 
 export class Transaction<TLogs extends Record<string, Log<any, any>>> {
-  #options: { logs: TLogs };
+  private _logs: TLogs;
 
   constructor(options: { logs: TLogs }) {
-    this.#options = options;
+    this._logs = options.logs;
   }
 }
 

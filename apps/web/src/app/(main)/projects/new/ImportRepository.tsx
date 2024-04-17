@@ -17,8 +17,8 @@ import { RouterOutputs } from "~/trpc/shared";
 export function ImportRepository() {
   const [currentInstallation, setCurrentInstallation] = useState<number>();
 
-  const { data: installations } = api.project.getInstallations.useQuery();
-  const { data: repositories } = api.project.getRepositories.useQuery(
+  const { data: installations } = api.github.getInstallations.useQuery();
+  const { data: repositories } = api.github.getRepositories.useQuery(
     { installationId: currentInstallation! },
     {
       enabled: !!currentInstallation,
@@ -37,7 +37,10 @@ export function ImportRepository() {
           </SelectTrigger>
           <SelectContent>
             {installations?.map((installation) => (
-              <SelectItem value={installation.id.toString()}>
+              <SelectItem
+                key={installation.id}
+                value={installation.id.toString()}
+              >
                 {installation.name}
               </SelectItem>
             ))}
@@ -66,7 +69,7 @@ export function ImportRepository() {
 }
 
 function RepositoryRow(props: {
-  repo: RouterOutputs["project"]["getRepositories"][0];
+  repo: RouterOutputs["github"]["getRepositories"][0];
 }) {
   const router = useRouter();
   const { repo } = props;
@@ -78,7 +81,7 @@ function RepositoryRow(props: {
   return (
     <div className="flex p-2">
       <div className="flex-1 truncate">{repo.name}</div>
-      <Button onClick={() => mutateAsync({ repoName: repo.name })}>
+      <Button onClick={() => mutateAsync({ repositoryId: repo.id })}>
         Import
       </Button>
     </div>

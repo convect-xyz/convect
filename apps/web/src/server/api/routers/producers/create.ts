@@ -1,9 +1,9 @@
 import { v4 } from "uuid";
 import { z } from "zod";
-import { createProducer } from "~/server/actions/producer/createProducer";
+import { createProducer as _createProducer } from "~/server/actions/producer/createProducer";
 import { protectedProcedure } from "~/server/api/trpc";
 
-export const createProducerApi = protectedProcedure
+export const createProducer = protectedProcedure
   .input(
     z.object({
       wsUrl: z.string(),
@@ -18,7 +18,7 @@ export const createProducerApi = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     const id = v4();
 
-    await createProducer({
+    await _createProducer({
       id,
       wsUrl: input.wsUrl,
       pollingUrl: input.pollingUrl,
