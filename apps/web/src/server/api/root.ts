@@ -4,6 +4,7 @@ import { getBranches } from "./routers/github/getBranches";
 import { getInstallations } from "./routers/github/getInstallations";
 import { getRepositories } from "./routers/github/getRepositories";
 import { createProducer } from "./routers/producers/create";
+import { getProducers } from "./routers/producers/getProducers";
 import { createProject } from "./routers/project/create";
 import { getProjectById } from "./routers/project/getProjectById";
 
@@ -19,6 +20,7 @@ export const deploymentRouter = createTRPCRouter({
 
 export const producersRouter = createTRPCRouter({
   create: createProducer,
+  getProducers: getProducers,
 });
 
 export const projectRouter = createTRPCRouter({

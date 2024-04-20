@@ -4,11 +4,13 @@ import {
   integer,
   pgTableCreator,
   primaryKey,
+  serial,
   text,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
+import { v4 } from "uuid";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -139,14 +141,18 @@ export const deploymentsRelations = relations(deployments, ({ one }) => ({
 export const producers = createTable(
   "producer",
   {
-    id: varchar("id", { length: 255 }).notNull().primaryKey(),
+    id: serial("id").notNull().primaryKey(),
+    altId: varchar("altId", { length: 255 })
+      .notNull()
+      .unique()
+      .$defaultFn(() => v4()),
     pollingUrl: varchar("pollingUrl", { length: 255 }).notNull(),
     wsUrl: varchar("wsUrl", { length: 255 }).notNull(),
     userId: varchar("userId", { length: 255 })
       .notNull()
       .references(() => users.id),
-    serviceArn: varchar("serviceArn", { length: 255 }).notNull(),
-    topicArn: varchar("topicArn", { length: 255 }).notNull(),
+    serviceArn: varchar("serviceArn", { length: 255 }),
+    topicArn: varchar("topicArn", { length: 255 }),
   },
   (producers) => ({
     userIdIdx: index("producers_userId_idx").on(producers.userId),

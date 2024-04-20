@@ -58,6 +58,10 @@ export async function triggerBuild(options: TriggerBuildOptions) {
               name: "ARCHIVE_DIR",
               value: "/build/archive",
             },
+            {
+              name: "INGEST_API",
+              value: "https://relieved-allegedly-turkey.ngrok-free.app",
+            },
           ],
         },
       ],

@@ -1,0 +1,36 @@
+[package]
+name = "ingest"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "log-fetcher"            # The name of the target.
+path = "src/bin/log_fetcher.rs" # The source file of the target.
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1.22.0"
+aws-sdk-ecs = "1.20.0"
+aws-sdk-sqs = "1.14.0"
+aws_lambda_events = { version = "0.15.0", default-features = false, features = [
+  "sns",
+] }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1.0.114"
+serde = { version = "1.0.136", features = ["derive"] }
+aws-sdk-lambda = "1.19.0"
+futures = "0.3.30"
+web3 = "0.19.0"
+lambda_runtime = "0.11.1"
+openssl = { version = "0.10.35", features = ["vendored"] }
+uuid = { version = "1.8.0", features = ["v4", "v7", "js"] }
+aws-sdk-sns = "1.18.0"
+reqwest = { version = "0.11", features = ["json"] }
+aws-smithy-types = "1.1.8"
+prost = "0.12"
+prost-types = "0.12"
+
+[build-dependencies]
+prost-build = { version = "0.12.4" }

@@ -1,6 +1,5 @@
 import { v4 } from "uuid";
 import { z } from "zod";
-import { env } from "~/env";
 import { protectedProcedure } from "~/server/api/trpc";
 import { projects } from "~/server/db/schema";
 import { octokitMiddleware } from "../../middleware";
@@ -21,21 +20,21 @@ export const createProject = protectedProcedure
       },
     });
 
-    await ctx.octokit.request("POST /repos/{owner}/{repo}/hooks", {
-      owner: repository.data.owner.login,
-      repo: repository.data.name,
-      active: true,
-      events: ["push"],
-      config: {
-        url: env.REPOSITORY_WEBHOOK_RECEIVER_URL,
-        content_type: "json",
-        insecure_ssl: "0",
-        secret: "123",
-      },
-      headers: {
-        "X-Github-Api-Version": "2022-11-28",
-      },
-    });
+    // await ctx.octokit.request("POST /repos/{owner}/{repo}/hooks", {
+    //   owner: repository.data.owner.login,
+    //   repo: repository.data.name,
+    //   active: true,
+    //   events: ["push"],
+    //   config: {
+    //     url: env.REPOSITORY_WEBHOOK_RECEIVER_URL,
+    //     content_type: "json",
+    //     insecure_ssl: "0",
+    //     secret: "123",
+    //   },
+    //   headers: {
+    //     "X-Github-Api-Version": "2022-11-28",
+    //   },
+    // });
 
     const project = await ctx.db
       .insert(projects)
