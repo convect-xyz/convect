@@ -23,7 +23,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
       - name: Install dependencies
-        run: brew tap cargo-lambda/cargo-lambda && brew install cargo-lambda
+        run: brew tap protobuf cargo-lambda/cargo-lambda && brew install protobuf cargo-lambda
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
