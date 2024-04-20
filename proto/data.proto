@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package proto;
+
+message IngestPayload {
+  repeated IngestTransaction transactions = 1;
+}
+
+message IngestTransaction {
+  string id = 1;
+  uint64 block_number = 2;
+  uint64 transaction_index = 3;
+  string transaction_hash = 4;
+  map<string, IngestLogGroup> groups = 5;
+}
+
+message IngestLogGroup {
+  repeated IngestLog logs = 1;
+}
+
+message IngestLog {
+  string address = 1;
+  repeated string topics = 2;
+  string data = 3;
+  string block_hash = 4;
+  uint64 block_number = 5;
+  string transaction_hash = 6;
+  uint64 transaction_index = 7;
+  uint64 log_index = 8;
+  uint64 transaction_log_index = 9;
+  string log_type = 10;
+  bool removed = 11;
+}

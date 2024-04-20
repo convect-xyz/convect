@@ -13,7 +13,7 @@ export function mainnet() {
 export function polygon() {
   return {
     id: "polygon",
-    name: "Mainnet",
+    name: "Polygon",
   };
 }
 

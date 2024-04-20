@@ -31,7 +31,9 @@ async function createFunctions(options: {
   const { file, zipBucket, zipKey, manifestBucket, manifestKey } = options;
 
   const { default: pipeline } = await import(file);
-  const topic = pipeline.chain.id;
+  const chainId = pipeline.chain.id;
+
+  const producerConfig = await getProducerConfig(chainId);
 
   const transactionQueue = await sqsClient.send(
     new CreateQueueCommand({
@@ -60,6 +62,7 @@ async function createFunctions(options: {
           TRANSACTION_QUEUE_URL: transactionQueue.QueueUrl!,
           MANIFEST_BUCKET: manifestBucket,
           MANIFEST_PREFIX: manifestKey,
+          NODE_ENDPOINT: producerConfig.pollingUrl,
         },
       },
       Timeout: 200,
@@ -87,6 +90,7 @@ async function createFunctions(options: {
           LOG_FETCHER_LAMBDA_ARN: logFetcher.FunctionArn,
           MANIFEST_BUCKET: manifestBucket,
           MANIFEST_PREFIX: manifestKey,
+          NODE_ENDPOINT: producerConfig.pollingUrl,
         },
       },
       Timeout: 200,
@@ -141,13 +145,13 @@ async function createFunctions(options: {
       StatementId: `${process.env.DEPLOYMENT_ID}-${path.parse(file).base.split(".")[0]}`,
       Action: "lambda:InvokeFunction",
       Principal: "sns.amazonaws.com",
-      SourceArn: `arn:aws:sns:eu-west-1:730335604495:${topic}`,
+      SourceArn: `arn:aws:sns:eu-west-1:730335604495:${chainId}`,
     })
   );
 
   const createSubscriptionResponse = await snsClient.send(
     new SubscribeCommand({
-      TopicArn: `arn:aws:sns:eu-west-1:730335604495:${topic}`,
+      TopicArn: `arn:aws:sns:eu-west-1:730335604495:${chainId}`,
       Protocol: "lambda",
       Endpoint: createOrchestrator.FunctionArn,
     })
@@ -188,6 +192,16 @@ async function createManifest(file: string) {
     })
   );
   return { bucket, key };
+}
+
+async function getProducerConfig(id: string) {
+  const r = await fetch(
+    process.env.INGEST_API! + "/api/external/producer/" + id
+  );
+  const data = await r.json();
+  return data as {
+    pollingUrl: string;
+  };
 }
 
 async function zipLambda(file: string) {
