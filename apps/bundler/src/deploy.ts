@@ -173,11 +173,10 @@ async function createManifest(file: string) {
     chain: {
       url: "https://eth-mainnet.g.alchemy.com/v2/XDvWw6uVqbY0ZR8gKK18NtSc7rJnsNoB",
     },
-    tx_configs: Object.entries(pipeline.handlers).map(
-      ([name, handler]: [string, any]) => ({
-        id: name,
-        address: "0x",
-        log_configs: Object.entries(handler.transaction._logs).map(
+    tx_configs: Object.entries(pipeline.transactions).map(
+      ([label, transaction_config]: [string, any]) => ({
+        id: label,
+        log_configs: Object.entries(transaction_config._logs).map(
           ([name, log_config]: [string, any]) => ({
             name,
             address: log_config._origin,
