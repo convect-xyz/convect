@@ -1,0 +1,25 @@
+FROM --platform=linux/amd64 lukemathwalker/cargo-chef:latest as chef
+WORKDIR /app
+
+FROM --platform=linux/amd64 chef AS planner
+COPY ./proto ./proto
+COPY ./rust/Cargo.toml ./rust/Cargo.lock ./rust/
+COPY ./rust/src ./rust/src
+WORKDIR /app/rust
+RUN cargo chef prepare --bin=producer
+
+FROM --platform=linux/amd64 chef AS builder
+RUN apt-get update && apt-get install -y protobuf-compiler
+COPY ./proto ./proto
+COPY --from=planner /app/rust/recipe.json ./rust/recipe.json
+WORKDIR /app/rust
+RUN cargo chef cook --release --bin=producer
+COPY ./rust ./
+RUN cargo build --release --bin=producer
+RUN mv ./target/release/producer ./app
+
+FROM --platform=linux/amd64 debian:stable-slim AS runtime
+WORKDIR /app
+COPY --from=builder /app/rust/app /usr/local/bin/
+RUN apt-get update && apt install -y openssl ca-certificates
+ENTRYPOINT ["/usr/local/bin/app"]

@@ -3,6 +3,7 @@ import {
   CreateEventSourceMappingCommand,
   CreateFunctionCommand,
   LambdaClient,
+  PutFunctionConcurrencyCommand,
 } from "@aws-sdk/client-lambda";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { SNSClient, SubscribeCommand } from "@aws-sdk/client-sns";
@@ -103,6 +104,13 @@ async function createFunctions(options: {
   if (!createOrchestrator.FunctionArn) {
     throw new Error("Function ARN is undefined");
   }
+
+  const concurrency = await lambdaClient.send(
+    new PutFunctionConcurrencyCommand({
+      FunctionName: createOrchestrator.FunctionArn,
+      ReservedConcurrentExecutions: 1,
+    })
+  );
 
   const handlerLambda = await lambdaClient.send(
     new CreateFunctionCommand({

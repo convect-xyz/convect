@@ -7,10 +7,6 @@ use serde_json::json;
 
 #[derive(Deserialize)]
 struct TaskWithTagsResponse {
-    #[serde(rename(deserialize = "Cluster"))]
-    cluster: String,
-    #[serde(rename(deserialize = "TaskARN"))]
-    task_arn: String,
     #[serde(rename(deserialize = "TaskTags"))]
     task_tags: HashMap<String, String>,
 }

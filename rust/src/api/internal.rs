@@ -120,8 +120,8 @@ pub async fn get_ingest_transactions<'a>(
             transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
             transaction_index: log.transaction_index.unwrap().as_u64(),
             log_index: log.log_index.unwrap().as_u64(),
-            transaction_log_index: log.transaction_log_index.unwrap().as_u64(),
-            log_type: log.log_type.unwrap(),
+            transaction_log_index: 0,
+            log_type: String::from(""),
             removed: log.removed.unwrap(),
         });
         transaction
