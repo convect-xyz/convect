@@ -17,8 +17,8 @@ async fn main() -> Result<(), Error> {
 
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let config = aws_config::load_from_env().await;
-    let deployment_id = env::var("DEPLOYMENT_ID").expect("Deployment ID not set");
-    let pipeline = Pipeline::load(deployment_id).await;
+    let pipeline_id = env::var("PIPELINE_ID").expect("Pipeline ID not set");
+    let pipeline = Pipeline::load(pipeline_id).await;
     let incoming_block: u64 = event
         .payload
         .records
@@ -101,6 +101,10 @@ async fn trigger_batch_sync(
                             create_key_value_pair(
                                 "NODE_ENDPOINT".to_string(),
                                 env::var("NODE_ENDPOINT").unwrap(),
+                            ),
+                            create_key_value_pair(
+                                "PIPELINE_ID".to_string(),
+                                env::var("PIPELINE_ID").unwrap(),
                             ),
                         ]))
                         .build(),

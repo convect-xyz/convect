@@ -35,6 +35,7 @@ async function createFunctions(options: {
   const chainId = pipeline.chain.id;
 
   const producerConfig = await getProducerConfig(chainId);
+  const pipelineId = `${process.env.DEPLOYMENT_ID}-${path.parse(file).base.split(".")[0]}`;
 
   const transactionQueue = await sqsClient.send(
     new CreateQueueCommand({
@@ -64,6 +65,7 @@ async function createFunctions(options: {
           MANIFEST_BUCKET: manifestBucket,
           MANIFEST_PREFIX: manifestKey,
           NODE_ENDPOINT: producerConfig.pollingUrl,
+          PIPELINE_ID: pipelineId,
         },
       },
       Timeout: 200,
@@ -92,6 +94,7 @@ async function createFunctions(options: {
           MANIFEST_BUCKET: manifestBucket,
           MANIFEST_PREFIX: manifestKey,
           NODE_ENDPOINT: producerConfig.pollingUrl,
+          PIPELINE_ID: pipelineId,
         },
       },
       Timeout: 200,
