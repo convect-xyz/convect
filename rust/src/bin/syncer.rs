@@ -26,7 +26,7 @@ const BATCH_SIZE: u64 = 1999;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = syncer::load_config_from_env();
-    let pipeline = Pipeline::load(syncer_config.deployment_id.clone()).await;
+    let pipeline = Pipeline::load(syncer_config.pipeline_id.clone()).await;
 
     let result = run().await;
 

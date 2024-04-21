@@ -7,7 +7,7 @@ use lambda_runtime::tower::BoxError;
 use serde::{Deserialize, Serialize};
 
 pub struct Config {
-    pub deployment_id: String,
+    pub pipeline_id: String,
     pub start_block: u64,
     pub end_block: u64,
     pub function_name: String,
@@ -16,7 +16,7 @@ pub struct Config {
 
 pub fn load_config_from_env() -> Config {
     return Config {
-        deployment_id: env::var("DEPLOYMENT_ID").expect("Deployment ID not set"),
+        pipeline_id: env::var("PIPELINE_ID").expect("Pipeline ID not set"),
         start_block: env::var("START_BLOCK")
             .expect("START_BLOCK is not present")
             .parse()
@@ -41,16 +41,16 @@ pub enum SyncState {
 
 #[derive(Serialize, Deserialize)]
 pub struct Pipeline {
-    pub deployment_id: String,
+    pub pipeline_id: String,
     pub state: SyncState,
     pub last_block: u64,
 }
 
 impl Pipeline {
-    pub async fn load(deployment_id: String) -> Pipeline {
+    pub async fn load(pipeline_id: String) -> Pipeline {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let s3_client = aws_sdk_s3::Client::new(&config);
-        let sync_prefix = format!("syncs/{:?}", deployment_id);
+        let sync_prefix = format!("syncs/{:?}", pipeline_id);
 
         let result = s3_client
             .get_object()
@@ -70,7 +70,7 @@ impl Pipeline {
         match result {
             Ok(v) => v,
             Err(_) => Pipeline {
-                deployment_id,
+                pipeline_id,
                 state: SyncState::IDLE,
                 last_block: 0,
             },
@@ -79,7 +79,7 @@ impl Pipeline {
 
     pub fn update(&self) -> UpdatePipelineFluentBuilder {
         return UpdatePipelineFluentBuilder {
-            deployment_id: self.deployment_id.clone(),
+            pipeline_id: self.pipeline_id.clone(),
             state: self.state.clone(),
             last_block: self.last_block,
         };
@@ -87,7 +87,7 @@ impl Pipeline {
 }
 
 pub struct UpdatePipelineFluentBuilder {
-    pub deployment_id: String,
+    pub pipeline_id: String,
     pub state: SyncState,
     pub last_block: u64,
 }
@@ -106,7 +106,7 @@ impl UpdatePipelineFluentBuilder {
     pub async fn send(self) -> Result<(), BoxError> {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let s3_client = aws_sdk_s3::Client::new(&config);
-        let sync_prefix: String = format!("syncs/{:?}", self.deployment_id);
+        let sync_prefix: String = format!("syncs/{:?}", self.pipeline_id);
 
         s3_client
             .put_object()
@@ -114,7 +114,7 @@ impl UpdatePipelineFluentBuilder {
             .key(sync_prefix)
             .body(ByteStream::new(SdkBody::from(
                 serde_json::to_vec(&Pipeline {
-                    deployment_id: self.deployment_id,
+                    pipeline_id: self.pipeline_id,
                     state: self.state,
                     last_block: self.last_block,
                 })
