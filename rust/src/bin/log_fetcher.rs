@@ -8,7 +8,7 @@ use ingest::{
     proto::IngestPayload,
 };
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
-use prost::bytes::{Bytes, BytesMut};
+use prost::bytes::BytesMut;
 
 async fn function_handler(
     event: LambdaEvent<InvocationRequest>,

@@ -1,6 +1,13 @@
 use std::env;
 
+use aws_config::BehaviorVersion;
+use aws_sdk_s3::primitives::{ByteStream, SdkBody};
+use futures::TryFutureExt;
+use lambda_runtime::tower::BoxError;
+use serde::{Deserialize, Serialize};
+
 pub struct Config {
+    pub deployment_id: String,
     pub start_block: u64,
     pub end_block: u64,
     pub function_name: String,
@@ -9,6 +16,7 @@ pub struct Config {
 
 pub fn load_config_from_env() -> Config {
     return Config {
+        deployment_id: env::var("DEPLOYMENT_ID").expect("Deployment ID not set"),
         start_block: env::var("START_BLOCK")
             .expect("START_BLOCK is not present")
             .parse()
@@ -22,4 +30,100 @@ pub fn load_config_from_env() -> Config {
         tx_queue_url: env::var("TRANSACTION_QUEUE_URL")
             .expect("TRANSACTION_QUEUE_URL is not present"),
     };
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub enum SyncState {
+    IDLE,
+    SYNCING,
+    FAILED,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Pipeline {
+    pub deployment_id: String,
+    pub state: SyncState,
+    pub last_block: u64,
+}
+
+impl Pipeline {
+    pub async fn load(deployment_id: String) -> Pipeline {
+        let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+        let s3_client = aws_sdk_s3::Client::new(&config);
+        let sync_prefix = format!("syncs/{:?}", deployment_id);
+
+        let result = s3_client
+            .get_object()
+            .bucket("ingest-fetch-logs")
+            .key(sync_prefix)
+            .send()
+            .and_then(|r| async move {
+                let body = r.body.collect().await.unwrap();
+
+                let data: Pipeline =
+                    serde_json::from_slice(Into::<Vec<u8>>::into(body.into_bytes()).as_slice())
+                        .unwrap();
+                Ok(data)
+            })
+            .await;
+
+        match result {
+            Ok(v) => v,
+            Err(_) => Pipeline {
+                deployment_id,
+                state: SyncState::IDLE,
+                last_block: 0,
+            },
+        }
+    }
+
+    pub fn update(&self) -> UpdatePipelineFluentBuilder {
+        return UpdatePipelineFluentBuilder {
+            deployment_id: self.deployment_id.clone(),
+            state: self.state.clone(),
+            last_block: self.last_block,
+        };
+    }
+}
+
+pub struct UpdatePipelineFluentBuilder {
+    pub deployment_id: String,
+    pub state: SyncState,
+    pub last_block: u64,
+}
+
+impl UpdatePipelineFluentBuilder {
+    pub fn set_state(mut self, new_state: SyncState) -> UpdatePipelineFluentBuilder {
+        self.state = new_state;
+        self
+    }
+
+    pub fn set_last_block(mut self, new_last_block: u64) -> UpdatePipelineFluentBuilder {
+        self.last_block = new_last_block;
+        self
+    }
+
+    pub async fn send(self) -> Result<(), BoxError> {
+        let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+        let s3_client = aws_sdk_s3::Client::new(&config);
+        let sync_prefix: String = format!("syncs/{:?}", self.deployment_id);
+
+        s3_client
+            .put_object()
+            .bucket("ingest-fetch-logs")
+            .key(sync_prefix)
+            .body(ByteStream::new(SdkBody::from(
+                serde_json::to_vec(&Pipeline {
+                    deployment_id: self.deployment_id,
+                    state: self.state,
+                    last_block: self.last_block,
+                })
+                .unwrap(),
+            )))
+            .send()
+            .await
+            .expect("Failed to upload logs");
+
+        Ok(())
+    }
 }

@@ -1,15 +1,16 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_lambda::{operation::invoke::InvokeError, types::InvocationType};
-use aws_sdk_s3::{error::SdkError, primitives::Blob};
+use aws_sdk_lambda::types::InvocationType;
+use aws_sdk_s3::primitives::Blob;
+use base64::{engine::general_purpose, Engine};
 use futures::{future::join_all, TryFutureExt};
 use ingest::{
     log_fetcher::invocation::InvocationResponse,
     proto::{IngestPayload, IngestTransaction},
-    syncer,
+    syncer::{self, Pipeline},
 };
 use prost::bytes::BytesMut;
 use serde::Serialize;
-use std::{io::Read, time::Duration};
+use std::{error::Error, time::Duration};
 use uuid::Uuid;
 
 #[derive(Serialize, Debug)]
@@ -23,13 +24,34 @@ struct BlockConfig {
 const BATCH_SIZE: u64 = 1999;
 
 #[tokio::main]
-async fn main() -> Result<(), SdkError<InvokeError>> {
+async fn main() -> Result<(), Box<dyn Error>> {
+    let syncer_config = syncer::load_config_from_env();
+    let pipeline = Pipeline::load(syncer_config.deployment_id.clone()).await;
+
+    let result = run().await;
+
+    let _ = match result {
+        Ok(_) => pipeline
+            .update()
+            .set_state(syncer::SyncState::IDLE)
+            .set_last_block(syncer_config.end_block)
+            .send(),
+        Err(_) => pipeline
+            .update()
+            .set_state(syncer::SyncState::FAILED)
+            .send(),
+    }
+    .await;
+
+    Ok(())
+}
+
+async fn run() -> Result<(), Box<dyn Error>> {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let lambda_client = aws_sdk_lambda::Client::new(&config);
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
     let syncer_config = syncer::load_config_from_env();
-
     let batches = get_batches(syncer_config.start_block, syncer_config.end_block);
 
     let mut invocations = Vec::new();
@@ -53,8 +75,6 @@ async fn main() -> Result<(), SdkError<InvokeError>> {
 
         tokio::time::sleep(Duration::from_secs(2)).await;
     }
-
-    println!("Invocations Length: {:?}", invocations.len());
 
     let mut s3_results = Vec::new();
     for invocation_chunk in invocations.chunks(400) {
@@ -85,8 +105,10 @@ async fn main() -> Result<(), SdkError<InvokeError>> {
                     .and_then(|r| async move {
                         let body = r.body.collect().await.unwrap();
 
-                        let data: IngestPayload =
-                            prost::Message::decode(body.into_bytes().to_vec().as_slice()).unwrap();
+                        let data: IngestPayload = prost::Message::decode(
+                            Into::<Vec<u8>>::into(body.into_bytes()).as_slice(),
+                        )
+                        .unwrap();
                         Ok(data)
                     }),
             )
@@ -129,11 +151,11 @@ async fn main() -> Result<(), SdkError<InvokeError>> {
                 }
 
                 let tx_buffer = &mut BytesMut::new();
-                prost::Message::encode(last_seen_tx, tx_buffer);
+                prost::Message::encode(last_seen_tx, tx_buffer).unwrap();
 
                 // check that tx size will not make this entry over 256kb
                 let tx_size = tx_buffer.len();
-                if tx_size + group_size > 250000 {
+                if tx_size + group_size > 190000 {
                     break;
                 }
 
@@ -197,20 +219,12 @@ async fn upload_to_sqs(
 
     let buffer = &mut BytesMut::new();
 
-    prost::Message::encode(
-        &IngestPayload {
-            transactions: txs.clone(),
-        },
-        buffer,
-    )
-    .unwrap();
+    prost::Message::encode(&IngestPayload { transactions: txs }, buffer).unwrap();
 
     let sqs_res = sqs_client
         .send_message()
         .queue_url(&syncer_config.tx_queue_url)
-        .message_body(
-            String::from_utf8(buffer.bytes().map(|b| b.unwrap()).collect::<Vec<u8>>()).unwrap(),
-        )
+        .message_body(general_purpose::STANDARD.encode(buffer.to_vec()))
         .message_group_id("main")
         .message_deduplication_id(id)
         .send()
