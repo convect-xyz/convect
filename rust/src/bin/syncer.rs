@@ -1,17 +1,18 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_lambda::types::InvocationType;
+use aws_sdk_lambda::{
+    error::SdkError,
+    operation::invoke::{InvokeError, InvokeOutput},
+    types::InvocationType,
+};
 use aws_sdk_s3::primitives::Blob;
-use base64::{engine::general_purpose, Engine};
 use futures::{future::join_all, TryFutureExt};
 use ingest::{
+    api::{self, IngestTransaction},
     log_fetcher::invocation::InvocationResponse,
-    proto::{IngestPayload, IngestTransaction},
     syncer::{self, Pipeline},
 };
-use prost::bytes::BytesMut;
 use serde::Serialize;
 use std::{error::Error, time::Duration};
-use uuid::Uuid;
 
 #[derive(Serialize, Debug)]
 struct BlockConfig {
@@ -46,142 +47,93 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn run() -> Result<(), Box<dyn Error>> {
+async fn invoke_lambdas(
+    configs: &[BlockConfig],
+) -> Vec<Result<InvokeOutput, SdkError<InvokeError>>> {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let lambda_client = aws_sdk_lambda::Client::new(&config);
-    let s3_client = aws_sdk_s3::Client::new(&config);
-    let sqs_client = aws_sdk_sqs::Client::new(&config);
     let syncer_config = syncer::load_config_from_env();
-    let batches = get_batches(syncer_config.start_block, syncer_config.end_block);
 
-    let mut invocations = Vec::new();
+    let mut lambda_invocation_futures = Vec::new();
 
-    for batch in batches.chunks(100) {
-        let mut lambda_invocation_futures = Vec::new();
-
-        for config in batch {
-            lambda_invocation_futures.push(
-                lambda_client
-                    .invoke()
-                    .invocation_type(InvocationType::RequestResponse)
-                    .function_name(&syncer_config.function_name)
-                    .payload(Blob::new(serde_json::to_vec(config).unwrap()))
-                    .send(),
-            );
-        }
-
-        let lambda_results = join_all(lambda_invocation_futures).await;
-        invocations.extend(lambda_results);
-
-        tokio::time::sleep(Duration::from_secs(2)).await;
+    for config in configs {
+        lambda_invocation_futures.push(
+            lambda_client
+                .invoke()
+                .invocation_type(InvocationType::RequestResponse)
+                .function_name(&syncer_config.function_name)
+                .payload(Blob::new(serde_json::to_vec(config).unwrap()))
+                .send(),
+        );
     }
 
-    let mut s3_results = Vec::new();
-    for invocation_chunk in invocations.chunks(400) {
-        let mut s3_result_futures = Vec::new();
+    return join_all(lambda_invocation_futures).await;
+}
 
-        for invocation in invocation_chunk {
-            let output = match invocation {
-                Ok(v) => v.to_owned(),
-                Err(e) => panic!("Invocation Error: {e}"),
-            };
+async fn get_s3_results(
+    invocations: &Vec<Result<InvokeOutput, SdkError<InvokeError>>>,
+) -> Vec<IngestTransaction> {
+    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    let s3_client = aws_sdk_s3::Client::new(&config);
 
-            let payload = match output.payload {
-                Some(v) => v.into_inner(),
-                None => panic!("Blob is empty"),
-            };
+    let mut s3_result_futures = Vec::new();
+    for invocation in invocations {
+        let output = match invocation {
+            Ok(v) => v.to_owned(),
+            Err(e) => panic!("Invocation Error: {e}"),
+        };
 
-            let response: InvocationResponse = serde_json::from_slice(&payload).unwrap();
-            if response.s3_bucket.is_none() || response.s3_prefix.is_none() {
-                continue;
-            }
+        let payload = match output.payload {
+            Some(v) => v.into_inner(),
+            None => panic!("Blob is empty"),
+        };
 
-            s3_result_futures.push(
-                s3_client
-                    .get_object()
-                    .bucket(response.s3_bucket.unwrap())
-                    .key(response.s3_prefix.unwrap())
-                    .send()
-                    .and_then(|r| async move {
-                        let body = r.body.collect().await.unwrap();
-
-                        let data: IngestPayload = prost::Message::decode(
-                            Into::<Vec<u8>>::into(body.into_bytes()).as_slice(),
-                        )
-                        .unwrap();
-                        Ok(data)
-                    }),
-            )
+        let response: InvocationResponse = serde_json::from_slice(&payload).unwrap();
+        if response.s3_bucket.is_none() || response.s3_prefix.is_none() {
+            continue;
         }
 
-        let results = join_all(s3_result_futures)
-            .await
-            .into_iter()
-            .map(|f| f.unwrap().transactions)
-            .flatten()
-            .collect::<Vec<IngestTransaction>>();
+        s3_result_futures.push(
+            s3_client
+                .get_object()
+                .bucket(response.s3_bucket.unwrap())
+                .key(response.s3_prefix.unwrap())
+                .send()
+                .and_then(|r| async move {
+                    let data = r.body.collect().await.unwrap();
+                    let content =
+                        String::from_utf8(data.into_bytes().to_vec()).expect("Invalid UTF-8");
 
-        s3_results.extend(results);
+                    let data: Vec<IngestTransaction> = serde_json::from_str(&content).unwrap();
+                    Ok(data)
+                }),
+        );
     }
 
-    println!("S3 Results: {:?}", s3_results.len());
+    join_all(s3_result_futures)
+        .await
+        .into_iter()
+        .map(|f| f.unwrap())
+        .flatten()
+        .collect::<Vec<IngestTransaction>>()
+}
 
-    let mut i = 0;
-    while i < s3_results.len() {
-        // Batch is a list of a list of max 256 kb txs
-        let mut batch = Vec::new();
+async fn run() -> Result<(), Box<dyn Error>> {
+    let syncer_config = syncer::load_config_from_env();
 
-        while batch.len() < 10 && i < s3_results.len() {
-            let mut group_size = 0;
-            let mut group = Vec::new();
-            let mut last_id: Option<&str> = None;
+    let configs = get_block_configs(syncer_config.start_block, syncer_config.end_block);
 
-            // Group each entry into max 256kb entries.
-            while i < s3_results.len() {
-                let last_seen_tx = &s3_results[i];
-
-                // if last id is none, make it current tx
-                if last_id.is_none() {
-                    last_id = Some(last_seen_tx.id.as_str());
-                }
-
-                // if last id is not current id (different tx types), break
-                if last_id.unwrap().ne(last_seen_tx.id.as_str()) {
-                    break;
-                }
-
-                let tx_buffer = &mut BytesMut::new();
-                prost::Message::encode(last_seen_tx, tx_buffer).unwrap();
-
-                // check that tx size will not make this entry over 256kb
-                let tx_size = tx_buffer.len();
-                if tx_size + group_size > 190000 {
-                    break;
-                }
-
-                // add tx size to group size and add tx to group
-                group_size += tx_size;
-                group.push(last_seen_tx.clone());
-
-                // next result
-                i += 1;
-            }
-
-            // group is an entry
-            batch.push(group);
-        }
-
-        println!("Txs length {:?}", batch.len());
-
-        for txs in batch.into_iter() {
-            upload_to_sqs(&sqs_client, &syncer_config, txs).await;
-        }
+    for batch in configs.chunks(100) {
+        let invocations = invoke_lambdas(batch).await;
+        let s3_results = get_s3_results(&invocations).await;
+        api::upload_to_sqs(&s3_results).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
     }
 
     Ok(())
 }
 
-fn get_batches(mut start_block: u64, end_block: u64) -> Vec<BlockConfig> {
+fn get_block_configs(mut start_block: u64, end_block: u64) -> Vec<BlockConfig> {
     let mut result: Vec<BlockConfig> = Vec::new();
     let mut previous_id: Option<u64> = None;
     while start_block + BATCH_SIZE < end_block {
@@ -208,30 +160,4 @@ fn get_batches(mut start_block: u64, end_block: u64) -> Vec<BlockConfig> {
     }
 
     return result;
-}
-
-async fn upload_to_sqs(
-    sqs_client: &aws_sdk_sqs::Client,
-    syncer_config: &syncer::Config,
-    txs: Vec<IngestTransaction>,
-) {
-    let id = Uuid::new_v4();
-
-    let buffer = &mut BytesMut::new();
-
-    prost::Message::encode(&IngestPayload { transactions: txs }, buffer).unwrap();
-
-    let sqs_res = sqs_client
-        .send_message()
-        .queue_url(&syncer_config.tx_queue_url)
-        .message_body(general_purpose::STANDARD.encode(buffer.to_vec()))
-        .message_group_id("main")
-        .message_deduplication_id(id)
-        .send()
-        .await;
-
-    match sqs_res {
-        Ok(_) => {}
-        Err(e) => panic!("Upload Result: {:?}", e),
-    }
 }
