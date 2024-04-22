@@ -9,7 +9,7 @@ mod internal;
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct IngestTransaction {
-    pub id: String,
+    pub label: String,
     pub block_number: u64,
     pub transaction_index: u64,
     pub transaction_hash: String,
@@ -21,13 +21,10 @@ pub async fn get_ingest_transactions<'a>(
     start_block: u64,
     end_block: u64,
 ) -> Result<Vec<IngestTransaction>, web3::Error> {
-    let futures = manifest.tx_configs.iter().map(|tx_config| {
-        internal::get_ingest_transactions(internal::GetTransactionWithLogsRequest {
-            start_block,
-            end_block,
-            tx_config,
-        })
-    });
+    let futures = manifest
+        .tx_configs
+        .iter()
+        .map(|tx_config| internal::get_ingest_transactions(start_block, end_block, tx_config));
 
     let mut result = join_all(futures)
         .await

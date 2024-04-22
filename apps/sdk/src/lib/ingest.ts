@@ -4,27 +4,26 @@ import { Chain } from "./chain";
 import { Log } from "./log";
 import { Transaction } from "./transaction";
 
-export type InferTransaction<TTransaction> =
+export type InferTransaction<TTransaction, TLabel = string> =
   TTransaction extends Transaction<infer TLogs>
-    ? TLogs extends Record<string, Log<infer TEvent, any>>
-      ? TEvent extends AbiEvent
-        ? ViemLog<bigint, number, false, TEvent, true>
-        : never
-      : never
+    ? {
+        label: TLabel;
+        logs: TLogs extends Record<string, any>
+          ? {
+              [K in keyof TLogs]: TLogs[K] extends Log<infer TEvent, any>
+                ? TEvent extends AbiEvent
+                  ? ViemLog<bigint, number, false, TEvent, true>[]
+                  : never
+                : never;
+            }
+          : never;
+      }
     : never;
 
 type InferTransactions<TTransactions> =
   TTransactions extends Record<string, any>
     ? {
-        [K in keyof TTransactions]: TTransactions[K] extends Transaction<
-          infer TLogs
-        >
-          ? TLogs extends Record<string, Log<infer TEvent, any>>
-            ? TEvent extends AbiEvent
-              ? { label: K } & ViemLog<bigint, number, false, TEvent, true>
-              : never
-            : never
-          : never;
+        [K in keyof TTransactions]: InferTransaction<TTransactions[K], K>;
       }[keyof TTransactions]
     : never;
 

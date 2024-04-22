@@ -14,12 +14,6 @@ pub struct GetTransactionResult {
     pub transactions: Vec<IngestTransaction>,
 }
 
-pub struct GetTransactionWithLogsRequest<'a> {
-    pub start_block: u64,
-    pub end_block: u64,
-    pub tx_config: &'a TransactionConfig,
-}
-
 async fn get_logs_for_config(
     web3: &Web3<Http>,
     config: &LogConfig,
@@ -45,8 +39,10 @@ async fn get_logs_for_config(
     web3.eth().logs(filter).await.unwrap()
 }
 
-pub async fn get_ingest_transactions<'a>(
-    request: GetTransactionWithLogsRequest<'a>,
+pub async fn get_ingest_transactions(
+    start_block: u64,
+    end_block: u64,
+    tx_config: &TransactionConfig,
 ) -> Result<GetTransactionResult, web3::Error> {
     let transport: Http = web3::transports::Http::new(
         env::var("NODE_ENDPOINT")
@@ -54,13 +50,15 @@ pub async fn get_ingest_transactions<'a>(
             .as_str(),
     )?;
     let web3: Web3<Http> = web3::Web3::new(transport);
-    let tx_config = request.tx_config;
+    let tx_config = tx_config;
 
-    let log_futures =
-        join_all(tx_config.log_configs.iter().map(|config| {
-            get_logs_for_config(&web3, config, request.start_block, request.end_block)
-        }))
-        .await;
+    let log_futures = join_all(
+        tx_config
+            .log_configs
+            .iter()
+            .map(|config| get_logs_for_config(&web3, config, start_block, end_block)),
+    )
+    .await;
 
     let mut tx_indexes: HashMap<H256, usize> = HashMap::new();
     let mut txs: Vec<IngestTransaction> = Vec::new();
@@ -72,7 +70,7 @@ pub async fn get_ingest_transactions<'a>(
             tx_indexes.insert(tx_hash.clone(), txs.len());
 
             txs.push(IngestTransaction {
-                id: tx_config.id.to_string(),
+                label: tx_config.id.to_string(),
                 block_number: log.block_number.unwrap().as_u64(),
                 transaction_index: log.transaction_index.unwrap().as_u64(),
                 transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
