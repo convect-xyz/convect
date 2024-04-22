@@ -1,5 +1,4 @@
 use futures::future::join_all;
-use std::io::Read;
 use std::str::FromStr;
 use std::{collections::HashMap, env};
 use web3::{
@@ -8,9 +7,8 @@ use web3::{
     Web3,
 };
 
+use super::IngestTransaction;
 use crate::manifest::{LogConfig, TransactionConfig};
-
-use crate::proto::{IngestLog, IngestLogGroup, IngestTransaction};
 
 pub struct GetTransactionResult {
     pub transactions: Vec<IngestTransaction>,
@@ -78,7 +76,7 @@ pub async fn get_ingest_transactions<'a>(
                 block_number: log.block_number.unwrap().as_u64(),
                 transaction_index: log.transaction_index.unwrap().as_u64(),
                 transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
-                groups: HashMap::new(),
+                logs: HashMap::new(),
             });
         }
 
@@ -100,32 +98,15 @@ pub async fn get_ingest_transactions<'a>(
             .map(|config| config)
             .unwrap();
 
-        if !transaction.groups.contains_key(&log_config.name) {
-            transaction
-                .groups
-                .insert(log_config.name.clone(), IngestLogGroup { logs: Vec::new() });
+        if !transaction.logs.contains_key(&log_config.name) {
+            transaction.logs.insert(log_config.name.clone(), Vec::new());
         }
 
-        let mut logs_for_log_type = transaction.groups.get(&log_config.name).unwrap().clone();
-        logs_for_log_type.logs.push(IngestLog {
-            address: format!("{:#x}", log.address),
-            topics: log
-                .topics
-                .iter()
-                .map(|topic| format!("{:#x}", topic))
-                .collect(),
-            data: String::from_utf8(log.data.0).unwrap(),
-            block_hash: format!("{:#x}", log.block_hash.unwrap()),
-            block_number: log.block_number.unwrap().as_u64(),
-            transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
-            transaction_index: log.transaction_index.unwrap().as_u64(),
-            log_index: log.log_index.unwrap().as_u64(),
-            transaction_log_index: 0,
-            log_type: String::from(""),
-            removed: log.removed.unwrap(),
-        });
+        let mut logs_for_log_type = transaction.logs.get(&log_config.name).unwrap().clone();
+        logs_for_log_type.push(log);
+
         transaction
-            .groups
+            .logs
             .insert(log_config.name.clone(), logs_for_log_type);
 
         txs[tx_index] = transaction;

@@ -5,7 +5,7 @@ use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use ingest::syncer::Pipeline;
+use ingest::{api, manifest::Manifest, syncer::Pipeline};
 use lambda_runtime::{run, service_fn, tower::BoxError, tracing, Error, LambdaEvent};
 
 #[tokio::main]
@@ -36,16 +36,20 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     }
 
     // If block diff is too great, trigger fargate to do the work
-    if incoming_block - pipeline.last_block > 1999 {
-        return trigger_batch_sync(&pipeline, &config, incoming_block).await;
+    if incoming_block - pipeline.last_block.or(Some(0)).unwrap() > 1999 {
+        return trigger_batch_sync_task(&pipeline, &config, incoming_block).await;
     }
 
     // We'll process the blocks here and add them to tx queue
     // We shouldn't need to update status here because max concurrency should be 1
-    return sync_blocks().await;
+    return sync_blocks(
+        pipeline.last_block.map(|l| l + 1).or(Some(0)).unwrap(),
+        incoming_block,
+    )
+    .await;
 }
 
-async fn trigger_batch_sync(
+async fn trigger_batch_sync_task(
     pipeline: &Pipeline,
     config: &SdkConfig,
     incoming_block: u64,
@@ -84,7 +88,12 @@ async fn trigger_batch_sync(
                         .set_environment(Some(vec![
                             create_key_value_pair(
                                 "START_BLOCK".to_string(),
-                                (pipeline.last_block + 1).to_string(),
+                                pipeline
+                                    .last_block
+                                    .map(|l| l + 1)
+                                    .or(Some(0))
+                                    .unwrap()
+                                    .to_string(),
                             ),
                             create_key_value_pair(
                                 "END_BLOCK".to_string(),
@@ -124,6 +133,14 @@ fn create_key_value_pair(name: String, value: String) -> KeyValuePair {
         .build()
 }
 
-async fn sync_blocks() -> Result<(), BoxError> {
+async fn sync_blocks(from_block: u64, to_block: u64) -> Result<(), BoxError> {
+    let manifest = Manifest::from_env().await.unwrap();
+
+    let transactions = api::get_ingest_transactions(&manifest, from_block, to_block)
+        .await
+        .unwrap();
+
+    api::upload_to_sqs(&transactions).await;
+
     Ok(())
 }

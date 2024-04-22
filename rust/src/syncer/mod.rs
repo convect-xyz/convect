@@ -43,7 +43,7 @@ pub enum SyncState {
 pub struct Pipeline {
     pub pipeline_id: String,
     pub state: SyncState,
-    pub last_block: u64,
+    pub last_block: Option<u64>,
 }
 
 impl Pipeline {
@@ -72,7 +72,7 @@ impl Pipeline {
             Err(_) => Pipeline {
                 pipeline_id,
                 state: SyncState::IDLE,
-                last_block: 0,
+                last_block: None,
             },
         }
     }
@@ -89,7 +89,7 @@ impl Pipeline {
 pub struct UpdatePipelineFluentBuilder {
     pub pipeline_id: String,
     pub state: SyncState,
-    pub last_block: u64,
+    pub last_block: Option<u64>,
 }
 
 impl UpdatePipelineFluentBuilder {
@@ -99,7 +99,7 @@ impl UpdatePipelineFluentBuilder {
     }
 
     pub fn set_last_block(mut self, new_last_block: u64) -> UpdatePipelineFluentBuilder {
-        self.last_block = new_last_block;
+        self.last_block = Some(new_last_block);
         self
     }
 

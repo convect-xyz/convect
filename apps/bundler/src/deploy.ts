@@ -16,6 +16,7 @@ import esbuild from "esbuild";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
+import { encodeEventTopics } from "viem";
 
 const lambdaClient = new LambdaClient({ region: "eu-west-1" });
 const snsClient = new SNSClient({ region: "eu-west-1" });
@@ -146,7 +147,7 @@ async function createFunctions(options: {
     new CreateEventSourceMappingCommand({
       EventSourceArn: attributes.Attributes!.QueueArn,
       FunctionName: handlerLambda.FunctionArn,
-      BatchSize: 1,
+      BatchSize: 10,
     })
   );
 
@@ -180,13 +181,16 @@ async function createManifest(file: string) {
       ([label, transaction_config]: [string, any]) => ({
         id: label,
         log_configs: Object.entries(transaction_config._logs).map(
-          ([name, log_config]: [string, any]) => ({
-            name,
-            address: log_config._origin,
-            topics: [
-              "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-            ],
-          })
+          ([name, log_config]: [string, any]) => {
+            console.log(log_config._event);
+            return {
+              name,
+              address: log_config._origin,
+              topics: encodeEventTopics({ abi: [log_config._event] }).map(
+                (topic) => topic.substring(2)
+              ),
+            };
+          }
         ),
       })
     ),
