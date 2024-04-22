@@ -179,7 +179,7 @@ async function createManifest(file: string) {
     },
     tx_configs: Object.entries(pipeline.transactions).map(
       ([label, transaction_config]: [string, any]) => ({
-        id: label,
+        label,
         log_configs: Object.entries(transaction_config._logs).map(
           ([name, log_config]: [string, any]) => {
             console.log(log_config._event);

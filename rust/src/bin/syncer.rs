@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let result = run().await;
 
-    let _ = match result {
+    let update_result = match result {
         Ok(_) => pipeline
             .update()
             .set_state(syncer::SyncState::IDLE)
@@ -43,6 +43,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .send(),
     }
     .await;
+
+    match update_result {
+        Ok(_) => (),
+        Err(err) => panic!("Failed to update pipeline configs: {:?}", err),
+    }
+
+    Ok(())
+}
+
+async fn run() -> Result<(), Box<dyn Error>> {
+    let syncer_config = syncer::load_config_from_env();
+
+    let configs = get_block_configs(syncer_config.start_block, syncer_config.end_block);
+
+    for batch in configs.chunks(100) {
+        let invocations = invoke_lambdas(batch).await;
+        let s3_results = get_s3_results(&invocations).await;
+        api::upload_to_sqs(&s3_results).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
 
     Ok(())
 }
@@ -116,21 +136,6 @@ async fn get_s3_results(
         .map(|f| f.unwrap())
         .flatten()
         .collect::<Vec<IngestTransaction>>()
-}
-
-async fn run() -> Result<(), Box<dyn Error>> {
-    let syncer_config = syncer::load_config_from_env();
-
-    let configs = get_block_configs(syncer_config.start_block, syncer_config.end_block);
-
-    for batch in configs.chunks(100) {
-        let invocations = invoke_lambdas(batch).await;
-        let s3_results = get_s3_results(&invocations).await;
-        api::upload_to_sqs(&s3_results).await;
-        tokio::time::sleep(Duration::from_secs(1)).await;
-    }
-
-    Ok(())
 }
 
 fn get_block_configs(mut start_block: u64, end_block: u64) -> Vec<BlockConfig> {
