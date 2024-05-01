@@ -92,15 +92,16 @@ export const publicProcedure = t.procedure;
  */
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   const { session } = ctx;
+  console.log(ctx);
   if (!session || !session.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+    throw new TRPCError({ message: "Session not found", code: "UNAUTHORIZED" });
   }
 
   const account = await ctx.db.query.accounts.findFirst({
     where: (accounts, { eq }) => eq(accounts.userId, session.user.id),
   });
   if (!account) {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+    throw new TRPCError({ message: "Account not found", code: "UNAUTHORIZED" });
   }
 
   return next({

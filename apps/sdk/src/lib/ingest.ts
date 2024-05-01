@@ -1,6 +1,5 @@
 import { AbiEvent } from "abitype";
 import { Log as ViemLog } from "viem";
-import { Chain } from "./chain";
 import { Log } from "./log";
 import { Transaction } from "./transaction";
 
@@ -27,16 +26,15 @@ type InferTransactions<TTransactions> =
       }[keyof TTransactions]
     : never;
 
-// [K in keyof TLogs]: TLogs[K] extends Log<infer TEvent, any>
-// ? TEvent extends AbiEvent
-//   ? (ViemLog<bigint, number, false, TEvent, true> & {})[]
-//   : never
-// : never;
-
-export function ingest<TTransactions>(options: {
-  chain: Chain;
+export function ingest<
+  TTransactions,
+  TCreateReturn extends Record<string, string | number | boolean>,
+>(options: {
   transactions: TTransactions;
   handler: (transactions: InferTransactions<TTransactions>[]) => Promise<void>;
+  onCreate?: () => Promise<TCreateReturn>;
+  onReset?: (params: TCreateReturn) => Promise<void>;
+  onDelete?: (params: TCreateReturn) => Promise<void>;
 }) {
   return {
     ...options,

@@ -13,6 +13,7 @@ export const getProducers = protectedProcedure
       producers: z.array(
         z.object({
           id: z.number(),
+          name: z.string(),
         }),
       ),
     }),
@@ -23,8 +24,11 @@ export const getProducers = protectedProcedure
     const { cursor } = input;
 
     const producers = await ctx.db.query.producers.findMany({
-      where(fields, { eq }) {
-        return eq(fields.userId, ctx.session.user.id);
+      where(fields, { eq, isNull, or }) {
+        return or(
+          eq(fields.userId, ctx.session.user.id),
+          isNull(fields.userId),
+        );
       },
     });
 

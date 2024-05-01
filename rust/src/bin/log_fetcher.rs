@@ -28,16 +28,18 @@ async fn function_handler(
         return Ok(InvocationResponse {
             s3_bucket: None,
             s3_prefix: None,
+            size: 0,
         });
     }
+
+    let body = serde_json::to_string(&transactions).unwrap();
+    let size = body.len();
 
     s3_client
         .put_object()
         .bucket("ingest-fetch-logs")
         .key(event.payload.id.to_string())
-        .body(ByteStream::new(SdkBody::from(
-            serde_json::to_string(&transactions).unwrap(),
-        )))
+        .body(ByteStream::new(SdkBody::from(body)))
         .send()
         .await
         .expect("Failed to upload logs");
@@ -45,6 +47,7 @@ async fn function_handler(
     Ok(InvocationResponse {
         s3_bucket: Some("ingest-fetch-logs".to_string()),
         s3_prefix: Some(event.payload.id.to_string()),
+        size,
     })
 }
 

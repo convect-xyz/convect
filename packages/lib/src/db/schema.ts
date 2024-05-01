@@ -1,0 +1,197 @@
+import { relations, sql } from "drizzle-orm";
+import {
+  index,
+  integer,
+  pgTableCreator,
+  primaryKey,
+  serial,
+  text,
+  timestamp,
+  unique,
+  varchar,
+} from "drizzle-orm/pg-core";
+import { type AdapterAccount } from "next-auth/adapters";
+import { v4 } from "uuid";
+
+export const createTable = pgTableCreator((name) => `web_${name}`);
+
+export const users = createTable("user", {
+  id: varchar("id").notNull().primaryKey(),
+  name: varchar("name", { length: 255 }),
+  email: varchar("email", { length: 255 }).notNull(),
+  emailVerified: timestamp("emailVerified", {
+    mode: "date",
+  }).default(sql`CURRENT_TIMESTAMP`),
+  image: varchar("image", { length: 255 }),
+});
+
+export const usersRelations = relations(users, ({ many }) => ({
+  accounts: many(accounts),
+}));
+
+export const accounts = createTable(
+  "account",
+  {
+    userId: varchar("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 255 })
+      .$type<AdapterAccount["type"]>()
+      .notNull(),
+    provider: varchar("provider", { length: 255 }).notNull(),
+    providerAccountId: varchar("providerAccountId", { length: 255 }).notNull(),
+    refresh_token: text("refresh_token"),
+    refresh_token_expires_in: integer("refresh_token_expires_in"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: varchar("token_type", { length: 255 }),
+    scope: varchar("scope", { length: 255 }),
+    id_token: text("id_token"),
+    session_state: varchar("session_state", { length: 255 }),
+  },
+  (account) => ({
+    compoundKey: primaryKey({
+      columns: [account.provider, account.providerAccountId],
+    }),
+    userIdIdx: index("account_userId_idx").on(account.userId),
+  })
+);
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, { fields: [accounts.userId], references: [users.id] }),
+}));
+
+export const sessions = createTable(
+  "session",
+  {
+    sessionToken: varchar("sessionToken", { length: 255 })
+      .notNull()
+      .primaryKey(),
+    userId: varchar("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+  },
+  (session) => ({
+    userIdIdx: index("session_userId_idx").on(session.userId),
+  })
+);
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, { fields: [sessions.userId], references: [users.id] }),
+}));
+
+export const verificationTokens = createTable(
+  "verificationToken",
+  {
+    identifier: varchar("identifier", { length: 255 }).notNull(),
+    token: varchar("token", { length: 255 }).notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+  },
+  (vt) => ({
+    compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
+  })
+);
+
+export const projects = createTable(
+  "project",
+  {
+    id: serial("id").notNull().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    userId: varchar("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (projects) => ({
+    userIdIdx: index("project_userId_idx").on(projects.userId),
+    projectNameUserId: unique().on(projects.name, projects.userId),
+  })
+);
+
+export const projectsRelations = relations(projects, ({ one }) => ({
+  user: one(users, { fields: [projects.userId], references: [users.id] }),
+}));
+
+export const handler = createTable(
+  "handler",
+  {
+    id: serial("id").notNull().primaryKey(),
+    projectId: integer("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: varchar("name").notNull(),
+    producerId: integer("producerId")
+      .notNull()
+      .references(() => producers.id),
+    txQueueUrl: varchar("txQueueUrl"),
+    logFetcherArn: varchar("logFetcherArn"),
+    orchestratorArn: varchar("orchestratorArn"),
+    handlerArn: varchar("handlerArn"),
+    handlerLogGroup: varchar("handlerLogGroup"),
+    handlerToTxQueueEventSourceMappingUuid: varchar(
+      "handlerToTxQueueEventSourceMappingUuid"
+    ),
+    orchestratorSubscriptionArn: varchar("orchestratorSubscriptionArn"),
+  },
+  (handler) => ({
+    projectIdName: unique().on(handler.name, handler.projectId),
+  })
+);
+
+export const handlerRelations = relations(handler, ({ one }) => ({
+  project: one(projects, {
+    fields: [handler.projectId],
+    references: [projects.id],
+  }),
+  producer: one(producers, {
+    fields: [handler.producerId],
+    references: [producers.id],
+  }),
+}));
+
+export const deployment = createTable(
+  "deployment",
+  {
+    id: serial("id").notNull().primaryKey(),
+    handlerId: integer("handlerId")
+      .notNull()
+      .references(() => handler.id, { onDelete: "cascade" }),
+    ecsTaskId: varchar("ecsTaskId", { length: 255 }).notNull(),
+  },
+  (deployment) => ({
+    handlerIdIdx: index("deployment_handlerId_idx").on(deployment.handlerId),
+  })
+);
+
+export const deploymentsRelations = relations(deployment, ({ one }) => ({
+  handler: one(handler, {
+    fields: [deployment.handlerId],
+    references: [handler.id],
+  }),
+}));
+
+export const producers = createTable(
+  "producer",
+  {
+    id: serial("id").notNull().primaryKey(),
+    altId: varchar("altId", { length: 255 })
+      .notNull()
+      .unique()
+      .$defaultFn(() => v4()),
+    pollingUrl: varchar("pollingUrl", { length: 255 }).notNull(),
+    wsUrl: varchar("wsUrl", { length: 255 }).notNull(),
+    userId: varchar("userId").references(() => users.id),
+    serviceArn: varchar("serviceArn", { length: 255 }),
+    topicArn: varchar("topicArn", { length: 255 }),
+    name: varchar("name").notNull(),
+  },
+  (producers) => ({
+    uniqueName: unique().on(producers.userId, producers.name),
+    userIdIdx: index("producers_userId_idx").on(producers.userId),
+  })
+);
+
+export const producersRelations = relations(producers, ({ one, many }) => ({
+  user: one(users, { fields: [producers.userId], references: [users.id] }),
+  handlers: many(handler),
+}));

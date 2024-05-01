@@ -1,15 +1,19 @@
 import { RunTaskCommand } from "@aws-sdk/client-ecs";
+import { env } from "~/env";
 import { ecs } from "~/lib/server/aws";
+import { db } from "~/server/db";
+import schema from "~/server/db/schema";
 
 type TriggerBuildOptions = {
   deploymentId: string;
-  githubAccessToken: string;
-  githubUsername: string;
-  githubRepo: string;
-  githubBranch: string;
+  projectId: number;
+  handlerId: number;
+  pollingUrl: string;
+  chainSns: string;
+  mode: "new" | "update";
 };
 
-export async function triggerBuild(options: TriggerBuildOptions) {
+export async function createDeployment(options: TriggerBuildOptions) {
   const command = new RunTaskCommand({
     cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
     taskDefinition:
@@ -26,41 +30,38 @@ export async function triggerBuild(options: TriggerBuildOptions) {
         {
           name: "builder",
           environment: [
+            { name: "MODE", value: options.mode },
+            {
+              name: "PROJECT_ID",
+              value: options.projectId.toString(),
+            },
+            {
+              name: "HANDLER_ID",
+              value: options.handlerId.toString(),
+            },
+            {
+              name: "SOURCE_BUCKET",
+              value: "ingest-build-outputs",
+            },
+            {
+              name: "SOURCE_PREFIX",
+              value: `code/${options.projectId}/${options.handlerId}`,
+            },
+            {
+              name: "POLLING_URL",
+              value: options.pollingUrl,
+            },
+            {
+              name: "CHAIN_SNS",
+              value: options.chainSns,
+            },
+            {
+              name: "DATABASE_URL",
+              value: env.DATABASE_URL,
+            },
             {
               name: "DEPLOYMENT_ID",
               value: options.deploymentId,
-            },
-            {
-              name: "GITHUB_ACCESS_TOKEN",
-              value: options.githubAccessToken,
-            },
-            {
-              name: "GITHUB_REF",
-              value: options.githubBranch,
-            },
-            {
-              name: "GITHUB_OWNER",
-              value: options.githubUsername,
-            },
-            {
-              name: "GITHUB_REPO",
-              value: options.githubRepo,
-            },
-            {
-              name: "SRC_DIR",
-              value: "/build/src",
-            },
-            {
-              name: "OUT_DIR",
-              value: "/build/out",
-            },
-            {
-              name: "ARCHIVE_DIR",
-              value: "/build/archive",
-            },
-            {
-              name: "INGEST_API",
-              value: "https://relieved-allegedly-turkey.ngrok-free.app",
             },
           ],
         },
@@ -68,7 +69,19 @@ export async function triggerBuild(options: TriggerBuildOptions) {
     },
   });
 
+  const output = await ecs.send(command);
+
+  const task = output.tasks?.at(0);
+  if (!task || !task.taskArn) {
+    throw new Error("Task did not start");
+  }
+
+  await db.insert(schema.deployment).values({
+    handlerId: options.handlerId,
+    ecsTaskId: task.taskArn,
+  });
+
   return {
-    ecsOutput: await ecs.send(command),
+    ecsOutput: output,
   };
 }

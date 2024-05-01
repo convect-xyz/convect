@@ -1,21 +1,19 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure } from "~/server/api/trpc";
-import { octokitMiddleware } from "../../middleware";
 
 export const getProjectById = protectedProcedure
   .input(
     z.object({
-      id: z.string(),
+      id: z.coerce.number(),
     }),
   )
   .output(
     z.object({
-      id: z.string(),
-      repositoryId: z.number(),
+      id: z.number(),
+      name: z.string(),
     }),
   )
-  .use(octokitMiddleware)
   .query(async ({ ctx, input }) => {
     const project = await ctx.db.query.projects.findFirst({
       where(fields, { eq, and }) {

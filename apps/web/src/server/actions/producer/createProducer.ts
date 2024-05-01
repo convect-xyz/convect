@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { Session } from "next-auth";
 import { ecs, sns } from "~/lib/server/aws";
 import { Context } from "~/server/api/trpc";
-import { producers } from "~/server/db/schema";
+import schema from "~/server/db/schema";
 
 type CreateProducerParams = Context & {
   id: string;
@@ -19,12 +19,13 @@ const PRODUCER_CLUSTER = "arn:aws:ecs:eu-west-1:730335604495:cluster/mainnet";
 
 export async function createProducer(params: CreateProducerParams) {
   const producer = await params.db
-    .insert(producers)
+    .insert(schema.producers)
     .values({
       altId: params.id,
       wsUrl: params.wsUrl,
       pollingUrl: params.pollingUrl,
       userId: params.session.user.id,
+      name: "",
     })
     .returning()
     .then((r) => r.at(0)!);
@@ -36,12 +37,12 @@ export async function createProducer(params: CreateProducerParams) {
   });
 
   await params.db
-    .update(producers)
+    .update(schema.producers)
     .set({
       topicArn,
       serviceArn,
     })
-    .where(eq(producers.id, producer.id));
+    .where(eq(schema.producers.id, producer.id));
 
   return producer;
 }

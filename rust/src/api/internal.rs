@@ -7,7 +7,7 @@ use web3::{
     Web3,
 };
 
-use super::IngestTransaction;
+use super::{IngestLog, IngestTransaction};
 use crate::manifest::{LogConfig, TransactionConfig};
 
 pub struct GetTransactionResult {
@@ -70,8 +70,9 @@ pub async fn get_ingest_transactions(
             tx_indexes.insert(tx_hash.clone(), txs.len());
 
             txs.push(IngestTransaction {
-                label: tx_config.id.to_string(),
+                label: tx_config.label.to_string(),
                 block_number: log.block_number.unwrap().as_u64(),
+                block_hash: format!("{:#x}", log.block_hash.unwrap()),
                 transaction_index: log.transaction_index.unwrap().as_u64(),
                 transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
                 logs: HashMap::new(),
@@ -101,7 +102,13 @@ pub async fn get_ingest_transactions(
         }
 
         let mut logs_for_log_type = transaction.logs.get(&log_config.name).unwrap().clone();
-        logs_for_log_type.push(log);
+        logs_for_log_type.push(IngestLog {
+            address: format!("{:#x}", log.address),
+            topics: log.topics.iter().map(|t| format!("{:#x}", t)).collect(),
+            data: log.data,
+            log_index: log.log_index,
+            removed: log.removed,
+        });
 
         transaction
             .logs

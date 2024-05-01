@@ -33,7 +33,8 @@ export const env = createEnv({
     GITHUB_PRIVATE_KEY: z.string(),
     REPOSITORY_WEBHOOK_RECEIVER_URL: z.string(),
 
-    AWS_REGION: z.string()
+    AWS_REGION: z.string(),
+    AWS_ACCOUNT_ID: z.string()
   },
 
   /**
@@ -57,7 +58,8 @@ export const env = createEnv({
     GITHUB_PRIVATE_KEY: process.env.GITHUB_PRIVATE_KEY,
     REPOSITORY_WEBHOOK_RECEIVER_URL: process.env.REPOSITORY_WEBHOOK_RECEIVER_URL,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
-    AWS_REGION: process.env.AWS_REGION
+    AWS_REGION: process.env.AWS_REGION,
+    AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
