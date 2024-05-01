@@ -1,19 +1,37 @@
 use crate::{manifest::Manifest, syncer};
 use aws_config::BehaviorVersion;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, collections::HashMap, fmt::Debug};
+use std::{cmp::Ordering, collections::HashMap, fmt::Debug, ops::Deref};
 use uuid::Uuid;
-use web3::{futures::future::join_all, types::Log};
+use web3::{
+    futures::future::join_all,
+    types::{Bytes, Log, U256},
+};
 
 mod internal;
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct IngestTransaction {
     pub label: String,
+    #[serde(rename = "blockNumber")]
     pub block_number: u64,
+    #[serde(rename = "blockHash")]
+    pub block_hash: String,
+    #[serde(rename = "transactionIndex")]
     pub transaction_index: u64,
+    #[serde(rename = "transactionHash")]
     pub transaction_hash: String,
-    pub logs: HashMap<String, Vec<Log>>,
+    pub logs: HashMap<String, Vec<IngestLog>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct IngestLog {
+    pub address: String,
+    pub topics: Vec<String>,
+    pub data: Bytes,
+    #[serde(rename = "logIndex")]
+    pub log_index: Option<U256>,
+    pub removed: Option<bool>,
 }
 
 pub async fn get_ingest_transactions<'a>(
@@ -44,48 +62,106 @@ pub async fn get_ingest_transactions<'a>(
     Ok(result)
 }
 
-pub async fn upload_to_sqs(txs: &Vec<IngestTransaction>) {
-    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    let sqs_client = aws_sdk_sqs::Client::new(&config);
-    let syncer_config = syncer::load_config_from_env();
+#[derive(Serialize, Deserialize)]
+pub struct Batch {
+    pub bucket: String,
+    pub prefix: String,
+}
 
-    let mut i = 0;
-    while i < txs.len() {
-        let mut group = Vec::new();
-        let mut group_byte_size = 0;
+#[derive(Serialize, Deserialize)]
+pub enum SQSPayload {
+    Transactions(Vec<IngestTransaction>),
+    Batch(Batch),
+}
 
-        // Group each entry into max 256kb entries.
-        while i < txs.len() {
-            let current_tx = &txs[i];
+#[derive(Serialize, Deserialize)]
+struct TxPayload {
+    #[serde(rename(serialize = "type"))]
+    _type: String,
+    data: Vec<IngestTransaction>,
+}
 
-            // check that tx size will not make this entry over 256kb
-            let tx_size = serde_json::to_string(current_tx).unwrap().len();
-            if tx_size + group_byte_size > 250000 {
-                break;
+#[derive(Serialize, Deserialize)]
+struct BatchPayload {
+    #[serde(rename(serialize = "type"))]
+    _type: String,
+    data: Batch,
+}
+
+pub async fn upload_to_sqs(
+    sqs_client: &aws_sdk_sqs::Client,
+    queue_url: String,
+    payload: SQSPayload,
+) {
+    match payload {
+        SQSPayload::Transactions(txs) => {
+            let mut i = 0;
+            while i < txs.len() {
+                let mut group = Vec::new();
+                let mut group_byte_size = 0;
+
+                // Group each entry into max 256kb entries.
+                while i < txs.len() {
+                    let current_tx = &txs[i];
+
+                    // check that tx size will not make this entry over 256kb
+                    let tx_size = serde_json::to_string(current_tx).unwrap().len();
+                    if tx_size + group_byte_size > 230000 {
+                        break;
+                    }
+
+                    // add tx size to group size and add tx to group
+                    group_byte_size += tx_size;
+                    group.push(current_tx.clone());
+
+                    // next result
+                    i += 1;
+                }
+
+                let id = Uuid::new_v4();
+
+                let sqs_res = sqs_client
+                    .send_message()
+                    .queue_url(queue_url.to_owned())
+                    .message_body(
+                        serde_json::to_string(&TxPayload {
+                            _type: String::from("non-batch"),
+                            data: group.clone(),
+                        })
+                        .unwrap(),
+                    )
+                    .message_group_id("main")
+                    .message_deduplication_id(id)
+                    .send()
+                    .await;
+
+                match sqs_res {
+                    Ok(_) => {}
+                    Err(e) => panic!("Upload Result: {:?}", e),
+                }
             }
-
-            // add tx size to group size and add tx to group
-            group_byte_size += tx_size;
-            group.push(current_tx);
-
-            // next result
-            i += 1;
         }
+        SQSPayload::Batch(payload) => {
+            let prefix = payload.prefix.clone();
+            let sqs_res = sqs_client
+                .send_message()
+                .queue_url(queue_url.to_owned())
+                .message_body(
+                    serde_json::to_string(&BatchPayload {
+                        _type: String::from("batch"),
+                        data: payload,
+                    })
+                    .unwrap(),
+                )
+                .message_group_id("main")
+                .message_deduplication_id(prefix)
+                .send()
+                .await;
 
-        let id = Uuid::new_v4();
-
-        let sqs_res = sqs_client
-            .send_message()
-            .queue_url(&syncer_config.tx_queue_url)
-            .message_body(serde_json::to_string(txs).unwrap())
-            .message_group_id("main")
-            .message_deduplication_id(id)
-            .send()
-            .await;
-
-        match sqs_res {
-            Ok(_) => {}
-            Err(e) => panic!("Upload Result: {:?}", e),
+            match sqs_res {
+                Ok(_) => {}
+                Err(e) => panic!("Upload Result: {:?}", e),
+            }
         }
     }
 }

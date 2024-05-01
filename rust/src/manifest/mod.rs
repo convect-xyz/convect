@@ -28,7 +28,7 @@ impl Manifest {
 
 #[derive(Deserialize)]
 pub struct TransactionConfig {
-    pub id: String,
+    pub label: String,
     pub log_configs: Vec<LogConfig>,
 }
 

@@ -32,6 +32,8 @@ aws-smithy-types = "1.1.8"
 prost = "0.12"
 prost-types = "0.12"
 base64 = "0.22.0"
+aws-sdk-dynamodb = "1.23.0"
+serde_dynamo = "4.2.14"
 
 [build-dependencies]
 prost-build = { version = "0.12.4" }

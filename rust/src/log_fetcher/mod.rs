@@ -8,9 +8,10 @@ pub mod invocation {
         pub end_block: u64,
     }
 
-    #[derive(Deserialize, Serialize, Debug)]
+    #[derive(Deserialize, Serialize, Debug, Clone)]
     pub struct InvocationResponse {
         pub s3_bucket: Option<String>,
         pub s3_prefix: Option<String>,
+        pub size: usize,
     }
 }

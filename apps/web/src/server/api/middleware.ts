@@ -1,7 +1,7 @@
 import { experimental_standaloneMiddleware } from "@trpc/server";
 import { InferSelectModel } from "drizzle-orm";
 import { Octokit } from "octokit";
-import { accounts } from "../db/schema";
+import { accounts } from "../../../../../packages/lib/src/db/schema";
 
 export const octokitMiddleware = experimental_standaloneMiddleware<{
   ctx: { githubAccount: InferSelectModel<typeof accounts> };

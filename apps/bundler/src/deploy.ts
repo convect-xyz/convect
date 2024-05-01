@@ -1,250 +1,105 @@
-import {
-  AddPermissionCommand,
-  CreateEventSourceMappingCommand,
-  CreateFunctionCommand,
-  LambdaClient,
-  PutFunctionConcurrencyCommand,
-} from "@aws-sdk/client-lambda";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { SNSClient, SubscribeCommand } from "@aws-sdk/client-sns";
-import {
-  CreateQueueCommand,
-  GetQueueAttributesCommand,
-  SQSClient,
-} from "@aws-sdk/client-sqs";
+import { Lambda } from "@aws-sdk/client-lambda";
+import { S3 } from "@aws-sdk/client-s3";
+import { SNS } from "@aws-sdk/client-sns";
+import { SQS } from "@aws-sdk/client-sqs";
+import { getDb, schema } from "@kayakthedev/lib";
+import { eq } from "drizzle-orm";
 import esbuild from "esbuild";
+import { backOff } from "exponential-backoff";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
-import { encodeEventTopics } from "viem";
 
-const lambdaClient = new LambdaClient({ region: "eu-west-1" });
-const snsClient = new SNSClient({ region: "eu-west-1" });
-const sqsClient = new SQSClient({ region: "eu-west-1" });
-const s3Client = new S3Client({ region: "eu-west-1" });
+const lambda = new Lambda({ region: "eu-west-1" });
+const sns = new SNS({ region: "eu-west-1" });
+const sqs = new SQS({ region: "eu-west-1" });
+const s3 = new S3({ region: "eu-west-1" });
+const db = getDb({
+  dbUrl: process.env.DATABASE_URL!,
+});
 
-async function createFunctions(options: {
-  file: string;
-  zipBucket: string;
-  zipKey: string;
-  manifestBucket: string;
-  manifestKey: string;
-}) {
-  const { file, zipBucket, zipKey, manifestBucket, manifestKey } = options;
+const MODE = process.env.MODE as "new" | "update";
+const CURR_DIR = process.env.CURR_DIR!;
+const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
+const PROJECT_ID = process.env.PROJECT_ID!;
+const HANDLER_ID = process.env.HANDLER_ID!;
+const SOURCE_BUCKET = process.env.SOURCE_BUCKET!;
+const SOURCE_PREFIX = process.env.SOURCE_PREFIX!;
+const POLLING_URL = process.env.POLLING_URL!;
+const CHAIN_SNS = process.env.CHAIN_SNS!;
 
-  const { default: pipeline } = await import(file);
-  const chainId = pipeline.chain.id;
+const MANIFEST_BUCKET = "ingest-fetch-logs";
+const MANIFEST_PREFIX = path.join(
+  "manifests",
+  PROJECT_ID,
+  HANDLER_ID + ".json"
+);
+const CREATE_PARAMS_BUCKET = "ingest-fetch-logs";
+const CREATE_PARAMS_PREFIX = path.join(
+  "create-params",
+  DEPLOYMENT_ID + ".json"
+);
+const HANDLER_SRC_FILE = path.join(CURR_DIR, SOURCE_PREFIX + ".js");
+const BUNDLE_SRC_DIR = path.join(CURR_DIR, "bundle_src");
+const BUNDLE_OUT_DIR = path.join(CURR_DIR, "bundle_out");
+const RUNTIME_SRC_FILE = path.join(CURR_DIR, "runtime.js");
+const EVENTS_RUNTIME_SRC_FILE = path.join(CURR_DIR, "events-runtime.js");
+const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
+const EVENTS_OUT_FILE = path.join(BUNDLE_OUT_DIR, "events-index.js");
 
-  const producerConfig = await getProducerConfig(chainId);
-  const pipelineId = `${process.env.DEPLOYMENT_ID}-${path.parse(file).base.split(".")[0]}`;
+main();
 
-  const transactionQueue = await sqsClient.send(
-    new CreateQueueCommand({
-      QueueName: `tx-queue-${process.env.DEPLOYMENT_ID}-${path.parse(file).base.split(".")[0]}.fifo`,
-      Attributes: {
-        FifoQueue: "true",
-        VisibilityTimeout: "250",
-      },
-    })
-  );
-
-  if (!transactionQueue.QueueUrl) {
-    throw new Error("Queue URL is undefined");
+async function main() {
+  await downloadFile();
+  await prepareBundle();
+  await zipLambda();
+  await zipEventsLambda();
+  if (MODE === "new") {
+    const { eventsLambdaArn } = await allocateResources();
+    await initialiseHandler({
+      eventsLambdaArn,
+    });
   }
 
-  const logFetcher = await lambdaClient.send(
-    new CreateFunctionCommand({
-      FunctionName: `log-fetcher-${process.env.DEPLOYMENT_ID}-${path.parse(file).base.split(".")[0]}`,
-      Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-      Code: {
-        S3Bucket: "ingest-functions",
-        S3Key: "log-fetcher.zip",
-      },
-      Environment: {
-        Variables: {
-          TRANSACTION_QUEUE_URL: transactionQueue.QueueUrl!,
-          MANIFEST_BUCKET: manifestBucket,
-          MANIFEST_PREFIX: manifestKey,
-          NODE_ENDPOINT: producerConfig.pollingUrl,
-          PIPELINE_ID: pipelineId,
-        },
-      },
-      Timeout: 200,
-      Handler: "bootstrap",
-      PackageType: "Zip",
-      Runtime: "provided.al2023",
-    })
-  );
-
-  if (!logFetcher.FunctionArn) {
-    throw new Error("Function ARN is undefined");
+  if (MODE === "update") {
+    await updateFunctionCode();
   }
-
-  const createOrchestrator = await lambdaClient.send(
-    new CreateFunctionCommand({
-      FunctionName: `${process.env.DEPLOYMENT_ID}-${path.parse(file).base.split(".")[0]}`,
-      Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-      Code: {
-        S3Bucket: "ingest-functions",
-        S3Key: "orchestrator.zip",
-      },
-      Environment: {
-        Variables: {
-          TRANSACTION_QUEUE_URL: transactionQueue.QueueUrl!,
-          LOG_FETCHER_LAMBDA_ARN: logFetcher.FunctionArn,
-          MANIFEST_BUCKET: manifestBucket,
-          MANIFEST_PREFIX: manifestKey,
-          NODE_ENDPOINT: producerConfig.pollingUrl,
-          PIPELINE_ID: pipelineId,
-        },
-      },
-      Timeout: 200,
-      Handler: "bootstrap",
-      PackageType: "Zip",
-      Runtime: "provided.al2023",
-    })
-  );
-
-  if (!createOrchestrator.FunctionArn) {
-    throw new Error("Function ARN is undefined");
-  }
-
-  const concurrency = await lambdaClient.send(
-    new PutFunctionConcurrencyCommand({
-      FunctionName: createOrchestrator.FunctionArn,
-      ReservedConcurrentExecutions: 1,
-    })
-  );
-
-  const handlerLambda = await lambdaClient.send(
-    new CreateFunctionCommand({
-      FunctionName: `handler-${process.env.DEPLOYMENT_ID}-${path.parse(file).base.split(".")[0]}`,
-      Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-      Code: {
-        S3Bucket: zipBucket,
-        S3Key: zipKey,
-      },
-      Environment: {},
-      Timeout: 200,
-      Handler: "index.handler",
-      PackageType: "Zip",
-      Runtime: "nodejs20.x",
-    })
-  );
-
-  if (!handlerLambda.FunctionArn) {
-    throw new Error("Function ARN is undefined");
-  }
-
-  let attributes = await sqsClient.send(
-    new GetQueueAttributesCommand({
-      QueueUrl: transactionQueue.QueueUrl,
-      AttributeNames: ["QueueArn"],
-    })
-  );
-
-  const createQueueSub = await lambdaClient.send(
-    new CreateEventSourceMappingCommand({
-      EventSourceArn: attributes.Attributes!.QueueArn,
-      FunctionName: handlerLambda.FunctionArn,
-      BatchSize: 10,
-    })
-  );
-
-  const permissionResponse = await lambdaClient.send(
-    new AddPermissionCommand({
-      FunctionName: createOrchestrator.FunctionArn,
-      StatementId: `${process.env.DEPLOYMENT_ID}-${path.parse(file).base.split(".")[0]}`,
-      Action: "lambda:InvokeFunction",
-      Principal: "sns.amazonaws.com",
-      SourceArn: `arn:aws:sns:eu-west-1:730335604495:${chainId}`,
-    })
-  );
-
-  const createSubscriptionResponse = await snsClient.send(
-    new SubscribeCommand({
-      TopicArn: `arn:aws:sns:eu-west-1:730335604495:${chainId}`,
-      Protocol: "lambda",
-      Endpoint: createOrchestrator.FunctionArn,
-    })
-  );
+  process.exit(0);
 }
 
-async function createManifest(file: string) {
-  const { default: pipeline } = await import(file);
+async function downloadFile() {
+  const object = await s3.getObject({
+    Bucket: SOURCE_BUCKET,
+    Key: SOURCE_PREFIX,
+  });
 
-  const manifest = {
-    chain: {
-      url: "https://eth-mainnet.g.alchemy.com/v2/XDvWw6uVqbY0ZR8gKK18NtSc7rJnsNoB",
-    },
-    tx_configs: Object.entries(pipeline.transactions).map(
-      ([label, transaction_config]: [string, any]) => ({
-        label,
-        log_configs: Object.entries(transaction_config._logs).map(
-          ([name, log_config]: [string, any]) => {
-            console.log(log_config._event);
-            return {
-              name,
-              address: log_config._origin,
-              topics: encodeEventTopics({ abi: [log_config._event] }).map(
-                (topic) => topic.substring(2)
-              ),
-            };
-          }
-        ),
-      })
-    ),
-  };
-
-  const bucket = "ingest-fetch-logs";
-  const key = path.join("manifests", path.basename(file) + ".json");
-  await s3Client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: JSON.stringify(manifest),
-    })
-  );
-  return { bucket, key };
-}
-
-async function getProducerConfig(id: string) {
-  const r = await fetch(
-    process.env.INGEST_API! + "/api/external/producer/" + id
-  );
-  const data = await r.json();
-  return data as {
-    pollingUrl: string;
-  };
-}
-
-async function zipLambda(file: string) {
-  const fileName = path.basename(file);
-
-  const toBundleDir = path.join(process.env.CURR_DIR!, fileName, "to_bundle");
-  const bundleOutDir = path.join(process.env.CURR_DIR!, fileName, "out");
-
-  fs.mkdirSync(toBundleDir, {
+  fs.mkdirSync(HANDLER_SRC_FILE.split("/").slice(0, -1).join("/"), {
     recursive: true,
   });
-  fs.mkdirSync(bundleOutDir, { recursive: true });
+  fs.writeFileSync(HANDLER_SRC_FILE, await object.Body?.transformToString()!);
+}
 
-  fs.copyFileSync(file, path.join(toBundleDir, "pipeline.js"));
-  fs.copyFileSync(
-    path.join(process.env.CURR_DIR!, "runtime.js"),
-    path.join(toBundleDir, "index.js")
-  );
+async function prepareBundle() {
+  fs.mkdirSync(BUNDLE_OUT_DIR, { recursive: true });
+  fs.mkdirSync(BUNDLE_SRC_DIR, { recursive: true });
+
+  fs.copyFileSync(HANDLER_SRC_FILE, path.join(BUNDLE_SRC_DIR, "pipeline.js"));
+}
+
+async function zipLambda() {
+  fs.copyFileSync(RUNTIME_SRC_FILE, path.join(BUNDLE_SRC_DIR, "index.js"));
 
   await esbuild.build({
-    entryPoints: [path.join(toBundleDir, "index.js")],
+    entryPoints: [path.join(BUNDLE_SRC_DIR, "index.js")],
     bundle: true,
-    outfile: path.join(bundleOutDir, "index.js"),
+    minify: true,
+    outfile: BUNDLE_OUT_FILE,
     nodePaths: [process.env.NODE_PATH!],
     target: "node10.4",
     platform: "node",
   });
 
-  const content = fs.readFileSync(path.join(bundleOutDir, "index.js"));
+  const content = fs.readFileSync(BUNDLE_OUT_FILE);
 
   const zip = new JSZip();
   zip.file("index.js", content.toString());
@@ -252,48 +107,235 @@ async function zipLambda(file: string) {
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
   const bucket = "ingest-build-outputs";
-  const key = path.join(
-    process.env.DEPLOYMENT_ID!,
-    path.basename(file) + ".zip"
-  );
-  await s3Client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: zipData,
-    })
+  const key = path.join("outputs", PROJECT_ID, HANDLER_ID + ".zip");
+
+  await s3.putObject({
+    Bucket: bucket,
+    Key: key,
+    Body: zipData,
+  });
+}
+
+async function zipEventsLambda() {
+  fs.copyFileSync(
+    EVENTS_RUNTIME_SRC_FILE,
+    path.join(BUNDLE_SRC_DIR, "events-index.js")
   );
 
+  await esbuild.build({
+    entryPoints: [path.join(BUNDLE_SRC_DIR, "events-index.js")],
+    bundle: true,
+    minify: true,
+    outfile: EVENTS_OUT_FILE,
+    nodePaths: [process.env.NODE_PATH!],
+    target: "node10.4",
+    platform: "node",
+  });
+
+  const content = fs.readFileSync(EVENTS_OUT_FILE);
+
+  const zip = new JSZip();
+  zip.file("index.js", content.toString());
+  const zipData = await zip.generateAsync({ type: "uint8array" });
+
+  const bucket = "ingest-build-outputs";
+  const key = path.join("outputs", PROJECT_ID, HANDLER_ID + "-events.zip");
+
+  await s3.putObject({
+    Bucket: bucket,
+    Key: key,
+    Body: zipData,
+  });
+}
+async function allocateResources() {
+  const transactionQueue = await sqs.createQueue({
+    QueueName: `tx-queue-${PROJECT_ID}-${HANDLER_ID}.fifo`,
+    Attributes: {
+      FifoQueue: "true",
+      VisibilityTimeout: "250",
+    },
+  });
+
+  if (!transactionQueue.QueueUrl) {
+    throw new Error("Queue URL is undefined");
+  }
+
+  const logFetcher = await lambda.createFunction({
+    FunctionName: `log-fetcher-${PROJECT_ID}-${HANDLER_ID}`,
+    Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+    Code: {
+      S3Bucket: "ingest-functions",
+      S3Key: "log-fetcher.zip",
+    },
+    Environment: {
+      Variables: {
+        TRANSACTION_QUEUE_URL: transactionQueue.QueueUrl!,
+        MANIFEST_BUCKET,
+        MANIFEST_PREFIX,
+        NODE_ENDPOINT: POLLING_URL,
+        PIPELINE_ID: `${PROJECT_ID}-${HANDLER_ID}`,
+      },
+    },
+    Timeout: 200,
+    Handler: "bootstrap",
+    PackageType: "Zip",
+    Runtime: "provided.al2023",
+  });
+
+  if (!logFetcher.FunctionArn) {
+    throw new Error("Function ARN is undefined");
+  }
+
+  const createOrchestrator = await lambda.createFunction({
+    FunctionName: `orchestrator-${PROJECT_ID}-${HANDLER_ID}`,
+    Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+    Code: {
+      S3Bucket: "ingest-functions",
+      S3Key: "orchestrator.zip",
+    },
+    Environment: {
+      Variables: {
+        TRANSACTION_QUEUE_URL: transactionQueue.QueueUrl!,
+        LOG_FETCHER_LAMBDA_ARN: logFetcher.FunctionArn,
+        MANIFEST_BUCKET,
+        MANIFEST_PREFIX,
+        NODE_ENDPOINT: POLLING_URL,
+        PIPELINE_ID: `${PROJECT_ID}-${HANDLER_ID}`,
+        HANDLER_ID: HANDLER_ID,
+        PROJECT_ID: PROJECT_ID,
+      },
+    },
+    Timeout: 200,
+    Handler: "bootstrap",
+    PackageType: "Zip",
+    Runtime: "provided.al2023",
+  });
+
+  if (!createOrchestrator.FunctionArn) {
+    throw new Error("Function ARN is undefined");
+  }
+
+  const concurrency = await lambda.putFunctionConcurrency({
+    FunctionName: createOrchestrator.FunctionArn,
+    ReservedConcurrentExecutions: 1,
+  });
+
+  const handlerLambda = await lambda.createFunction({
+    FunctionName: `handler-${PROJECT_ID}-${HANDLER_ID}`,
+    Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+    Code: {
+      S3Bucket: "ingest-build-outputs",
+      S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + ".zip"),
+    },
+    Environment: {},
+    Timeout: 200,
+    Handler: "index.handler",
+    PackageType: "Zip",
+    Runtime: "nodejs20.x",
+  });
+
+  if (!handlerLambda.FunctionArn) {
+    throw new Error("Function ARN is undefined");
+  }
+
+  const eventsLambda = await lambda.createFunction({
+    FunctionName: `events-${PROJECT_ID}-${HANDLER_ID}`,
+    Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+    Code: {
+      S3Bucket: "ingest-build-outputs",
+      S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + "-events.zip"),
+    },
+    Environment: {
+      Variables: {
+        INGEST_DEPLOYMENT_ID: DEPLOYMENT_ID,
+      },
+    },
+    Timeout: 200,
+    Handler: "index.handler",
+    PackageType: "Zip",
+    Runtime: "nodejs20.x",
+  });
+
+  if (!handlerLambda.FunctionArn) {
+    throw new Error("Function ARN is undefined");
+  }
+
+  let attributes = await sqs.getQueueAttributes({
+    QueueUrl: transactionQueue.QueueUrl,
+    AttributeNames: ["QueueArn"],
+  });
+
+  const createQueueSub = await lambda.createEventSourceMapping({
+    EventSourceArn: attributes.Attributes!.QueueArn,
+    FunctionName: handlerLambda.FunctionArn,
+    BatchSize: 10,
+  });
+
+  const permissionResponse = await lambda.addPermission({
+    FunctionName: createOrchestrator.FunctionArn,
+    StatementId: `${PROJECT_ID}-${HANDLER_ID}`,
+    Action: "lambda:InvokeFunction",
+    Principal: "sns.amazonaws.com",
+    SourceArn: CHAIN_SNS,
+  });
+
+  const createSubscriptionResponse = await sns.subscribe({
+    TopicArn: CHAIN_SNS,
+    Protocol: "lambda",
+    Endpoint: createOrchestrator.FunctionArn,
+  });
+
+  await db
+    .update(schema.handler)
+    .set({
+      txQueueUrl: transactionQueue.QueueUrl!,
+      logFetcherArn: logFetcher.FunctionArn!,
+      orchestratorArn: createOrchestrator.FunctionArn!,
+      handlerArn: handlerLambda.FunctionArn!,
+      handlerLogGroup: handlerLambda.LoggingConfig!.LogGroup,
+      handlerToTxQueueEventSourceMappingUuid: createQueueSub.UUID!,
+      orchestratorSubscriptionArn: createSubscriptionResponse.SubscriptionArn!,
+    })
+    .where(eq(schema.handler.id, Number(HANDLER_ID)));
+
   return {
-    bucket,
-    key,
+    eventsLambdaArn: eventsLambda.FunctionArn!,
   };
 }
 
-async function main() {
-  const files = fs.readdirSync(process.env.OUT_DIR!);
-
-  const promises = [];
-  for (const file of files) {
-    const fullPath = path.join(process.env.OUT_DIR!, file);
-
-    promises.push(
-      (async () => {
-        const { bucket: zipBucket, key: zipKey } = await zipLambda(fullPath);
-        const { bucket: manifestBucket, key: manifestKey } =
-          await createManifest(fullPath);
-        await createFunctions({
-          file: fullPath,
-          zipBucket,
-          zipKey,
-          manifestBucket,
-          manifestKey,
-        });
-      })()
-    );
-  }
-
-  await Promise.all(promises);
+async function updateFunctionCode() {
+  await lambda.updateFunctionCode({
+    FunctionName: `events-${PROJECT_ID}-${HANDLER_ID}`,
+    S3Bucket: "ingest-build-outputs",
+    S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + "-events.zip"),
+  });
 }
 
-main();
+async function initialiseHandler(opts: { eventsLambdaArn: string }) {
+  await backOff(
+    async () => {
+      const { Payload } = await lambda.invoke({
+        FunctionName: opts.eventsLambdaArn,
+        Payload: JSON.stringify({
+          type: "Create",
+        }),
+      });
+
+      if (!Payload) return;
+
+      const result = Buffer.from(Payload).toString();
+
+      await s3.putObject({
+        Bucket: CREATE_PARAMS_BUCKET,
+        Key: CREATE_PARAMS_PREFIX,
+        Body: result,
+      });
+    },
+    {
+      numOfAttempts: 3,
+      delayFirstAttempt: true,
+      startingDelay: 1000,
+      maxDelay: 3000,
+    }
+  );
+}

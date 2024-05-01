@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/index.ts",
+  "type": "module",
   "scripts": {
     "start": "bun src/bundle.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -15,6 +16,7 @@
     "@aws-sdk/client-s3": "^3.549.0",
     "@aws-sdk/client-sns": "^3.549.0",
     "@aws-sdk/client-sqs": "^3.549.0",
+    "@kayakthedev/lib": "*",
     "@types/aws-lambda": "^8.10.134",
     "@vercel/kv": "^1.0.1",
     "async-lock": "^1.4.1",
@@ -22,6 +24,7 @@
     "bullmq": "^5.1.8",
     "dotenv": "^16.3.1",
     "drizzle-orm": "^0.29.3",
+    "exponential-backoff": "^3.1.1",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "octokit": "^3.1.2",

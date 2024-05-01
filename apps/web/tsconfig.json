@@ -49,6 +49,6 @@
     "**/*.cjs",
     "**/*.js",
     ".next/types/**/*.ts"
-  ],
+, "../../packages/lib/drizzle.config.ts"  ],
   "exclude": ["node_modules"]
 }
