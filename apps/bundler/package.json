@@ -12,10 +12,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.569.0",
     "@aws-sdk/client-lambda": "^3.549.0",
     "@aws-sdk/client-s3": "^3.549.0",
     "@aws-sdk/client-sns": "^3.549.0",
     "@aws-sdk/client-sqs": "^3.549.0",
+    "@aws-sdk/lib-dynamodb": "^3.569.0",
     "@kayakthedev/lib": "*",
     "@types/aws-lambda": "^8.10.134",
     "@vercel/kv": "^1.0.1",

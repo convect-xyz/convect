@@ -1,4 +1,5 @@
 "use client";
+
 import { PlusCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -16,12 +17,12 @@ import { api } from "~/trpc/react";
 import { NewProjectDialog } from "./NewProject";
 
 export function ProjectsDropdown() {
-  const [projects, _] = api.project.getProjects.useSuspenseQuery();
+  const { data: projects } = api.project.getProjects.useQuery();
   const { projectId } = useParams<{ projectId?: string }>();
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const router = useRouter();
 
-  const currentProject = projects.find((p) => projectId === p.id.toString());
+  const currentProject = projects?.find((p) => projectId === p.id.toString());
 
   return (
     <>

@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "db:push": "drizzle-kit push:pg",
+    "db:migrate": "drizzle-kit generate:pg",
     "db:studio": "drizzle-kit studio",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

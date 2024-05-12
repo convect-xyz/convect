@@ -10,6 +10,7 @@ type TriggerBuildOptions = {
   handlerId: number;
   pollingUrl: string;
   chainSns: string;
+  envs: Array<{ key: string; value: string }>;
   mode: "new" | "update";
 };
 
@@ -62,6 +63,10 @@ export async function createDeployment(options: TriggerBuildOptions) {
             {
               name: "DEPLOYMENT_ID",
               value: options.deploymentId,
+            },
+            {
+              name: "HANDLER_ENVS",
+              value: JSON.stringify(options.envs),
             },
           ],
         },

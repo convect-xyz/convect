@@ -2,15 +2,15 @@ FROM --platform=linux/amd64 lukemathwalker/cargo-chef:latest as chef
 WORKDIR /app
 
 FROM --platform=linux/amd64 chef AS planner
-COPY ./proto ./proto
+# COPY ./proto ./proto
 COPY ./rust/Cargo.toml ./rust/Cargo.lock ./rust/
 COPY ./rust/src ./rust/src
 WORKDIR /app/rust
 RUN cargo chef prepare --bin=syncer
 
 FROM --platform=linux/amd64 chef AS builder
-RUN apt-get update && apt-get install -y protobuf-compiler
-COPY ./proto ./proto
+# RUN apt-get update && apt-get install -y protobuf-compiler
+# COPY ./proto ./proto
 COPY --from=planner /app/rust/recipe.json ./rust/recipe.json
 WORKDIR /app/rust
 RUN cargo chef cook --release --bin=syncer

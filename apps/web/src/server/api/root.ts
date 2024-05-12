@@ -3,10 +3,15 @@ import { createTRPCRouter } from "~/server/api/trpc";
 import { getBranches } from "./routers/github/getBranches";
 import { getInstallations } from "./routers/github/getInstallations";
 import { getRepositories } from "./routers/github/getRepositories";
+import { addEnv } from "./routers/handler/addEnv";
 import { createHandler } from "./routers/handler/create";
 import { deleteHandler } from "./routers/handler/delete";
+import { deleteEnv } from "./routers/handler/deleteEnv";
+import { getEnvs } from "./routers/handler/getEnvs";
 import { getHandler } from "./routers/handler/getHandler";
 import { getHandlers } from "./routers/handler/getHandlers";
+import { getLogs } from "./routers/handler/getLogs";
+import { updateEnv } from "./routers/handler/updateEnv";
 import { createProducer } from "./routers/producers/create";
 import { getProducers } from "./routers/producers/getProducers";
 import { createProject } from "./routers/project/create";
@@ -24,6 +29,11 @@ export const handlerRouter = createTRPCRouter({
   getHandlers,
   deleteHandler,
   getHandler,
+  getLogs,
+  getEnvs,
+  addEnv,
+  deleteEnv,
+  updateEnv,
 });
 
 type RouterInput = inferRouterInputs<typeof handlerRouter>;

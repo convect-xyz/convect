@@ -3,7 +3,7 @@ import {
   Signature,
   Signatures,
 } from "abitype/dist/types/human-readable/types/signatures";
-import { Address, Narrow } from "viem";
+import { Address, Narrow, encodeEventTopics } from "viem";
 
 type Error<T extends string | string[]> = T extends string
   ? [
@@ -35,9 +35,10 @@ export type S<
   );
 
 export class Log<
-  TAbiEvent extends AbiEvent,
+  TAbiEvent extends AbiEvent = AbiEvent,
   TOptional extends true | false = false,
 > {
+  private _topics: string[];
   private _event: TAbiEvent;
   private _origin: Address;
   private _optional: TOptional;
@@ -50,6 +51,9 @@ export class Log<
     this._event = options.event;
     this._optional = options.optional;
     this._origin = options.origin;
+    this._topics = encodeEventTopics({
+      abi: [options.event as AbiEvent],
+    });
   }
 
   optional() {

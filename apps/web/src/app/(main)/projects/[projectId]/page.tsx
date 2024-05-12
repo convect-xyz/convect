@@ -51,13 +51,6 @@ function HandlerRow(props: { handler: GetHandlersOutput["handlers"][number] }) {
       }
     >
       {props.handler.name}
-
-      <Button
-        variant="destructive"
-        onClick={() => deleteHandler({ handlerId: props.handler.id })}
-      >
-        Delete
-      </Button>
     </div>
   );
 }

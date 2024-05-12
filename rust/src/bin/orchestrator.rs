@@ -20,8 +20,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let sqs_client = aws_sdk_sqs::Client::new(&config);
     let ecs_client = aws_sdk_ecs::Client::new(&config);
 
-    let pipeline_id = env::var("PIPELINE_ID").expect("Pipeline ID not set");
-    let pipeline = Pipeline::load(pipeline_id).await;
+    let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
+    let pipeline = Pipeline::load(handler_id).await;
     let incoming_block: u64 = event
         .payload
         .records
@@ -34,12 +34,20 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     // Will not sync while sync task already in progress
     // TODO: this should be added to a DLQ
-    if pipeline.state.ne(&ingest::syncer::SyncState::IDLE) {
+    if pipeline.state().ne(&ingest::syncer::SyncState::IDLE) {
         return Ok(());
     }
 
+    // It is the responsibility of the ECS task to revert this status
+    pipeline
+        .update()
+        .set_state(ingest::syncer::SyncState::SYNCING)
+        .send()
+        .await
+        .expect("Failed to update pipeline");
+
     // If block diff is too great, trigger fargate to do the work
-    if incoming_block - pipeline.last_block.or(Some(0)).unwrap() > 1999 {
+    if incoming_block - pipeline.last_block().or(Some(0)).unwrap() > 1999 {
         return trigger_batch_sync_task(&ecs_client, &pipeline, incoming_block).await;
     }
 
@@ -47,13 +55,14 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     // We shouldn't need to update status here because max concurrency should be 1
     return sync_blocks(
         &sqs_client,
-        pipeline.last_block.map(|l| l + 1).or(Some(0)).unwrap(),
+        pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap(),
         incoming_block,
     )
     .and_then(|_| async {
         pipeline
             .update()
             .set_last_block(incoming_block)
+            .set_state(ingest::syncer::SyncState::IDLE)
             .send()
             .await
     })
@@ -65,14 +74,6 @@ async fn trigger_batch_sync_task(
     pipeline: &Pipeline,
     incoming_block: u64,
 ) -> Result<(), Error> {
-    // It is the responsibility of the ECS task to revert this status
-    pipeline
-        .update()
-        .set_state(ingest::syncer::SyncState::SYNCING)
-        .send()
-        .await
-        .expect("Failed to update pipeline");
-
     let _ = ecs_client
         .run_task()
         .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
@@ -98,7 +99,7 @@ async fn trigger_batch_sync_task(
                             create_key_value_pair(
                                 "START_BLOCK".to_string(),
                                 pipeline
-                                    .last_block
+                                    .last_block()
                                     .map(|l| l + 1)
                                     .or(Some(0))
                                     .unwrap()
@@ -121,8 +122,12 @@ async fn trigger_batch_sync_task(
                                 env::var("NODE_ENDPOINT").unwrap(),
                             ),
                             create_key_value_pair(
-                                "PIPELINE_ID".to_string(),
-                                env::var("PIPELINE_ID").unwrap(),
+                                "HANDLER_ID".to_string(),
+                                env::var("HANDLER_ID").unwrap(),
+                            ),
+                            create_key_value_pair(
+                                "PROJECT_ID".to_string(),
+                                env::var("PROJECT_ID").unwrap(),
                             ),
                         ]))
                         .build(),

@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   upload:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         binary: ["log-fetcher", "orchestrator"]
@@ -22,8 +22,6 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
-      - name: Install dependencies
-        run: brew tap cargo-lambda/cargo-lambda && brew install protobuf cargo-lambda
       - name: Build
         env:
           BIN: ${{ matrix.binary }}

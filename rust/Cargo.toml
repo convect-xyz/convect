@@ -4,12 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "log-fetcher"            # The name of the target.
-path = "src/bin/log_fetcher.rs" # The source file of the target.
+name = "log-fetcher"
+path = "src/bin/log_fetcher.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+flate2 = "1.0"
+ethers = { version = "2.0", features = ["ws"] }
+eyre = "0.6"
 aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
 aws-sdk-s3 = "1.22.0"
 aws-sdk-ecs = "1.20.0"
@@ -27,13 +30,16 @@ lambda_runtime = "0.11.1"
 openssl = { version = "0.10.35", features = ["vendored"] }
 uuid = { version = "1.8.0", features = ["v4", "v7", "js"] }
 aws-sdk-sns = "1.18.0"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "blocking"] }
 aws-smithy-types = "1.1.8"
-prost = "0.12"
-prost-types = "0.12"
+lambda-extension = "0.10.0"
+tracing-subscriber = "0.3.18"
+regex = "1.10.4"
+# prost = "0.12"
+# prost-types = "0.12"
 base64 = "0.22.0"
 aws-sdk-dynamodb = "1.23.0"
-serde_dynamo = "4.2.14"
+serde_dynamo = { version = "4.2.14", features = ["aws-sdk-dynamodb+1"] }
 
-[build-dependencies]
-prost-build = { version = "0.12.4" }
+# [build-dependencies]
+# prost-build = { version = "0.12.4" }

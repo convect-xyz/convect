@@ -8,11 +8,7 @@ use web3::{
 };
 
 use super::{IngestLog, IngestTransaction};
-use crate::manifest::{LogConfig, TransactionConfig};
-
-pub struct GetTransactionResult {
-    pub transactions: Vec<IngestTransaction>,
-}
+use crate::manifest::LogConfig;
 
 async fn get_logs_for_config(
     web3: &Web3<Http>,
@@ -42,19 +38,17 @@ async fn get_logs_for_config(
 pub async fn get_ingest_transactions(
     start_block: u64,
     end_block: u64,
-    tx_config: &TransactionConfig,
-) -> Result<GetTransactionResult, web3::Error> {
+    log_configs: &Vec<LogConfig>,
+) -> Result<Vec<IngestTransaction>, web3::Error> {
     let transport: Http = web3::transports::Http::new(
         env::var("NODE_ENDPOINT")
             .expect("NODE_ENDPOINT is undefined")
             .as_str(),
     )?;
     let web3: Web3<Http> = web3::Web3::new(transport);
-    let tx_config = tx_config;
 
     let log_futures = join_all(
-        tx_config
-            .log_configs
+        log_configs
             .iter()
             .map(|config| get_logs_for_config(&web3, config, start_block, end_block)),
     )
@@ -70,39 +64,18 @@ pub async fn get_ingest_transactions(
             tx_indexes.insert(tx_hash.clone(), txs.len());
 
             txs.push(IngestTransaction {
-                label: tx_config.label.to_string(),
                 block_number: log.block_number.unwrap().as_u64(),
                 block_hash: format!("{:#x}", log.block_hash.unwrap()),
                 transaction_index: log.transaction_index.unwrap().as_u64(),
                 transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
-                logs: HashMap::new(),
+                logs: Vec::new(),
             });
         }
 
         let tx_index = tx_indexes.get(&tx_hash).unwrap().clone();
         let mut transaction = txs.get(tx_index).unwrap().clone();
 
-        let log_config = tx_config
-            .log_configs
-            .iter()
-            .find(|log_config| {
-                let config_event_topic = log_config.topics.first().unwrap().to_ascii_lowercase();
-                let log_event_topic = format!("{:#x}", log.topics.first().unwrap())
-                    .strip_prefix("0x")
-                    .unwrap()
-                    .to_ascii_lowercase();
-
-                config_event_topic.eq(&log_event_topic)
-            })
-            .map(|config| config)
-            .unwrap();
-
-        if !transaction.logs.contains_key(&log_config.name) {
-            transaction.logs.insert(log_config.name.clone(), Vec::new());
-        }
-
-        let mut logs_for_log_type = transaction.logs.get(&log_config.name).unwrap().clone();
-        logs_for_log_type.push(IngestLog {
+        transaction.logs.push(IngestLog {
             address: format!("{:#x}", log.address),
             topics: log.topics.iter().map(|t| format!("{:#x}", t)).collect(),
             data: log.data,
@@ -110,12 +83,8 @@ pub async fn get_ingest_transactions(
             removed: log.removed,
         });
 
-        transaction
-            .logs
-            .insert(log_config.name.clone(), logs_for_log_type);
-
         txs[tx_index] = transaction;
     }
 
-    Ok(GetTransactionResult { transactions: txs })
+    Ok(txs)
 }

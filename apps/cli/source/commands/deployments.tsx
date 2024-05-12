@@ -47,7 +47,7 @@ export default function Upload({args}: Props) {
 
 		await esbuild.build({
 			entryPoints: [entrypoint],
-			minify: true,
+			minify: false,
 			target: 'node10.4',
 			platform: 'node',
 			outfile: outfile,
@@ -57,24 +57,32 @@ export default function Upload({args}: Props) {
 		const {
 			default: {default: pipeline},
 		} = await import(path.join(process.cwd(), outfile));
+
 		const manifest = {
-			tx_configs: Object.entries(pipeline.transactions).map(
-				([label, transaction_config]: [string, any]) => ({
-					label,
-					log_configs: Object.entries(transaction_config._logs).map(
-						([name, log_config]: [string, any]) => {
-							return {
-								name,
-								address: log_config._origin,
-								topics: encodeEventTopics({abi: [log_config._event]}).map(
-									topic => topic.substring(2),
-								),
-							};
-						},
-					),
-				}),
-			),
+			log_configs: [] as Array<any>,
 		};
+
+		const all_log_configs = Object.values(pipeline.transactions).flatMap(
+			(txConfig: any) => txConfig._logs,
+		);
+
+		const seen = new Set<string>();
+		for (const log_config of all_log_configs) {
+			let topics = encodeEventTopics({abi: [log_config._event]});
+			let event_signature = topics.at(0)!.substring(2);
+			let origin = log_config._origin;
+
+			let identifier = event_signature + '-' + origin;
+
+			if (seen.has(identifier)) continue;
+
+			manifest.log_configs.push({
+				address: origin,
+				topics: [event_signature],
+			});
+
+			seen.add(identifier);
+		}
 
 		fs.writeFileSync(outmanifest, JSON.stringify(manifest));
 
@@ -89,13 +97,11 @@ export default function Upload({args}: Props) {
 		bodyFormData.append('handler', fs.readFileSync(opts.outfile));
 		bodyFormData.append('manifest', fs.readFileSync(opts.outmanifest));
 
-		await axios.post(
-			'http://localhost:3000/api/cli/deployments',
-			bodyFormData,
-			{
+		await axios
+			.post('http://localhost:3000/api/cli/deployments', bodyFormData, {
 				headers: {'Content-Type': 'multipart/form-data'},
-			},
-		);
+			})
+			.catch(e => console.log(e.response.data));
 	}
 
 	async function start() {
