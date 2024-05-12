@@ -19,9 +19,8 @@ jobs:
         uses: jaxxstorm/action-install-gh-release@v1.9.0
         with:
           repo: cargo-lambda/cargo-lambda
-          tag: v0.14.0 # Remove this if you want to grab always the latest version
-          platform: linux # Other valid options: 'windows' or 'darwin'
-          arch: x86_64 # Other valid options for linux: 'aarch64'
+          platform: linux
+          arch: x86_64
       - uses: actions/checkout@master
       - name: Set up cargo cache
         uses: actions/cache@v3
@@ -42,8 +41,4 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
           AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          brew tap cargo-lambda/cargo-lambda
-          brew install cargo-lambda
-          sh ./rust/scripts/build.sh
+        run: sh ./rust/scripts/build.sh
