@@ -22,11 +22,7 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
-      - name: Install dependencies
-        run: |
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          brew tap cargo-lambda/cargo-lambda
-          brew install cargo-lambda
+
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
@@ -34,4 +30,8 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
           AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: sh ./rust/scripts/build.sh
+        run: |
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          brew tap cargo-lambda/cargo-lambda
+          brew install cargo-lambda
+          sh ./rust/scripts/build.sh
