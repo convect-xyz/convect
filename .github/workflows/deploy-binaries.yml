@@ -82,7 +82,7 @@ jobs:
         run: |
           cd rust
           cargo lambda build --release --extension --bin=extension
-          cargo lambda deploy --extension --binary-name=extension
+          cargo lambda deploy --extension --binary-name=extension extension-$VERSION
 
   build_images:
     runs-on: ubuntu-latest
