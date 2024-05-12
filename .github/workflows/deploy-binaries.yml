@@ -23,7 +23,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
       - name: Install dependencies
-        run: bash <(curl -L https://nixos.org/nix/install) --no-daemon && nix-env -iA nixpkgs.cargo-lambda
+        run: |
+          $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
+          brew tap cargo-lambda/cargo-lambda
+          brew install cargo-lambda
+
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
