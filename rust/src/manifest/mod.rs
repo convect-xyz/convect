@@ -3,7 +3,7 @@ use std::env;
 
 #[derive(Deserialize)]
 pub struct Manifest {
-    pub tx_configs: Vec<TransactionConfig>,
+    pub log_configs: Vec<LogConfig>,
 }
 
 impl Manifest {
@@ -27,14 +27,7 @@ impl Manifest {
 }
 
 #[derive(Deserialize)]
-pub struct TransactionConfig {
-    pub label: String,
-    pub log_configs: Vec<LogConfig>,
-}
-
-#[derive(Deserialize)]
 pub struct LogConfig {
-    pub name: String,
     pub address: String,
     pub topics: Vec<String>,
 }

@@ -3,6 +3,7 @@ import path from "path";
 import { v4 } from "uuid";
 import { z } from "zod";
 import { s3 } from "~/lib/server/aws";
+import { decryptEnvValue } from "~/lib/server/security";
 import { createDeployment } from "~/server/actions/builds";
 import { db } from "~/server/db";
 
@@ -38,6 +39,7 @@ export const POST = async (req: NextRequest) => {
     with: {
       project: true,
       producer: true,
+      envs: true,
     },
   });
 
@@ -70,6 +72,7 @@ export const POST = async (req: NextRequest) => {
     }),
   ]);
 
+  console.log(handler);
   await createDeployment({
     deploymentId: v4(),
     projectId: handler.projectId,
@@ -77,6 +80,10 @@ export const POST = async (req: NextRequest) => {
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
     mode: formData.mode,
+    envs: handler.envs.map((env) => ({
+      ...env,
+      value: decryptEnvValue(env.value, env.iv),
+    })),
   });
 
   return NextResponse.json({});

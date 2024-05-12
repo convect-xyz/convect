@@ -3,7 +3,7 @@ pub mod invocation {
 
     #[derive(Deserialize, Serialize, Debug)]
     pub struct InvocationRequest {
-        pub id: u64,
+        pub id: String,
         pub start_block: u64,
         pub end_block: u64,
     }

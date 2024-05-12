@@ -8,7 +8,7 @@ export const env = createEnv({
       .url()
       .refine(
         (str) => !str.includes("YOUR_MYSQL_URL_HERE"),
-        "You forgot to change the default URL"
+        "You forgot to change the default URL",
       ),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -25,7 +25,7 @@ export const env = createEnv({
       // Since NextAuth.js automatically uses the VERCEL_URL if present.
       (str) => process.env.VERCEL_URL ?? str,
       // VERCEL_URL doesn't include `https` so it cant be validated as a URL
-      process.env.VERCEL ? z.string() : z.string().url()
+      process.env.VERCEL ? z.string() : z.string().url(),
     ),
     GITHUB_APP_ID: z.string(),
     GITHUB_CLIENT_ID: z.string(),
@@ -34,7 +34,9 @@ export const env = createEnv({
     REPOSITORY_WEBHOOK_RECEIVER_URL: z.string(),
 
     AWS_REGION: z.string(),
-    AWS_ACCOUNT_ID: z.string()
+    AWS_ACCOUNT_ID: z.string(),
+
+    ENCRYPTION_KEY: z.string(),
   },
 
   /**
@@ -43,7 +45,7 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    NEXT_PUBLIC_APP_NAME: z.string()
+    NEXT_PUBLIC_APP_NAME: z.string(),
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
@@ -56,10 +58,12 @@ export const env = createEnv({
     GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
     GITHUB_PRIVATE_KEY: process.env.GITHUB_PRIVATE_KEY,
-    REPOSITORY_WEBHOOK_RECEIVER_URL: process.env.REPOSITORY_WEBHOOK_RECEIVER_URL,
+    REPOSITORY_WEBHOOK_RECEIVER_URL:
+      process.env.REPOSITORY_WEBHOOK_RECEIVER_URL,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     AWS_REGION: process.env.AWS_REGION,
     AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID,
+    ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

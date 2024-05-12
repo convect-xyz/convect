@@ -9,18 +9,18 @@ use aws_smithy_types::body::SdkBody;
 use futures::{future::join_all, TryFutureExt};
 use ingest::{
     api::{self, Batch, IngestTransaction},
-    log_fetcher::invocation::InvocationResponse,
+    log_fetcher::invocation::{InvocationRequest, InvocationResponse},
     syncer::{self, Pipeline},
 };
+use openssl::conf;
 use serde::Serialize;
 use std::error::Error;
 
 #[derive(Serialize, Debug)]
 struct BlockConfig {
-    id: u64,
+    id: String,
     start_block: u64,
     end_block: u64,
-    previous_id: Option<u64>,
 }
 
 const BATCH_SIZE: u64 = 1999;
@@ -28,7 +28,7 @@ const BATCH_SIZE: u64 = 1999;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = syncer::load_config_from_env();
-    let pipeline = Pipeline::load(syncer_config.pipeline_id.clone()).await;
+    let pipeline = Pipeline::load(syncer_config.handler_id.clone()).await;
 
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let s3_client = aws_sdk_s3::Client::new(&config);
@@ -64,7 +64,7 @@ async fn run(
     let syncer_config = syncer::load_config_from_env();
     let configs = get_block_configs(syncer_config.start_block, syncer_config.end_block);
 
-    let use_batch = false;
+    let use_batch = true;
 
     if use_batch {
         batch(s3_client, sqs_client, configs, syncer_config).await;
@@ -93,54 +93,53 @@ async fn batch(
     configs: Vec<BlockConfig>,
     syncer_config: syncer::Config,
 ) {
-    let mut batch = Vec::new();
-    let mut batch_size = 0;
     for chunk in configs.chunks(100) {
         let invocations = invoke_lambdas(chunk).await;
-        let s3_results = get_s3_results(&invocations).await;
+        let s3_results: Vec<IngestTransaction> = get_s3_results(&invocations)
+            .await
+            .into_iter()
+            .map(|r| r.0)
+            .flatten()
+            .collect();
 
         let mut i = 0;
         while i < s3_results.len() {
-            let s3_result = &s3_results[i];
+            let mut batch = Vec::new();
 
-            // If this result makes it go over limit, upload it.
-            if batch_size + s3_result.1 > 1024 * 1024 * 1 {
-                let id = uuid::Uuid::new_v4();
-                let key = format!("syncs/{}", id);
-
-                let response = s3_client
-                    .put_object()
-                    .bucket("ingest-fetch-logs")
-                    .key(key.to_string())
-                    .body(ByteStream::new(SdkBody::from(
-                        serde_json::to_string(&batch).unwrap(),
-                    )))
-                    .send()
-                    .await;
-
-                match response {
-                    Ok(_) => {}
-                    Err(e) => panic!("Error uploading response: {:?}", e),
-                }
-
-                api::upload_to_sqs(
-                    &sqs_client,
-                    syncer_config.tx_queue_url.clone(),
-                    api::SQSPayload::Batch(Batch {
-                        bucket: "ingest-fetch-logs".to_string(),
-                        prefix: key.to_string(),
-                    }),
-                )
-                .await;
-
-                // Reset
-                batch_size = 0;
-                batch = Vec::new();
+            // Max transactions per batch: 60
+            while i < s3_results.len() && batch.len() < 60 {
+                let s3_result = &s3_results[i];
+                batch.push(s3_result);
+                i += 1;
             }
 
-            batch_size += s3_result.1;
-            batch.extend(s3_result.0.clone());
-            i += 1;
+            let id = uuid::Uuid::new_v4();
+            let key = format!("syncs/batch-{}", id);
+
+            let response = s3_client
+                .put_object()
+                .bucket("ingest-fetch-logs")
+                .key(key.to_string())
+                .body(ByteStream::new(SdkBody::from(
+                    serde_json::to_string(&batch).unwrap(),
+                )))
+                .send()
+                .await;
+
+            match response {
+                Ok(_) => {}
+                Err(e) => panic!("Error uploading response: {:?}", e),
+            }
+
+            api::upload_to_sqs(
+                &sqs_client,
+                syncer_config.tx_queue_url.clone(),
+                api::SQSPayload::Batch(Batch {
+                    bucket: "ingest-fetch-logs".to_string(),
+                    prefix: key.to_string(),
+                }),
+            )
+            .await;
         }
     }
 }
@@ -160,7 +159,14 @@ async fn invoke_lambdas(
                 .invoke()
                 .invocation_type(InvocationType::RequestResponse)
                 .function_name(&syncer_config.function_name)
-                .payload(Blob::new(serde_json::to_vec(config).unwrap()))
+                .payload(Blob::new(
+                    serde_json::to_vec(&InvocationRequest {
+                        id: config.id.clone(),
+                        start_block: config.start_block,
+                        end_block: config.end_block,
+                    })
+                    .unwrap(),
+                ))
                 .send(),
         );
     }
@@ -221,27 +227,23 @@ async fn get_s3_results(
 
 fn get_block_configs(mut start_block: u64, end_block: u64) -> Vec<BlockConfig> {
     let mut result: Vec<BlockConfig> = Vec::new();
-    let mut previous_id: Option<u64> = None;
     while start_block + BATCH_SIZE < end_block {
-        let id = previous_id.map(|p| p + 1).or(Some(1)).unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
         result.push(BlockConfig {
             id,
             start_block,
             end_block: start_block + BATCH_SIZE,
-            previous_id,
         });
-        previous_id = Some(id);
         start_block += BATCH_SIZE + 1;
     }
 
     if end_block - start_block > 0 {
-        let id = previous_id.map(|p| p + 1).or(Some(1)).unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
 
         result.push(BlockConfig {
             id,
             start_block,
             end_block,
-            previous_id,
         });
     }
 

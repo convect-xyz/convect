@@ -53,26 +53,19 @@ function Main(props: PropsWithChildren) {
 
   return (
     <>
-      <div className="mx-auto grid w-full max-w-6xl gap-2">
-        <h1 className="text-3xl font-semibold">
-          {handler?.project?.name} / {handler?.name}
-        </h1>
-      </div>
-      <div className="mx-auto grid w-full max-w-6xl items-start gap-6 md:grid-cols-[180px_1fr] lg:grid-cols-[250px_1fr]">
+      <div className="mx-auto grid w-full max-w-screen-2xl items-start gap-6 md:grid-cols-[180px_1fr] lg:grid-cols-[250px_1fr]">
         <nav
           className="grid gap-4 text-sm text-muted-foreground"
           x-chunk="dashboard-04-chunk-0"
         >
+          <div className="text-md font-semibold">
+            {handler?.project?.name} / {handler?.name}
+          </div>
           <Link {...getLinkProps(`/projects/${projectId}/${handlerId}`)}>
             Overview
           </Link>
-          <Link
-            {...getLinkProps(`/projects/${projectId}/${handlerId}/metrics`)}
-          >
-            Metrics
-          </Link>
-          <Link {...getLinkProps(`/projects/${projectId}/${handlerId}/usage`)}>
-            Usage
+          <Link {...getLinkProps(`/projects/${projectId}/${handlerId}/logs`)}>
+            Logs
           </Link>
           <Link {...getLinkProps(`/projects/${projectId}/${handlerId}/envs`)}>
             Environment Variables

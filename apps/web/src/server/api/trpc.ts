@@ -92,7 +92,6 @@ export const publicProcedure = t.procedure;
  */
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   const { session } = ctx;
-  console.log(ctx);
   if (!session || !session.user) {
     throw new TRPCError({ message: "Session not found", code: "UNAUTHORIZED" });
   }

@@ -138,7 +138,7 @@ export const handler = createTable(
   })
 );
 
-export const handlerRelations = relations(handler, ({ one }) => ({
+export const handlerRelations = relations(handler, ({ one, many }) => ({
   project: one(projects, {
     fields: [handler.projectId],
     references: [projects.id],
@@ -146,6 +146,31 @@ export const handlerRelations = relations(handler, ({ one }) => ({
   producer: one(producers, {
     fields: [handler.producerId],
     references: [producers.id],
+  }),
+  envs: many(handlerEnv),
+}));
+
+export const handlerEnv = createTable(
+  "handler_env",
+  {
+    id: serial("id").notNull().primaryKey(),
+    handlerId: integer("handler_id")
+      .notNull()
+      .references(() => handler.id, { onDelete: "cascade" }),
+    key: varchar("key").notNull(),
+    value: varchar("value").notNull(),
+    iv: varchar("iv").notNull(),
+    lastUpdatedAt: timestamp("last_updated_at").defaultNow().notNull(),
+  },
+  (handlerEnv) => ({
+    handlerIdName: unique().on(handlerEnv.handlerId, handlerEnv.key),
+  })
+);
+
+export const handlerEnvRelations = relations(handlerEnv, ({ one, many }) => ({
+  handler: one(handler, {
+    fields: [handlerEnv.handlerId],
+    references: [handler.id],
   }),
 }));
 

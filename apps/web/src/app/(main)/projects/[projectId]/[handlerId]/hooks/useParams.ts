@@ -7,6 +7,6 @@ export function useParams() {
 
   return {
     ...projectParams,
-    ...params,
+    handlerId: Number(params.handlerId),
   };
 }

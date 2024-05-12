@@ -1,13 +1,13 @@
 use std::env;
 
-use aws_config::BehaviorVersion;
-use aws_sdk_s3::primitives::{ByteStream, SdkBody};
-use futures::TryFutureExt;
+use aws_sdk_dynamodb::types::AttributeValue;
 use lambda_runtime::tower::BoxError;
 use serde::{Deserialize, Serialize};
+use serde_dynamo::aws_sdk_dynamodb_1;
 
 pub struct Config {
-    pub pipeline_id: String,
+    pub handler_id: String,
+    pub project_id: String,
     pub start_block: u64,
     pub end_block: u64,
     pub function_name: String,
@@ -16,7 +16,8 @@ pub struct Config {
 
 pub fn load_config_from_env() -> Config {
     return Config {
-        pipeline_id: env::var("PIPELINE_ID").expect("Pipeline ID not set"),
+        handler_id: env::var("HANDLER_ID").expect("Handler ID not set"),
+        project_id: env::var("PROJECT_ID").expect("Project ID not set"),
         start_block: env::var("START_BLOCK")
             .expect("START_BLOCK is not present")
             .parse()
@@ -39,57 +40,84 @@ pub enum SyncState {
     FAILED,
 }
 
+impl SyncState {
+    fn as_str(&self) -> &'static str {
+        match self {
+            SyncState::IDLE => "IDLE",
+            SyncState::SYNCING => "SYNCING",
+            SyncState::FAILED => "FAILED",
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Pipeline {
-    pub pipeline_id: String,
-    pub state: SyncState,
-    pub last_block: Option<u64>,
+    #[serde(rename(serialize = "HandlerId_", deserialize = "HandlerId_"))]
+    handler_id: String,
+    #[serde(rename(serialize = "ProjectId_", deserialize = "ProjectId_"))]
+    project_id: String,
+    #[serde(rename(serialize = "State_", deserialize = "State_"))]
+    state: SyncState,
+    #[serde(rename(serialize = "LastBlock_", deserialize = "LastBlock_"))]
+    last_block: Option<String>,
 }
 
 impl Pipeline {
-    pub async fn load(pipeline_id: String) -> Pipeline {
-        let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-        let s3_client = aws_sdk_s3::Client::new(&config);
-        let sync_prefix = format!("syncs/{:?}", pipeline_id);
+    pub fn handler_id(&self) -> String {
+        self.handler_id.clone()
+    }
 
-        let result = s3_client
-            .get_object()
-            .bucket("ingest-fetch-logs")
-            .key(sync_prefix)
-            .send()
-            .and_then(|r| async move {
-                let body = r.body.collect().await.unwrap();
+    pub fn project_id(&self) -> String {
+        self.handler_id.clone()
+    }
 
-                let data: Pipeline =
-                    serde_json::from_slice(Into::<Vec<u8>>::into(body.into_bytes()).as_slice())
-                        .unwrap();
-                Ok(data)
-            })
-            .await;
+    pub fn state(&self) -> SyncState {
+        self.state.clone()
+    }
 
-        match result {
-            Ok(v) => v,
-            Err(_) => Pipeline {
-                pipeline_id,
-                state: SyncState::IDLE,
-                last_block: None,
-            },
-        }
+    pub fn last_block(&self) -> Option<u64> {
+        self.last_block.as_ref().and_then(|v| {
+            if v.is_empty() {
+                return None;
+            }
+
+            Some(v.parse::<u64>().unwrap())
+        })
+    }
+
+    pub async fn load(handler_id: String) -> Pipeline {
+        let config = aws_config::load_from_env().await;
+        let client = aws_sdk_dynamodb::Client::new(&config);
+
+        let get_item_request = client
+            .get_item()
+            .table_name("pipeline_state")
+            .key("HandlerId_", AttributeValue::S(handler_id.to_string()));
+
+        let get_item_response = get_item_request.send().await.unwrap();
+
+        let item = match get_item_response.item {
+            Some(v) => v,
+            None => panic!("Could not find pipeline state"),
+        };
+
+        let pipeline: Pipeline = aws_sdk_dynamodb_1::from_item(item).unwrap();
+        pipeline
     }
 
     pub fn update(&self) -> UpdatePipelineFluentBuilder {
         return UpdatePipelineFluentBuilder {
-            pipeline_id: self.pipeline_id.clone(),
+            handler_id: self.handler_id.clone(),
             state: self.state.clone(),
-            last_block: self.last_block,
+            last_block: self.last_block.clone(),
         };
     }
 }
 
 pub struct UpdatePipelineFluentBuilder {
-    pub pipeline_id: String,
-    pub state: SyncState,
-    pub last_block: Option<u64>,
+    handler_id: String,
+    state: SyncState,
+    last_block: Option<String>,
 }
 
 impl UpdatePipelineFluentBuilder {
@@ -99,30 +127,39 @@ impl UpdatePipelineFluentBuilder {
     }
 
     pub fn set_last_block(mut self, new_last_block: u64) -> UpdatePipelineFluentBuilder {
-        self.last_block = Some(new_last_block);
+        self.last_block = Some(new_last_block.to_string());
         self
     }
 
     pub async fn send(self) -> Result<(), BoxError> {
-        let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-        let s3_client = aws_sdk_s3::Client::new(&config);
-        let sync_prefix: String = format!("syncs/{:?}", self.pipeline_id);
+        let config = aws_config::load_from_env().await;
+        let client = aws_sdk_dynamodb::Client::new(&config);
 
-        s3_client
-            .put_object()
-            .bucket("ingest-fetch-logs")
-            .key(sync_prefix)
-            .body(ByteStream::new(SdkBody::from(
-                serde_json::to_vec(&Pipeline {
-                    pipeline_id: self.pipeline_id,
-                    state: self.state,
-                    last_block: self.last_block,
-                })
-                .unwrap(),
-            )))
+        let result = client
+            .update_item()
+            .table_name("pipeline_state")
+            .update_expression("SET State_ = :state, LastBlock_ = :last_block")
+            .expression_attribute_values(
+                String::from(":state"),
+                AttributeValue::S(self.state.as_str().to_string()),
+            )
+            .expression_attribute_values(
+                String::from(":last_block"),
+                AttributeValue::S(
+                    self.last_block
+                        .or(Some("".to_string()))
+                        .unwrap()
+                        .to_string(),
+                ),
+            )
+            .key("HandlerId_", AttributeValue::S(self.handler_id))
             .send()
-            .await
-            .expect("Failed to upload logs");
+            .await;
+
+        match result {
+            Ok(_) => {}
+            Err(e) => panic!("Could not update: {:?}", e),
+        }
 
         Ok(())
     }

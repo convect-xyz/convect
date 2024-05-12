@@ -1,7 +1,9 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { Lambda } from "@aws-sdk/client-lambda";
 import { S3 } from "@aws-sdk/client-s3";
 import { SNS } from "@aws-sdk/client-sns";
 import { SQS } from "@aws-sdk/client-sqs";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { getDb, schema } from "@kayakthedev/lib";
 import { eq } from "drizzle-orm";
 import esbuild from "esbuild";
@@ -14,6 +16,9 @@ const lambda = new Lambda({ region: "eu-west-1" });
 const sns = new SNS({ region: "eu-west-1" });
 const sqs = new SQS({ region: "eu-west-1" });
 const s3 = new S3({ region: "eu-west-1" });
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client);
+
 const db = getDb({
   dbUrl: process.env.DATABASE_URL!,
 });
@@ -27,6 +32,18 @@ const SOURCE_BUCKET = process.env.SOURCE_BUCKET!;
 const SOURCE_PREFIX = process.env.SOURCE_PREFIX!;
 const POLLING_URL = process.env.POLLING_URL!;
 const CHAIN_SNS = process.env.CHAIN_SNS!;
+const HANDLER_ENVS = (
+  JSON.parse(process.env.HANDLER_ENVS!) as Array<{
+    key: string;
+    value: string;
+  }>
+).reduce(
+  (acc, curr) => {
+    acc[curr.key] = curr.value;
+    return acc;
+  },
+  {} as Record<string, string>
+);
 
 const MANIFEST_BUCKET = "ingest-fetch-logs";
 const MANIFEST_PREFIX = path.join(
@@ -39,6 +56,7 @@ const CREATE_PARAMS_PREFIX = path.join(
   "create-params",
   DEPLOYMENT_ID + ".json"
 );
+
 const HANDLER_SRC_FILE = path.join(CURR_DIR, SOURCE_PREFIX + ".js");
 const BUNDLE_SRC_DIR = path.join(CURR_DIR, "bundle_src");
 const BUNDLE_OUT_DIR = path.join(CURR_DIR, "bundle_out");
@@ -46,7 +64,6 @@ const RUNTIME_SRC_FILE = path.join(CURR_DIR, "runtime.js");
 const EVENTS_RUNTIME_SRC_FILE = path.join(CURR_DIR, "events-runtime.js");
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 const EVENTS_OUT_FILE = path.join(BUNDLE_OUT_DIR, "events-index.js");
-
 main();
 
 async function main() {
@@ -54,7 +71,9 @@ async function main() {
   await prepareBundle();
   await zipLambda();
   await zipEventsLambda();
+
   if (MODE === "new") {
+    await createPipelineState();
     const { eventsLambdaArn } = await allocateResources();
     await initialiseHandler({
       eventsLambdaArn,
@@ -92,7 +111,7 @@ async function zipLambda() {
   await esbuild.build({
     entryPoints: [path.join(BUNDLE_SRC_DIR, "index.js")],
     bundle: true,
-    minify: true,
+    minify: false,
     outfile: BUNDLE_OUT_FILE,
     nodePaths: [process.env.NODE_PATH!],
     target: "node10.4",
@@ -152,7 +171,7 @@ async function allocateResources() {
     QueueName: `tx-queue-${PROJECT_ID}-${HANDLER_ID}.fifo`,
     Attributes: {
       FifoQueue: "true",
-      VisibilityTimeout: "250",
+      VisibilityTimeout: "900",
     },
   });
 
@@ -173,7 +192,8 @@ async function allocateResources() {
         MANIFEST_BUCKET,
         MANIFEST_PREFIX,
         NODE_ENDPOINT: POLLING_URL,
-        PIPELINE_ID: `${PROJECT_ID}-${HANDLER_ID}`,
+        HANDLER_ID,
+        PROJECT_ID,
       },
     },
     Timeout: 200,
@@ -200,7 +220,6 @@ async function allocateResources() {
         MANIFEST_BUCKET,
         MANIFEST_PREFIX,
         NODE_ENDPOINT: POLLING_URL,
-        PIPELINE_ID: `${PROJECT_ID}-${HANDLER_ID}`,
         HANDLER_ID: HANDLER_ID,
         PROJECT_ID: PROJECT_ID,
       },
@@ -215,7 +234,7 @@ async function allocateResources() {
     throw new Error("Function ARN is undefined");
   }
 
-  const concurrency = await lambda.putFunctionConcurrency({
+  await lambda.putFunctionConcurrency({
     FunctionName: createOrchestrator.FunctionArn,
     ReservedConcurrentExecutions: 1,
   });
@@ -227,8 +246,14 @@ async function allocateResources() {
       S3Bucket: "ingest-build-outputs",
       S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + ".zip"),
     },
-    Environment: {},
-    Timeout: 200,
+    Environment: {
+      Variables: {
+        HANDLER_ID,
+        ...HANDLER_ENVS,
+      },
+    },
+    Timeout: 900,
+    MemorySize: 512,
     Handler: "index.handler",
     PackageType: "Zip",
     Runtime: "nodejs20.x",
@@ -309,6 +334,11 @@ async function updateFunctionCode() {
     S3Bucket: "ingest-build-outputs",
     S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + "-events.zip"),
   });
+  await lambda.updateFunctionCode({
+    FunctionName: `handler-${PROJECT_ID}-${HANDLER_ID}`,
+    S3Bucket: "ingest-build-outputs",
+    S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + ".zip"),
+  });
 }
 
 async function initialiseHandler(opts: { eventsLambdaArn: string }) {
@@ -338,4 +368,17 @@ async function initialiseHandler(opts: { eventsLambdaArn: string }) {
       maxDelay: 3000,
     }
   );
+}
+
+async function createPipelineState() {
+  const command = new PutCommand({
+    TableName: "pipeline_state",
+    Item: {
+      HandlerId_: HANDLER_ID,
+      ProjectId_: PROJECT_ID,
+      State_: "IDLE",
+    },
+  });
+
+  const response = await docClient.send(command);
 }

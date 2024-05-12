@@ -1,18 +1,20 @@
-use crate::{manifest::Manifest, syncer};
-use aws_config::BehaviorVersion;
+use crate::manifest::Manifest;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, collections::HashMap, fmt::Debug, ops::Deref};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+};
 use uuid::Uuid;
 use web3::{
     futures::future::join_all,
-    types::{Bytes, Log, U256},
+    types::{Bytes, U256},
 };
 
 mod internal;
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct IngestTransaction {
-    pub label: String,
     #[serde(rename = "blockNumber")]
     pub block_number: u64,
     #[serde(rename = "blockHash")]
@@ -21,7 +23,7 @@ pub struct IngestTransaction {
     pub transaction_index: u64,
     #[serde(rename = "transactionHash")]
     pub transaction_hash: String,
-    pub logs: HashMap<String, Vec<IngestLog>>,
+    pub logs: Vec<IngestLog>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -39,18 +41,12 @@ pub async fn get_ingest_transactions<'a>(
     start_block: u64,
     end_block: u64,
 ) -> Result<Vec<IngestTransaction>, web3::Error> {
-    let futures = manifest
-        .tx_configs
-        .iter()
-        .map(|tx_config| internal::get_ingest_transactions(start_block, end_block, tx_config));
+    let mut transactions =
+        internal::get_ingest_transactions(start_block, end_block, &manifest.log_configs)
+            .await
+            .unwrap();
 
-    let mut result = join_all(futures)
-        .await
-        .into_iter()
-        .flat_map(|f| f.unwrap().transactions)
-        .collect::<Vec<IngestTransaction>>();
-
-    result.sort_by(|a, b| {
+    transactions.sort_by(|a, b| {
         let block_cmp = a.block_number.cmp(&b.block_number);
         if block_cmp == Ordering::Equal {
             return a.transaction_index.cmp(&b.transaction_index);
@@ -59,7 +55,7 @@ pub async fn get_ingest_transactions<'a>(
         return block_cmp;
     });
 
-    Ok(result)
+    Ok(transactions)
 }
 
 #[derive(Serialize, Deserialize)]
