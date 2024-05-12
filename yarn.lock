@@ -6375,7 +6375,7 @@ drizzle-kit@0.20.13:
     semver "^7.5.4"
     zod "^3.20.2"
 
-drizzle-kit@^0.20.11, drizzle-kit@^0.20.12, drizzle-kit@^0.20.14, drizzle-kit@^0.20.17:
+drizzle-kit@^0.20.11, drizzle-kit@^0.20.12, drizzle-kit@^0.20.14:
   version "0.20.17"
   resolved "https://registry.npmjs.org/drizzle-kit/-/drizzle-kit-0.20.17.tgz"
   integrity sha512-mLVDS4nXmO09wFVlzGrdshWnAL+U9eQGC5zRs6hTN6Q9arwQGWU2XnZ17I8BM8Quau8CQRx3Ms6VPgRWJFVp7Q==
@@ -11073,7 +11073,7 @@ ts-interface-checker@^0.1.9:
   resolved "https://registry.npmjs.org/ts-interface-checker/-/ts-interface-checker-0.1.13.tgz"
   integrity sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==
 
-ts-node@*, ts-node@10.9.2, ts-node@^10.9.1, ts-node@^10.9.2:
+ts-node@*, ts-node@10.9.2, ts-node@^10.9.1:
   version "10.9.2"
   resolved "https://registry.npmjs.org/ts-node/-/ts-node-10.9.2.tgz"
   integrity sha512-f0FFpIdcHgn8zcPSbf1dRevwt047YMnaiJM3u2w2RewrB+fob/zePZcrOyQoLMMO7aBIddLcQIEK5dYjkLnGrQ==
@@ -11277,7 +11277,7 @@ typescript@5.1.6:
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-5.1.6.tgz#02f8ac202b6dad2c0dd5e0913745b47a37998274"
   integrity sha512-zaWCozRZ6DLEWAWFrVDz1H6FVXzUSfTy5FUMWsQlU8Ym5JP9eO4xkTIROFCQvhQf61z6O/G6ugw3SgAnvvm+HA==
 
-typescript@^5.0.3, typescript@^5.3.3, typescript@^5.4.5:
+typescript@5.4.5, typescript@^5.0.3, typescript@^5.3.3:
   version "5.4.5"
   resolved "https://registry.npmjs.org/typescript/-/typescript-5.4.5.tgz"
   integrity sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ==
