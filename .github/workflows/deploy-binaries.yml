@@ -22,14 +22,9 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
-      - name: Add brew to PATH
-        run: |
-          test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
-          test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          echo "eval \"\$($(brew --prefix)/bin/brew shellenv)\"" >> ~/.bashrc
-          sh
       - name: Install dependencies
         run: |
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew tap cargo-lambda/cargo-lambda
           brew install cargo-lambda
       - name: Build
