@@ -2,12 +2,10 @@ use crate::manifest::Manifest;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
-    collections::{HashMap, HashSet},
     fmt::Debug,
 };
 use uuid::Uuid;
 use web3::{
-    futures::future::join_all,
     types::{Bytes, U256},
 };
 
