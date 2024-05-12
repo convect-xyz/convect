@@ -80,6 +80,7 @@ jobs:
         env:
           VERSION: ${{ github.event.release.tag_name }}
         run: |
+          cd rust
           cargo lambda build --release --extension --bin=extension
           cargo lambda deploy --extension --binary-name=extension
 
