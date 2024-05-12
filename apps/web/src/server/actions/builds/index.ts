@@ -5,6 +5,7 @@ import { db } from "~/server/db";
 import schema from "~/server/db/schema";
 
 type TriggerBuildOptions = {
+  version: string;
   deploymentId: string;
   projectId: number;
   handlerId: number;
@@ -31,6 +32,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
         {
           name: "builder",
           environment: [
+            { name: "VERSION", value: options.version },
             { name: "MODE", value: options.mode },
             {
               name: "PROJECT_ID",

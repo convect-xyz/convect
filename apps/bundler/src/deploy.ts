@@ -23,6 +23,7 @@ const db = getDb({
   dbUrl: process.env.DATABASE_URL!,
 });
 
+const VERSION = process.env.VERSION!;
 const MODE = process.env.MODE as "new" | "update";
 const CURR_DIR = process.env.CURR_DIR!;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
@@ -64,6 +65,7 @@ const RUNTIME_SRC_FILE = path.join(CURR_DIR, "runtime.js");
 const EVENTS_RUNTIME_SRC_FILE = path.join(CURR_DIR, "events-runtime.js");
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 const EVENTS_OUT_FILE = path.join(BUNDLE_OUT_DIR, "events-index.js");
+
 main();
 
 async function main() {
@@ -83,6 +85,7 @@ async function main() {
   if (MODE === "update") {
     await updateFunctionCode();
   }
+
   process.exit(0);
 }
 
@@ -184,7 +187,7 @@ async function allocateResources() {
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-functions",
-      S3Key: "log-fetcher.zip",
+      S3Key: `log-fetcher/${VERSION}.zip`,
     },
     Environment: {
       Variables: {
@@ -211,7 +214,7 @@ async function allocateResources() {
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-functions",
-      S3Key: "orchestrator.zip",
+      S3Key: `orchestrator/${VERSION}.zip`,
     },
     Environment: {
       Variables: {
