@@ -22,6 +22,8 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
+      - name: Install dependencies
+        run: bash <(curl -L https://nixos.org/nix/install) --no-daemon && nix-env -iA nixpkgs.cargo-lambda
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
