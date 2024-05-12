@@ -1,6 +1,8 @@
 name: Upload to S3
 
-on: [push]
+on:
+  release:
+    types: [published]
 
 jobs:
   upload:
@@ -41,4 +43,5 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
           AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          VERSION: ${{ github.event.release.tag_name }}
         run: sh ./rust/scripts/build.sh
