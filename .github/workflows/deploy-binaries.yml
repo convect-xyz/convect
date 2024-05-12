@@ -24,9 +24,8 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
       - name: Install dependencies
         run: |
-          $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
-          brew tap cargo-lambda/cargo-lambda
-          brew install cargo-lambda
+          /home/linuxbrew/.linuxbrew/bin/brew tap cargo-lambda/cargo-lambda
+          /home/linuxbrew/.linuxbrew/bin/brew install cargo-lambda
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
