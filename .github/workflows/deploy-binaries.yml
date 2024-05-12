@@ -27,7 +27,6 @@ jobs:
           $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
           brew tap cargo-lambda/cargo-lambda
           brew install cargo-lambda
-
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
