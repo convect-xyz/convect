@@ -37,6 +37,8 @@ export const env = createEnv({
     AWS_ACCOUNT_ID: z.string(),
 
     ENCRYPTION_KEY: z.string(),
+
+    VERSION: z.string(),
   },
 
   /**
@@ -64,6 +66,7 @@ export const env = createEnv({
     AWS_REGION: process.env.AWS_REGION,
     AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID,
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+    VERSION: process.env.VERSION,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

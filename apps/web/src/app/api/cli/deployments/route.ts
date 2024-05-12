@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { v4 } from "uuid";
 import { z } from "zod";
+import { env } from "~/env";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
 import { createDeployment } from "~/server/actions/builds";
@@ -72,8 +73,8 @@ export const POST = async (req: NextRequest) => {
     }),
   ]);
 
-  console.log(handler);
   await createDeployment({
+    version: env.VERSION,
     deploymentId: v4(),
     projectId: handler.projectId,
     handlerId: handler.id,
