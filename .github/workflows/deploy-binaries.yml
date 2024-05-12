@@ -9,6 +9,19 @@ jobs:
       matrix:
         binary: ["log-fetcher", "orchestrator"]
     steps:
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Zig toolchain
+        uses: korandoru/setup-zig@v1
+        with:
+          zig-version: 0.10.0
+      - name: Install Cargo Lambda
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        with:
+          repo: cargo-lambda/cargo-lambda
+          tag: v0.14.0 # Remove this if you want to grab always the latest version
+          platform: linux # Other valid options: 'windows' or 'darwin'
+          arch: x86_64 # Other valid options for linux: 'aarch64'
       - uses: actions/checkout@master
       - name: Set up cargo cache
         uses: actions/cache@v3
@@ -22,7 +35,6 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
-
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
