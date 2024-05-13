@@ -7,6 +7,7 @@
   "scripts": {
     "db:push": "drizzle-kit push:pg",
     "db:migrate": "drizzle-kit generate:pg",
+    "db:deploy": "npx tsx ./src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
