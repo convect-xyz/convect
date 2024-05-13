@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, fmt::format};
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
@@ -74,10 +74,15 @@ async fn trigger_batch_sync_task(
     pipeline: &Pipeline,
     incoming_block: u64,
 ) -> Result<(), Error> {
+    let version = env::var("VERSION").expect("Version ENV not defined");
+
     let _ = ecs_client
         .run_task()
         .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
-        .task_definition("arn:aws:ecs:eu-west-1:730335604495:task-definition/syncers:1")
+        .task_definition(format!(
+            "arn:aws:ecs:eu-west-1:730335604495:task-definition/syncer-{:?}:1",
+            version.replace(".", "-")
+        ))
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(
             NetworkConfiguration::builder()
@@ -129,6 +134,7 @@ async fn trigger_batch_sync_task(
                                 "PROJECT_ID".to_string(),
                                 env::var("PROJECT_ID").unwrap(),
                             ),
+                            create_key_value_pair("VERSION".to_string(), version),
                         ]))
                         .build(),
                 )
