@@ -12,4 +12,4 @@ jobs:
       - name: "Deploy prod migrations"
         env:
           DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
-        run: "cd packages/lib && yarn && yarn db:migrate"
+        run: "cd packages/lib && yarn && yarn db:deploy"
