@@ -46,7 +46,7 @@ async fn function_handler(
 
     Ok(InvocationResponse {
         s3_bucket: Some("ingest-fetch-logs".to_string()),
-        s3_prefix: Some(format!("fetch/{:?}", event.payload.id)),
+        s3_prefix: Some(format!("fetch/{id}", id = event.payload.id)),
         size,
     })
 }
