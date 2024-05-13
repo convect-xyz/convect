@@ -20,9 +20,9 @@ export default function Layout(props: PropsWithChildren) {
       return <></>;
     }
 
-    if (!handler.isInitialised) {
-      return <InitaliseInstructions />;
-    }
+    // if (!handler.isInitialised) {
+    //   return <InitaliseInstructions />;
+    // }
 
     return <Main {...props} />;
   };
@@ -82,22 +82,22 @@ function Main(props: PropsWithChildren) {
   );
 }
 
-function InitaliseInstructions() {
-  const { handlerId, projectId } = useParams();
-  const { data: handler } = api.handlers.getHandler.useQuery({
-    handlerId: Number(handlerId),
-    projectId: Number(projectId),
-  });
-  return (
-    <div className="flex flex-col">
-      <h2 className="text-2xl">Initialise your new handler</h2>
-      <p>
-        Run{" "}
-        <code>
-          yarn ingest deployments {handler?.project.name}/{handler?.name}{" "}
-          &lt;src path&gt;
-        </code>
-      </p>
-    </div>
-  );
-}
+// function InitaliseInstructions() {
+//   const { handlerId, projectId } = useParams();
+//   const { data: handler } = api.handlers.getHandler.useQuery({
+//     handlerId: Number(handlerId),
+//     projectId: Number(projectId),
+//   });
+//   return (
+//     <div className="flex flex-col">
+//       <h2 className="text-2xl">Initialise your new handler</h2>
+//       <p>
+//         Run{" "}
+//         <code>
+//           yarn ingest deployments {handler?.project.name}/{handler?.name}{" "}
+//           &lt;src path&gt;
+//         </code>
+//       </p>
+//     </div>
+//   );
+// }

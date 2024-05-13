@@ -4,6 +4,8 @@ import { decodeEventLog, isAddressEqual } from "viem";
 
 import pipeline from "./pipeline";
 
+const allTxConfigs = Object.values(pipeline.transactions);
+
 export async function handler(event) {
   const parsedTxs = [];
 
@@ -30,10 +32,7 @@ export async function handler(event) {
     const batch = [];
     // tx at the front of parsedTxs
     const frontTx = parsedTxs.at(i);
-    const processors = getEligibleTxConfigs(
-      frontTx,
-      Object.values(pipeline.transactions)
-    );
+    const processors = getEligibleTxConfigs(frontTx, allTxConfigs);
 
     console.log("Eligible Processors:", processors);
 
@@ -77,11 +76,9 @@ export async function getS3Results(batchRecords) {
 }
 
 // Eligible Tx configs are configs that match the given transaction
-export function getEligibleTxConfigs(tx, txConfigs) {
+export function getEligibleTxConfigs(tx, allTxConfigs) {
   const eligibleTxConfigs = [];
-
   const txLogIdentifiers = getUniqueLogIdentifiers(tx);
-  const allTxConfigs = txConfigs;
 
   for (const config of allTxConfigs) {
     var isEligible = true;
