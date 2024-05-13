@@ -131,5 +131,5 @@ jobs:
         run: |
           DOCKER_BUILDKIT=1 
           DOCKER_DEFAULT_PLATFORM=linux/arm64
-          docker build -t $REGISTRY/$REPOSITORY:$VERSION . -f $DOCKERFILE
+          docker buildx build --platform=linux/arm64 -t $REGISTRY/$REPOSITORY:$VERSION . -f $DOCKERFILE
           docker push $REGISTRY/$REPOSITORY:$VERSION
