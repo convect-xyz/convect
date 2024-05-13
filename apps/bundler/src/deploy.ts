@@ -258,7 +258,7 @@ async function allocateResources() {
       },
     },
     Layers: [
-      `arn:aws:lambda:eu-west-1:730335604495:layer:extension-${VERSION.replaceAll(".", "-")}:1`,
+      `arn:aws:lambda:eu-west-1:730335604495:layer:extension-${VERSION.replaceAll(".", "-")}`,
     ],
     Timeout: 900,
     MemorySize: 512,
