@@ -76,10 +76,10 @@ async fn trigger_batch_sync_task(
 ) -> Result<(), Error> {
     let version = env::var("VERSION").expect("Version ENV not defined");
 
-    println!(format!(
+    println!(
         "arn:aws:ecs:eu-west-1:730335604495:task-definition/syncer-{:?}",
         version.replace(".", "-")
-    ));
+    );
     ecs_client
         .run_task()
         .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
