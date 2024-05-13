@@ -1,9 +1,8 @@
-import { S3 } from "@aws-sdk/client-s3";
+import axios from "axios";
 import { v4 } from "uuid";
 import { decodeEventLog, isAddressEqual } from "viem";
-import pipeline from "./pipeline";
 
-const s3 = new S3({ region: "eu-west-1" });
+import pipeline from "./pipeline";
 
 export async function handler(event) {
   const parsedTxs = [];
@@ -13,22 +12,7 @@ export async function handler(event) {
     data: JSON.parse(record.body),
   }));
 
-  const s3Results = new Map();
-
-  await Promise.all(
-    records
-      .filter((r) => r.data.type === "batch")
-      .map((r) =>
-        s3
-          .getObject({
-            Bucket: r.data.data.bucket,
-            Key: r.data.data.prefix,
-          })
-          .then(async (obj) => {
-            s3Results.set(r.id, JSON.parse(await obj.Body.transformToString()));
-          })
-      )
-  );
+  const s3Results = await getS3Results(records);
 
   for (const record of records) {
     const payload = record.data;
@@ -74,6 +58,22 @@ export async function handler(event) {
   }
 
   return {};
+}
+
+export async function getS3Results(batchRecords) {
+  const s3Results = new Map();
+
+  await Promise.all(
+    batchRecords
+      .filter((r) => r.data.type === "batch")
+      .map((r) =>
+        axios.get(r.data.download_url).then(async (r) => {
+          s3Results.set(r.id, JSON.parse(r.data));
+        })
+      )
+  );
+
+  return s3Results;
 }
 
 // Eligible Tx configs are configs that match the given transaction

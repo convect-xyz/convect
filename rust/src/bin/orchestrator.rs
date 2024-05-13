@@ -1,4 +1,4 @@
-use std::{env, fmt::format};
+use std::env;
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
@@ -18,6 +18,7 @@ async fn main() -> Result<(), Error> {
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let config = aws_config::load_from_env().await;
     let sqs_client = aws_sdk_sqs::Client::new(&config);
+    let s3_client = aws_sdk_s3::Client::new(&config);
     let ecs_client = aws_sdk_ecs::Client::new(&config);
 
     let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
@@ -55,6 +56,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     // We shouldn't need to update status here because max concurrency should be 1
     return sync_blocks(
         &sqs_client,
+        &s3_client,
         pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap(),
         incoming_block,
     )
@@ -156,6 +158,7 @@ fn create_key_value_pair(name: String, value: String) -> KeyValuePair {
 
 async fn sync_blocks(
     sqs_client: &aws_sdk_sqs::Client,
+    s3_client: &aws_sdk_s3::Client,
     from_block: u64,
     to_block: u64,
 ) -> Result<(), BoxError> {
@@ -165,10 +168,11 @@ async fn sync_blocks(
         .await
         .unwrap();
 
-    api::upload_to_sqs(
+    api::upload_transactions(
         sqs_client,
+        s3_client,
         env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"),
-        api::SQSPayload::Transactions(transactions),
+        transactions,
     )
     .await;
 

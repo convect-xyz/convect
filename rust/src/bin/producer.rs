@@ -4,33 +4,6 @@ use ethers::providers::{Middleware, Provider, Ws};
 use futures::future::join_all;
 use ingest::producer::{get_supported_networks, SupportedNetwork};
 
-// #[allow(dead_code)]
-// pub struct SNSImpl {
-//     inner: aws_sdk_sns::Client,
-// }
-
-// #[cfg_attr(test, automock)]
-// impl SNSImpl {
-//     #[allow(dead_code)]
-//     pub fn new(inner: aws_sdk_sns::Client) -> Self {
-//         Self { inner }
-//     }
-
-//     #[allow(dead_code)]
-//     pub async fn publish_block(
-//         &self,
-//         supported_network: &SupportedNetwork,
-//         block_number: U64,
-//     ) -> Result<PublishOutput, aws_sdk_sns::error::SdkError<PublishError>> {
-//         self.inner
-//             .publish()
-//             .topic_arn(supported_network.sns_topic.clone())
-//             .message(block_number.to_string())
-//             .send()
-//             .await
-//     }
-// }
-
 #[tokio::main]
 async fn main() {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
@@ -83,7 +56,7 @@ async fn run(network: &SupportedNetwork, provider: &Provider<Ws>, sns: &aws_sdk_
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     #[test]
     fn test_publish_block() {}
