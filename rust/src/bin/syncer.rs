@@ -227,7 +227,7 @@ async fn get_s3_results(
 
 fn get_block_configs(mut start_block: u64, end_block: u64) -> Vec<BlockConfig> {
     let mut result: Vec<BlockConfig> = Vec::new();
-    while start_block + BATCH_SIZE < end_block {
+    while start_block + BATCH_SIZE <= end_block {
         let id = uuid::Uuid::new_v4().to_string();
         result.push(BlockConfig {
             id,
@@ -237,7 +237,7 @@ fn get_block_configs(mut start_block: u64, end_block: u64) -> Vec<BlockConfig> {
         start_block += BATCH_SIZE + 1;
     }
 
-    if end_block - start_block > 0 {
+    if end_block as i64 - start_block as i64 >= 0 {
         let id = uuid::Uuid::new_v4().to_string();
 
         result.push(BlockConfig {
