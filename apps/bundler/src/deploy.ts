@@ -255,6 +255,9 @@ async function allocateResources() {
         ...HANDLER_ENVS,
       },
     },
+    Layers: [
+      `arn:aws:lambda:eu-west-1:730335604495:layer:extension-${VERSION.replace(".", "-")}:1`,
+    ],
     Timeout: 900,
     MemorySize: 512,
     Handler: "index.handler",
