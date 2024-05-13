@@ -1,3 +1,5 @@
+use std::env;
+
 use aws_sdk_s3::primitives::{ByteStream, SdkBody};
 use ingest::{
     api,
@@ -35,10 +37,19 @@ async fn function_handler(
     let body = serde_json::to_string(&transactions).unwrap();
     let size = body.len();
 
+    let project_id = env::var("PROJECT_ID").expect("PROJECT_ID is undefined");
+    let handler_id = env::var("HANDLER_ID").expect("HANDLER_ID is undefined");
+    let key = format!(
+        "fetch/{project_id}/{handler_id}/{id}",
+        project_id = project_id,
+        handler_id = handler_id,
+        id = event.payload.id
+    );
+
     s3_client
         .put_object()
         .bucket("ingest-fetch-logs")
-        .key(event.payload.id.to_string())
+        .key(key.clone())
         .body(ByteStream::new(SdkBody::from(body)))
         .send()
         .await
@@ -46,7 +57,7 @@ async fn function_handler(
 
     Ok(InvocationResponse {
         s3_bucket: Some("ingest-fetch-logs".to_string()),
-        s3_prefix: Some(format!("fetch/{id}", id = event.payload.id)),
+        s3_prefix: Some(key),
         size,
     })
 }
