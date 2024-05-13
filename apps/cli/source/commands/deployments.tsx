@@ -2,11 +2,11 @@ import axios from 'axios';
 import * as esbuild from 'esbuild';
 import FormData from 'form-data';
 import fs from 'fs';
-import {Text} from 'ink';
+import { Text } from 'ink';
 import path from 'path';
-import React, {useEffect, useState} from 'react';
-import {encodeEventTopics} from 'viem';
-import {z} from 'zod';
+import React, { useEffect, useState } from 'react';
+import { encodeEventTopics } from 'viem';
+import { z } from 'zod';
 
 export const args = z.tuple([
 	z.enum(['new', 'update']),
