@@ -23,11 +23,6 @@ jobs:
       matrix:
         binary: ["log-fetcher", "orchestrator"]
     steps:
-      - name: Set version
-        env:
-          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
-        run: |
-          ./scripts/set_version.sh
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Install Zig toolchain
@@ -41,6 +36,13 @@ jobs:
           platform: linux
           arch: x86_64
       - uses: actions/checkout@master
+
+      - name: Set version
+        env:
+          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          ./scripts/set_version.sh
+
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -61,11 +63,6 @@ jobs:
   build_extensions:
     runs-on: ubuntu-latest
     steps:
-      - name: Set version
-        env:
-          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
-        run: |
-          ./scripts/set_version.sh
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Install Zig toolchain
@@ -79,6 +76,12 @@ jobs:
           platform: linux
           arch: x86_64
       - uses: actions/checkout@master
+
+      - name: Set version
+        env:
+          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          ./scripts/set_version.sh
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -103,13 +106,13 @@ jobs:
       matrix:
         binary: ["syncer", "builder"]
     steps:
+      - uses: actions/checkout@master
+
       - name: Set version
         env:
           VERSION: ${{ github.event.release.tag_name || github.ref_name }}
         run: |
           ./scripts/set_version.sh
-
-      - uses: actions/checkout@master
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
