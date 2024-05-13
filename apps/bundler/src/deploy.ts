@@ -5,6 +5,7 @@ import { SNS } from "@aws-sdk/client-sns";
 import { SQS } from "@aws-sdk/client-sqs";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { getDb, schema } from "@kayakthedev/lib";
+import { createId } from "@paralleldrive/cuid2";
 import { eq } from "drizzle-orm";
 import esbuild from "esbuild";
 import { backOff } from "exponential-backoff";
@@ -74,16 +75,30 @@ async function main() {
   await zipLambda();
   await zipEventsLambda();
 
+  const id = createId();
   if (MODE === "new") {
     await createPipelineState();
-    const { eventsLambdaArn } = await allocateResources();
+    const { eventsLambdaArn } = await allocateResources(id);
     await initialiseHandler({
       eventsLambdaArn,
     });
   }
 
   if (MODE === "update") {
-    await updateFunctionCode();
+    const handler = await db.query.handler.findFirst({
+      where(fields, { eq }) {
+        return eq(fields.id, Number(HANDLER_ID));
+      },
+    });
+
+    if (!handler || !handler.handlerArn) {
+      throw new Error("Handler not found or handler ARN not present");
+    }
+
+    await updateFunctionCode({
+      eventsArn: "",
+      handlerArn: handler.handlerArn,
+    });
   }
 
   process.exit(0);
@@ -169,9 +184,10 @@ async function zipEventsLambda() {
     Body: zipData,
   });
 }
-async function allocateResources() {
+
+async function allocateResources(id: string) {
   const transactionQueue = await sqs.createQueue({
-    QueueName: `tx-queue-${PROJECT_ID}-${HANDLER_ID}.fifo`,
+    QueueName: `tx-queue-${PROJECT_ID}-${HANDLER_ID}-${id}.fifo`,
     Attributes: {
       FifoQueue: "true",
       VisibilityTimeout: "900",
@@ -183,7 +199,7 @@ async function allocateResources() {
   }
 
   const logFetcher = await lambda.createFunction({
-    FunctionName: `log-fetcher-${PROJECT_ID}-${HANDLER_ID}`,
+    FunctionName: `log-fetcher-${PROJECT_ID}-${HANDLER_ID}-${id}`,
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-functions",
@@ -211,7 +227,7 @@ async function allocateResources() {
   }
 
   const createOrchestrator = await lambda.createFunction({
-    FunctionName: `orchestrator-${PROJECT_ID}-${HANDLER_ID}`,
+    FunctionName: `orchestrator-${PROJECT_ID}-${HANDLER_ID}-${id}`,
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-functions",
@@ -245,7 +261,7 @@ async function allocateResources() {
   });
 
   const handlerLambda = await lambda.createFunction({
-    FunctionName: `handler-${PROJECT_ID}-${HANDLER_ID}`,
+    FunctionName: `handler-${PROJECT_ID}-${HANDLER_ID}-${id}`,
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-build-outputs",
@@ -272,7 +288,7 @@ async function allocateResources() {
   }
 
   const eventsLambda = await lambda.createFunction({
-    FunctionName: `events-${PROJECT_ID}-${HANDLER_ID}`,
+    FunctionName: `events-${PROJECT_ID}-${HANDLER_ID}-${id}`,
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-build-outputs",
@@ -306,7 +322,7 @@ async function allocateResources() {
 
   const permissionResponse = await lambda.addPermission({
     FunctionName: createOrchestrator.FunctionArn,
-    StatementId: `${PROJECT_ID}-${HANDLER_ID}`,
+    StatementId: `${PROJECT_ID}-${HANDLER_ID}-${id}`,
     Action: "lambda:InvokeFunction",
     Principal: "sns.amazonaws.com",
     SourceArn: CHAIN_SNS,
@@ -336,7 +352,10 @@ async function allocateResources() {
   };
 }
 
-async function updateFunctionCode() {
+async function updateFunctionCode(options: {
+  eventsArn: string;
+  handlerArn: string;
+}) {
   await lambda.updateFunctionCode({
     FunctionName: `events-${PROJECT_ID}-${HANDLER_ID}`,
     S3Bucket: "ingest-build-outputs",
