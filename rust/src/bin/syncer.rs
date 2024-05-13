@@ -74,6 +74,7 @@ async fn run(
             .map(|r| r.0)
             .flatten()
             .collect();
+
         api::upload_transactions(
             sqs_client,
             s3_client,
@@ -81,6 +82,10 @@ async fn run(
             s3_results,
         )
         .await;
+
+        tokio::spawn(async move {
+            delete_s3_results(&invocations).await;
+        });
     }
 
     Ok(())
@@ -165,6 +170,39 @@ async fn get_s3_results(
         .map(|f| f.unwrap())
         // .flatten()
         .collect::<Vec<S3Result>>()
+}
+
+async fn delete_s3_results(invocations: &Vec<Result<InvokeOutput, SdkError<InvokeError>>>) {
+    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    let s3_client = aws_sdk_s3::Client::new(&config);
+
+    let mut s3_deletion_futures = Vec::new();
+    for invocation in invocations {
+        let output = match invocation {
+            Ok(v) => v.to_owned(),
+            Err(e) => panic!("Invocation Error: {e}"),
+        };
+
+        let payload = match output.payload {
+            Some(v) => v.into_inner(),
+            None => panic!("Blob is empty"),
+        };
+
+        let response: InvocationResponse = serde_json::from_slice(&payload).unwrap();
+        if response.s3_bucket.is_none() || response.s3_prefix.is_none() {
+            continue;
+        }
+
+        s3_deletion_futures.push(
+            s3_client
+                .delete_object()
+                .bucket(&response.s3_bucket.unwrap())
+                .key(&response.s3_prefix.unwrap())
+                .send(),
+        );
+    }
+
+    join_all(s3_deletion_futures).await;
 }
 
 fn get_block_configs(mut start_block: u64, end_block: u64, batch_size: u64) -> Vec<BlockConfig> {
