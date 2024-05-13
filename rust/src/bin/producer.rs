@@ -4,54 +4,90 @@ use ethers::providers::{Middleware, Provider, Ws};
 use futures::future::join_all;
 use ingest::producer::{get_supported_networks, SupportedNetwork};
 
+// #[allow(dead_code)]
+// pub struct SNSImpl {
+//     inner: aws_sdk_sns::Client,
+// }
+
+// #[cfg_attr(test, automock)]
+// impl SNSImpl {
+//     #[allow(dead_code)]
+//     pub fn new(inner: aws_sdk_sns::Client) -> Self {
+//         Self { inner }
+//     }
+
+//     #[allow(dead_code)]
+//     pub async fn publish_block(
+//         &self,
+//         supported_network: &SupportedNetwork,
+//         block_number: U64,
+//     ) -> Result<PublishOutput, aws_sdk_sns::error::SdkError<PublishError>> {
+//         self.inner
+//             .publish()
+//             .topic_arn(supported_network.sns_topic.clone())
+//             .message(block_number.to_string())
+//             .send()
+//             .await
+//     }
+// }
+
 #[tokio::main]
 async fn main() {
-    let mut handles = Vec::new();
-    for network in get_supported_networks().into_iter() {
-        handles.push(run(network));
-    }
-
-    join_all(handles).await;
-}
-
-async fn run(network: SupportedNetwork) {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let client = aws_sdk_sns::Client::new(&config);
 
-    let provider = Provider::<Ws>::connect(network.ws_url.clone())
-        .await
-        .expect(format!("Failed on {:?}", network.network).as_str());
+    let supported_networks = get_supported_networks();
+    let providers = join_all(
+        supported_networks
+            .iter()
+            .map(|n| Provider::<Ws>::connect(n.ws_url.clone())),
+    )
+    .await;
 
-    println!("Provider about to stream on {:?}", network.network);
+    let mut handlers = Vec::new();
 
+    for (i, network) in supported_networks.iter().enumerate() {
+        let provider_result = providers.get(i).expect("Provider not present");
+
+        match provider_result {
+            Ok(p) => handlers.push(run(network, p, &client)),
+            Err(e) => panic!("Failed to connect to handler: {:?}", e),
+        }
+    }
+
+    join_all(handlers).await;
+}
+
+async fn run(network: &SupportedNetwork, provider: &Provider<Ws>, sns: &aws_sdk_sns::Client) {
     let mut stream = provider.subscribe_blocks().await.unwrap();
 
     while let Some(block) = stream.next().await {
-        publish_block(&client, &network, block.number.unwrap().as_u64()).await;
+        if let Some(number) = block.number {
+            match sns
+                .publish()
+                .topic_arn(network.sns_topic.clone())
+                .message(number.to_string())
+                .send()
+                .await
+            {
+                Ok(_) => {
+                    println!("Uploaded to {:?}", network.network)
+                }
+                Err(e) => panic!("Error on {:?}: {:?}", network.network, e),
+            }
+        }
     }
 
     return;
 }
 
-async fn publish_block(
-    client: &aws_sdk_sns::Client,
-    network: &SupportedNetwork,
-    current_block: u64,
-) {
-    match client
-        .publish()
-        .topic_arn(network.sns_topic.clone())
-        .message(current_block.to_string())
-        .send()
-        .await
-    {
-        Ok(_) => {
-            println!("Uploaded to {:?}", network.network)
-        }
-        Err(e) => panic!("Error on {:?}: {:?}", network.network, e),
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    #[test]
+    fn test_publish_block() {}
+}
 // async fn run(network: &SupportedNetwork) {
 //     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 //     let client = aws_sdk_sns::Client::new(&config);
