@@ -21,7 +21,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
     taskDefinition: `arn:aws:ecs:eu-west-1:730335604495:task-definition/builder-${options.version.replaceAll(
       ".",
       "-",
-    )}:LATEST`,
+    )}`,
     networkConfiguration: {
       awsvpcConfiguration: {
         subnets: ["subnet-05d39f2476de29dc7"],
