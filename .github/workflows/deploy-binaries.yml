@@ -129,7 +129,6 @@ jobs:
           REPOSITORY: ${{ matrix.binary }}
           DOCKERFILE: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
         run: |
-          DOCKER_BUILDKIT=1 
-          DOCKER_DEFAULT_PLATFORM=linux/arm64
-          docker buildx build --platform=linux/arm64 -t $REGISTRY/$REPOSITORY:$VERSION . -f $DOCKERFILE
+          DOCKER_BUILDKIT=1
+          docker build -t $REGISTRY/$REPOSITORY:$VERSION . -f $DOCKERFILE
           docker push $REGISTRY/$REPOSITORY:$VERSION
