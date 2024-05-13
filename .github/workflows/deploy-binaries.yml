@@ -58,7 +58,6 @@ jobs:
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
-          VERSION: ${{ env.VERSION }}
         run: sh ./rust/scripts/build.sh
 
   build_extensions:
@@ -96,8 +95,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-extension
           restore-keys: ${{ runner.os }}-cargo-
       - name: Build
-        env:
-          VERSION: ${{ env.VERSION }}
         run: |
           cd rust
           cargo lambda build --release --extension --bin=extension
@@ -132,7 +129,6 @@ jobs:
           REPOSITORY: ${{ matrix.binary }}
           IMAGE_TAG: ${{ github.event.release.tag_name }}
           DOCKERFILE: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
-          VERSION: ${{ env.VERSION }}
         run: |
           DOCKER_BUILDKIT=1 
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG . -f $DOCKERFILE
