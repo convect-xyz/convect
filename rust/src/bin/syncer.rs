@@ -4,15 +4,13 @@ use aws_sdk_lambda::{
     operation::invoke::{InvokeError, InvokeOutput},
     types::InvocationType,
 };
-use aws_sdk_s3::primitives::{Blob, ByteStream};
-use aws_smithy_types::body::SdkBody;
+use aws_sdk_s3::primitives::Blob;
 use futures::{future::join_all, TryFutureExt};
 use ingest::{
-    api::{self, Batch, IngestTransaction},
+    api::{self, IngestTransaction},
     log_fetcher::invocation::{InvocationRequest, InvocationResponse},
     syncer::{self, Pipeline},
 };
-use openssl::conf;
 use serde::Serialize;
 use std::error::Error;
 
@@ -64,35 +62,6 @@ async fn run(
     let syncer_config = syncer::load_config_from_env();
     let configs = get_block_configs(syncer_config.start_block, syncer_config.end_block);
 
-    let use_batch = true;
-
-    if use_batch {
-        batch(s3_client, sqs_client, configs, syncer_config).await;
-    } else {
-        for chunk in configs.chunks(100) {
-            let invocations = invoke_lambdas(chunk).await;
-            let s3_results = get_s3_results(&invocations).await;
-
-            api::upload_to_sqs(
-                sqs_client,
-                syncer_config.tx_queue_url.clone(),
-                api::SQSPayload::Transactions(
-                    s3_results.into_iter().map(|r| r.0).flatten().collect(),
-                ),
-            )
-            .await;
-        }
-    }
-
-    Ok(())
-}
-
-async fn batch(
-    s3_client: &aws_sdk_s3::Client,
-    sqs_client: &aws_sdk_sqs::Client,
-    configs: Vec<BlockConfig>,
-    syncer_config: syncer::Config,
-) {
     for chunk in configs.chunks(100) {
         let invocations = invoke_lambdas(chunk).await;
         let s3_results: Vec<IngestTransaction> = get_s3_results(&invocations)
@@ -101,47 +70,16 @@ async fn batch(
             .map(|r| r.0)
             .flatten()
             .collect();
-
-        let mut i = 0;
-        while i < s3_results.len() {
-            let mut batch = Vec::new();
-
-            // Max transactions per batch: 60
-            while i < s3_results.len() && batch.len() < 60 {
-                let s3_result = &s3_results[i];
-                batch.push(s3_result);
-                i += 1;
-            }
-
-            let id = uuid::Uuid::new_v4();
-            let key = format!("syncs/batch-{}", id);
-
-            let response = s3_client
-                .put_object()
-                .bucket("ingest-fetch-logs")
-                .key(key.to_string())
-                .body(ByteStream::new(SdkBody::from(
-                    serde_json::to_string(&batch).unwrap(),
-                )))
-                .send()
-                .await;
-
-            match response {
-                Ok(_) => {}
-                Err(e) => panic!("Error uploading response: {:?}", e),
-            }
-
-            api::upload_to_sqs(
-                &sqs_client,
-                syncer_config.tx_queue_url.clone(),
-                api::SQSPayload::Batch(Batch {
-                    bucket: "ingest-fetch-logs".to_string(),
-                    prefix: key.to_string(),
-                }),
-            )
-            .await;
-        }
+        api::upload_transactions(
+            sqs_client,
+            s3_client,
+            syncer_config.tx_queue_url.clone(),
+            s3_results,
+        )
+        .await;
     }
+
+    Ok(())
 }
 
 async fn invoke_lambdas(
