@@ -1,0 +1,2 @@
+VERSION=${VERSION//\//-}
+echo "VERSION=${VERSION}" >> $GITHUB_ENV

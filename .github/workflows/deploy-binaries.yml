@@ -23,6 +23,11 @@ jobs:
       matrix:
         binary: ["log-fetcher", "orchestrator"]
     steps:
+      - name: Set version
+        env:
+          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          ./scripts/set_version.sh
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Install Zig toolchain
@@ -51,12 +56,16 @@ jobs:
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
-          VERSION: ${{ github.event.release.tag_name }}
         run: sh ./rust/scripts/build.sh
 
   build_extensions:
     runs-on: ubuntu-latest
     steps:
+      - name: Set version
+        env:
+          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          ./scripts/set_version.sh
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Install Zig toolchain
@@ -83,8 +92,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-extension
           restore-keys: ${{ runner.os }}-cargo-
       - name: Build
-        env:
-          VERSION: ${{ github.event.release.tag_name }}
         run: |
           cd rust
           cargo lambda build --release --extension --bin=extension
@@ -96,6 +103,12 @@ jobs:
       matrix:
         binary: ["syncer", "builder"]
     steps:
+      - name: Set version
+        env:
+          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          ./scripts/set_version.sh
+
       - uses: actions/checkout@master
 
       - name: Configure AWS credentials
