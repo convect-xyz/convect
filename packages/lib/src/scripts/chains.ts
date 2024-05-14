@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { getConnection, getDb } from "../db/db";
 import { producers } from "../db/schema";
 
+// @ts-ignore
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
