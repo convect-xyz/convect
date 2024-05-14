@@ -401,7 +401,9 @@ async function initialiseHandler(opts: { eventsLambdaArn: string }) {
 async function createPipelineState() {
   redisClient.on("error", (err) => console.log("Redis redisClient Error", err));
 
+  console.log("Connecting to redis");
   await redisClient.connect();
+  console.log("Connected to redis");
   await redisClient.json.set(
     HANDLER_ID,
     "$",
@@ -414,4 +416,8 @@ async function createPipelineState() {
       NX: true,
     }
   );
+
+  console.log("Disonnecting to redis");
+  await redisClient.disconnect();
+  console.log("Disconnected to redis");
 }
