@@ -1,7 +1,7 @@
 use std::env;
 
 use lambda_runtime::tower::BoxError;
-use redis::{cluster::ClusterClient, Commands, Connection, JsonCommands};
+use redis::{cluster::ClusterClient, Commands, JsonCommands};
 use serde::{Deserialize, Serialize};
 
 pub struct Config {
