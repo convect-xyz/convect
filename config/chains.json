@@ -23,7 +23,7 @@
   {
     "id": 81457,
     "name": "Blast Mainnet",
-    "polling_url": "",
+    "polling_url": "https://rpc.blast.io",
     "ws_url": "wss://orbital-lively-shape.blast-mainnet.quiknode.pro/REDACTED/",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast"
   }
