@@ -92,7 +92,7 @@ impl Pipeline {
         let mut con = client.get_connection().unwrap();
 
         let result: String = con.json_get(handler_id, "$").unwrap();
-        println!(result);
+        println!("{result}");
         let inner: Vec<Inner> = serde_json::from_str(result.as_str()).unwrap();
 
         Pipeline {
