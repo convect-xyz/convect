@@ -10,22 +10,19 @@ import { backOff } from "exponential-backoff";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
-import { createClient } from "redis";
+import { createCluster } from "redis";
 
 const lambda = new Lambda({ region: "eu-west-1" });
 const sns = new SNS({ region: "eu-west-1" });
 const sqs = new SQS({ region: "eu-west-1" });
 const s3 = new S3({ region: "eu-west-1" });
 
-const redisClient = createClient({
-  legacyMode: true,
-  disableOfflineQueue: true,
-  socket: {
-    port: 6379,
-    host: "clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com",
-    reconnectStrategy: () => 3000,
-    tls: true,
-  },
+const redisClient = createCluster({
+  rootNodes: [
+    {
+      url: "redis://clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
+    },
+  ],
 });
 
 const db = getDb({

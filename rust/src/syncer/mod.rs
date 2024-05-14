@@ -1,7 +1,7 @@
 use std::env;
 
 use lambda_runtime::tower::BoxError;
-use redis::{Commands, Connection, JsonCommands};
+use redis::{cluster::ClusterClient, Commands, Connection, JsonCommands};
 use serde::{Deserialize, Serialize};
 
 pub struct Config {
@@ -60,7 +60,7 @@ struct Inner {
 }
 
 pub struct Pipeline {
-    client: redis::Client,
+    client: redis::cluster::ClusterClient,
     inner: Inner,
 }
 
@@ -84,9 +84,9 @@ impl Pipeline {
     }
 
     pub async fn load(handler_id: String) -> Pipeline {
-        let client = redis::Client::open(
+        let client = ClusterClient::new(vec![
             "redis://clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
-        )
+        ])
         .unwrap();
         let mut con = client.get_connection().unwrap();
 
@@ -106,7 +106,7 @@ impl Pipeline {
 }
 
 pub struct UpdatePipelineFluentBuilder {
-    connection: redis::Connection,
+    connection: redis::cluster::ClusterConnection,
     inner: Inner,
 }
 
