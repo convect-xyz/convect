@@ -117,7 +117,7 @@ impl Pipeline {
             handler_id = self.inner.handler_id.to_string()
         );
 
-        let _: String = self.connection.incr(key, tx_count).unwrap();
+        let _: u64 = self.connection.incr(key, tx_count).unwrap();
     }
 
     pub fn get_transaction_count(&mut self) -> u64 {
