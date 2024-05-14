@@ -35,7 +35,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let result = run(&s3_client, &sqs_client, &pipeline).await;
 
     let update_result = match result {
-        Ok(_) => pipeline.update().set_state(syncer::SyncState::IDLE).send(),
+        Ok(_) => pipeline
+            .update()
+            .set_state(syncer::SyncState::IDLE)
+            .set_last_block(syncer_config.end_block)
+            .send(),
         Err(_) => pipeline
             .update()
             .set_state(syncer::SyncState::FAILED)
@@ -75,7 +79,6 @@ async fn run(
             .collect();
 
         api::upload_transactions(
-            pipeline,
             sqs_client,
             s3_client,
             syncer_config.tx_queue_url.clone(),
