@@ -76,7 +76,7 @@ pub async fn upload_transactions(
 ) {
     let serialised_txs = serde_json::to_string(&txs).unwrap();
 
-    if serialised_txs.len() > 1024 * 1024 * 2 {
+    if serialised_txs.len() < 1024 * 1024 * 2 {
         return upload_small(pipeline, sqs_client, queue_url, txs).await;
     }
 
@@ -133,6 +133,8 @@ async fn upload_small(
             Ok(_) => {}
             Err(e) => panic!("Upload Result: {:?}", e),
         }
+
+        pipeline.increment_transaction_count(group.len());
     }
 }
 
