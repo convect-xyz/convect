@@ -4,7 +4,6 @@ use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use futures::TryFutureExt;
 use ingest::{api, manifest::Manifest, syncer::Pipeline};
 use lambda_runtime::{run, service_fn, tower::BoxError, tracing, Error, LambdaEvent};
 
@@ -22,7 +21,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let ecs_client = aws_sdk_ecs::Client::new(&config);
 
     let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
-    let mut pipeline = Pipeline::load(handler_id).await;
+    let mut pipeline = Pipeline::load(handler_id);
+
     let incoming_block: u64 = event
         .payload
         .records
@@ -32,6 +32,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .message
         .parse()
         .expect("Invalid SNS Message");
+
+    println!("Tx count: {:?}", pipeline.get_transaction_count());
 
     // Will not sync while sync task already in progress
     // TODO: this should be added to a DLQ
@@ -44,7 +46,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .update()
         .set_state(ingest::syncer::SyncState::SYNCING)
         .send()
-        .await
         .expect("Failed to update pipeline");
 
     // If block diff is too great, trigger fargate to do the work
@@ -52,23 +53,24 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block).await;
     }
 
+    let from_block = pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap();
+
     // We'll process the blocks here and add them to tx queue
     // We shouldn't need to update status here because max concurrency should be 1
-    return sync_blocks(
+    let _ = sync_blocks(
+        &mut pipeline,
         &sqs_client,
         &s3_client,
-        pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap(),
+        from_block,
         incoming_block,
     )
-    .and_then(|_| async {
-        pipeline
-            .update()
-            .set_last_block(incoming_block)
-            .set_state(ingest::syncer::SyncState::IDLE)
-            .send()
-            .await
-    })
     .await;
+
+    pipeline
+        .update()
+        .set_last_block(incoming_block)
+        .set_state(ingest::syncer::SyncState::IDLE)
+        .send()
 }
 
 async fn trigger_batch_sync_task(
@@ -150,7 +152,6 @@ async fn trigger_batch_sync_task(
             .update()
             .set_state(ingest::syncer::SyncState::IDLE)
             .send()
-            .await
             .expect("Failed to update pipeline"),
         _ => {}
     }
@@ -166,6 +167,7 @@ fn create_key_value_pair(name: String, value: String) -> KeyValuePair {
 }
 
 async fn sync_blocks(
+    pipeline: &mut Pipeline,
     sqs_client: &aws_sdk_sqs::Client,
     s3_client: &aws_sdk_s3::Client,
     from_block: u64,
@@ -178,6 +180,7 @@ async fn sync_blocks(
         .unwrap();
 
     api::upload_transactions(
+        pipeline,
         sqs_client,
         s3_client,
         env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"),
