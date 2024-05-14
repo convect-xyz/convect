@@ -14,6 +14,7 @@ export async function handler(event) {
     data: JSON.parse(record.body),
   }));
 
+  console.log(records);
   const s3Results = await getS3Results(records);
 
   for (const record of records) {
