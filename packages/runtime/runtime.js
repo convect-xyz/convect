@@ -44,8 +44,6 @@ export async function handler(event) {
       i++;
     }
 
-    console.log("Batch Size:", batch.length);
-
     for (const txConfig of processors) {
       if (txConfig._independent) {
         await Promise.all(
@@ -68,11 +66,11 @@ export async function getS3Results(batchRecords) {
       .filter((r) => r.data.type === "batch")
       .map((r) =>
         axios.get(r.data.download_url).then(async (r) => {
+          console.log(r.data);
           s3Results.set(r.id, JSON.parse(r.data));
         })
       )
   );
-  console.log(s3Results);
 
   return s3Results;
 }
