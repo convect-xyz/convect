@@ -425,8 +425,6 @@ async function createPipelineState() {
   redisClient.on("error", (err) => console.log("Redis redisClient Error", err));
 
   console.log("Connecting to redis");
-  // await redisClient.connect();
-  // console.log("Connected to redis");
   await redisClient.call(
     "JSON.SET",
     HANDLER_ID,
@@ -441,6 +439,4 @@ async function createPipelineState() {
   await redisClient.set(`tx-count-${HANDLER_ID}`, 0);
 
   console.log("Disonnecting to redis");
-  // await redisClient.disconnect();
-  // console.log("Disconnected to redis");
 }
