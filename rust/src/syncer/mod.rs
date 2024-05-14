@@ -84,18 +84,14 @@ impl Pipeline {
     }
 
     pub fn load(handler_id: String) -> Pipeline {
-        println!("Connecting");
         let client = ClusterClient::new(vec![
             "rediss://clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
         ])
         .unwrap();
-        println!("Connected");
 
         let mut con = client.get_connection().unwrap();
 
-        println!("Getting Pipeline");
         let result: String = con.json_get(handler_id, "$").unwrap();
-        println!("Value obtained: {result}");
         let inner: Vec<Inner> = serde_json::from_str(result.as_str()).unwrap();
 
         Pipeline {
