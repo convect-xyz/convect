@@ -420,6 +420,7 @@ async function createPipelineState() {
   // await redisClient.connect();
   // console.log("Connected to redis");
   await redisClient.call(
+    "JSON.SET",
     HANDLER_ID,
     "$",
     JSON.stringify({
