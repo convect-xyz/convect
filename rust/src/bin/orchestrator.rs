@@ -56,7 +56,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     // If block diff is too great, trigger fargate to do the work
     if incoming_block - pipeline.last_block().or(Some(0)).unwrap() > 1999 {
-        return trigger_batch_sync_task(&ecs_client, &pipeline, incoming_block).await;
+        return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block).await;
     }
 
     // We'll process the blocks here and add them to tx queue
@@ -80,12 +80,12 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
 async fn trigger_batch_sync_task(
     ecs_client: &aws_sdk_ecs::Client,
-    pipeline: &Pipeline,
+    pipeline: &mut Pipeline,
     incoming_block: u64,
 ) -> Result<(), Error> {
     let version = env::var("VERSION").expect("Version ENV not defined");
 
-    ecs_client
+    let result = ecs_client
         .run_task()
         .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
         .task_definition(format!(
@@ -150,8 +150,17 @@ async fn trigger_batch_sync_task(
                 .build(),
         )
         .send()
-        .await
-        .unwrap();
+        .await;
+
+    match result {
+        Err(_) => pipeline
+            .update()
+            .set_state(ingest::syncer::SyncState::IDLE)
+            .send()
+            .await
+            .expect("Failed to update pipeline"),
+        _ => {}
+    }
 
     Ok(())
 }
