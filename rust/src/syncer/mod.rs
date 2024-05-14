@@ -85,7 +85,7 @@ impl Pipeline {
 
     pub async fn load(handler_id: String) -> Pipeline {
         let client = redis::Client::open(
-            "clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
+            "redis://clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
         )
         .unwrap();
         let mut con = client.get_connection().unwrap();

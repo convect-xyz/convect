@@ -19,6 +19,7 @@ const s3 = new S3({ region: "eu-west-1" });
 
 const redisClient = createClient({
   url: "redis://clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
+  legacyMode: true,
 });
 
 const db = getDb({
