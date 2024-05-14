@@ -60,7 +60,7 @@ struct Inner {
 }
 
 pub struct Pipeline {
-    client: redis::cluster::ClusterClient,
+    connection: redis::cluster::ClusterConnection,
     inner: Inner,
 }
 
@@ -84,37 +84,40 @@ impl Pipeline {
     }
 
     pub async fn load(handler_id: String) -> Pipeline {
+        println!("Connecting");
         let client = ClusterClient::new(vec![
             "rediss://clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
         ])
         .unwrap();
+        println!("Connected");
 
         let mut con = client.get_connection().unwrap();
 
+        println!("Getting Pipeline");
         let result: String = con.json_get(handler_id, "$").unwrap();
-        println!("{result}");
+        println!("Value obtained: {result}");
         let inner: Vec<Inner> = serde_json::from_str(result.as_str()).unwrap();
 
         Pipeline {
-            client,
+            connection: con,
             inner: inner.first().unwrap().clone(),
         }
     }
 
-    pub fn update(&self) -> UpdatePipelineFluentBuilder {
+    pub fn update(&mut self) -> UpdatePipelineFluentBuilder {
         return UpdatePipelineFluentBuilder {
-            connection: self.client.get_connection().unwrap(),
+            connection: &mut self.connection,
             inner: self.inner.clone(),
         };
     }
 }
 
-pub struct UpdatePipelineFluentBuilder {
-    connection: redis::cluster::ClusterConnection,
+pub struct UpdatePipelineFluentBuilder<'a> {
+    connection: &'a mut redis::cluster::ClusterConnection,
     inner: Inner,
 }
 
-impl UpdatePipelineFluentBuilder {
+impl<'a> UpdatePipelineFluentBuilder<'a> {
     pub fn set_state(mut self, new_state: SyncState) -> Self {
         self.inner.state = new_state;
         self
@@ -125,7 +128,7 @@ impl UpdatePipelineFluentBuilder {
         self
     }
 
-    pub async fn send(mut self) -> Result<(), BoxError> {
+    pub async fn send(self) -> Result<(), BoxError> {
         let _: String = self
             .connection
             .json_set(self.inner.handler_id.to_string(), "$", &self.inner)
