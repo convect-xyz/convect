@@ -22,7 +22,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let ecs_client = aws_sdk_ecs::Client::new(&config);
 
     let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
-    let pipeline = Pipeline::load(handler_id).await;
+    let mut pipeline = Pipeline::load(handler_id).await;
     let incoming_block: u64 = event
         .payload
         .records

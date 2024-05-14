@@ -26,7 +26,7 @@ const BATCH_SIZE: u64 = 1500;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = syncer::load_config_from_env();
-    let pipeline = Pipeline::load(syncer_config.handler_id.clone()).await;
+    let mut pipeline = Pipeline::load(syncer_config.handler_id.clone()).await;
 
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let s3_client = aws_sdk_s3::Client::new(&config);
