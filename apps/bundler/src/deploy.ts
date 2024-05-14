@@ -251,11 +251,7 @@ async function allocateResources(id: string) {
     },
     VpcConfig: {
       SecurityGroupIds: ["sg-08b95d721fc52088f"],
-      SubnetIds: [
-        "subnet-05d39f2476de29dc7",
-        "subnet-0c5024279478d0020",
-        "subnet-0d916fd4645cdeec4",
-      ],
+      SubnetIds: ["subnet-05d39f2476de29dc7"],
     },
     Environment: {
       Variables: {
@@ -293,11 +289,7 @@ async function allocateResources(id: string) {
     },
     VpcConfig: {
       SecurityGroupIds: ["sg-08b95d721fc52088f"],
-      SubnetIds: [
-        "subnet-05d39f2476de29dc7",
-        "subnet-0c5024279478d0020",
-        "subnet-0d916fd4645cdeec4",
-      ],
+      SubnetIds: ["subnet-05d39f2476de29dc7"],
     },
     Environment: {
       Variables: {
@@ -325,14 +317,6 @@ async function allocateResources(id: string) {
     Code: {
       S3Bucket: "ingest-build-outputs",
       S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + "-events.zip"),
-    },
-    VpcConfig: {
-      SecurityGroupIds: ["sg-08b95d721fc52088f"],
-      SubnetIds: [
-        "subnet-05d39f2476de29dc7",
-        "subnet-0c5024279478d0020",
-        "subnet-0d916fd4645cdeec4",
-      ],
     },
     Environment: {
       Variables: {
