@@ -93,9 +93,12 @@ impl Pipeline {
 
         let result: String = con.json_get(handler_id, "$").unwrap();
 
-        let inner: Inner = serde_json::from_str(result.as_str()).unwrap();
+        let inner: Vec<Inner> = serde_json::from_str(result.as_str()).unwrap();
 
-        Pipeline { client, inner }
+        Pipeline {
+            client,
+            inner: inner.first().unwrap().clone(),
+        }
     }
 
     pub fn update(&self) -> UpdatePipelineFluentBuilder {
