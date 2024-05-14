@@ -55,6 +55,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     // We'll process the blocks here and add them to tx queue
     // We shouldn't need to update status here because max concurrency should be 1
     return sync_blocks(
+        &pipeline,
         &sqs_client,
         &s3_client,
         pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap(),
@@ -63,7 +64,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     .and_then(|_| async {
         pipeline
             .update()
-            .set_last_block(incoming_block)
             .set_state(ingest::syncer::SyncState::IDLE)
             .send()
             .await
@@ -157,6 +157,7 @@ fn create_key_value_pair(name: String, value: String) -> KeyValuePair {
 }
 
 async fn sync_blocks(
+    pipeline: &Pipeline,
     sqs_client: &aws_sdk_sqs::Client,
     s3_client: &aws_sdk_s3::Client,
     from_block: u64,
@@ -169,6 +170,7 @@ async fn sync_blocks(
         .unwrap();
 
     api::upload_transactions(
+        pipeline,
         sqs_client,
         s3_client,
         env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"),

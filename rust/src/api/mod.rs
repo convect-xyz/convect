@@ -1,4 +1,4 @@
-use crate::manifest::Manifest;
+use crate::{manifest::Manifest, syncer::Pipeline};
 use aws_sdk_s3::primitives::ByteStream;
 use aws_smithy_types::body::SdkBody;
 use serde::{Deserialize, Serialize};
@@ -63,10 +63,12 @@ struct TxPayload {
 #[derive(Serialize, Deserialize)]
 struct BatchPayload {
     #[serde(rename(serialize = "type"))]
+    _type: String,
     download_url: String,
 }
 
 pub async fn upload_transactions(
+    pipeline: &Pipeline,
     sqs_client: &aws_sdk_sqs::Client,
     s3_client: &aws_sdk_s3::Client,
     queue_url: String,
@@ -75,13 +77,14 @@ pub async fn upload_transactions(
     let serialised_txs = serde_json::to_string(&txs).unwrap();
 
     if serialised_txs.len() > 1024 * 1024 * 2 {
-        return upload_small(sqs_client, queue_url, txs).await;
+        return upload_small(pipeline, sqs_client, queue_url, txs).await;
     }
 
-    return upload_batch(sqs_client, s3_client, queue_url, txs).await;
+    return upload_batch(pipeline, sqs_client, s3_client, queue_url, txs).await;
 }
 
 async fn upload_small(
+    pipeline: &Pipeline,
     sqs_client: &aws_sdk_sqs::Client,
     queue_url: String,
     txs: Vec<IngestTransaction>,
@@ -130,10 +133,18 @@ async fn upload_small(
             Ok(_) => {}
             Err(e) => panic!("Upload Result: {:?}", e),
         }
+
+        pipeline
+            .update()
+            .set_last_block(group.last().unwrap().block_number)
+            .send()
+            .await
+            .unwrap();
     }
 }
 
 async fn upload_batch(
+    pipeline: &Pipeline,
     sqs_client: &aws_sdk_sqs::Client,
     s3_client: &aws_sdk_s3::Client,
     queue_url: String,
@@ -182,6 +193,7 @@ async fn upload_batch(
             .queue_url(queue_url.to_owned())
             .message_body(
                 serde_json::to_string(&BatchPayload {
+                    _type: String::from("batch"),
                     download_url: download_url.clone(),
                 })
                 .unwrap(),
@@ -195,5 +207,12 @@ async fn upload_batch(
             Ok(_) => {}
             Err(e) => panic!("Upload Result: {:?}", e),
         }
+
+        pipeline
+            .update()
+            .set_last_block(batch.last().unwrap().block_number)
+            .send()
+            .await
+            .unwrap();
     }
 }

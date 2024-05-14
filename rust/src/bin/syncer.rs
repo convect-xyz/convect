@@ -32,14 +32,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
 
-    let result = run(&s3_client, &sqs_client).await;
+    let result = run(&s3_client, &sqs_client, &pipeline).await;
 
     let update_result = match result {
-        Ok(_) => pipeline
-            .update()
-            .set_state(syncer::SyncState::IDLE)
-            .set_last_block(syncer_config.end_block)
-            .send(),
+        Ok(_) => pipeline.update().set_state(syncer::SyncState::IDLE).send(),
         Err(_) => pipeline
             .update()
             .set_state(syncer::SyncState::FAILED)
@@ -58,6 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn run(
     s3_client: &aws_sdk_s3::Client,
     sqs_client: &aws_sdk_sqs::Client,
+    pipeline: &Pipeline,
 ) -> Result<(), Box<dyn Error>> {
     let syncer_config = syncer::load_config_from_env();
     let configs = get_block_configs(
@@ -78,6 +75,7 @@ async fn run(
             .collect();
 
         api::upload_transactions(
+            pipeline,
             sqs_client,
             s3_client,
             syncer_config.tx_queue_url.clone(),
