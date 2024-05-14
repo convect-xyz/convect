@@ -71,6 +71,7 @@ export async function getS3Results(batchRecords) {
         })
       )
   );
+  console.log(s3Results);
 
   return s3Results;
 }
