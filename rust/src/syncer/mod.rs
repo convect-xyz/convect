@@ -1,9 +1,8 @@
 use std::env;
 
-use aws_sdk_dynamodb::types::AttributeValue;
 use lambda_runtime::tower::BoxError;
+use redis::{Commands, Connection, JsonCommands};
 use serde::{Deserialize, Serialize};
-use serde_dynamo::aws_sdk_dynamodb_1;
 
 pub struct Config {
     pub handler_id: String,
@@ -50,33 +49,32 @@ impl SyncState {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Pipeline {
+#[derive(Serialize, Deserialize, Clone)]
+struct Inner {
     #[serde(rename(serialize = "HandlerId_", deserialize = "HandlerId_"))]
     handler_id: String,
-    #[serde(rename(serialize = "ProjectId_", deserialize = "ProjectId_"))]
-    project_id: String,
     #[serde(rename(serialize = "State_", deserialize = "State_"))]
     state: SyncState,
     #[serde(rename(serialize = "LastBlock_", deserialize = "LastBlock_"))]
     last_block: Option<String>,
 }
 
+pub struct Pipeline {
+    client: redis::Client,
+    inner: Inner,
+}
+
 impl Pipeline {
     pub fn handler_id(&self) -> String {
-        self.handler_id.clone()
-    }
-
-    pub fn project_id(&self) -> String {
-        self.handler_id.clone()
+        self.inner.handler_id.clone()
     }
 
     pub fn state(&self) -> SyncState {
-        self.state.clone()
+        self.inner.state.clone()
     }
 
     pub fn last_block(&self) -> Option<u64> {
-        self.last_block.as_ref().and_then(|v| {
+        self.inner.last_block.as_ref().and_then(|v| {
             if v.is_empty() {
                 return None;
             }
@@ -86,80 +84,48 @@ impl Pipeline {
     }
 
     pub async fn load(handler_id: String) -> Pipeline {
-        let config = aws_config::load_from_env().await;
-        let client = aws_sdk_dynamodb::Client::new(&config);
+        let client = redis::Client::open(
+            "clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
+        )
+        .unwrap();
+        let mut con = client.get_connection().unwrap();
 
-        let get_item_request = client
-            .get_item()
-            .table_name("pipeline_state")
-            .key("HandlerId_", AttributeValue::S(handler_id.to_string()));
+        let result: String = con.json_get(handler_id, "$").unwrap();
 
-        let get_item_response = get_item_request.send().await.unwrap();
+        let inner: Inner = serde_json::from_str(result.as_str()).unwrap();
 
-        let item = match get_item_response.item {
-            Some(v) => v,
-            None => panic!("Could not find pipeline state"),
-        };
-
-        let pipeline: Pipeline = aws_sdk_dynamodb_1::from_item(item).unwrap();
-        pipeline
+        Pipeline { client, inner }
     }
 
     pub fn update(&self) -> UpdatePipelineFluentBuilder {
         return UpdatePipelineFluentBuilder {
-            handler_id: self.handler_id.clone(),
-            state: self.state.clone(),
-            last_block: self.last_block.clone(),
+            connection: self.client.get_connection().unwrap(),
+            inner: self.inner.clone(),
         };
     }
 }
 
 pub struct UpdatePipelineFluentBuilder {
-    handler_id: String,
-    state: SyncState,
-    last_block: Option<String>,
+    connection: redis::Connection,
+    inner: Inner,
 }
 
 impl UpdatePipelineFluentBuilder {
-    pub fn set_state(mut self, new_state: SyncState) -> UpdatePipelineFluentBuilder {
-        self.state = new_state;
+    pub fn set_state(mut self, new_state: SyncState) -> Self {
+        self.inner.state = new_state;
         self
     }
 
-    pub fn set_last_block(mut self, new_last_block: u64) -> UpdatePipelineFluentBuilder {
-        self.last_block = Some(new_last_block.to_string());
+    pub fn set_last_block(mut self, new_last_block: u64) -> Self {
+        self.inner.last_block = Some(new_last_block.to_string());
         self
     }
 
-    pub async fn send(self) -> Result<(), BoxError> {
-        let config = aws_config::load_from_env().await;
-        let client = aws_sdk_dynamodb::Client::new(&config);
-
-        let result = client
-            .update_item()
-            .table_name("pipeline_state")
-            .update_expression("SET State_ = :state, LastBlock_ = :last_block")
-            .expression_attribute_values(
-                String::from(":state"),
-                AttributeValue::S(self.state.as_str().to_string()),
-            )
-            .expression_attribute_values(
-                String::from(":last_block"),
-                AttributeValue::S(
-                    self.last_block
-                        .or(Some("".to_string()))
-                        .unwrap()
-                        .to_string(),
-                ),
-            )
-            .key("HandlerId_", AttributeValue::S(self.handler_id))
-            .send()
-            .await;
-
-        match result {
-            Ok(_) => {}
-            Err(e) => panic!("Could not update: {:?}", e),
-        }
+    pub async fn send(mut self) -> Result<(), BoxError> {
+        let _: String = self
+            .connection
+            .json_set(self.inner.handler_id.to_string(), "$", &self.inner)
+            .unwrap();
 
         Ok(())
     }

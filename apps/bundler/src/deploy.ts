@@ -1,9 +1,7 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { Lambda } from "@aws-sdk/client-lambda";
 import { S3 } from "@aws-sdk/client-s3";
 import { SNS } from "@aws-sdk/client-sns";
 import { SQS } from "@aws-sdk/client-sqs";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { getDb, schema } from "@kayakthedev/lib";
 import { createId } from "@paralleldrive/cuid2";
 import { eq } from "drizzle-orm";
@@ -12,13 +10,16 @@ import { backOff } from "exponential-backoff";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
+import { createClient } from "redis";
 
 const lambda = new Lambda({ region: "eu-west-1" });
 const sns = new SNS({ region: "eu-west-1" });
 const sqs = new SQS({ region: "eu-west-1" });
 const s3 = new S3({ region: "eu-west-1" });
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+
+const redisClient = createClient({
+  url: "clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
+});
 
 const db = getDb({
   dbUrl: process.env.DATABASE_URL!,
@@ -398,14 +399,19 @@ async function initialiseHandler(opts: { eventsLambdaArn: string }) {
 }
 
 async function createPipelineState() {
-  const command = new PutCommand({
-    TableName: "pipeline_state",
-    Item: {
+  redisClient.on("error", (err) => console.log("Redis redisClient Error", err));
+
+  await redisClient.connect();
+  await redisClient.json.set(
+    HANDLER_ID,
+    "$",
+    {
       HandlerId_: HANDLER_ID,
       ProjectId_: PROJECT_ID,
       State_: "IDLE",
     },
-  });
-
-  const response = await docClient.send(command);
+    {
+      NX: true,
+    }
+  );
 }

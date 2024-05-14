@@ -39,8 +39,7 @@ async-trait = "0.1.80"
 # prost = "0.12"
 # prost-types = "0.12"
 base64 = "0.22.0"
-aws-sdk-dynamodb = "1.23.0"
-serde_dynamo = { version = "4.2.14", features = ["aws-sdk-dynamodb+1"] }
+redis = { version = "0.25.3", features = ["json"] }
 
 [dev-dependencies]
 mockall = "0.12.1"
