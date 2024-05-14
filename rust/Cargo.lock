@@ -3482,6 +3482,7 @@ dependencies = [
  "combine",
  "crc16",
  "itoa",
+ "native-tls",
  "percent-encoding",
  "rand",
  "ryu",

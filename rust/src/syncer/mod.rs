@@ -88,6 +88,7 @@ impl Pipeline {
             "rediss://clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
         ])
         .unwrap();
+
         let mut con = client.get_connection().unwrap();
 
         let result: String = con.json_get(handler_id, "$").unwrap();
