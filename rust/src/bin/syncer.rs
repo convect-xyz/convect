@@ -66,6 +66,8 @@ async fn run(
         BATCH_SIZE,
     );
 
+    let mut delete_handles = Vec::new();
+
     for chunk in configs.chunks(100) {
         let invocations = invoke_lambdas(chunk).await;
         let s3_results: Vec<IngestTransaction> = get_s3_results(&invocations)
@@ -83,10 +85,12 @@ async fn run(
         )
         .await;
 
-        tokio::spawn(async move {
+        delete_handles.push(tokio::spawn(async move {
             delete_s3_results(&invocations).await;
-        });
+        }));
     }
+
+    join_all(delete_handles).await;
 
     Ok(())
 }
