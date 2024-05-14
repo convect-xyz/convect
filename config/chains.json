@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "name": "Ethereum Mainnet",
+    "polling_url": "",
+    "ws_url": "wss://eth-mainnet.g.alchemy.com/v2/9XxfVSh91vo3fDuPN6zVouOwn82IPlpu",
+    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-mainnet"
+  },
+  {
+    "id": 137,
+    "name": "Polygon MATIC",
+    "polling_url": "",
+    "ws_url": "wss://polygon-mainnet.g.alchemy.com/v2/RR6SauaFrOOffGTqGrmea2EzWQvIUCtK",
+    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-matic"
+  },
+  {
+    "id": 80002,
+    "name": "Polygon Amoy",
+    "polling_url": "",
+    "ws_url": "wss://polygon-amoy.g.alchemy.com/v2/WHbTD19RIAt8R1leUqIE1NaD9nDh_kn4",
+    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-amoy"
+  },
+  {
+    "id": 81457,
+    "name": "Blast Mainnet",
+    "polling_url": "",
+    "ws_url": "wss://orbital-lively-shape.blast-mainnet.quiknode.pro/4438d7ee9173c04e77eb8f42d52f9fb2a9fb7a47/",
+    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast"
+  }
+]

@@ -44,9 +44,9 @@ async fn run(network: &SupportedNetwork, provider: &Provider<Ws>, sns: &aws_sdk_
                 .await
             {
                 Ok(_) => {
-                    println!("Uploaded to {:?}", network.network)
+                    println!("Uploaded to {:?}", network.name)
                 }
-                Err(e) => panic!("Error on {:?}: {:?}", network.network, e),
+                Err(e) => panic!("Error on {:?}: {:?}", network.name, e),
             }
         }
     }
