@@ -26,13 +26,13 @@ const BATCH_SIZE: u64 = 1500;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = syncer::load_config_from_env();
-    let mut pipeline = Pipeline::load(syncer_config.handler_id.clone()).await;
+    let mut pipeline = Pipeline::load(syncer_config.handler_id.clone());
 
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
 
-    let result = run(&s3_client, &sqs_client, &pipeline).await;
+    let result = run(&s3_client, &sqs_client, &mut pipeline).await;
 
     let update_result = match result {
         Ok(_) => pipeline
@@ -44,8 +44,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .update()
             .set_state(syncer::SyncState::FAILED)
             .send(),
-    }
-    .await;
+    };
 
     match update_result {
         Ok(_) => (),
@@ -58,7 +57,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn run(
     s3_client: &aws_sdk_s3::Client,
     sqs_client: &aws_sdk_sqs::Client,
-    pipeline: &Pipeline,
+    pipeline: &mut Pipeline,
 ) -> Result<(), Box<dyn Error>> {
     let syncer_config = syncer::load_config_from_env();
     let configs = get_block_configs(
@@ -79,6 +78,7 @@ async fn run(
             .collect();
 
         api::upload_transactions(
+            pipeline,
             sqs_client,
             s3_client,
             syncer_config.tx_queue_url.clone(),

@@ -438,6 +438,8 @@ async function createPipelineState() {
     })
   );
 
+  await redisClient.set(`tx-count-${HANDLER_ID}`, 0);
+
   console.log("Disonnecting to redis");
   // await redisClient.disconnect();
   // console.log("Disconnected to redis");
