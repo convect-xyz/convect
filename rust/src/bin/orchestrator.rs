@@ -4,8 +4,11 @@ use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use ingest::{api, manifest::Manifest, types::pipeline::Pipeline};
-use lambda_runtime::{run, service_fn, tower::BoxError, tracing, Error, LambdaEvent};
+use ingest::{
+    api::{self},
+    types::{manifest::Manifest, pipeline::Pipeline},
+};
+use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -17,7 +20,7 @@ async fn main() -> Result<(), Error> {
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&config);
-
+    let api = api::Api::new(&config);
     let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
     let mut pipeline = Pipeline::load(handler_id);
 
@@ -58,7 +61,24 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     // We'll process the blocks here and add them to tx queue
     // We shouldn't need to update status here because max concurrency should be 1
-    let _ = sync_blocks(&mut pipeline, from_block, incoming_block).await;
+    let manifest = Manifest::from_env().await.unwrap();
+
+    let transactions = api
+        .fetch_transactions()
+        .set_manifest(&manifest)
+        .set_start_block(from_block)
+        .set_end_block(incoming_block)
+        .send()
+        .await
+        .unwrap();
+
+    let _ = api
+        .enqueue_transactions()
+        .set_pipeline(&mut pipeline)
+        .set_queue_url(env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"))
+        .set_transactions(&transactions)
+        .send()
+        .await;
 
     pipeline
         .update()
@@ -158,32 +178,4 @@ fn create_key_value_pair(name: String, value: String) -> KeyValuePair {
         .set_name(Some(name))
         .set_value(Some(value))
         .build()
-}
-
-async fn sync_blocks(
-    pipeline: &mut Pipeline,
-    from_block: u64,
-    to_block: u64,
-) -> Result<(), BoxError> {
-    let manifest = Manifest::from_env().await.unwrap();
-    let api = api::Api::new();
-
-    let transactions = api
-        .fetch_transactions()
-        .set_manifest(&manifest)
-        .set_start_block(from_block)
-        .set_end_block(to_block)
-        .send()
-        .await
-        .unwrap();
-
-    let _ = api
-        .enqueue_transactions()
-        .set_pipeline(pipeline)
-        .set_queue_url(env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"))
-        .set_transactions(&transactions)
-        .send()
-        .await;
-
-    Ok(())
 }

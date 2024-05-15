@@ -8,7 +8,7 @@ use web3::{
     Web3,
 };
 
-use crate::manifest::{LogConfig, Manifest};
+use crate::types::manifest::{LogConfig, Manifest};
 use crate::types::transactions::{IngestLog, IngestTransaction};
 
 pub trait TransactionFetcher {
