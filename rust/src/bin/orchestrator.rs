@@ -34,8 +34,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .parse()
         .expect("Invalid SNS Message");
 
-    println!("Tx count: {:?}", pipeline.get_transaction_count());
-
     // Will not sync while sync task already in progress
     // TODO: this should be added to a DLQ
     if pipeline
@@ -57,12 +55,18 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block).await;
     }
 
+    println!("State: {:?}", pipeline.state());
+
     let from_block = pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap();
 
     // We'll process the blocks here and add them to tx queue
     // We shouldn't need to update status here because max concurrency should be 1
     let manifest = Manifest::from_env().await.unwrap();
 
+    println!(
+        "start block: {:?}. end block: {:?}",
+        from_block, incoming_block
+    );
     let transactions = api
         .fetch_transactions()
         .set_manifest(&manifest)
@@ -71,6 +75,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .send()
         .await
         .unwrap();
+
+    println!("transactions: {:?}", transactions);
 
     let _ = api
         .enqueue_transactions()
