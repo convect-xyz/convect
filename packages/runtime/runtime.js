@@ -35,7 +35,11 @@ export async function handler(event) {
     const frontTx = parsedTxs.at(i);
     const processors = getEligibleTxConfigs(frontTx, allTxConfigs);
 
-    console.log("Eligible Processors:", processors);
+    if (processors.length === 0) {
+      console.log("No eligible processors for: ", frontTx);
+    } else {
+      console.log("Eligible Processors:", processors);
+    }
 
     // batch matching transactions
     while (i < parsedTxs.length && txMatches(frontTx, parsedTxs[i])) {
