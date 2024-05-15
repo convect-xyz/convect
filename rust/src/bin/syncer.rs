@@ -7,9 +7,10 @@ use aws_sdk_lambda::{
 use aws_sdk_s3::primitives::Blob;
 use futures::{future::join_all, TryFutureExt};
 use ingest::{
-    api::{self, IngestTransaction},
+    api,
     log_fetcher::invocation::{InvocationRequest, InvocationResponse},
-    syncer::{self, Pipeline},
+    types::pipeline::Pipeline,
+    types::{self, transactions::IngestTransaction},
 };
 use serde::Serialize;
 use std::error::Error;
@@ -25,24 +26,19 @@ const BATCH_SIZE: u64 = 1500;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let syncer_config = syncer::load_config_from_env();
+    let syncer_config = load_config_from_env();
     let mut pipeline = Pipeline::load(syncer_config.handler_id.clone());
-
-    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    let s3_client = aws_sdk_s3::Client::new(&config);
-    let sqs_client = aws_sdk_sqs::Client::new(&config);
-
-    let result = run(&s3_client, &sqs_client, &mut pipeline).await;
+    let result = run(&mut pipeline).await;
 
     let update_result = match result {
         Ok(_) => pipeline
             .update()
-            .set_state(syncer::SyncState::IDLE)
+            .set_state(types::pipeline::SyncState::IDLE)
             .set_last_block(syncer_config.end_block)
             .send(),
         Err(_) => pipeline
             .update()
-            .set_state(syncer::SyncState::FAILED)
+            .set_state(types::pipeline::SyncState::FAILED)
             .send(),
     };
 
@@ -54,17 +50,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn run(
-    s3_client: &aws_sdk_s3::Client,
-    sqs_client: &aws_sdk_sqs::Client,
-    pipeline: &mut Pipeline,
-) -> Result<(), Box<dyn Error>> {
-    let syncer_config = syncer::load_config_from_env();
+async fn run(pipeline: &mut Pipeline) -> Result<(), Box<dyn Error>> {
+    let syncer_config = load_config_from_env();
     let configs = get_block_configs(
         syncer_config.start_block,
         syncer_config.end_block,
         BATCH_SIZE,
     );
+
+    let api = api::Api::new();
 
     let mut delete_handles = Vec::new();
 
@@ -77,14 +71,13 @@ async fn run(
             .flatten()
             .collect();
 
-        api::upload_transactions(
-            pipeline,
-            sqs_client,
-            s3_client,
-            syncer_config.tx_queue_url.clone(),
-            s3_results,
-        )
-        .await;
+        let _ = api
+            .enqueue_transactions()
+            .set_pipeline(pipeline)
+            .set_queue_url(syncer_config.tx_queue_url.clone())
+            .set_transactions(&s3_results)
+            .send()
+            .await;
 
         delete_handles.push(tokio::spawn(async move {
             delete_s3_results(&invocations).await;
@@ -101,7 +94,7 @@ async fn invoke_lambdas(
 ) -> Vec<Result<InvokeOutput, SdkError<InvokeError>>> {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let lambda_client = aws_sdk_lambda::Client::new(&config);
-    let syncer_config = syncer::load_config_from_env();
+    let syncer_config = load_config_from_env();
 
     let mut lambda_invocation_futures = Vec::new();
 
@@ -234,6 +227,36 @@ fn get_block_configs(mut start_block: u64, end_block: u64, batch_size: u64) -> V
     }
 
     return result;
+}
+
+use std::env;
+
+pub struct Config {
+    pub handler_id: String,
+    pub project_id: String,
+    pub start_block: u64,
+    pub end_block: u64,
+    pub function_name: String,
+    pub tx_queue_url: String,
+}
+
+pub fn load_config_from_env() -> Config {
+    return Config {
+        handler_id: env::var("HANDLER_ID").expect("Handler ID not set"),
+        project_id: env::var("PROJECT_ID").expect("Project ID not set"),
+        start_block: env::var("START_BLOCK")
+            .expect("START_BLOCK is not present")
+            .parse()
+            .expect("START_BLOCK is not a u64"),
+        end_block: env::var("END_BLOCK")
+            .expect("END_BLOCK is not present")
+            .parse()
+            .expect("END_BLOCK is not a u64"),
+        function_name: env::var("LOG_FETCHER_LAMBDA_ARN")
+            .expect("LOG_FETCHER_LAMBDA_ARN is not present"),
+        tx_queue_url: env::var("TRANSACTION_QUEUE_URL")
+            .expect("TRANSACTION_QUEUE_URL is not present"),
+    };
 }
 
 #[cfg(test)]

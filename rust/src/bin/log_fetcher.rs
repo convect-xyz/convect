@@ -14,13 +14,15 @@ async fn function_handler(
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let manifest = Manifest::from_env().await.unwrap();
+    let api = api::Api::new();
 
-    let transactions = match api::get_ingest_transactions(
-        &manifest,
-        event.payload.start_block,
-        event.payload.end_block,
-    )
-    .await
+    let transactions = match api
+        .fetch_transactions()
+        .set_manifest(&manifest)
+        .set_start_block(event.payload.start_block)
+        .set_end_block(event.payload.end_block)
+        .send()
+        .await
     {
         Ok(txs) => txs,
         Err(_) => todo!(),
