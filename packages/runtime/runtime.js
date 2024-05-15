@@ -64,9 +64,9 @@ export async function getS3Results(batchRecords) {
   await Promise.all(
     batchRecords
       .filter((r) => r.data.type === "batch")
-      .map((r) =>
-        axios.get(r.data.download_url).then(async (r) => {
-          s3Results.set(r.id, r.data);
+      .map((record) =>
+        axios.get(record.data.download_url).then(async (response) => {
+          s3Results.set(record.id, response.data);
         })
       )
   );
