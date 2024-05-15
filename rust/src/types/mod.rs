@@ -181,7 +181,8 @@ pub mod pipeline {
                 handler_id = self.inner.handler_id.to_string()
             );
 
-            let _: u64 = self.connection.incr(key, tx_count).unwrap();
+            let v: u64 = self.connection.incr(key, tx_count).unwrap();
+            println!("{v}");
         }
 
         pub fn get_transaction_count(&mut self) -> u64 {
