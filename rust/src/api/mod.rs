@@ -37,7 +37,10 @@ impl Api<TransactionFetcherImpl<Web3ClientImpl>, TransactionEnqueuerImpl<aws_sdk
     pub fn new(config: &aws_config::SdkConfig) -> Self {
         Self {
             log_fetcher: TransactionFetcherImpl::new(),
-            tx_enqueuer: TransactionEnqueuerImpl::new(aws_sdk_s3::Client::new(config)),
+            tx_enqueuer: TransactionEnqueuerImpl::new(
+                aws_sdk_s3::Client::new(config),
+                aws_sdk_sqs::Client::new(&config),
+            ),
         }
     }
 }
