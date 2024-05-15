@@ -44,6 +44,12 @@ export async function handler(event) {
     // batch matching transactions
     while (i < parsedTxs.length && txMatches(frontTx, parsedTxs[i])) {
       const tx = parsedTxs[i];
+      if (
+        tx.transactionHash.toLowerCase() ===
+        "0xe0d3d5b33e80d8d2507b9b25012421bbef838221f0afe5bb8b44b23c539dffaf"
+      ) {
+        console.log("Found transaction:", tx);
+      }
       batch.push(tx);
       i++;
     }
