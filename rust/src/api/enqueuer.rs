@@ -1,9 +1,7 @@
 use crate::s3::S3;
 use crate::types::pipeline::Pipeline;
 use crate::types::transactions::IngestTransaction;
-use aws_config::BehaviorVersion;
 use serde::{Deserialize, Serialize};
-use tokio::runtime::Handle;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize)]
