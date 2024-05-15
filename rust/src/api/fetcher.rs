@@ -78,6 +78,19 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         }
 
         txs.sort_by(|a, b| {
+            if a.transaction_hash
+                .to_ascii_lowercase()
+                .eq("0xe0d3d5b33e80d8d2507b9b25012421bbef838221f0afe5bb8b44b23c539dffaf")
+            {
+                println!("Found the transaction: {:?}", a);
+            }
+            if b.transaction_hash
+                .to_ascii_lowercase()
+                .eq("0xe0d3d5b33e80d8d2507b9b25012421bbef838221f0afe5bb8b44b23c539dffaf")
+            {
+                println!("Found the transaction: {:?}", a);
+            }
+
             let block_cmp = a.block_number.cmp(&b.block_number);
             if block_cmp == Ordering::Equal {
                 return a.transaction_index.cmp(&b.transaction_index);
