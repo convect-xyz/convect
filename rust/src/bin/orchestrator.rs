@@ -4,7 +4,7 @@ use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use ingest::{api, manifest::Manifest, syncer::Pipeline};
+use ingest::{api, manifest::Manifest, types::pipeline::Pipeline};
 use lambda_runtime::{run, service_fn, tower::BoxError, tracing, Error, LambdaEvent};
 
 #[tokio::main]
@@ -16,8 +16,6 @@ async fn main() -> Result<(), Error> {
 
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let config = aws_config::load_from_env().await;
-    let sqs_client = aws_sdk_sqs::Client::new(&config);
-    let s3_client = aws_sdk_s3::Client::new(&config);
     let ecs_client = aws_sdk_ecs::Client::new(&config);
 
     let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
@@ -37,14 +35,17 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     // Will not sync while sync task already in progress
     // TODO: this should be added to a DLQ
-    if pipeline.state().ne(&ingest::syncer::SyncState::IDLE) {
+    if pipeline
+        .state()
+        .ne(&ingest::types::pipeline::SyncState::IDLE)
+    {
         return Ok(());
     }
 
     // It is the responsibility of the ECS task to revert this status
     pipeline
         .update()
-        .set_state(ingest::syncer::SyncState::SYNCING)
+        .set_state(ingest::types::pipeline::SyncState::SYNCING)
         .send()
         .expect("Failed to update pipeline");
 
@@ -57,19 +58,12 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     // We'll process the blocks here and add them to tx queue
     // We shouldn't need to update status here because max concurrency should be 1
-    let _ = sync_blocks(
-        &mut pipeline,
-        &sqs_client,
-        &s3_client,
-        from_block,
-        incoming_block,
-    )
-    .await;
+    let _ = sync_blocks(&mut pipeline, from_block, incoming_block).await;
 
     pipeline
         .update()
         .set_last_block(incoming_block)
-        .set_state(ingest::syncer::SyncState::IDLE)
+        .set_state(ingest::types::pipeline::SyncState::IDLE)
         .send()
 }
 
@@ -150,7 +144,7 @@ async fn trigger_batch_sync_task(
     match result {
         Err(_) => pipeline
             .update()
-            .set_state(ingest::syncer::SyncState::IDLE)
+            .set_state(ingest::types::pipeline::SyncState::IDLE)
             .send()
             .expect("Failed to update pipeline"),
         _ => {}
@@ -168,25 +162,28 @@ fn create_key_value_pair(name: String, value: String) -> KeyValuePair {
 
 async fn sync_blocks(
     pipeline: &mut Pipeline,
-    sqs_client: &aws_sdk_sqs::Client,
-    s3_client: &aws_sdk_s3::Client,
     from_block: u64,
     to_block: u64,
 ) -> Result<(), BoxError> {
     let manifest = Manifest::from_env().await.unwrap();
+    let api = api::Api::new();
 
-    let transactions = api::get_ingest_transactions(&manifest, from_block, to_block)
+    let transactions = api
+        .fetch_transactions()
+        .set_manifest(&manifest)
+        .set_start_block(from_block)
+        .set_end_block(to_block)
+        .send()
         .await
         .unwrap();
 
-    api::upload_transactions(
-        pipeline,
-        sqs_client,
-        s3_client,
-        env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"),
-        transactions,
-    )
-    .await;
+    let _ = api
+        .enqueue_transactions()
+        .set_pipeline(pipeline)
+        .set_queue_url(env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"))
+        .set_transactions(&transactions)
+        .send()
+        .await;
 
     Ok(())
 }
