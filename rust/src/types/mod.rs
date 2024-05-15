@@ -110,14 +110,14 @@ pub mod pipeline {
     use redis::{cluster::ClusterClient, Commands, JsonCommands};
     use serde::{Deserialize, Serialize};
 
-    #[derive(Serialize, Deserialize, Clone, PartialEq)]
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     pub enum SyncState {
         IDLE,
         SYNCING,
         FAILED,
     }
 
-    #[derive(Serialize, Deserialize, Clone)]
+    #[derive(Serialize, Deserialize, Clone, Debug)]
     struct Inner {
         #[serde(rename(serialize = "HandlerId_", deserialize = "HandlerId_"))]
         handler_id: String,
