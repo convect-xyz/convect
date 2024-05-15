@@ -66,8 +66,7 @@ export async function getS3Results(batchRecords) {
       .filter((r) => r.data.type === "batch")
       .map((r) =>
         axios.get(r.data.download_url).then(async (r) => {
-          console.log(r.data);
-          s3Results.set(r.id, JSON.parse(r.data));
+          s3Results.set(r.id, r.data);
         })
       )
   );
