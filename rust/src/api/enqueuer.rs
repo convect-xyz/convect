@@ -1,8 +1,7 @@
+use crate::s3::S3;
 use crate::types::pipeline::Pipeline;
 use crate::types::transactions::IngestTransaction;
 use aws_config::BehaviorVersion;
-use aws_sdk_s3::primitives::ByteStream;
-use aws_smithy_types::body::SdkBody;
 use serde::{Deserialize, Serialize};
 use tokio::runtime::Handle;
 use uuid::Uuid;
@@ -22,24 +21,23 @@ struct BatchPayload {
 }
 
 pub trait TransactionEnqueuer {
-    fn enqueue_transactions<'a>(
+    async fn enqueue_transactions(
         &self,
         pipeline: &mut Pipeline,
         queue_url: String,
-        txs: &'a Vec<IngestTransaction>,
-    ) -> impl std::future::Future<Output = Result<(), web3::Error>> + Send;
+        txs: &Vec<IngestTransaction>,
+    ) -> Result<(), web3::Error>;
 }
 
-pub struct TransactionEnqueuerImpl {
+pub struct TransactionEnqueuerImpl<T: S3> {
     sqs_client: aws_sdk_sqs::Client,
-    s3_client: aws_sdk_s3::Client,
+    s3_client: T,
 }
 
-impl TransactionEnqueuerImpl {
-    pub fn new() -> Self {
+impl<T: S3> TransactionEnqueuerImpl<T> {
+    pub fn new(s3_client: T) -> Self {
         let config =
             Handle::current().block_on(aws_config::load_defaults(BehaviorVersion::latest()));
-        let s3_client = aws_sdk_s3::Client::new(&config);
         let sqs_client = aws_sdk_sqs::Client::new(&config);
 
         Self {
@@ -128,13 +126,11 @@ impl TransactionEnqueuerImpl {
 
             let response = self
                 .s3_client
-                .put_object()
-                .bucket("ingest-fetch-logs")
-                .key(key.to_string())
-                .body(ByteStream::new(SdkBody::from(
+                .put_s3_object(
+                    "ingest-fetch-logs",
+                    key.as_str(),
                     serde_json::to_string(&batch).unwrap(),
-                )))
-                .send()
+                )
                 .await;
 
             match response {
@@ -175,7 +171,7 @@ impl TransactionEnqueuerImpl {
     }
 }
 
-impl TransactionEnqueuer for TransactionEnqueuerImpl {
+impl<T: S3> TransactionEnqueuer for TransactionEnqueuerImpl<T> {
     async fn enqueue_transactions(
         &self,
         pipeline: &mut Pipeline,

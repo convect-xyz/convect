@@ -1,12 +1,20 @@
 use std::env;
 
-use aws_sdk_s3::primitives::{ByteStream, SdkBody};
 use ingest::{
-    api,
+    api::{
+        self,
+        enqueuer::TransactionEnqueuerImpl,
+        fetcher::{TransactionFetcherImpl, Web3ClientImpl},
+        Api,
+    },
     log_fetcher::invocation::{InvocationRequest, InvocationResponse},
-    manifest::Manifest,
+    s3::S3,
+    types::manifest::Manifest,
 };
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
+
+type ApiInstance =
+    Api<TransactionFetcherImpl<Web3ClientImpl>, TransactionEnqueuerImpl<aws_sdk_s3::Client>>;
 
 async fn function_handler(
     event: LambdaEvent<InvocationRequest>,
@@ -14,7 +22,7 @@ async fn function_handler(
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let manifest = Manifest::from_env().await.unwrap();
-    let api = api::Api::new();
+    let api: ApiInstance = api::Api::new(&config);
 
     let transactions = match api
         .fetch_transactions()
@@ -49,13 +57,9 @@ async fn function_handler(
     );
 
     s3_client
-        .put_object()
-        .bucket("ingest-fetch-logs")
-        .key(key.clone())
-        .body(ByteStream::new(SdkBody::from(body)))
-        .send()
+        .put_s3_object("ingest-fetch-logs", key.as_str(), body)
         .await
-        .expect("Failed to upload logs");
+        .unwrap();
 
     Ok(InvocationResponse {
         s3_bucket: Some("ingest-fetch-logs".to_string()),

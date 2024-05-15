@@ -1,12 +1,12 @@
 use crate::{
-    manifest::Manifest, types::pipeline::Pipeline, types::transactions::IngestTransaction,
+    types::manifest::Manifest, types::pipeline::Pipeline, types::transactions::IngestTransaction,
 };
 
 use self::enqueuer::{TransactionEnqueuer, TransactionEnqueuerImpl};
 use self::fetcher::{TransactionFetcher, TransactionFetcherImpl, Web3ClientImpl};
 
-mod enqueuer;
-mod fetcher;
+pub mod enqueuer;
+pub mod fetcher;
 
 pub struct Api<F: TransactionFetcher, E: TransactionEnqueuer> {
     log_fetcher: F,
@@ -14,7 +14,7 @@ pub struct Api<F: TransactionFetcher, E: TransactionEnqueuer> {
 }
 
 impl<F: TransactionFetcher, E: TransactionEnqueuer> Api<F, E> {
-    pub fn fetch_transactions(&self) -> TransactionFetcherFluentBuilder<'_, '_, F> {
+    pub fn fetch_transactions(&self) -> TransactionFetcherFluentBuilder<'_, F> {
         TransactionFetcherFluentBuilder {
             log_fetcher: &self.log_fetcher,
             manifest: None,
@@ -23,7 +23,7 @@ impl<F: TransactionFetcher, E: TransactionEnqueuer> Api<F, E> {
         }
     }
 
-    pub fn enqueue_transactions(&self) -> TransactionEnqueuerFluentBuilder<'_, '_, '_, E> {
+    pub fn enqueue_transactions(&self) -> TransactionEnqueuerFluentBuilder<'_, E> {
         TransactionEnqueuerFluentBuilder {
             tx_enqueuer: &self.tx_enqueuer,
             pipeline: None,
@@ -33,24 +33,24 @@ impl<F: TransactionFetcher, E: TransactionEnqueuer> Api<F, E> {
     }
 }
 
-impl Api<TransactionFetcherImpl<Web3ClientImpl>, TransactionEnqueuerImpl> {
-    pub fn new() -> Self {
+impl Api<TransactionFetcherImpl<Web3ClientImpl>, TransactionEnqueuerImpl<aws_sdk_s3::Client>> {
+    pub fn new(config: &aws_config::SdkConfig) -> Self {
         Self {
             log_fetcher: TransactionFetcherImpl::new(),
-            tx_enqueuer: TransactionEnqueuerImpl::new(),
+            tx_enqueuer: TransactionEnqueuerImpl::new(aws_sdk_s3::Client::new(config)),
         }
     }
 }
 
-pub struct TransactionFetcherFluentBuilder<'a, 'b, T: TransactionFetcher> {
-    log_fetcher: &'b T,
+pub struct TransactionFetcherFluentBuilder<'a, T: TransactionFetcher> {
+    log_fetcher: &'a T,
     manifest: Option<&'a Manifest>,
     start_block: Option<u64>,
     end_block: Option<u64>,
 }
 
-impl<'a, 'b, T: TransactionFetcher> TransactionFetcherFluentBuilder<'a, 'b, T> {
-    pub fn set_manifest(&mut self, value: &'a Manifest) -> &mut Self {
+impl<'a, T: TransactionFetcher> TransactionFetcherFluentBuilder<'a, T> {
+    pub fn set_manifest(&'a mut self, value: &'a Manifest) -> &'a mut Self {
         self.manifest = Some(value);
         self
     }
@@ -80,21 +80,20 @@ impl<'a, 'b, T: TransactionFetcher> TransactionFetcherFluentBuilder<'a, 'b, T> {
     }
 }
 
-pub struct TransactionEnqueuerFluentBuilder<'b, 'c, 't, T: TransactionEnqueuer> {
-    tx_enqueuer: &'b T,
-
-    pipeline: Option<&'c mut Pipeline>,
-    transactions: Option<&'t Vec<IngestTransaction>>,
+pub struct TransactionEnqueuerFluentBuilder<'a, T: TransactionEnqueuer> {
+    tx_enqueuer: &'a T,
+    pipeline: Option<&'a mut Pipeline>,
+    transactions: Option<&'a Vec<IngestTransaction>>,
     queue_url: Option<String>,
 }
 
-impl<'b, 'c, 't, T: TransactionEnqueuer> TransactionEnqueuerFluentBuilder<'b, 'c, 't, T> {
-    pub fn set_pipeline(&mut self, value: &'c mut Pipeline) -> &mut Self {
+impl<'a, T: TransactionEnqueuer> TransactionEnqueuerFluentBuilder<'a, T> {
+    pub fn set_pipeline(&'a mut self, value: &'a mut Pipeline) -> &'a mut Self {
         self.pipeline = Some(value);
         self
     }
 
-    pub fn set_transactions(&mut self, value: &'t Vec<IngestTransaction>) -> &mut Self {
+    pub fn set_transactions(&'a mut self, value: &'a Vec<IngestTransaction>) -> &'a mut Self {
         self.transactions = Some(value);
         self
     }

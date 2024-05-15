@@ -7,13 +7,19 @@ use aws_sdk_lambda::{
 use aws_sdk_s3::primitives::Blob;
 use futures::{future::join_all, TryFutureExt};
 use ingest::{
-    api,
+    api::{
+        enqueuer::TransactionEnqueuerImpl,
+        fetcher::{TransactionFetcherImpl, Web3ClientImpl},
+        Api,
+    },
     log_fetcher::invocation::{InvocationRequest, InvocationResponse},
-    types::pipeline::Pipeline,
-    types::{self, transactions::IngestTransaction},
+    types::{self, pipeline::Pipeline, transactions::IngestTransaction},
 };
 use serde::Serialize;
 use std::error::Error;
+
+type ApiInstance =
+    Api<TransactionFetcherImpl<Web3ClientImpl>, TransactionEnqueuerImpl<aws_sdk_s3::Client>>;
 
 #[derive(Serialize, Debug)]
 struct BlockConfig {
@@ -28,7 +34,10 @@ const BATCH_SIZE: u64 = 1500;
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
     let mut pipeline = Pipeline::load(syncer_config.handler_id.clone());
-    let result = run(&mut pipeline).await;
+    let config = aws_config::load_from_env().await;
+    let api: ApiInstance = Api::new(&config);
+
+    let result = run(&api, &mut pipeline).await;
 
     let update_result = match result {
         Ok(_) => pipeline
@@ -50,15 +59,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn run(pipeline: &mut Pipeline) -> Result<(), Box<dyn Error>> {
+async fn run(api: &ApiInstance, pipeline: &mut Pipeline) -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
     let configs = get_block_configs(
         syncer_config.start_block,
         syncer_config.end_block,
         BATCH_SIZE,
     );
-
-    let api = api::Api::new();
 
     let mut delete_handles = Vec::new();
 
