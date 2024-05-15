@@ -35,11 +35,7 @@ pub struct TransactionEnqueuerImpl<T: S3> {
 }
 
 impl<T: S3> TransactionEnqueuerImpl<T> {
-    pub fn new(s3_client: T) -> Self {
-        let config =
-            Handle::current().block_on(aws_config::load_defaults(BehaviorVersion::latest()));
-        let sqs_client = aws_sdk_sqs::Client::new(&config);
-
+    pub fn new(s3_client: T, sqs_client: aws_sdk_sqs::Client) -> Self {
         Self {
             s3_client,
             sqs_client,
