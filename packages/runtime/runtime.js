@@ -42,7 +42,13 @@ export async function handler(event) {
     }
 
     // batch matching transactions
-    while (i < parsedTxs.length && txMatches(frontTx, parsedTxs[i])) {
+    while (
+      i < parsedTxs.length &&
+      sameEligibleProcessors(
+        processors,
+        getEligibleTxConfigs(parsedTxs[i], allTxConfigs)
+      )
+    ) {
       const tx = parsedTxs[i];
       if (
         tx.transactionHash.toLowerCase() ===
@@ -152,6 +158,24 @@ export function txMatches(baseTx, txToMatch) {
       txToMatchLogIdentifiers.has(k) &&
       txToMatchLogIdentifiers.get(k) === baseTxLogIdentifiers.get(k)
   );
+}
+
+export function sameEligibleProcessors(processorsA, processorsB) {
+  let seen = new Set();
+
+  if (processorsA.length != processorsB.length) return false;
+
+  for (const p of processorsA) {
+    seen.add(p);
+  }
+
+  for (const p of processorsB) {
+    if (!seen.has(p)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export function getUniqueLogIdentifiers(tx) {

@@ -173,7 +173,6 @@ async fn get_s3_results(
         .await
         .into_iter()
         .map(|f| f.unwrap())
-        // .flatten()
         .collect::<Vec<S3Result>>()
 }
 
