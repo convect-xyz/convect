@@ -14,7 +14,6 @@ export async function handler(event) {
     data: JSON.parse(record.body),
   }));
 
-  console.log(records);
   const s3Results = await getS3Results(records);
 
   for (const record of records) {
@@ -35,13 +34,7 @@ export async function handler(event) {
     const frontTx = parsedTxs.at(i);
     const processors = getEligibleTxConfigs(frontTx, allTxConfigs);
 
-    if (processors.length === 0) {
-      console.log("No eligible processors for: ", frontTx);
-    } else {
-      console.log("Eligible Processors:", processors);
-    }
-
-    // batch matching transactions
+    // batch transactions that can be processed by the exact same processors
     while (
       i < parsedTxs.length &&
       sameEligibleProcessors(
@@ -50,12 +43,6 @@ export async function handler(event) {
       )
     ) {
       const tx = parsedTxs[i];
-      if (
-        tx.transactionHash.toLowerCase() ===
-        "0xe0d3d5b33e80d8d2507b9b25012421bbef838221f0afe5bb8b44b23c539dffaf"
-      ) {
-        console.log("Found transaction:", tx);
-      }
       batch.push(tx);
       i++;
     }
