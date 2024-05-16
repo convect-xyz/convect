@@ -136,30 +136,6 @@ export function txConfigComparison(tx) {
   };
 }
 
-export function txMatches(baseTx, txToMatch) {
-  const baseTxLogIdentifiers = getUniqueLogIdentifiers(baseTx).reduce(
-    (acc, curr) => {
-      acc.set(curr.signature, curr.address);
-      return acc;
-    },
-    new Map()
-  );
-
-  const txToMatchLogIdentifiers = getUniqueLogIdentifiers(txToMatch).reduce(
-    (acc, curr) => {
-      acc.set(curr.signature, curr.address);
-      return acc;
-    },
-    new Map()
-  );
-
-  return [...baseTxLogIdentifiers.keys()].every(
-    (k) =>
-      txToMatchLogIdentifiers.has(k) &&
-      txToMatchLogIdentifiers.get(k) === baseTxLogIdentifiers.get(k)
-  );
-}
-
 export function sameEligibleProcessors(processorsA, processorsB) {
   let seen = new Set();
 
