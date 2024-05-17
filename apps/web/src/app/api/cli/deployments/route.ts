@@ -56,10 +56,11 @@ export const POST = async (req: NextRequest) => {
   const bundledHandler = formData.handler;
   const manifest = formData.manifest;
 
+  const sourcePrefix = `code/${handler.internalId}.zip`;
   const response = await Promise.all([
     s3.putObject({
       Bucket: "ingest-build-outputs",
-      Key: `code/${handler.internalId}.zip`,
+      Key: sourcePrefix,
       Body: await bundledHandler.text(),
     }),
     s3.putObject({
@@ -71,6 +72,7 @@ export const POST = async (req: NextRequest) => {
 
   await createDeployment({
     version: env.VERSION,
+    sourcePrefix,
     deploymentId: v4(),
     internalHandlerId: handler.internalId,
     pollingUrl: handler.producer.pollingUrl,
