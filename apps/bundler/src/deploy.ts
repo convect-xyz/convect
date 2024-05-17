@@ -235,10 +235,10 @@ async function allocateResources() {
       S3Bucket: "ingest-functions",
       S3Key: `orchestrator/${VERSION}.zip`,
     },
-    VpcConfig: {
-      SecurityGroupIds: ["sg-08b95d721fc52088f"],
-      SubnetIds: ["subnet-05d39f2476de29dc7"],
-    },
+    // VpcConfig: {
+    //   SecurityGroupIds: ["sg-08b95d721fc52088f"],
+    //   SubnetIds: ["subnet-05d39f2476de29dc7"],
+    // },
     Environment: {
       Variables: {
         TRANSACTION_QUEUE_URL: transactionQueue.QueueUrl!,
@@ -272,10 +272,10 @@ async function allocateResources() {
       S3Bucket: "ingest-build-outputs",
       S3Key: path.join("outputs", HANDLER_ID + ".zip"),
     },
-    VpcConfig: {
-      SecurityGroupIds: ["sg-08b95d721fc52088f"],
-      SubnetIds: ["subnet-05d39f2476de29dc7"],
-    },
+    // VpcConfig: {
+    //   SecurityGroupIds: ["sg-08b95d721fc52088f"],
+    //   SubnetIds: ["subnet-05d39f2476de29dc7"],
+    // },
     Environment: {
       Variables: {
         HANDLER_ID,
