@@ -50,6 +50,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .send()
         .expect("Failed to update pipeline");
 
+    println!("{:?}", pipeline.inner());
+
     // If block diff is too great, trigger fargate to do the work
     if incoming_block - pipeline.last_block().or(Some(0)).unwrap() > 1999 {
         return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block).await;
@@ -101,6 +103,7 @@ async fn trigger_batch_sync_task(
     incoming_block: u64,
 ) -> Result<(), Error> {
     let version = env::var("VERSION").expect("Version ENV not defined");
+    println!("Triggering batch sync");
 
     let result = ecs_client
         .run_task()
@@ -164,6 +167,7 @@ async fn trigger_batch_sync_task(
         )
         .send()
         .await;
+    println!("done");
 
     match result {
         Err(_) => pipeline
