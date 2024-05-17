@@ -2,9 +2,7 @@ import { Lambda } from "@aws-sdk/client-lambda";
 import { S3 } from "@aws-sdk/client-s3";
 import { SNS } from "@aws-sdk/client-sns";
 import { SQS } from "@aws-sdk/client-sqs";
-import { getDb, schema } from "@kayakthedev/lib";
-import { createId } from "@paralleldrive/cuid2";
-import { eq } from "drizzle-orm";
+import { getDb } from "@kayakthedev/lib";
 import esbuild from "esbuild";
 import { backOff } from "exponential-backoff";
 import fs from "fs";
@@ -44,7 +42,6 @@ const VERSION = process.env.VERSION!;
 const MODE = process.env.MODE as "new" | "update";
 const CURR_DIR = process.env.CURR_DIR!;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
-const PROJECT_ID = process.env.PROJECT_ID!;
 const HANDLER_ID = process.env.HANDLER_ID!;
 const SOURCE_BUCKET = process.env.SOURCE_BUCKET!;
 const SOURCE_PREFIX = process.env.SOURCE_PREFIX!;
@@ -64,11 +61,7 @@ const HANDLER_ENVS = (
 );
 
 const MANIFEST_BUCKET = "ingest-fetch-logs";
-const MANIFEST_PREFIX = path.join(
-  "manifests",
-  PROJECT_ID,
-  HANDLER_ID + ".json"
-);
+const MANIFEST_PREFIX = path.join("manifests", HANDLER_ID + ".json");
 const CREATE_PARAMS_BUCKET = "ingest-fetch-logs";
 const CREATE_PARAMS_PREFIX = path.join(
   "create-params",
@@ -91,10 +84,9 @@ async function main() {
   await zipLambda();
   await zipEventsLambda();
 
-  const id = createId();
   if (MODE === "new") {
     await createPipelineState();
-    const { eventsLambdaArn } = await allocateResources(id);
+    const { eventsLambdaArn } = await allocateResources();
     await initialiseHandler({
       eventsLambdaArn,
     });
@@ -107,14 +99,14 @@ async function main() {
       },
     });
 
-    if (!handler || !handler.handlerArn) {
-      throw new Error("Handler not found or handler ARN not present");
-    }
+    // if (!handler || !handler.handlerArn) {
+    //   throw new Error("Handler not found or handler ARN not present");
+    // }
 
-    await updateFunctionCode({
-      eventsArn: "",
-      handlerArn: handler.handlerArn,
-    });
+    // await updateFunctionCode({
+    //   eventsArn: "",
+    //   handlerArn: handler.handlerArn,
+    // });
   }
 
   process.exit(0);
@@ -160,7 +152,7 @@ async function zipLambda() {
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
   const bucket = "ingest-build-outputs";
-  const key = path.join("outputs", PROJECT_ID, HANDLER_ID + ".zip");
+  const key = path.join("outputs", HANDLER_ID + ".zip");
 
   await s3.putObject({
     Bucket: bucket,
@@ -192,7 +184,7 @@ async function zipEventsLambda() {
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
   const bucket = "ingest-build-outputs";
-  const key = path.join("outputs", PROJECT_ID, HANDLER_ID + "-events.zip");
+  const key = path.join("outputs", HANDLER_ID + "-events.zip");
 
   await s3.putObject({
     Bucket: bucket,
@@ -201,9 +193,9 @@ async function zipEventsLambda() {
   });
 }
 
-async function allocateResources(id: string) {
+async function allocateResources() {
   const transactionQueue = await sqs.createQueue({
-    QueueName: `tx-queue-${PROJECT_ID}-${HANDLER_ID}-${id}.fifo`,
+    QueueName: `tx-queue-${HANDLER_ID}.fifo`,
     Attributes: {
       FifoQueue: "true",
       VisibilityTimeout: "900",
@@ -215,7 +207,7 @@ async function allocateResources(id: string) {
   }
 
   const logFetcher = await lambda.createFunction({
-    FunctionName: `log-fetcher-${PROJECT_ID}-${HANDLER_ID}-${id}`,
+    FunctionName: `log-fetcher-${HANDLER_ID}`,
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-functions",
@@ -228,7 +220,6 @@ async function allocateResources(id: string) {
         MANIFEST_PREFIX,
         NODE_ENDPOINT: POLLING_URL,
         HANDLER_ID,
-        PROJECT_ID,
         VERSION,
       },
     },
@@ -243,7 +234,7 @@ async function allocateResources(id: string) {
   }
 
   const createOrchestrator = await lambda.createFunction({
-    FunctionName: `orchestrator-${PROJECT_ID}-${HANDLER_ID}-${id}`,
+    FunctionName: `orchestrator-${HANDLER_ID}`,
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-functions",
@@ -261,7 +252,6 @@ async function allocateResources(id: string) {
         MANIFEST_PREFIX,
         NODE_ENDPOINT: POLLING_URL,
         HANDLER_ID: HANDLER_ID,
-        PROJECT_ID: PROJECT_ID,
         VERSION,
       },
     },
@@ -281,11 +271,11 @@ async function allocateResources(id: string) {
   });
 
   const handlerLambda = await lambda.createFunction({
-    FunctionName: `handler-${PROJECT_ID}-${HANDLER_ID}-${id}`,
+    FunctionName: `handler-${HANDLER_ID}`,
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-build-outputs",
-      S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + ".zip"),
+      S3Key: path.join("outputs", HANDLER_ID + ".zip"),
     },
     VpcConfig: {
       SecurityGroupIds: ["sg-08b95d721fc52088f"],
@@ -312,11 +302,11 @@ async function allocateResources(id: string) {
   }
 
   const eventsLambda = await lambda.createFunction({
-    FunctionName: `events-${PROJECT_ID}-${HANDLER_ID}-${id}`,
+    FunctionName: `events-${HANDLER_ID}`,
     Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     Code: {
       S3Bucket: "ingest-build-outputs",
-      S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + "-events.zip"),
+      S3Key: path.join("outputs", HANDLER_ID + "-events.zip"),
     },
     Environment: {
       Variables: {
@@ -346,7 +336,7 @@ async function allocateResources(id: string) {
 
   const permissionResponse = await lambda.addPermission({
     FunctionName: createOrchestrator.FunctionArn,
-    StatementId: `${PROJECT_ID}-${HANDLER_ID}-${id}`,
+    StatementId: `${HANDLER_ID}`,
     Action: "lambda:InvokeFunction",
     Principal: "sns.amazonaws.com",
     SourceArn: CHAIN_SNS,
@@ -358,19 +348,6 @@ async function allocateResources(id: string) {
     Endpoint: createOrchestrator.FunctionArn,
   });
 
-  await db
-    .update(schema.handler)
-    .set({
-      txQueueUrl: transactionQueue.QueueUrl!,
-      logFetcherArn: logFetcher.FunctionArn!,
-      orchestratorArn: createOrchestrator.FunctionArn!,
-      handlerArn: handlerLambda.FunctionArn!,
-      handlerLogGroup: handlerLambda.LoggingConfig!.LogGroup,
-      handlerToTxQueueEventSourceMappingUuid: createQueueSub.UUID!,
-      orchestratorSubscriptionArn: createSubscriptionResponse.SubscriptionArn!,
-    })
-    .where(eq(schema.handler.id, Number(HANDLER_ID)));
-
   return {
     eventsLambdaArn: eventsLambda.FunctionArn!,
   };
@@ -381,14 +358,14 @@ async function updateFunctionCode(options: {
   handlerArn: string;
 }) {
   await lambda.updateFunctionCode({
-    FunctionName: `events-${PROJECT_ID}-${HANDLER_ID}`,
+    FunctionName: `events-${HANDLER_ID}`,
     S3Bucket: "ingest-build-outputs",
-    S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + "-events.zip"),
+    S3Key: path.join("outputs", HANDLER_ID + "-events.zip"),
   });
   await lambda.updateFunctionCode({
-    FunctionName: `handler-${PROJECT_ID}-${HANDLER_ID}`,
+    FunctionName: `handler-${HANDLER_ID}`,
     S3Bucket: "ingest-build-outputs",
-    S3Key: path.join("outputs", PROJECT_ID, HANDLER_ID + ".zip"),
+    S3Key: path.join("outputs", HANDLER_ID + ".zip"),
   });
 }
 
@@ -431,7 +408,6 @@ async function createPipelineState() {
     "$",
     JSON.stringify({
       HandlerId_: HANDLER_ID,
-      ProjectId_: PROJECT_ID,
       State_: "IDLE",
     })
   );

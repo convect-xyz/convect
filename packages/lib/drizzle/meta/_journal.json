@@ -8,6 +8,20 @@
       "when": 1715471191557,
       "tag": "0000_common_kid_colt",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1715982109272,
+      "tag": "0001_furry_zzzax",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1715982644054,
+      "tag": "0002_huge_rocket_racer",
+      "breakpoints": true
     }
   ]
 }
