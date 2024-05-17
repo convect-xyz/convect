@@ -62,11 +62,6 @@ const HANDLER_ENVS = (
 
 const MANIFEST_BUCKET = "ingest-fetch-logs";
 const MANIFEST_PREFIX = path.join("manifests", HANDLER_ID + ".json");
-const CREATE_PARAMS_BUCKET = "ingest-fetch-logs";
-const CREATE_PARAMS_PREFIX = path.join(
-  "create-params",
-  DEPLOYMENT_ID + ".json"
-);
 
 const HANDLER_SRC_FILE = path.join(CURR_DIR, SOURCE_PREFIX + ".js");
 const BUNDLE_SRC_DIR = path.join(CURR_DIR, "bundle_src");
@@ -380,14 +375,6 @@ async function initialiseHandler(opts: { eventsLambdaArn: string }) {
       });
 
       if (!Payload) return;
-
-      const result = Buffer.from(Payload).toString();
-
-      await s3.putObject({
-        Bucket: CREATE_PARAMS_BUCKET,
-        Key: CREATE_PARAMS_PREFIX,
-        Body: result,
-      });
     },
     {
       numOfAttempts: 3,
