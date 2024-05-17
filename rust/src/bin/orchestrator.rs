@@ -170,11 +170,14 @@ async fn trigger_batch_sync_task(
     println!("done");
 
     match result {
-        Err(_) => pipeline
-            .update()
-            .set_state(ingest::types::pipeline::SyncState::IDLE)
-            .send()
-            .unwrap(),
+        Err(e) => {
+            println!("{:?}", e);
+            pipeline
+                .update()
+                .set_state(ingest::types::pipeline::SyncState::IDLE)
+                .send()
+                .unwrap()
+        }
         _ => {}
     }
 
