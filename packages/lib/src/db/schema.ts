@@ -119,19 +119,11 @@ export const handler = createTable(
     projectId: integer("projectId")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
+    internalId: varchar("internal_id").unique().default(sql`gen_random_uuid()`).notNull(),
     name: varchar("name").notNull(),
     producerId: integer("producerId")
       .notNull()
       .references(() => producers.id),
-    txQueueUrl: varchar("txQueueUrl"),
-    logFetcherArn: varchar("logFetcherArn"),
-    orchestratorArn: varchar("orchestratorArn"),
-    handlerArn: varchar("handlerArn"),
-    handlerLogGroup: varchar("handlerLogGroup"),
-    handlerToTxQueueEventSourceMappingUuid: varchar(
-      "handlerToTxQueueEventSourceMappingUuid"
-    ),
-    orchestratorSubscriptionArn: varchar("orchestratorSubscriptionArn"),
   },
   (handler) => ({
     projectIdName: unique().on(handler.name, handler.projectId),

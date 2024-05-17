@@ -244,7 +244,6 @@ use std::env;
 
 pub struct Config {
     pub handler_id: String,
-    pub project_id: String,
     pub start_block: u64,
     pub end_block: u64,
     pub function_name: String,
@@ -254,7 +253,6 @@ pub struct Config {
 pub fn load_config_from_env() -> Config {
     return Config {
         handler_id: env::var("HANDLER_ID").expect("Handler ID not set"),
-        project_id: env::var("PROJECT_ID").expect("Project ID not set"),
         start_block: env::var("START_BLOCK")
             .expect("START_BLOCK is not present")
             .parse()

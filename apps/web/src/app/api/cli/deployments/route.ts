@@ -59,16 +59,12 @@ export const POST = async (req: NextRequest) => {
   const response = await Promise.all([
     s3.putObject({
       Bucket: "ingest-build-outputs",
-      Key: `code/${handler.projectId}/${handler.id}`,
+      Key: `code/${handler.internalId}.zip`,
       Body: await bundledHandler.text(),
     }),
     s3.putObject({
       Bucket: MANIFEST_BUCKET,
-      Key: path.join(
-        "manifests",
-        handler.projectId.toString(),
-        handler.id + ".json",
-      ),
+      Key: path.join("manifests", handler.internalId + ".json"),
       Body: await manifest.text(),
     }),
   ]);
@@ -76,8 +72,7 @@ export const POST = async (req: NextRequest) => {
   await createDeployment({
     version: env.VERSION,
     deploymentId: v4(),
-    projectId: handler.projectId,
-    handlerId: handler.id,
+    internalHandlerId: handler.internalId,
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
     mode: formData.mode,

@@ -156,10 +156,6 @@ async fn trigger_batch_sync_task(
                                 "HANDLER_ID".to_string(),
                                 env::var("HANDLER_ID").unwrap(),
                             ),
-                            create_key_value_pair(
-                                "PROJECT_ID".to_string(),
-                                env::var("PROJECT_ID").unwrap(),
-                            ),
                             create_key_value_pair("VERSION".to_string(), version),
                         ]))
                         .build(),

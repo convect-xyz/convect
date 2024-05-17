@@ -1,14 +1,11 @@
 import { RunTaskCommand } from "@aws-sdk/client-ecs";
 import { env } from "~/env";
 import { ecs } from "~/lib/server/aws";
-import { db } from "~/server/db";
-import schema from "~/server/db/schema";
 
 type TriggerBuildOptions = {
   version: string;
   deploymentId: string;
-  projectId: number;
-  handlerId: number;
+  internalHandlerId: string;
   pollingUrl: string;
   chainSns: string;
   envs: Array<{ key: string; value: string }>;
@@ -37,12 +34,8 @@ export async function createDeployment(options: TriggerBuildOptions) {
             { name: "VERSION", value: options.version },
             { name: "MODE", value: options.mode },
             {
-              name: "PROJECT_ID",
-              value: options.projectId.toString(),
-            },
-            {
               name: "HANDLER_ID",
-              value: options.handlerId.toString(),
+              value: options.internalHandlerId.toString(),
             },
             {
               name: "SOURCE_BUCKET",
@@ -50,7 +43,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
             },
             {
               name: "SOURCE_PREFIX",
-              value: `code/${options.projectId}/${options.handlerId}`,
+              value: `code/${options.internalHandlerId}`,
             },
             {
               name: "POLLING_URL",
@@ -85,10 +78,10 @@ export async function createDeployment(options: TriggerBuildOptions) {
     throw new Error("Task did not start");
   }
 
-  await db.insert(schema.deployment).values({
-    handlerId: options.handlerId,
-    ecsTaskId: task.taskArn,
-  });
+  // await db.insert(schema.deployment).values({
+  //   handlerId: options.internalHandlerId,
+  //   ecsTaskId: task.taskArn,
+  // });
 
   return {
     ecsOutput: output,

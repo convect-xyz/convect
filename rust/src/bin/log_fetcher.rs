@@ -47,11 +47,9 @@ async fn function_handler(
     let body = serde_json::to_string(&transactions).unwrap();
     let size = body.len();
 
-    let project_id = env::var("PROJECT_ID").expect("PROJECT_ID is undefined");
     let handler_id = env::var("HANDLER_ID").expect("HANDLER_ID is undefined");
     let key = format!(
-        "fetch/{project_id}/{handler_id}/{id}",
-        project_id = project_id,
+        "fetch/{handler_id}/{id}",
         handler_id = handler_id,
         id = event.payload.id
     );
