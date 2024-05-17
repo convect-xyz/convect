@@ -111,18 +111,21 @@ impl<'a, T: TransactionEnqueuer> TransactionEnqueuerFluentBuilder<'a, T> {
 
         let txs = self.transactions.expect("Transactions must be set");
 
+        if txs.is_empty() {
+            return Ok(());
+        }
+
         let queue_url = self
             .queue_url
             .as_ref()
             .expect("Queue url must be set")
             .clone();
 
-        let transactions = self
-            .tx_enqueuer
+        self.tx_enqueuer
             .enqueue_transactions(pipeline, queue_url, txs)
             .await
             .unwrap();
 
-        Ok(transactions)
+        Ok(())
     }
 }

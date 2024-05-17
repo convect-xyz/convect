@@ -118,13 +118,13 @@ pub mod pipeline {
     }
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
-    struct Inner {
+    pub struct Inner {
         #[serde(rename(serialize = "HandlerId_", deserialize = "HandlerId_"))]
-        handler_id: String,
+        pub handler_id: String,
         #[serde(rename(serialize = "State_", deserialize = "State_"))]
-        state: SyncState,
+        pub state: SyncState,
         #[serde(rename(serialize = "LastBlock_", deserialize = "LastBlock_"))]
-        last_block: Option<String>,
+        pub last_block: Option<String>,
     }
 
     pub struct Pipeline {
@@ -192,6 +192,10 @@ pub mod pipeline {
 
             let count: u64 = self.connection.get(key).unwrap();
             count
+        }
+
+        pub fn inner(&self) -> &Inner {
+            &self.inner
         }
     }
 

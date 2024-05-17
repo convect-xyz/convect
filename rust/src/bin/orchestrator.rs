@@ -38,7 +38,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     // TODO: this should be added to a DLQ
     if pipeline
         .state()
-        .ne(&ingest::types::pipeline::SyncState::IDLE)
+        .eq(&ingest::types::pipeline::SyncState::SYNCING)
     {
         return Ok(());
     }
@@ -63,10 +63,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     // We shouldn't need to update status here because max concurrency should be 1
     let manifest = Manifest::from_env().await.unwrap();
 
-    println!(
-        "start block: {:?}. end block: {:?}",
-        from_block, incoming_block
-    );
     let transactions = api
         .fetch_transactions()
         .set_manifest(&manifest)
@@ -78,7 +74,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     println!("transactions: {:?}", transactions);
 
-    let _ = api
+    let result = api
         .enqueue_transactions()
         .set_pipeline(&mut pipeline)
         .set_queue_url(env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"))
@@ -86,11 +82,17 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .send()
         .await;
 
-    pipeline
-        .update()
-        .set_last_block(incoming_block)
-        .set_state(ingest::types::pipeline::SyncState::IDLE)
-        .send()
+    match result {
+        Ok(_) => pipeline
+            .update()
+            .set_last_block(incoming_block)
+            .set_state(ingest::types::pipeline::SyncState::IDLE)
+            .send(),
+        Err(_) => pipeline
+            .update()
+            .set_state(ingest::types::pipeline::SyncState::FAILED)
+            .send(),
+    }
 }
 
 async fn trigger_batch_sync_task(
@@ -172,7 +174,7 @@ async fn trigger_batch_sync_task(
             .update()
             .set_state(ingest::types::pipeline::SyncState::IDLE)
             .send()
-            .expect("Failed to update pipeline"),
+            .unwrap(),
         _ => {}
     }
 
