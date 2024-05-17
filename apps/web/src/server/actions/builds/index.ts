@@ -10,6 +10,7 @@ type TriggerBuildOptions = {
   chainSns: string;
   envs: Array<{ key: string; value: string }>;
   mode: "new" | "update";
+  sourcePrefix: string;
 };
 
 export async function createDeployment(options: TriggerBuildOptions) {
@@ -43,7 +44,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
             },
             {
               name: "SOURCE_PREFIX",
-              value: `code/${options.internalHandlerId}`,
+              value: options.sourcePrefix,
             },
             {
               name: "POLLING_URL",
