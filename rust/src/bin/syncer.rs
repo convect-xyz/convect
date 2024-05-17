@@ -78,30 +78,19 @@ async fn run(api: &ApiInstance, pipeline: &mut Pipeline) -> Result<(), Box<dyn E
             .flatten()
             .collect();
 
-        let result = api
-            .enqueue_transactions()
+        api.enqueue_transactions()
             .set_pipeline(pipeline)
             .set_queue_url(syncer_config.tx_queue_url.clone())
             .set_transactions(&s3_results)
             .send()
-            .await;
+            .await?;
 
-        match result {
-            Ok(_) => {
-                pipeline
-                    .update()
-                    .set_last_block(chunk.last().unwrap().end_block)
-                    .send()
-                    .unwrap();
-            }
-            Err(_) => {
-                pipeline
-                    .update()
-                    .set_state(types::pipeline::SyncState::FAILED)
-                    .send()
-                    .unwrap();
-            }
-        }
+        pipeline
+            .update()
+            .set_last_block(chunk.last().unwrap().end_block)
+            .send()
+            .unwrap();
+
         delete_handles.push(tokio::spawn(async move {
             delete_s3_results(&invocations).await;
         }));
