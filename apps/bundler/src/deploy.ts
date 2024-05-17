@@ -237,7 +237,7 @@ async function allocateResources() {
     },
     VpcConfig: {
       SecurityGroupIds: ["sg-08b95d721fc52088f"],
-      SubnetIds: ["subnet-05c5f4e3190f095a2"],
+      SubnetIds: ["subnet-05d39f2476de29dc7"],
     },
     Environment: {
       Variables: {
@@ -274,7 +274,7 @@ async function allocateResources() {
     },
     VpcConfig: {
       SecurityGroupIds: ["sg-08b95d721fc52088f"],
-      SubnetIds: ["subnet-05c5f4e3190f095a2"],
+      SubnetIds: ["subnet-05d39f2476de29dc7"],
     },
     Environment: {
       Variables: {
