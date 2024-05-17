@@ -430,7 +430,7 @@ async function createPipelineState() {
     HANDLER_ID,
     "$",
     JSON.stringify({
-      HandlerId_: HANDLER_ID,
+      HandleharId_: HANDLER_ID,
       ProjectId_: PROJECT_ID,
       State_: "IDLE",
     })

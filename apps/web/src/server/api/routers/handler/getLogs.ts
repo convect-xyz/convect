@@ -17,6 +17,7 @@ export const getLogs = protectedProcedure
   .input(
     z.object({
       handlerId: z.number(),
+      logLevel: z.enum(["INFO", "DEBUG", "ERROR"]),
     }),
   )
   .output(
@@ -35,8 +36,9 @@ export const getLogs = protectedProcedure
         "https://api.eu-central-1.aws.tinybird.co/v0/sql",
         {
           q: `%
-        SELECT * FROM ingest_pipe WHERE handler_id = {{String(handler_id)}} ORDER BY parseDateTimeBestEffortOrNull(time) DESC LIMIT 50 FORMAT JSON`,
+        SELECT * FROM ingest_pipe WHERE handler_id = {{String(handler_id)}} AND log_level = {{String(log_level)}} ORDER BY parseDateTimeBestEffortOrNull(time) DESC LIMIT 50 FORMAT JSON`,
           handler_id: input.handlerId,
+          log_level: input.logLevel,
         },
         {
           headers: {

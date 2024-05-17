@@ -1,17 +1,22 @@
 import { Address, Log as ViemLog } from "viem";
 
+import { AbiEvent } from "abitype";
 import { Log } from "./log";
+
+type InferLogs<TLogs> = TLogs extends [Log<infer U>, ...infer Rest]
+  ? U extends AbiEvent
+    ? ViemLog<bigint, number, false, U, true> | InferLogs<Rest>
+    : never
+  : never;
 
 export type InferTransaction<TLogs> = {
   from: Address;
   to: Address;
-  logs: TLogs extends Array<Log<infer TEvents>>
-    ? ViemLog<bigint, number, false, TEvents, true>[]
-    : never;
+  logs: InferLogs<TLogs>[];
 };
 
 export class Transaction<
-  TLogs extends Array<any>,
+  const TLogs extends Array<any>,
   TIndependent extends boolean,
   THandler,
 > {
@@ -36,7 +41,7 @@ export class Transaction<
 }
 
 export function transaction<
-  TLogs extends Array<any>,
+  const TLogs extends Array<any>,
   TIndependent extends boolean,
   THandler = (
     v: TIndependent extends true
