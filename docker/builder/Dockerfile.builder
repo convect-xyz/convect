@@ -15,6 +15,8 @@ RUN apk --no-cache add curl tar gzip
 
 WORKDIR /scripts
 
+RUN yarn global add esbuild
+
 COPY ./apps/bundler/scripts .
 COPY --from=bundle /runtime.js /deploy.js /events-runtime.js ./
 
