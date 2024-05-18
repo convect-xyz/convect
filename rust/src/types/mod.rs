@@ -153,7 +153,7 @@ pub mod pipeline {
 
         pub fn load(handler_id: String) -> Self {
             let client = redis::Client::open(
-                "redis://redis-cyg7zh.serverless.euw1.cache.amazonaws.com:6379",
+                "rediss://redis-cyg7zh.serverless.euw1.cache.amazonaws.com:6379",
             )
             .unwrap();
 
