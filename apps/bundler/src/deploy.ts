@@ -229,10 +229,10 @@ async function allocateResources() {
       S3Bucket: "ingest-functions",
       S3Key: `orchestrator/${VERSION}.zip`,
     },
-    // VpcConfig: {
-    //   SecurityGroupIds: ["sg-08b95d721fc52088f"],
-    //   SubnetIds: ["subnet-05d39f2476de29dc7"],
-    // },
+    VpcConfig: {
+      SecurityGroupIds: ["sg-08b95d721fc52088f"],
+      SubnetIds: ["subnet-0d588c105766713a1"],
+    },
     Environment: {
       Variables: {
         TRANSACTION_QUEUE_URL: transactionQueue.QueueUrl!,
