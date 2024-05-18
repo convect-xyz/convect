@@ -17,7 +17,15 @@ const s3 = new S3({ region: "eu-west-1" });
 
 const redisClient = new Redis(
   6379,
-  "redis://redis-cyg7zh.serverless.euw1.cache.amazonaws.com"
+  "rediss://redis-cyg7zh.serverless.euw1.cache.amazonaws.com",
+  {
+    tls: {
+      checkServerIdentity: (servername, cert) => {
+        // skip certificate hostname validation
+        return undefined;
+      },
+    },
+  }
 );
 
 const db = getDb({
@@ -375,7 +383,7 @@ async function createPipelineState() {
   redisClient.on("error", (err) => console.log("Redis redisClient Error", err));
 
   console.log("Connecting to redis");
-  const r = await redisClient.call(
+  const c = await redisClient.call(
     "JSON.SET",
     HANDLER_ID,
     "$",
@@ -384,10 +392,10 @@ async function createPipelineState() {
       State_: "IDLE",
     })
   );
-
-  console.log(r);
-  const c = await redisClient.set(`tx-count-${HANDLER_ID}`, 0);
   console.log(c);
+
+  const r = await redisClient.set(`tx-count-${HANDLER_ID}`, 0);
+  console.log(r);
 
   console.log("Disonnecting to redis");
 }
