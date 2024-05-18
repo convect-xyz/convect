@@ -9,6 +9,7 @@ use ingest::{
     types::{manifest::Manifest, pipeline::Pipeline},
 };
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
+use reqwest::blocking::Client;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -22,6 +23,12 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let ecs_client = aws_sdk_ecs::Client::new(&config);
     let api = api::Api::new(&config);
     let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
+
+    let client = Client::new();
+    let res = client.get("https://google.com").send();
+
+    println!("{:?}", res);
+
     let mut pipeline = Pipeline::load(handler_id);
 
     let incoming_block: u64 = event
