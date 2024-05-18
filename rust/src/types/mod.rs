@@ -107,7 +107,7 @@ pub mod manifest {
 
 pub mod pipeline {
     use lambda_runtime::tower::BoxError;
-    use redis::{cluster::ClusterClient, Commands, JsonCommands};
+    use redis::{Commands, JsonCommands};
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
