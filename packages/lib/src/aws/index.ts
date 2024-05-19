@@ -18,3 +18,8 @@ export function getOrchestratorArn(options: GetHandlerArnOptions) {
 export function getTxQueueUrl(options: GetHandlerArnOptions) {
   return `https://sqs.${options.region}.amazonaws.com/730335604495/tx-queue-${options.handlerId}.fifo`
 }
+
+
+export function getReportingArn(options: GetHandlerArnOptions) {
+  return `arn:aws:lambda:${options.region}:730335604495:function:reporting-${options.handlerId}`
+}
