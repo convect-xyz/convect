@@ -345,20 +345,9 @@ async function allocateResources() {
     throw new Error("Function ARN is undefined");
   }
 
-  let attributes = await sqs.getQueueAttributes({
-    QueueUrl: transactionQueue.QueueUrl,
-    AttributeNames: ["QueueArn"],
-  });
-
-  await lambda.createEventSourceMapping({
-    EventSourceArn: attributes.Attributes!.QueueArn,
-    FunctionName: handlerLambda.FunctionArn,
-    BatchSize: 10,
-  });
-
   await new Promise((resolve) => setTimeout(resolve, 3000));
 
-  await lambda.updateFunctionEventInvokeConfig({
+  await lambda.putFunctionEventInvokeConfig({
     FunctionName: handlerLambda.FunctionArn,
     DestinationConfig: {
       OnSuccess: {
@@ -368,6 +357,17 @@ async function allocateResources() {
         Destination: reporting.FunctionArn,
       },
     },
+  });
+
+  let attributes = await sqs.getQueueAttributes({
+    QueueUrl: transactionQueue.QueueUrl,
+    AttributeNames: ["QueueArn"],
+  });
+
+  await lambda.createEventSourceMapping({
+    EventSourceArn: attributes.Attributes!.QueueArn,
+    FunctionName: handlerLambda.FunctionArn,
+    BatchSize: 10,
   });
 
   await lambda.addPermission({
