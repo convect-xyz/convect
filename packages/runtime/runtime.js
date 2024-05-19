@@ -53,17 +53,15 @@ export async function handler(event) {
 
     for (const txConfig of processors) {
       if (txConfig._independent) {
-        await Promise.allSettled(
-          batch.map((tx) =>
-            txConfig._handler(decodeTx(tx, txConfig)).then((_) => succeeded++)
-          )
+        await Promise.all(
+          batch.map((tx) => txConfig._handler(decodeTx(tx, txConfig)))
         );
       } else {
-        await txConfig
-          ._handler(batch.map((tx) => decodeTx(tx, txConfig)))
-          .then((_) => succeeded++);
+        await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
       }
     }
+
+    succeeded += batch.length;
   }
 
   await report({

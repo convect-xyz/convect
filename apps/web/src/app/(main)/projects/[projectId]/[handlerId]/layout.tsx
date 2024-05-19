@@ -46,7 +46,10 @@ function Main(props: PropsWithChildren) {
     const isLinked = trim(route, "/") === trim(pathname, "/");
 
     return {
-      className: cn(isLinked && " text-primary font-bold"),
+      className: cn(
+        "text-muted-foreground",
+        isLinked && " text-primary font-bold",
+      ),
       href: route,
     };
   };

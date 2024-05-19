@@ -79,7 +79,5 @@ function DeleteHandler() {
 }
 
 function Section(props: PropsWithChildren) {
-  return (
-    <div className="rounded-md border bg-background p-4">{props.children}</div>
-  );
+  return <div className="rounded-md border bg-muted p-4">{props.children}</div>;
 }

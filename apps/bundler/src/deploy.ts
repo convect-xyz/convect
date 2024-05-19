@@ -26,7 +26,6 @@ const redisClient = new Redis.Cluster(
     redisOptions: {
       tls: {
         checkServerIdentity: (servername, cert) => {
-          // skip certificate hostname validation
           return undefined;
         },
       },
