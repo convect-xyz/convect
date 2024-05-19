@@ -2,7 +2,7 @@ use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Request {
     version: String,
 }
@@ -11,6 +11,7 @@ struct Request {
 struct Response {}
 
 async fn function_handler(event: LambdaEvent<Request>) -> Result<Response, Error> {
+    println!("{:?}", event.payload);
     Ok(Response {})
 }
 
