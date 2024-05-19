@@ -312,18 +312,53 @@ async function allocateResources() {
     throw new Error("Function ARN is undefined");
   }
 
+  const reporting = await lambda.createFunction({
+    FunctionName: `reporting-${HANDLER_ID}`,
+    Role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+    Code: {
+      S3Bucket: "ingest-functions",
+      S3Key: `reporting/${VERSION}.zip`,
+    },
+    Environment: {
+      Variables: {
+        TRANSACTION_QUEUE_URL: transactionQueue.QueueUrl!,
+        MANIFEST_BUCKET,
+        MANIFEST_PREFIX,
+        NODE_ENDPOINT: POLLING_URL,
+        HANDLER_ID,
+        VERSION,
+      },
+    },
+    Timeout: 200,
+    Handler: "bootstrap",
+    PackageType: "Zip",
+    Runtime: "provided.al2023",
+  });
+
+  if (!logFetcher.FunctionArn) {
+    throw new Error("Function ARN is undefined");
+  }
+
   let attributes = await sqs.getQueueAttributes({
     QueueUrl: transactionQueue.QueueUrl,
     AttributeNames: ["QueueArn"],
   });
 
-  const createQueueSub = await lambda.createEventSourceMapping({
+  await lambda.createEventSourceMapping({
+    DestinationConfig: {
+      OnSuccess: {
+        Destination: reporting.FunctionArn,
+      },
+      OnFailure: {
+        Destination: reporting.FunctionArn,
+      },
+    },
     EventSourceArn: attributes.Attributes!.QueueArn,
     FunctionName: handlerLambda.FunctionArn,
     BatchSize: 10,
   });
 
-  const permissionResponse = await lambda.addPermission({
+  await lambda.addPermission({
     FunctionName: createOrchestrator.FunctionArn,
     StatementId: `${HANDLER_ID}`,
     Action: "lambda:InvokeFunction",
@@ -331,7 +366,7 @@ async function allocateResources() {
     SourceArn: CHAIN_SNS,
   });
 
-  const createSubscriptionResponse = await sns.subscribe({
+  await sns.subscribe({
     TopicArn: CHAIN_SNS,
     Protocol: "lambda",
     Endpoint: createOrchestrator.FunctionArn,
