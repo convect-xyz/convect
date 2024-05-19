@@ -341,7 +341,7 @@ async function allocateResources() {
     Runtime: "provided.al2023",
   });
 
-  if (!logFetcher.FunctionArn) {
+  if (!reporting.FunctionArn) {
     throw new Error("Function ARN is undefined");
   }
 
@@ -351,6 +351,13 @@ async function allocateResources() {
   });
 
   await lambda.createEventSourceMapping({
+    EventSourceArn: attributes.Attributes!.QueueArn,
+    FunctionName: handlerLambda.FunctionArn,
+    BatchSize: 10,
+  });
+
+  await lambda.updateFunctionEventInvokeConfig({
+    FunctionName: handlerLambda.FunctionArn,
     DestinationConfig: {
       OnSuccess: {
         Destination: reporting.FunctionArn,
@@ -359,9 +366,6 @@ async function allocateResources() {
         Destination: reporting.FunctionArn,
       },
     },
-    EventSourceArn: attributes.Attributes!.QueueArn,
-    FunctionName: handlerLambda.FunctionArn,
-    BatchSize: 10,
   });
 
   await lambda.addPermission({
