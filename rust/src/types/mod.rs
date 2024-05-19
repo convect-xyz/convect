@@ -128,7 +128,7 @@ pub mod pipeline {
     }
 
     pub struct Pipeline {
-        connection: redis::Connection,
+        connection: redis::cluster::ClusterConnection,
         inner: Inner,
     }
 
@@ -152,9 +152,9 @@ pub mod pipeline {
         }
 
         pub fn load(handler_id: String) -> Self {
-            let client = redis::Client::open(
-                "rediss://redis-cyg7zh.serverless.euw1.cache.amazonaws.com:6379",
-            )
+            let client = redis::cluster::ClusterClient::new(vec![
+                "rediss://clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
+            ])
             .unwrap();
 
             let mut con = client.get_connection().unwrap();
@@ -200,7 +200,7 @@ pub mod pipeline {
     }
 
     pub struct UpdatePipelineFluentBuilder<'a> {
-        connection: &'a mut redis::Connection,
+        connection: &'a mut redis::cluster::ClusterConnection,
         inner: Inner,
     }
 
