@@ -3,13 +3,14 @@ import { Button } from "~/components/ui/button";
 
 import Link from "next/link";
 import React from "react";
+import LogoIcon from "~/components/icons/LogoIcon";
 
 export default function Page() {
   return (
     <>
       <header className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5">
         <Link className="flex items-center" href="#">
-          <MountainIcon className="h-6 w-6" />
+          <LogoIcon className="h-6 w-6" />
           <span className="ml-2 text-lg font-semibold">convect</span>
         </Link>
         <nav className="hidden space-x-4 md:flex">

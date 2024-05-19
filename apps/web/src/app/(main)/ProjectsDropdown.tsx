@@ -3,6 +3,7 @@
 import { PlusCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import LogoIcon from "~/components/icons/LogoIcon";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -32,12 +33,16 @@ export function ProjectsDropdown() {
             variant="outline"
             className="w-[180px] items-center justify-start gap-2"
           >
-            <Skeleton className="h-5 w-5 animate-none rounded-full" />
-            {currentProject ? currentProject.name : <>Select a project</>}
+            <LogoIcon className="h-6 w-6" />
+            {currentProject ? (
+              <>{currentProject.name}</>
+            ) : (
+              <>Select a project</>
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56">
-          <DropdownMenuLabel className="text-xs uppercase text-secondary">
+          <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">
             Projects
           </DropdownMenuLabel>
           {projects?.map((project) => (

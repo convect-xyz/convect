@@ -14,6 +14,7 @@ export const getOverview = protectedProcedure
       lastFetchedBlock: z.number(),
       transactionCount: z.number(),
       processedTransactionsCount: z.number(),
+      avgDuration: z.number(),
     }),
   )
   .query(async (opts) => {
@@ -28,7 +29,7 @@ export const getOverview = protectedProcedure
     if (!handler) {
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
-    console.log("here");
+
     try {
       const response = await axios.post(
         "https://gfxa802p84.execute-api.eu-west-1.amazonaws.com/dev/status",
@@ -37,12 +38,32 @@ export const getOverview = protectedProcedure
         },
       );
 
-      console.log(response);
+      const avgDuration = await axios
+        .post(
+          "https://api.eu-central-1.aws.tinybird.co/v0/sql",
+          {
+            q: `%
+        SELECT AVG(duration_ms) FROM ingest_metrics_pipe WHERE handler_id = {{String(handler_id)}}`,
+            handler_id: handler.internalId,
+          },
+          {
+            headers: {
+              Authorization:
+                "Bearer REDACTED",
+            },
+          },
+        )
+        .then((r) => r.data)
+        .catch((e) => {
+          console.log(e.response.data);
+          throw e;
+        });
 
       return {
         transactionCount: response.data.transactionCount,
         processedTransactionsCount: response.data.processedTransactionsCount,
         lastFetchedBlock: response.data.lastBlock,
+        avgDuration,
       };
     } catch (e) {
       console.log(e);

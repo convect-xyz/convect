@@ -25,7 +25,7 @@ export default function Page() {
         </div>
         <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
 
-        <div className="flex flex-col gap-2 divide-y rounded-md border p-2">
+        <div className="flex flex-col gap-2 divide-y rounded-md border bg-muted/20 p-2">
           {!handlers &&
             times(20).map((idx) => <HandlerRowSkeleton key={idx} />)}
           {handlers?.handlers.length === 0 && <NoHandlers />}
