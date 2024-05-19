@@ -16,7 +16,9 @@ export default function Page() {
         <div className="text-sm uppercase text-secondary">
           Fetched Transactions
         </div>
-        <div className="text-xl">{overview?.transactionCount}</div>
+        <div className="text-xl">
+          {overview?.processedTransactionsCount} / {overview?.transactionCount}
+        </div>
       </div>
     </div>
   );

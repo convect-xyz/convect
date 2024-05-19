@@ -334,6 +334,10 @@ async function allocateResources() {
         VERSION,
       },
     },
+    VpcConfig: {
+      SecurityGroupIds: ["sg-08b95d721fc52088f"],
+      SubnetIds: ["subnet-0d588c105766713a1"],
+    },
     Timeout: 200,
     Handler: "bootstrap",
     PackageType: "Zip",

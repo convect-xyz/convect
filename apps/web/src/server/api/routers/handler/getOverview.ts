@@ -13,6 +13,7 @@ export const getOverview = protectedProcedure
     z.object({
       lastFetchedBlock: z.number(),
       transactionCount: z.number(),
+      processedTransactionsCount: z.number(),
     }),
   )
   .query(async (opts) => {
@@ -40,6 +41,7 @@ export const getOverview = protectedProcedure
 
       return {
         transactionCount: response.data.transactionCount,
+        processedTransactionsCount: response.data.processedTransactionsCount,
         lastFetchedBlock: response.data.lastBlock,
       };
     } catch (e) {
