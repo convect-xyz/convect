@@ -356,6 +356,8 @@ async function allocateResources() {
     BatchSize: 10,
   });
 
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
   await lambda.updateFunctionEventInvokeConfig({
     FunctionName: handlerLambda.FunctionArn,
     DestinationConfig: {
