@@ -76,9 +76,9 @@ export async function handler(event) {
 export async function report(options) {
   lambda.invokeAsync({
     FunctionName: `arn:aws:lambda:${options.region}:730335604495:function:reporting-${options.handlerId}`,
-    InvokeArgs: {
+    InvokeArgs: JSON.stringify({
       processedTransactionsCount: options.processedTransactionsCount,
-    },
+    }),
   });
 }
 
