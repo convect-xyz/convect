@@ -184,9 +184,28 @@ pub mod pipeline {
             let _: u64 = self.connection.incr(key, tx_count).unwrap();
         }
 
+        pub fn increment_processed_transaction_count(&mut self, tx_count: u64) {
+            let key = format!(
+                "processed-tx-count-{handler_id}",
+                handler_id = self.inner.handler_id.to_string()
+            );
+
+            let _: u64 = self.connection.incr(key, tx_count).unwrap();
+        }
+
         pub fn get_transaction_count(&mut self) -> u64 {
             let key = format!(
                 "tx-count-{handler_id}",
+                handler_id = self.inner.handler_id.to_string()
+            );
+
+            let count: u64 = self.connection.get(key).unwrap();
+            count
+        }
+
+        pub fn get_processed_transaction_count(&mut self) -> u64 {
+            let key = format!(
+                "processed-tx-count-{handler_id}",
                 handler_id = self.inner.handler_id.to_string()
             );
 

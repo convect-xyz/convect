@@ -330,7 +330,6 @@ async function allocateResources() {
         TRANSACTION_QUEUE_URL: transactionQueue.QueueUrl!,
         MANIFEST_BUCKET,
         MANIFEST_PREFIX,
-        NODE_ENDPOINT: POLLING_URL,
         HANDLER_ID,
         VERSION,
       },
@@ -344,20 +343,6 @@ async function allocateResources() {
   if (!reporting.FunctionArn) {
     throw new Error("Function ARN is undefined");
   }
-
-  await new Promise((resolve) => setTimeout(resolve, 3000));
-
-  await lambda.putFunctionEventInvokeConfig({
-    FunctionName: handlerLambda.FunctionArn,
-    DestinationConfig: {
-      OnSuccess: {
-        Destination: reporting.FunctionArn,
-      },
-      OnFailure: {
-        Destination: reporting.FunctionArn,
-      },
-    },
-  });
 
   let attributes = await sqs.getQueueAttributes({
     QueueUrl: transactionQueue.QueueUrl,
@@ -430,7 +415,7 @@ async function createPipelineState() {
   redisClient.on("error", (err) => console.log("Redis redisClient Error", err));
 
   console.log("Connecting to redis");
-  const c = await redisClient.call(
+  await redisClient.call(
     "JSON.SET",
     HANDLER_ID,
     "$",
@@ -439,10 +424,9 @@ async function createPipelineState() {
       State_: "IDLE",
     })
   );
-  console.log(c);
 
-  const r = await redisClient.set(`tx-count-${HANDLER_ID}`, 0);
-  console.log(r);
+  await redisClient.set(`tx-count-${HANDLER_ID}`, 0);
+  await redisClient.set(`processed-tx-count-${HANDLER_ID}`, 0);
 
-  console.log("Disonnecting to redis");
+  console.log("Disonnecting from redis");
 }

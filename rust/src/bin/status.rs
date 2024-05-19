@@ -18,6 +18,8 @@ struct RequestResponse {
     last_block: Option<u64>,
     #[serde(rename = "transactionCount")]
     transaction_count: u64,
+    #[serde(rename = "processedTransactionsCount")]
+    processed_transactions_count: u64,
 }
 
 async fn function_handler(event: Request) -> Result<impl IntoResponse, Error> {
@@ -39,6 +41,7 @@ async fn function_handler(event: Request) -> Result<impl IntoResponse, Error> {
                 state: pipeline.state(),
                 last_block: pipeline.last_block(),
                 transaction_count: pipeline.get_transaction_count(),
+                processed_transactions_count: pipeline.get_processed_transaction_count(),
             })
             .unwrap(),
         )

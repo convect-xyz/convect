@@ -1,10 +1,12 @@
+import { Lambda } from "@aws-sdk/client-lambda";
 import axios from "axios";
 import { v4 } from "uuid";
 import { decodeEventLog, isAddressEqual } from "viem";
-
 import pipeline from "./pipeline";
 
 const allTxConfigs = Object.values(pipeline.transactions);
+
+const lambda = new Lambda({ region: "eu-west-1" });
 
 export async function handler(event) {
   const parsedTxs = [];
@@ -26,6 +28,8 @@ export async function handler(event) {
     }
     parsedTxs.push(...txs);
   }
+
+  var succeeded = 0;
 
   let i = 0;
   while (i < parsedTxs.length) {
@@ -49,16 +53,33 @@ export async function handler(event) {
 
     for (const txConfig of processors) {
       if (txConfig._independent) {
-        await Promise.all(
-          batch.map((tx) => txConfig._handler(decodeTx(tx, txConfig)))
+        await Promise.allSettled(
+          batch.map((tx) =>
+            txConfig._handler(decodeTx(tx, txConfig)).then((_) => succeeded++)
+          )
         );
       } else {
-        await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
+        await txConfig
+          ._handler(batch.map((tx) => decodeTx(tx, txConfig)))
+          .then((_) => succeeded++);
       }
     }
   }
 
+  await report({
+    processedTransactionsCount: succeeded,
+  });
+
   return {};
+}
+
+export async function report(options) {
+  lambda.invokeAsync({
+    FunctionName: `arn:aws:lambda:${options.region}:730335604495:function:reporting-${options.handlerId}`,
+    InvokeArgs: {
+      processedTransactionsCount: options.processedTransactionsCount,
+    },
+  });
 }
 
 export async function getS3Results(batchRecords) {
