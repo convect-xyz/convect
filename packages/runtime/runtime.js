@@ -11,6 +11,7 @@ const lambda = new Lambda({ region: "eu-west-1" });
 export async function handler(event) {
   const parsedTxs = [];
 
+  console.time("parse");
   const records = event.Records.map((record) => ({
     id: v4(),
     data: JSON.parse(record.body),
@@ -28,12 +29,15 @@ export async function handler(event) {
     }
     parsedTxs.push(...txs);
   }
+  console.timeEnd("parse");
 
   var succeeded = 0;
 
   let i = 0;
   while (i < parsedTxs.length) {
     const batch = [];
+
+    console.time("organise");
     // tx at the front of parsedTxs
     const frontTx = parsedTxs.at(i);
     const processors = getEligibleTxConfigs(frontTx, allTxConfigs);
@@ -50,16 +54,23 @@ export async function handler(event) {
       batch.push(tx);
       i++;
     }
+    console.timeEnd("organise");
 
+    console.time("processors");
     for (const txConfig of processors) {
       if (txConfig._independent) {
+        console.time("independent");
         await Promise.all(
           batch.map((tx) => txConfig._handler(decodeTx(tx, txConfig)))
         );
+        console.timeEnd("independent");
       } else {
+        console.time("non-independent");
         await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
+        console.timeEnd("non-independent");
       }
     }
+    console.timeEnd("processors");
 
     succeeded += batch.length;
   }
@@ -72,14 +83,14 @@ export async function handler(event) {
 }
 
 export async function report(options) {
-  console.time();
+  console.time("report");
   await lambda.invokeAsync({
     FunctionName: `arn:aws:lambda:eu-west-1:730335604495:function:reporting-${process.env.HANDLER_ID}`,
     InvokeArgs: JSON.stringify({
       processedTransactionsCount: options.processedTransactionsCount,
     }),
   });
-  console.timeEnd();
+  console.timeEnd("report");
 }
 
 export async function getS3Results(batchRecords) {
