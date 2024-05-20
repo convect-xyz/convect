@@ -40,19 +40,19 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         start_block: u64,
         end_block: u64,
     ) -> Result<Vec<IngestTransaction>, BoxError> {
-        let log_futures: Vec<_> = join_all(manifest.log_configs.iter().map(|config| {
-            self.web3_client
-                .get_logs_for_config(config, start_block, end_block)
-        }))
-        .await
-        .into_iter()
-        .flatten()
-        .collect();
+        let all_logs: Result<Vec<Vec<Log>>, BoxError> =
+            join_all(manifest.log_configs.iter().map(|config| {
+                self.web3_client
+                    .get_logs_for_config(config, start_block, end_block)
+            }))
+            .await
+            .into_iter()
+            .collect();
 
         let mut tx_indexes: HashMap<H256, usize> = HashMap::new();
         let mut txs: Vec<IngestTransaction> = Vec::new();
 
-        for log in log_futures.into_iter().flatten() {
+        for log in all_logs?.into_iter().flatten() {
             let tx_hash = log.transaction_hash.unwrap();
 
             if !tx_indexes.contains_key(&tx_hash) {
