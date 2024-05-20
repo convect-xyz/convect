@@ -30,7 +30,7 @@ export default function Page() {
         );
         return {
           ...data,
-          avgParsed: {
+          avgDurationParsed: {
             mins,
             secs,
           },
@@ -64,7 +64,8 @@ export default function Page() {
         <div className="text-xl">
           {overview && (
             <>
-              {overview.avgParsed.mins}m {overview.avgParsed.secs}s
+              {overview.avgDurationParsed.mins}m{" "}
+              {overview.avgDurationParsed.secs}s
             </>
           )}
         </div>
