@@ -1,3 +1,5 @@
+use aws_sdk_s3::error::BoxError;
+
 use crate::{
     types::manifest::Manifest, types::pipeline::Pipeline, types::transactions::IngestTransaction,
 };
@@ -68,7 +70,7 @@ impl<'a, T: TransactionFetcher> TransactionFetcherFluentBuilder<'a, T> {
         self
     }
 
-    pub async fn send(&self) -> Result<Vec<IngestTransaction>, web3::Error> {
+    pub async fn send(&self) -> Result<Vec<IngestTransaction>, BoxError> {
         let manifest = self.manifest.expect("Manifest must be set");
         let start_block = self.start_block.expect("Start Block must be set");
         let end_block = self.end_block.expect("End Block must be set");
@@ -76,8 +78,7 @@ impl<'a, T: TransactionFetcher> TransactionFetcherFluentBuilder<'a, T> {
         let transactions = self
             .log_fetcher
             .get_ingest_transactions(manifest, start_block, end_block)
-            .await
-            .unwrap();
+            .await?;
 
         Ok(transactions)
     }
