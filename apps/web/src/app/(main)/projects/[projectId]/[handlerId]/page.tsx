@@ -22,6 +22,7 @@ export default function Page() {
       handlerId,
     },
     {
+      refetchInterval: 5000,
       select(data) {
         const mins = millisecondsToMinutes(data.avgDuration);
         const secs = millisecondsToSeconds(
