@@ -1,3 +1,4 @@
+use aws_sdk_s3::error::BoxError;
 use futures::future::join_all;
 use std::cmp::Ordering;
 use std::str::FromStr;
@@ -17,7 +18,7 @@ pub trait TransactionFetcher {
         manifest: &Manifest,
         start_block: u64,
         end_block: u64,
-    ) -> Result<Vec<IngestTransaction>, web3::Error>;
+    ) -> Result<Vec<IngestTransaction>, BoxError>;
 }
 
 pub struct TransactionFetcherImpl<T: Web3Client> {
@@ -38,7 +39,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         manifest: &Manifest,
         start_block: u64,
         end_block: u64,
-    ) -> Result<Vec<IngestTransaction>, web3::Error> {
+    ) -> Result<Vec<IngestTransaction>, BoxError> {
         let log_futures = join_all(manifest.log_configs.iter().map(|config| {
             self.web3_client
                 .get_logs_for_config(config, start_block, end_block)
@@ -48,33 +49,35 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         let mut tx_indexes: HashMap<H256, usize> = HashMap::new();
         let mut txs: Vec<IngestTransaction> = Vec::new();
 
-        for log in log_futures.into_iter().flatten() {
-            let tx_hash = log.transaction_hash.unwrap();
+        for log_result in log_futures.into_iter() {
+            for log in log_result? {
+                let tx_hash = log.transaction_hash.unwrap();
 
-            if !tx_indexes.contains_key(&tx_hash) {
-                tx_indexes.insert(tx_hash.clone(), txs.len());
+                if !tx_indexes.contains_key(&tx_hash) {
+                    tx_indexes.insert(tx_hash.clone(), txs.len());
 
-                txs.push(IngestTransaction {
-                    block_number: log.block_number.unwrap().as_u64(),
-                    block_hash: format!("{:#x}", log.block_hash.unwrap()),
-                    transaction_index: log.transaction_index.unwrap().as_u64(),
-                    transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
-                    logs: Vec::new(),
+                    txs.push(IngestTransaction {
+                        block_number: log.block_number.unwrap().as_u64(),
+                        block_hash: format!("{:#x}", log.block_hash.unwrap()),
+                        transaction_index: log.transaction_index.unwrap().as_u64(),
+                        transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
+                        logs: Vec::new(),
+                    });
+                }
+
+                let tx_index = tx_indexes.get(&tx_hash).unwrap().clone();
+                let mut transaction = txs.get(tx_index).unwrap().clone();
+
+                transaction.logs.push(IngestLog {
+                    address: format!("{:#x}", log.address),
+                    topics: log.topics.iter().map(|t| format!("{:#x}", t)).collect(),
+                    data: log.data,
+                    log_index: log.log_index,
+                    removed: log.removed,
                 });
+
+                txs[tx_index] = transaction;
             }
-
-            let tx_index = tx_indexes.get(&tx_hash).unwrap().clone();
-            let mut transaction = txs.get(tx_index).unwrap().clone();
-
-            transaction.logs.push(IngestLog {
-                address: format!("{:#x}", log.address),
-                topics: log.topics.iter().map(|t| format!("{:#x}", t)).collect(),
-                data: log.data,
-                log_index: log.log_index,
-                removed: log.removed,
-            });
-
-            txs[tx_index] = transaction;
         }
 
         txs.sort_by(|a, b| {
@@ -96,7 +99,7 @@ pub trait Web3Client {
         config: &LogConfig,
         start_block: u64,
         end_block: u64,
-    ) -> Vec<Log>;
+    ) -> Result<Vec<Log>, BoxError>;
 }
 
 pub struct Web3ClientImpl {
@@ -123,7 +126,7 @@ impl Web3Client for Web3ClientImpl {
         config: &LogConfig,
         start_block: u64,
         end_block: u64,
-    ) -> Vec<Log> {
+    ) -> Result<Vec<Log>, BoxError> {
         let address = H160::from_str(config.address.as_str()).unwrap();
 
         let filter = FilterBuilder::default()
@@ -140,6 +143,8 @@ impl Web3Client for Web3ClientImpl {
             )
             .build();
 
-        self.web3.eth().logs(filter).await.unwrap()
+        let result = self.web3.eth().logs(filter).await?;
+
+        Ok(result)
     }
 }
