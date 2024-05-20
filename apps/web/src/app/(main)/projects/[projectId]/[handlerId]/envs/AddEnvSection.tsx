@@ -47,7 +47,7 @@ export function AddEnvSection() {
   };
 
   return (
-    <div className="rounded-md border bg-background p-4">
+    <div className="rounded-md border bg-muted p-4">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className="flex gap-2">

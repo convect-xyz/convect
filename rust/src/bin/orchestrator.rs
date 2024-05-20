@@ -9,7 +9,6 @@ use ingest::{
     types::{manifest::Manifest, pipeline::Pipeline},
 };
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
-use reqwest::blocking::Client;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
