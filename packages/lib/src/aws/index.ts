@@ -23,3 +23,8 @@ export function getTxQueueUrl(options: GetHandlerArnOptions) {
 export function getReportingArn(options: GetHandlerArnOptions) {
   return `arn:aws:lambda:${options.region}:730335604495:function:reporting-${options.handlerId}`
 }
+
+
+export function getEventsArn(options: GetHandlerArnOptions) {
+  return `arn:aws:lambda:${options.region}:730335604495:function:events-${options.handlerId}`
+}
