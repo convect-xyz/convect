@@ -4,6 +4,7 @@ use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
+use futures::TryFutureExt;
 use ingest::{
     api::{self},
     types::{manifest::Manifest, pipeline::Pipeline},
@@ -71,8 +72,13 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .set_start_block(from_block)
         .set_end_block(incoming_block)
         .send()
-        .await
-        .unwrap();
+        .inspect_err(|_| {
+            let _ = pipeline
+                .update()
+                .set_state(ingest::types::pipeline::SyncState::FAILED)
+                .send();
+        })
+        .await?;
 
     println!("transactions: {:?}", transactions);
 
