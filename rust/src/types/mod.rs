@@ -171,7 +171,9 @@ pub mod pipeline {
         pub fn update(&mut self) -> UpdatePipelineFluentBuilder {
             return UpdatePipelineFluentBuilder {
                 connection: &mut self.connection,
-                inner: self.inner.clone(),
+                state: self.inner.state.clone(),
+                last_block: self.inner.last_block.clone(),
+                inner: &mut self.inner,
             };
         }
 
@@ -220,24 +222,29 @@ pub mod pipeline {
 
     pub struct UpdatePipelineFluentBuilder<'a> {
         connection: &'a mut redis::cluster::ClusterConnection,
-        inner: Inner,
+        inner: &'a mut Inner,
+
+        state: SyncState,
+        last_block: Option<String>,
     }
 
     impl<'a> UpdatePipelineFluentBuilder<'a> {
         pub fn set_state(mut self, new_state: SyncState) -> Self {
-            self.inner.state = new_state;
+            self.state = new_state;
             self
         }
 
         pub fn set_last_block(mut self, new_last_block: u64) -> Self {
-            self.inner.last_block = Some(new_last_block.to_string());
+            self.last_block = Some(new_last_block.to_string());
             self
         }
 
         pub fn send(self) -> Result<(), BoxError> {
-            let _: String =
-                self.connection
-                    .json_set(self.inner.handler_id.to_string(), "$", &self.inner)?;
+            self.connection
+                .json_set(self.inner.handler_id.to_string(), "$", &self.inner)?;
+
+            self.inner.state = self.state;
+            self.inner.last_block = self.last_block;
 
             Ok(())
         }
