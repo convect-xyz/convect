@@ -50,7 +50,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         let mut txs: Vec<IngestTransaction> = Vec::new();
 
         for log_result in log_futures.into_iter() {
-            for log in log_result? {
+            for log in log_result?.into_iter() {
                 let tx_hash = log.transaction_hash.unwrap();
 
                 if !tx_indexes.contains_key(&tx_hash) {
