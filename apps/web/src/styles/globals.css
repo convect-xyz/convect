@@ -73,4 +73,8 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  code {
+    font-family: Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace
+  }
 }

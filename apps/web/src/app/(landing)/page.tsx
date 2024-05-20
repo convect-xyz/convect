@@ -3,15 +3,34 @@ import { Button } from "~/components/ui/button";
 
 import Link from "next/link";
 import React from "react";
-import LogoIcon from "~/components/icons/LogoIcon";
+import { CodeBlock } from "~/components/code/CodeBlock";
+import FullLogoIcon from "~/components/icons/FullLogoIcon";
 
+const c = `import { log, transaction } from "@kayakthedev/sdk";
+import { db } from "../db/db";
+import { mintedCard } from "../db/schema";
+
+export const transfer = transaction({
+  independent: false,
+  logs: [
+    log({
+      origin: "0x10fe37bac405b209f83ff523fb8d00c0c3f508a8",
+      signature:
+        "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+    }),
+  ],
+  handler: async (tx) => {
+    await createTransferRecord(tx);
+  }
+});
+
+`;
 export default function Page() {
   return (
     <>
       <header className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5">
         <Link className="flex items-center" href="#">
-          <LogoIcon className="h-6 w-6" />
-          <span className="ml-2 text-lg font-semibold">convect</span>
+          <FullLogoIcon className="h-6" />
         </Link>
         <nav className="hidden space-x-4 md:flex">
           <Link className="text-sm font-medium hover:underline" href="#">
@@ -30,7 +49,7 @@ export default function Page() {
         <Button>Get Started</Button>
       </header>
       <main>
-        <section className="bg-gray-100 py-12 md:py-16 lg:py-20">
+        <section className="min-h-screen bg-background">
           <div className="container mx-auto px-4 md:px-6 lg:px-8">
             <div className="grid items-center gap-8 md:grid-cols-2">
               <div className="space-y-4">
@@ -69,20 +88,18 @@ export default function Page() {
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-3">
                 <BoltIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-xl font-semibold">Rapid Deployment</h3>
+                <h3 className="text-xl font-semibold">Low Latency</h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Get your application up and running in no time with our
-                  streamlined deployment process.
+                  Transactions from new blocks are sent to your handlers almost
+                  instantly.
                 </p>
               </div>
               <div className="space-y-3">
                 <CogIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-xl font-semibold">
-                  Scalable Infrastructure
-                </h3>
+                <h3 className="text-xl font-semibold">High Throughput</h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Easily scale your application to meet growing demand without
-                  worrying about infrastructure.
+                  Convect handlers can send your code up to 600 transactions per
+                  invocation.
                 </p>
               </div>
               <div className="space-y-3">
@@ -91,14 +108,6 @@ export default function Page() {
                 <p className="text-gray-600 dark:text-gray-400">
                   Gain valuable insights into your application's performance
                   with our comprehensive analytics tools.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <ShieldCheckIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-xl font-semibold">Secure by Design</h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Rest easy knowing your application is protected by
-                  industry-leading security measures.
                 </p>
               </div>
               <div className="space-y-3">
@@ -146,6 +155,9 @@ export default function Page() {
               </div>
             </div>
           </div>
+        </section>
+        <section className="mx-auto max-w-screen-xl py-12 md:py-16 lg:py-20">
+          <CodeBlock code={c} />
         </section>
       </main>
       <footer className="bg-gray-100 py-6 dark:bg-gray-800">
