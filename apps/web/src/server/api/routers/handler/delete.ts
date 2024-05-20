@@ -2,6 +2,7 @@ import {
   getHandlerArn,
   getLogFetcherArn,
   getOrchestratorArn,
+  getReportingArn,
   getTxQueueUrl,
 } from "@kayakthedev/lib";
 import { TRPCError } from "@trpc/server";
@@ -27,6 +28,12 @@ async function cleanup(handler: InferSelectModel<typeof schema.handler>) {
     }),
     lambda.deleteFunction({
       FunctionName: getOrchestratorArn({
+        handlerId: handler.internalId,
+        region: "eu-west-1",
+      }),
+    }),
+    lambda.deleteFunction({
+      FunctionName: getReportingArn({
         handlerId: handler.internalId,
         region: "eu-west-1",
       }),
