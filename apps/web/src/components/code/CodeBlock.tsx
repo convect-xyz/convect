@@ -19,20 +19,32 @@ export function CodeBlock(props: CodeBlockProps) {
 
   return (
     <div className="rounded-lg border bg-muted">
+      <div className="px-4 py-8">
+        <code
+          className={cn("whitespace-pre-wrap text-sm", roboto_mono.className)}
+          dangerouslySetInnerHTML={{ __html: highlighted.value }}
+        ></code>
+      </div>
+    </div>
+  );
+}
+
+type FrameCodeBlockProps = CodeBlockProps & { fileName: string };
+
+export function FrameCodeBlock(props: FrameCodeBlockProps) {
+  const highlighted = hljs.highlight(props.code, { language: "typescript" });
+
+  return (
+    <div className="overflow-hidden rounded-lg border bg-muted">
       <div className="flex divide-x border-b">
         <div className="flex items-center gap-2 px-2">
           <div className="h-3 w-3 rounded-full bg-[rgb(237,106,94)]"></div>
           <div className="h-3 w-3 rounded-full bg-[rgb(245,191,79)]"></div>
           <div className="h-3 w-3 rounded-full bg-[rgb(98,197,84)]"></div>
         </div>
-        <div className="flex-1 p-2">handler.ts</div>
+        <div className="flex-1 p-2">{props.fileName}</div>
       </div>
-      <div className="px-4 py-8">
-        <code
-          className={cn("whitespace-pre-wrap", roboto_mono.className)}
-          dangerouslySetInnerHTML={{ __html: highlighted.value }}
-        ></code>
-      </div>
+      <CodeBlock {...props} />
     </div>
   );
 }

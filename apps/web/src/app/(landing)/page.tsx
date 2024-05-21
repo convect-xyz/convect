@@ -3,28 +3,42 @@ import { Button } from "~/components/ui/button";
 
 import Link from "next/link";
 import React from "react";
-import { CodeBlock } from "~/components/code/CodeBlock";
+import { FrameCodeBlock } from "~/components/code/CodeBlock";
 import FullLogoIcon from "~/components/icons/FullLogoIcon";
 
-const c = `import { log, transaction } from "@kayakthedev/sdk";
-import { db } from "../db/db";
-import { mintedCard } from "../db/schema";
+const c = `import { db } from "../db/db";
+import { log, transaction } from "@convect-xyz/sdk";
 
 export const transfer = transaction({
-  independent: false,
   logs: [
     log({
       origin: "0x10fe37bac405b209f83ff523fb8d00c0c3f508a8",
-      signature:
-        "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-    }),
+      signature: "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
+    })
   ],
-  handler: async (tx) => {
-    await createTransferRecord(tx);
+  handler: async (transactions) => {
+    await db.activity.createMany({
+      data: transactions.flatMap(tx => tx.logs).map((log) => ({
+        from: log.args.from,
+        to: log.args.to,
+        tokenId: log.args.tokenId
+      }))
+    })
   }
 });
 
 `;
+
+const ingestCode = `import { transfer } from "./handlers/transfer";
+import { revoke } from "./handlers/revoke";
+import { ingest } from "@convect-xyz/sdk";
+
+export default ingest({
+  revoke
+  transfer,
+});
+`;
+
 export default function Page() {
   return (
     <>
@@ -32,7 +46,7 @@ export default function Page() {
         <Link className="flex items-center" href="#">
           <FullLogoIcon className="h-6" />
         </Link>
-        <nav className="hidden space-x-4 md:flex">
+        <nav className="hidden space-x-4 justify-self-center md:flex">
           <Link className="text-sm font-medium hover:underline" href="#">
             Features
           </Link>
@@ -40,35 +54,18 @@ export default function Page() {
             Pricing
           </Link>
           <Link className="text-sm font-medium hover:underline" href="#">
-            About
-          </Link>
-          <Link className="text-sm font-medium hover:underline" href="#">
             Contact
           </Link>
         </nav>
-        <Button>Get Started</Button>
+        <div className="w-[200px]"></div>
       </header>
       <main>
-        <section className="min-h-screen bg-background">
+        <section className="mt-8 min-h-screen bg-background">
           <div className="container mx-auto px-4 md:px-6 lg:px-8">
-            <div className="grid items-center gap-8 md:grid-cols-2">
-              <div className="space-y-4">
-                <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                  Unlock Your Team's Potential
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 md:text-lg">
-                  Streamline your workflow and focus on what matters most with
-                  our powerful platform.
-                </p>
-                <form
-                  action={async () => {
-                    "use server";
-                    await signIn("github", { redirectTo: "/projects" });
-                  }}
-                >
-                  <Button type="submit">Join Waitlist</Button>
-                </form>
-              </div>
+            <div className="-mt-16 flex min-h-screen flex-col items-center justify-center gap-8">
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+                Serverless transaction processing for Ethereum Networks
+              </h1>
               <img
                 alt="Hero Image"
                 className="mx-auto rounded-lg"
@@ -80,6 +77,18 @@ export default function Page() {
                 }}
                 width="600"
               />
+
+              <div className="flex gap-2">
+                <form
+                  action={async () => {
+                    "use server";
+                    await signIn("github", { redirectTo: "/projects" });
+                  }}
+                >
+                  <Button type="submit">Join Waitlist</Button>
+                </form>
+                <Button>View Documentation</Button>
+              </div>
             </div>
           </div>
         </section>
@@ -156,14 +165,35 @@ export default function Page() {
             </div>
           </div>
         </section>
-        <section className="mx-auto max-w-screen-xl py-12 md:py-16 lg:py-20">
-          <CodeBlock code={c} />
+        <section className="mx-auto flex max-w-[1920px] overflow-hidden px-8 py-12 md:py-16 lg:py-20">
+          <div className="flex flex-[2_2_0]  flex-col justify-center gap-4">
+            <div className="text-4xl font-bold">Full flexibility</div>
+            <div className="text-lg text-muted-foreground">
+              Define transaction handlers in code and process them however you
+              like with full typesafety.
+            </div>
+          </div>
+          <div className="flex-[3_3_0] translate-x-[10%]">
+            <FrameCodeBlock fileName="transfer.ts" code={c} />
+          </div>
+        </section>
+        <section className="mx-auto flex max-w-[1920px] flex-row-reverse overflow-hidden px-8 py-12 md:py-16 lg:py-20">
+          <div className="flex flex-[2_2_0] flex-col justify-center gap-4 px-8 text-right">
+            <div className="text-4xl font-bold">Combine handlers</div>
+            <div className="text-lg text-muted-foreground">
+              If you intend to process multiple transactions, just pass in
+              multiple handlers and we'll make sure they get processed in order.
+            </div>
+          </div>
+          <div className="flex-[3_3_0]">
+            <FrameCodeBlock fileName="ingest.ts" code={ingestCode} />
+          </div>
         </section>
       </main>
       <footer className="bg-gray-100 py-6 dark:bg-gray-800">
         <div className="container mx-auto flex flex-col items-center justify-between px-4 md:flex-row md:px-6 lg:px-8">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            © 2024 Acme Platform. All rights reserved.
+            © 2024 convect.xyz. All rights reserved.
           </p>
           <div className="mt-4 flex space-x-4 md:mt-0">
             <Link className="text-sm font-medium hover:underline" href="#">

@@ -22,7 +22,6 @@ export default function Page() {
       handlerId,
     },
     {
-      refetchInterval: 5000,
       select(data) {
         const mins = millisecondsToMinutes(data.avgDuration);
         const secs = millisecondsToSeconds(
@@ -40,35 +39,110 @@ export default function Page() {
   );
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
-      <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-        <div className="text-sm uppercase text-muted-foreground">
-          Processed Transactions
+    <div>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
+        <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+          <div className="text-sm uppercase text-muted-foreground">
+            Processed Transactions
+          </div>
+          <div className="text-xl">
+            {overview?.processedTransactionsCount} /{" "}
+            {overview?.transactionCount}
+          </div>
         </div>
-        <div className="text-xl">
-          {overview?.processedTransactionsCount} / {overview?.transactionCount}
+        <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="uppercase text-muted-foreground">Average DPI</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircleIcon size={14} />
+                </TooltipTrigger>
+                <TooltipContent>Average duration per invocation</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <div className="text-xl">
+            {overview && (
+              <>
+                {overview.avgDurationParsed.mins}m{" "}
+                {overview.avgDurationParsed.secs}s
+              </>
+            )}
+          </div>
+        </div>
+        <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+          <div className="text-sm uppercase text-muted-foreground">
+            Last Fetched Block
+          </div>
+          <div className="text-xl">{overview?.lastFetchedBlock}</div>
         </div>
       </div>
-      <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="uppercase text-muted-foreground">Average DPI</span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <HelpCircleIcon size={14} />
-              </TooltipTrigger>
-              <TooltipContent>Average duration per invocation</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-        <div className="text-xl">
-          {overview && (
-            <>
-              {overview.avgDurationParsed.mins}m{" "}
-              {overview.avgDurationParsed.secs}s
-            </>
-          )}
-        </div>
+      <div className="mt-4">
+        <RecentTransactions />
+      </div>
+    </div>
+  );
+}
+
+const stringToColour = (str: string) => {
+  let hash = 0;
+  str.split("").forEach((char) => {
+    hash = char.charCodeAt(0) + ((hash << 5) - hash);
+  });
+  let colour = "#";
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xff;
+    colour += value.toString(16).padStart(2, "0");
+  }
+  return colour;
+};
+
+function RecentTransactions() {
+  const { handlerId } = useParams();
+  const { data: overview } = api.handlers.getOverview.useQuery({
+    handlerId,
+  });
+
+  return (
+    <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="uppercase text-muted-foreground">
+          Recently Processed
+        </span>
+      </div>
+      <div className="flex flex-col divide-y">
+        {overview &&
+          overview.recentTransactions.map((tx) => (
+            <div
+              className="flex items-center gap-2 py-4"
+              key={tx.transactionHash}
+            >
+              <span className="h-2 w-2 rounded-full bg-green-400"></span>
+              <div className="flex-1 text-sm">{tx.transactionHash}</div>
+              <div className="flex gap-2">
+                {tx.labels.map((v) => (
+                  <div
+                    key={v}
+                    className="flex max-w-[100px] items-center gap-2 rounded-sm border bg-background p-1 text-xs"
+                  >
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: stringToColour(v) }}
+                    ></span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger className="flex-1 truncate">
+                          <span>{v}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>{v}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
       </div>
     </div>
   );

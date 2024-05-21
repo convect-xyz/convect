@@ -15,23 +15,13 @@ export type InferTransaction<TLogs> = {
   logs: InferLogs<TLogs>[];
 };
 
-export class Transaction<
-  const TLogs extends Array<any>,
-  TIndependent extends boolean,
-  THandler,
-> {
+export class Transaction<const TLogs extends Array<any>, THandler> {
   private _logs: TLogs;
-  private _independent: TIndependent;
   private _handler: THandler;
   private _logMap: Map<string, any>;
 
-  constructor(options: {
-    logs: TLogs;
-    independent: TIndependent;
-    handler: THandler;
-  }) {
+  constructor(options: { logs: TLogs; handler: THandler }) {
     this._logs = options.logs;
-    this._independent = options.independent;
     this._handler = options.handler;
     this._logMap = this._logs.reduce((acc, curr) => {
       acc.set(curr._topics.at(0), curr);
@@ -42,12 +32,7 @@ export class Transaction<
 
 export function transaction<
   const TLogs extends Array<any>,
-  TIndependent extends boolean,
-  THandler = (
-    v: TIndependent extends true
-      ? InferTransaction<TLogs>
-      : Array<InferTransaction<TLogs>>
-  ) => Promise<void>,
->(v: { logs: TLogs; independent: TIndependent; handler: THandler }) {
-  return new Transaction<TLogs, TIndependent, THandler>(v);
+  THandler = (v: Array<InferTransaction<TLogs>>) => Promise<void>,
+>(v: { logs: TLogs; handler: THandler }) {
+  return new Transaction<TLogs, THandler>(v);
 }
