@@ -1,12 +1,15 @@
-use std::{env, fmt::format};
+use std::env;
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
 use futures::TryFutureExt;
-use ingest::{api, manifest::Manifest, syncer::Pipeline};
-use lambda_runtime::{run, service_fn, tower::BoxError, tracing, Error, LambdaEvent};
+use ingest::{
+    api::{self},
+    types::{manifest::Manifest, pipeline::Pipeline},
+};
+use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -17,11 +20,11 @@ async fn main() -> Result<(), Error> {
 
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let config = aws_config::load_from_env().await;
-    let sqs_client = aws_sdk_sqs::Client::new(&config);
     let ecs_client = aws_sdk_ecs::Client::new(&config);
-
+    let api = api::Api::new(&config);
     let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
-    let pipeline = Pipeline::load(handler_id).await;
+    let mut pipeline = Pipeline::load(handler_id);
+
     let incoming_block: u64 = event
         .payload
         .records
@@ -34,54 +37,86 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     // Will not sync while sync task already in progress
     // TODO: this should be added to a DLQ
-    if pipeline.state().ne(&ingest::syncer::SyncState::IDLE) {
+    if pipeline
+        .state()
+        .eq(&ingest::types::pipeline::SyncState::SYNCING)
+    {
         return Ok(());
     }
 
     // It is the responsibility of the ECS task to revert this status
     pipeline
         .update()
-        .set_state(ingest::syncer::SyncState::SYNCING)
+        .set_state(ingest::types::pipeline::SyncState::SYNCING)
         .send()
-        .await
         .expect("Failed to update pipeline");
+
+    println!("{:?}", pipeline.inner());
 
     // If block diff is too great, trigger fargate to do the work
     if incoming_block - pipeline.last_block().or(Some(0)).unwrap() > 1999 {
-        return trigger_batch_sync_task(&ecs_client, &pipeline, incoming_block).await;
+        return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block).await;
     }
+
+    println!("State: {:?}", pipeline.state());
+
+    let from_block = pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap();
 
     // We'll process the blocks here and add them to tx queue
     // We shouldn't need to update status here because max concurrency should be 1
-    return sync_blocks(
-        &sqs_client,
-        pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap(),
-        incoming_block,
-    )
-    .and_then(|_| async {
-        pipeline
+    let manifest = Manifest::from_env().await.unwrap();
+
+    let transactions = api
+        .fetch_transactions()
+        .set_manifest(&manifest)
+        .set_start_block(from_block)
+        .set_end_block(incoming_block)
+        .send()
+        .inspect_err(|_| {
+            let _ = pipeline
+                .update()
+                .set_state(ingest::types::pipeline::SyncState::FAILED)
+                .send();
+        })
+        .await?;
+
+    println!("transactions: {:?}", transactions);
+
+    let result = api
+        .enqueue_transactions()
+        .set_pipeline(&mut pipeline)
+        .set_queue_url(env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"))
+        .set_transactions(&transactions)
+        .send()
+        .await;
+
+    match result {
+        Ok(_) => pipeline
             .update()
             .set_last_block(incoming_block)
-            .set_state(ingest::syncer::SyncState::IDLE)
-            .send()
-            .await
-    })
-    .await;
+            .set_state(ingest::types::pipeline::SyncState::IDLE)
+            .send(),
+        Err(_) => pipeline
+            .update()
+            .set_state(ingest::types::pipeline::SyncState::FAILED)
+            .send(),
+    }
 }
 
 async fn trigger_batch_sync_task(
     ecs_client: &aws_sdk_ecs::Client,
-    pipeline: &Pipeline,
+    pipeline: &mut Pipeline,
     incoming_block: u64,
 ) -> Result<(), Error> {
     let version = env::var("VERSION").expect("Version ENV not defined");
+    println!("Triggering batch sync");
 
-    let _ = ecs_client
+    let result = ecs_client
         .run_task()
         .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
         .task_definition(format!(
-            "arn:aws:ecs:eu-west-1:730335604495:task-definition/syncer-{:?}:1",
-            version.replace(".", "-")
+            "arn:aws:ecs:eu-west-1:730335604495:task-definition/syncer-{family_name}",
+            family_name = version.replace(".", "-")
         ))
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(
@@ -130,10 +165,6 @@ async fn trigger_batch_sync_task(
                                 "HANDLER_ID".to_string(),
                                 env::var("HANDLER_ID").unwrap(),
                             ),
-                            create_key_value_pair(
-                                "PROJECT_ID".to_string(),
-                                env::var("PROJECT_ID").unwrap(),
-                            ),
                             create_key_value_pair("VERSION".to_string(), version),
                         ]))
                         .build(),
@@ -142,6 +173,19 @@ async fn trigger_batch_sync_task(
         )
         .send()
         .await;
+    println!("done");
+
+    match result {
+        Err(e) => {
+            println!("{:?}", e);
+            pipeline
+                .update()
+                .set_state(ingest::types::pipeline::SyncState::IDLE)
+                .send()
+                .unwrap()
+        }
+        _ => {}
+    }
 
     Ok(())
 }
@@ -151,25 +195,4 @@ fn create_key_value_pair(name: String, value: String) -> KeyValuePair {
         .set_name(Some(name))
         .set_value(Some(value))
         .build()
-}
-
-async fn sync_blocks(
-    sqs_client: &aws_sdk_sqs::Client,
-    from_block: u64,
-    to_block: u64,
-) -> Result<(), BoxError> {
-    let manifest = Manifest::from_env().await.unwrap();
-
-    let transactions = api::get_ingest_transactions(&manifest, from_block, to_block)
-        .await
-        .unwrap();
-
-    api::upload_to_sqs(
-        sqs_client,
-        env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"),
-        api::SQSPayload::Transactions(transactions),
-    )
-    .await;
-
-    Ok(())
 }

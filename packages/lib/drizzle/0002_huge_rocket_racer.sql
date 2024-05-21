@@ -1,0 +1,2 @@
+ALTER TABLE "web_handler" ADD COLUMN "internal_id" varchar DEFAULT gen_random_uuid() NOT NULL;--> statement-breakpoint
+ALTER TABLE "web_handler" ADD CONSTRAINT "web_handler_internal_id_unique" UNIQUE("internal_id");

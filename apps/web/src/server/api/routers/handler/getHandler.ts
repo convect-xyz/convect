@@ -41,7 +41,7 @@ export const getHandler = protectedProcedure
 
     return {
       ...handler.handler,
-      isInitialised: !!handler.handler.handlerArn,
+      isInitialised: true,
       project: handler.project,
     };
   });

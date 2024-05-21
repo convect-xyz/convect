@@ -237,29 +237,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aws-sdk-dynamodb"
-version = "1.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "059a3cf6c50bc79b05153a18563be062f55a8b7b3e73392aec7ba479f825fc97"
-dependencies = [
- "aws-credential-types",
- "aws-runtime",
- "aws-smithy-async",
- "aws-smithy-http",
- "aws-smithy-json",
- "aws-smithy-runtime",
- "aws-smithy-runtime-api",
- "aws-smithy-types",
- "aws-types",
- "bytes",
- "fastrand",
- "http 0.2.12",
- "once_cell",
- "regex-lite",
- "tracing",
-]
-
-[[package]]
 name = "aws-sdk-ecs"
 version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -664,7 +641,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "598e2ade8447dce8d3a15b6159b73354db34257851344b232fb1920c272acc61"
 dependencies = [
  "base64 0.21.7",
+ "bytes",
  "chrono",
+ "http 1.1.0",
+ "http-body 1.0.0",
+ "http-serde",
+ "query_map",
  "serde",
  "serde_json",
  "serde_with",
@@ -988,6 +970,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "combine"
+version = "4.6.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
+dependencies = [
+ "bytes",
+ "memchr",
+]
+
+[[package]]
 name = "const-hex"
 version = "1.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1042,6 +1034,12 @@ checksum = "53fe5e26ff1b7aef8bca9c6080520cfb8d9333c7568e1829cef191a9723e5504"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "crc16"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "338089f42c427b86394a5ee60ff321da23a5c89c9d89514c829687b26359fcff"
 
 [[package]]
 name = "crc32c"
@@ -2436,7 +2434,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "aws-config",
- "aws-sdk-dynamodb",
  "aws-sdk-ecs",
  "aws-sdk-lambda",
  "aws-sdk-s3",
@@ -2450,13 +2447,14 @@ dependencies = [
  "flate2",
  "futures",
  "lambda-extension",
+ "lambda_http",
  "lambda_runtime",
  "mockall",
  "openssl",
+ "redis",
  "regex",
  "reqwest",
  "serde",
- "serde_dynamo",
  "serde_json",
  "tokio",
  "tracing-subscriber",
@@ -2623,6 +2621,33 @@ dependencies = [
  "tokio-stream",
  "tower",
  "tracing",
+]
+
+[[package]]
+name = "lambda_http"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ebde9aedfdf8c2bac4365d9adafae6ca6d631b0ea221734ac802595fcd141cb"
+dependencies = [
+ "aws_lambda_events",
+ "base64 0.21.7",
+ "bytes",
+ "encoding_rs",
+ "futures",
+ "futures-util",
+ "http 1.1.0",
+ "http-body 1.0.0",
+ "http-body-util",
+ "hyper 1.2.0",
+ "lambda_runtime",
+ "mime",
+ "percent-encoding",
+ "pin-project-lite",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "tokio-stream",
+ "url",
 ]
 
 [[package]]
@@ -3408,6 +3433,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "query_map"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5eab6b8b1074ef3359a863758dae650c7c0c6027927a085b7af911c8e0bf3a15"
+dependencies = [
+ "form_urlencoded",
+ "serde",
+ "serde_derive",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3479,6 +3515,26 @@ checksum = "1465873a3dfdaa8ae7cb14b4383657caab0b3e8a0aa9ae8e04b044854c8dfce2"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
+]
+
+[[package]]
+name = "redis"
+version = "0.25.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6472825949c09872e8f2c50bde59fcefc17748b6be5c90fd67cd8b4daca73bfd"
+dependencies = [
+ "combine",
+ "crc16",
+ "itoa",
+ "native-tls",
+ "percent-encoding",
+ "rand",
+ "ryu",
+ "serde",
+ "serde_json",
+ "sha1_smol",
+ "socket2",
+ "url",
 ]
 
 [[package]]
@@ -3956,17 +4012,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_dynamo"
-version = "4.2.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e36c1b1792cfd9de29eb373ee6a4b74650369c096f55db7198ceb7b8921d1f7f"
-dependencies = [
- "aws-sdk-dynamodb",
- "base64 0.21.7",
- "serde",
-]
-
-[[package]]
 name = "serde_json"
 version = "1.0.115"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4061,6 +4106,12 @@ dependencies = [
  "cpufeatures",
  "digest 0.10.7",
 ]
+
+[[package]]
+name = "sha1_smol"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae1a47186c03a32177042e55dbc5fd5aee900b8e0069a8d70fba96a9375cd012"
 
 [[package]]
 name = "sha2"

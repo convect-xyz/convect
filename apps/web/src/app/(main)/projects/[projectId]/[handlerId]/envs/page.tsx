@@ -43,7 +43,7 @@ function EnvironmentVariables() {
   const { data: envs } = useEnvs();
 
   return (
-    <div className="divide-y rounded-sm border">
+    <div className="divide-y rounded-sm border bg-muted">
       {envs && envs.length === 0 && <NoEnvs />}
       {envs?.map((env) => <EnvRow env={env} />)}
     </div>
@@ -78,7 +78,7 @@ function EnvRow({ env }: { env: RouterOutputs["handlers"]["getEnvs"][0] }) {
           )}
         </div>
       </div>
-      <div className="flex max-w-40 items-center gap-2">
+      <div className="max-w-40 flex items-center gap-2">
         <div>
           Last updated{" "}
           {formatDistanceToNow(env.lastUpdatedAt, { addSuffix: true })}

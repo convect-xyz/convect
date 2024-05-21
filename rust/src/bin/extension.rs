@@ -98,7 +98,6 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
                 init_duration_ms: metrics.init_duration_ms,
                 restore_duration_ms: metrics.restore_duration_ms,
             }),
-            // more types of telemetry events are available
             _ => (),
         }
     }

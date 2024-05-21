@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["log-fetcher", "orchestrator"]
+        binary: ["log-fetcher", "orchestrator", "reporting"]
     steps:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -129,7 +129,6 @@ jobs:
           REPOSITORY: ${{ matrix.binary }}
           DOCKERFILE: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
         run: |
-          DOCKER_BUILDKIT=1 
-          DOCKER_DEFAULT_PLATFORM=linux/arm64
+          DOCKER_BUILDKIT=1
           docker build -t $REGISTRY/$REPOSITORY:$VERSION . -f $DOCKERFILE
           docker push $REGISTRY/$REPOSITORY:$VERSION

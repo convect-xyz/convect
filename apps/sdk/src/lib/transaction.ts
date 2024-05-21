@@ -1,32 +1,27 @@
 import { Address, Log as ViemLog } from "viem";
 
+import { AbiEvent } from "abitype";
 import { Log } from "./log";
+
+type InferLogs<TLogs> = TLogs extends [Log<infer U>, ...infer Rest]
+  ? U extends AbiEvent
+    ? ViemLog<bigint, number, false, U, true> | InferLogs<Rest>
+    : never
+  : never;
 
 export type InferTransaction<TLogs> = {
   from: Address;
   to: Address;
-  logs: TLogs extends Array<Log<infer TEvents>>
-    ? ViemLog<bigint, number, false, TEvents, true>[]
-    : never;
+  logs: InferLogs<TLogs>[];
 };
 
-export class Transaction<
-  TLogs extends Array<any>,
-  TIndependent extends boolean,
-  THandler,
-> {
+export class Transaction<const TLogs extends Array<any>, THandler> {
   private _logs: TLogs;
-  private _independent: TIndependent;
   private _handler: THandler;
   private _logMap: Map<string, any>;
 
-  constructor(options: {
-    logs: TLogs;
-    independent: TIndependent;
-    handler: THandler;
-  }) {
+  constructor(options: { logs: TLogs; handler: THandler }) {
     this._logs = options.logs;
-    this._independent = options.independent;
     this._handler = options.handler;
     this._logMap = this._logs.reduce((acc, curr) => {
       acc.set(curr._topics.at(0), curr);
@@ -36,13 +31,8 @@ export class Transaction<
 }
 
 export function transaction<
-  TLogs extends Array<any>,
-  TIndependent extends boolean,
-  THandler = (
-    v: TIndependent extends true
-      ? InferTransaction<TLogs>
-      : Array<InferTransaction<TLogs>>
-  ) => Promise<void>,
->(v: { logs: TLogs; independent: TIndependent; handler: THandler }) {
-  return new Transaction<TLogs, TIndependent, THandler>(v);
+  const TLogs extends Array<any>,
+  THandler = (v: Array<InferTransaction<TLogs>>) => Promise<void>,
+>(v: { logs: TLogs; handler: THandler }) {
+  return new Transaction<TLogs, THandler>(v);
 }
