@@ -1,0 +1,58 @@
+---
+title: Quickstart
+description: Quickstart
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+
+<Steps>
+  <Step>
+    ### Create a project
+  </Step>
+  <Step>
+    ### Write your handler
+
+    ```ts title="src/convect/transfer.ts"
+    import { db } from "../db/db";
+    import { log, transaction } from "@convect-xyz/sdk";
+
+    export const transfer = transaction({
+      logs: [
+        log({
+          origin: "0x10fe37bac405b209f83ff523fb8d00c0c3f508a8",
+          signature: "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
+        })
+      ],
+      handler: async (transactions) => {
+        await db.activity.createMany({
+          data: transactions.flatMap(tx => tx.logs).map((log) => ({
+            from: log.args.from,
+            to: log.args.to,
+            tokenId: log.args.tokenId
+          }))
+        })
+      }
+    });
+    ```
+  </Step>
+  <Step>
+    ### Create an ingestion pipeline
+
+    ```ts title="src/convect/ingest.ts"
+    import { transfer } from "./transfer";
+    import { ingest } from "@convect-xyz/sdk";
+
+    export default ingest({
+      transfer
+    });
+    ```
+  </Step>
+  <Step>
+    ### Upload a new deployment
+
+    ```bash title="terminal"
+    yarn convect project/handler src/convect/ingest.ts
+    ```
+  </Step>
+</Steps>
