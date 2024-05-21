@@ -1,20 +1,36 @@
 import { Lambda } from "@aws-sdk/client-lambda";
 import axios from "axios";
-import { v4 } from "uuid";
-import { decodeEventLog, isAddressEqual } from "viem";
+import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
+
+import { SQSEvent } from "aws-lambda";
+// @ts-ignore
 import pipeline from "./pipeline";
 
-const allTxConfigs = Object.values(pipeline);
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
 const lambda = new Lambda({ region: "eu-west-1" });
 
-export async function handler(event) {
+type ParsedRecord = {
+  id: string;
+  data: Record<string, any>
+}
+
+type LogIdentifier = {
+  signature: Address;
+  address: Hex
+}
+
+type EligibleTxConfig = {
+  label: string;
+  config: any
+}
+
+export async function handler(event: SQSEvent) {
   const parsedTxs = [];
 
   console.time("parse");
   const records = event.Records.map((record) => ({
-    id: v4(),
+    id: record.messageId,
     data: JSON.parse(record.body),
   }));
 
@@ -36,7 +52,7 @@ export async function handler(event) {
 
   let i = 0;
   while (i < parsedTxs.length) {
-    const batch = [];
+    const batch: Array<any> = [];
 
     console.time("organise");
     // tx at the front of parsedTxs
@@ -57,7 +73,7 @@ export async function handler(event) {
       i++;
     }
     console.timeEnd("organise");
-
+    
     for (const { label, config: txConfig } of processors) {
       if (txConfig._independent) {
         await Promise.all(
@@ -70,7 +86,7 @@ export async function handler(event) {
       } else {
         await txConfig
           ._handler(batch.map((tx) => decodeTx(tx, txConfig)))
-          .then((batch) =>
+          .then(() =>
             batch.map((tx) => succeeded.get(tx.transactionHash).push(label))
           );
       }
@@ -84,7 +100,11 @@ export async function handler(event) {
   return {};
 }
 
-export async function report(options) {
+
+type ReportOptions = {
+  transactions: Record<string, any>
+}
+export async function report(options: ReportOptions) {
   console.time("report");
   await lambda.invokeAsync({
     FunctionName: `arn:aws:lambda:eu-west-1:730335604495:function:reporting-${process.env.HANDLER_ID}`,
@@ -95,7 +115,7 @@ export async function report(options) {
   console.timeEnd("report");
 }
 
-export async function getS3Results(batchRecords) {
+export async function getS3Results(batchRecords: Array<ParsedRecord>) {
   const s3Results = new Map();
 
   await Promise.all(
@@ -112,7 +132,7 @@ export async function getS3Results(batchRecords) {
 }
 
 // Eligible Tx configs are configs that match the given transaction
-export function getEligibleTxConfigs(tx, allTxConfigs) {
+export function getEligibleTxConfigs(tx: any, allTxConfigs: Array<any>): Array<EligibleTxConfig> {
   const eligibleTxConfigs = [];
   const txLogIdentifiers = getUniqueLogIdentifiers(tx);
 
@@ -137,13 +157,13 @@ export function getEligibleTxConfigs(tx, allTxConfigs) {
   return eligibleTxConfigs.sort(txConfigComparison(tx));
 }
 
-export function txConfigComparison(tx) {
+export function txConfigComparison(tx: any) {
   const identifiers = getUniqueLogIdentifiers(tx);
-  return (txConfigA, txConfigB) => {
+  return (txConfigA: any, txConfigB: any) => {
     for (const identifier of identifiers) {
       if (
         txConfigA.config._logMap.get(identifier.signature) &&
-        txConfigB.config._logMap.get(log.signature)
+        txConfigB.config._logMap.get(identifier.signature)
       ) {
         continue;
       }
@@ -157,7 +177,7 @@ export function txConfigComparison(tx) {
   };
 }
 
-export function sameEligibleProcessors(processorsA, processorsB) {
+export function sameEligibleProcessors(processorsA: Array<any>, processorsB: Array<any>) {
   let seen = new Set();
 
   if (processorsA.length != processorsB.length) return false;
@@ -175,7 +195,7 @@ export function sameEligibleProcessors(processorsA, processorsB) {
   return true;
 }
 
-export function getUniqueLogIdentifiers(tx) {
+export function getUniqueLogIdentifiers(tx: any): Array<LogIdentifier> {
   const seen = new Set();
   const unique = [];
 
@@ -190,14 +210,14 @@ export function getUniqueLogIdentifiers(tx) {
   return unique;
 }
 
-export function getLogIdentifier(txLogIdentifier) {
+export function getLogIdentifier(txLog: any): LogIdentifier {
   return {
-    signature: txLogIdentifier.topics.at(0),
-    address: txLogIdentifier.address,
+    signature: txLog.topics.at(0),
+    address: txLog.address,
   };
 }
 
-export function decodeTx(tx, txConfig) {
+export function decodeTx(tx: any, txConfig: any) {
   const newTx = { ...tx, logs: [] };
 
   for (const log of tx.logs) {
@@ -206,7 +226,7 @@ export function decodeTx(tx, txConfig) {
 
     if (!logConfig) continue;
 
-    const decodedEvent = decodeEventLog({
+    const decodedEvent: any = decodeEventLog({
       abi: [logConfig._event],
       data: log.data,
       topics: log.topics,
@@ -226,7 +246,7 @@ export function decodeTx(tx, txConfig) {
   return newTx;
 }
 
-export function logConfigMatches(logConfig, logIdentifier) {
+export function logConfigMatches(logConfig: any, logIdentifier: LogIdentifier) {
   return (
     (isAddressEqual(logConfig._origin, logIdentifier.address) &&
       logConfig._topics.at(0) === logIdentifier.signature) ||
