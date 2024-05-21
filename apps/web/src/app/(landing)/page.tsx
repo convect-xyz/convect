@@ -35,8 +35,8 @@ import { revoke } from "./handlers/revoke";
 import { ingest } from "@convect-xyz/sdk";
 
 export default ingest({
-  revoke
-  transfer,
+  revoke,
+  transfer
 });
 `;
 
@@ -85,7 +85,12 @@ export default function Page() {
                     await signIn("github", { redirectTo: "/projects" });
                   }}
                 >
-                  <Button type="submit">Join Waitlist</Button>
+                  <Button
+                    type="submit"
+                    disabled={process.env.NODE_ENV === "production"}
+                  >
+                    Join Waitlist
+                  </Button>
                 </form>
                 <Button asChild>
                   <a href={getDocsUrl()} target="_blank">
