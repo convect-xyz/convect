@@ -5,6 +5,7 @@ import { decodeEventLog, isAddressEqual } from "viem";
 import pipeline from "./pipeline";
 
 const allTxConfigs = Object.values(pipeline);
+const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
 const lambda = new Lambda({ region: "eu-west-1" });
 
@@ -31,7 +32,7 @@ export async function handler(event) {
   }
   console.timeEnd("parse");
 
-  var succeeded = 0;
+  var succeeded = new Map();
 
   let i = 0;
   while (i < parsedTxs.length) {
@@ -40,43 +41,44 @@ export async function handler(event) {
     console.time("organise");
     // tx at the front of parsedTxs
     const frontTx = parsedTxs.at(i);
-    const processors = getEligibleTxConfigs(frontTx, allTxConfigs);
+    const processors = getEligibleTxConfigs(frontTx, allTxConfigsWithLabels);
 
     // batch transactions that can be processed by the exact same processors
     while (
       i < parsedTxs.length &&
       sameEligibleProcessors(
         processors,
-        getEligibleTxConfigs(parsedTxs[i], allTxConfigs)
+        getEligibleTxConfigs(parsedTxs[i], allTxConfigsWithLabels)
       )
     ) {
       const tx = parsedTxs[i];
       batch.push(tx);
+      succeeded.set(tx.transactionHash, []);
       i++;
     }
     console.timeEnd("organise");
 
-    console.time("processors");
-    for (const txConfig of processors) {
+    for (const { label, config: txConfig } of processors) {
       if (txConfig._independent) {
-        console.time("independent");
         await Promise.all(
-          batch.map((tx) => txConfig._handler(decodeTx(tx, txConfig)))
+          batch.map((tx) =>
+            txConfig
+              ._handler(decodeTx(tx, txConfig))
+              .then(() => succeeded.get(tx.transactionHash).push(label))
+          )
         );
-        console.timeEnd("independent");
       } else {
-        console.time("non-independent");
-        await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
-        console.timeEnd("non-independent");
+        await txConfig
+          ._handler(batch.map((tx) => decodeTx(tx, txConfig)))
+          .then((batch) =>
+            batch.map((tx) => succeeded.get(tx.transactionHash).push(label))
+          );
       }
     }
-    console.timeEnd("processors");
-
-    succeeded += batch.length;
   }
 
   await report({
-    processedTransactionsCount: succeeded,
+    transactions: Object.fromEntries(succeeded),
   });
 
   return {};
@@ -87,7 +89,7 @@ export async function report(options) {
   await lambda.invokeAsync({
     FunctionName: `arn:aws:lambda:eu-west-1:730335604495:function:reporting-${process.env.HANDLER_ID}`,
     InvokeArgs: JSON.stringify({
-      processedTransactionsCount: options.processedTransactionsCount,
+      transactions: options.transactions,
     }),
   });
   console.timeEnd("report");
@@ -114,7 +116,7 @@ export function getEligibleTxConfigs(tx, allTxConfigs) {
   const eligibleTxConfigs = [];
   const txLogIdentifiers = getUniqueLogIdentifiers(tx);
 
-  for (const config of allTxConfigs) {
+  for (const [label, config] of allTxConfigs) {
     var isEligible = true;
 
     for (const logConfig of config._logs) {
@@ -128,7 +130,7 @@ export function getEligibleTxConfigs(tx, allTxConfigs) {
     }
 
     if (isEligible) {
-      eligibleTxConfigs.push(config);
+      eligibleTxConfigs.push({ label, config });
     }
   }
 
@@ -140,15 +142,15 @@ export function txConfigComparison(tx) {
   return (txConfigA, txConfigB) => {
     for (const identifier of identifiers) {
       if (
-        txConfigA._logMap.get(identifier.signature) &&
-        txConfigB._logMap.get(log.signature)
+        txConfigA.config._logMap.get(identifier.signature) &&
+        txConfigB.config._logMap.get(log.signature)
       ) {
         continue;
       }
 
-      if (txConfigA._logMap.get(identifier.signature)) return -1;
+      if (txConfigA.config._logMap.get(identifier.signature)) return -1;
 
-      if (txConfigB._logMap.get(identifier.signature)) return 1;
+      if (txConfigB.config._logMap.get(identifier.signature)) return 1;
     }
 
     return 0;
@@ -161,11 +163,11 @@ export function sameEligibleProcessors(processorsA, processorsB) {
   if (processorsA.length != processorsB.length) return false;
 
   for (const p of processorsA) {
-    seen.add(p);
+    seen.add(p.label);
   }
 
   for (const p of processorsB) {
-    if (!seen.has(p)) {
+    if (!seen.has(p.label)) {
       return false;
     }
   }
