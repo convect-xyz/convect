@@ -42,7 +42,7 @@ export default ingest({
 export default function Page() {
   return (
     <>
-      <header className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5">
+      <header className="mx-auto flex max-w-screen-lg items-center justify-between px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5">
         <Link className="flex items-center" href="#">
           <FullLogoIcon className="h-6" />
         </Link>
@@ -57,13 +57,12 @@ export default function Page() {
             Contact
           </Link>
         </nav>
-        <div className="w-[200px]"></div>
       </header>
       <main>
-        <section className="mt-8 min-h-screen bg-background">
+        <section className="mx-auto mt-8 min-h-screen max-w-screen-lg bg-background">
           <div className="container mx-auto px-4 md:px-6 lg:px-8">
             <div className="-mt-16 flex min-h-screen flex-col items-center justify-center gap-8">
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+              <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
                 Serverless transaction processing for Ethereum Networks
               </h1>
               <img
@@ -107,7 +106,7 @@ export default function Page() {
                 <CogIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
                 <h3 className="text-xl font-semibold">High Throughput</h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Convect handlers can send your code up to 600 transactions per
+                  Your handlers can be sent up to 600 transactions per
                   invocation.
                 </p>
               </div>
@@ -134,33 +133,6 @@ export default function Page() {
                   Stay on top of your application's performance with our
                   user-friendly dashboards.
                 </p>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className="bg-gray-100 py-12 md:py-16 lg:py-20">
-          <div className="container mx-auto px-4 md:px-6 lg:px-8">
-            <div className="grid items-center gap-8 md:grid-cols-2">
-              <img
-                alt="Collaboration Image"
-                className="mx-auto rounded-lg"
-                height="400"
-                src="/placeholder.svg"
-                style={{
-                  aspectRatio: "600/400",
-                  objectFit: "cover",
-                }}
-                width="600"
-              />
-              <div className="space-y-4">
-                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                  Collaborate with Ease
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 md:text-lg">
-                  Our platform makes it easy for your team to work together
-                  seamlessly, no matter where they are.
-                </p>
-                <Button>Learn More</Button>
               </div>
             </div>
           </div>
