@@ -62,7 +62,7 @@ export default function Upload({args}: Props) {
 			log_configs: [] as Array<any>,
 		};
 
-		const all_log_configs = Object.values(pipeline.transactions).flatMap(
+		const all_log_configs = Object.values(pipeline).flatMap(
 			(txConfig: any) => txConfig._logs,
 		);
 

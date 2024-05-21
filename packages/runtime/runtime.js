@@ -4,7 +4,7 @@ import { v4 } from "uuid";
 import { decodeEventLog, isAddressEqual } from "viem";
 import pipeline from "./pipeline";
 
-const allTxConfigs = Object.values(pipeline.transactions);
+const allTxConfigs = Object.values(pipeline);
 
 const lambda = new Lambda({ region: "eu-west-1" });
 
