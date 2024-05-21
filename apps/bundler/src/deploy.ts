@@ -2,7 +2,6 @@ import { Lambda } from "@aws-sdk/client-lambda";
 import { S3 } from "@aws-sdk/client-s3";
 import { SNS } from "@aws-sdk/client-sns";
 import { SQS } from "@aws-sdk/client-sqs";
-import { getDb } from "@kayakthedev/lib";
 import esbuild from "esbuild";
 import { backOff } from "exponential-backoff";
 import fs from "fs";
@@ -32,10 +31,6 @@ const redisClient = new Redis.Cluster(
     },
   }
 );
-
-const db = getDb({
-  dbUrl: process.env.DATABASE_URL!,
-});
 
 const VERSION = process.env.VERSION!;
 const MODE = process.env.MODE as "new" | "update";
@@ -87,16 +82,9 @@ async function main() {
   }
 
   if (MODE === "update") {
-    const handler = await db.query.handler.findFirst({
-      where(fields, { eq }) {
-        return eq(fields.id, Number(HANDLER_ID));
-      },
-    });
-
     // if (!handler || !handler.handlerArn) {
     //   throw new Error("Handler not found or handler ARN not present");
     // }
-
     // await updateFunctionCode({
     //   eventsArn: "",
     //   handlerArn: handler.handlerArn,
