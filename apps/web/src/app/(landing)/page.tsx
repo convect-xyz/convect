@@ -5,6 +5,7 @@ import Link from "next/link";
 import React from "react";
 import { FrameCodeBlock } from "~/components/code/CodeBlock";
 import FullLogoIcon from "~/components/icons/FullLogoIcon";
+import { getDocsUrl } from "~/lib/shared/validation";
 
 const c = `import { db } from "../db/db";
 import { log, transaction } from "@convect-xyz/sdk";
@@ -86,7 +87,11 @@ export default function Page() {
                 >
                   <Button type="submit">Join Waitlist</Button>
                 </form>
-                <Button>View Documentation</Button>
+                <Button asChild>
+                  <a href={getDocsUrl()} target="_blank">
+                    View Documentation
+                  </a>
+                </Button>
               </div>
             </div>
           </div>
