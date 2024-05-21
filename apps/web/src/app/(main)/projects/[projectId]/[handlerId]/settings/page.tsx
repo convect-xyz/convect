@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { PropsWithChildren } from "react";
 import {
   AlertDialog,
@@ -24,9 +25,14 @@ export default function Page() {
 }
 
 function DeleteHandler() {
+  const { handlerId, projectId } = useParams();
+  const router = useRouter();
   const { mutateAsync: deleteHandler, isLoading: isDeleting } =
-    api.handlers.deleteHandler.useMutation();
-  const { handlerId } = useParams();
+    api.handlers.deleteHandler.useMutation({
+      onSuccess() {
+        router.push(`/projects/${projectId}`);
+      },
+    });
 
   return (
     <AlertDialog>
@@ -73,5 +79,5 @@ function DeleteHandler() {
 }
 
 function Section(props: PropsWithChildren) {
-  return <div className="border p-4">{props.children}</div>;
+  return <div className="rounded-md border bg-muted p-4">{props.children}</div>;
 }

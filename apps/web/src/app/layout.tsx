@@ -11,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "Ingest.xyz",
-  description: "Serverless infrastructure for Web3",
+  title: "convect.xyz",
+  description: "Serverless infrastructure for the EVM",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

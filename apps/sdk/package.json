@@ -1,6 +1,6 @@
 {
-  "name": "@kayakthedev/sdk",
-  "version": "1.0.11",
+  "name": "@convect-xyz/sdk",
+  "version": "0.0.3",
   "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,10 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "drizzle-orm": "^0.29.3",
-    "viem": "^2.0.6",
-    "drizzle-kit": "^0.20.11",
+    "viem": "2.0.6",
     "abitype": "1.0.2"
   },
-  "description": ""
+  "description": "Convect's SDK for deploying serverless transaction processing pipelines for the EVM."
 }

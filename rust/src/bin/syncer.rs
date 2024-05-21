@@ -4,17 +4,22 @@ use aws_sdk_lambda::{
     operation::invoke::{InvokeError, InvokeOutput},
     types::InvocationType,
 };
-use aws_sdk_s3::primitives::{Blob, ByteStream};
-use aws_smithy_types::body::SdkBody;
+use aws_sdk_s3::primitives::Blob;
 use futures::{future::join_all, TryFutureExt};
 use ingest::{
-    api::{self, Batch, IngestTransaction},
+    api::{
+        enqueuer::TransactionEnqueuerImpl,
+        fetcher::{TransactionFetcherImpl, Web3ClientImpl},
+        Api,
+    },
     log_fetcher::invocation::{InvocationRequest, InvocationResponse},
-    syncer::{self, Pipeline},
+    types::{self, pipeline::Pipeline, transactions::IngestTransaction},
 };
-use openssl::conf;
 use serde::Serialize;
 use std::error::Error;
+
+type ApiInstance =
+    Api<TransactionFetcherImpl<Web3ClientImpl>, TransactionEnqueuerImpl<aws_sdk_s3::Client>>;
 
 #[derive(Serialize, Debug)]
 struct BlockConfig {
@@ -23,31 +28,28 @@ struct BlockConfig {
     end_block: u64,
 }
 
-const BATCH_SIZE: u64 = 1999;
+const BATCH_SIZE: u64 = 1500;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let syncer_config = syncer::load_config_from_env();
-    let pipeline = Pipeline::load(syncer_config.handler_id.clone()).await;
+    let syncer_config = load_config_from_env();
+    let mut pipeline = Pipeline::load(syncer_config.handler_id.clone());
+    let config = aws_config::load_from_env().await;
+    let api: ApiInstance = Api::new(&config);
 
-    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    let s3_client = aws_sdk_s3::Client::new(&config);
-    let sqs_client = aws_sdk_sqs::Client::new(&config);
-
-    let result = run(&s3_client, &sqs_client).await;
+    let result = run(&api, &mut pipeline).await;
 
     let update_result = match result {
         Ok(_) => pipeline
             .update()
-            .set_state(syncer::SyncState::IDLE)
+            .set_state(types::pipeline::SyncState::IDLE)
             .set_last_block(syncer_config.end_block)
             .send(),
         Err(_) => pipeline
             .update()
-            .set_state(syncer::SyncState::FAILED)
+            .set_state(types::pipeline::SyncState::FAILED)
             .send(),
-    }
-    .await;
+    };
 
     match update_result {
         Ok(_) => (),
@@ -57,42 +59,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn run(
-    s3_client: &aws_sdk_s3::Client,
-    sqs_client: &aws_sdk_sqs::Client,
-) -> Result<(), Box<dyn Error>> {
-    let syncer_config = syncer::load_config_from_env();
-    let configs = get_block_configs(syncer_config.start_block, syncer_config.end_block);
+async fn run(api: &ApiInstance, pipeline: &mut Pipeline) -> Result<(), Box<dyn Error>> {
+    let syncer_config = load_config_from_env();
+    let configs = get_block_configs(
+        syncer_config.start_block,
+        syncer_config.end_block,
+        BATCH_SIZE,
+    );
 
-    let use_batch = true;
+    let mut delete_handles = Vec::new();
 
-    if use_batch {
-        batch(s3_client, sqs_client, configs, syncer_config).await;
-    } else {
-        for chunk in configs.chunks(100) {
-            let invocations = invoke_lambdas(chunk).await;
-            let s3_results = get_s3_results(&invocations).await;
-
-            api::upload_to_sqs(
-                sqs_client,
-                syncer_config.tx_queue_url.clone(),
-                api::SQSPayload::Transactions(
-                    s3_results.into_iter().map(|r| r.0).flatten().collect(),
-                ),
-            )
-            .await;
-        }
-    }
-
-    Ok(())
-}
-
-async fn batch(
-    s3_client: &aws_sdk_s3::Client,
-    sqs_client: &aws_sdk_sqs::Client,
-    configs: Vec<BlockConfig>,
-    syncer_config: syncer::Config,
-) {
     for chunk in configs.chunks(100) {
         let invocations = invoke_lambdas(chunk).await;
         let s3_results: Vec<IngestTransaction> = get_s3_results(&invocations)
@@ -102,46 +78,27 @@ async fn batch(
             .flatten()
             .collect();
 
-        let mut i = 0;
-        while i < s3_results.len() {
-            let mut batch = Vec::new();
+        api.enqueue_transactions()
+            .set_pipeline(pipeline)
+            .set_queue_url(syncer_config.tx_queue_url.clone())
+            .set_transactions(&s3_results)
+            .send()
+            .await?;
 
-            // Max transactions per batch: 60
-            while i < s3_results.len() && batch.len() < 60 {
-                let s3_result = &s3_results[i];
-                batch.push(s3_result);
-                i += 1;
-            }
+        pipeline
+            .update()
+            .set_last_block(chunk.last().unwrap().end_block)
+            .send()
+            .unwrap();
 
-            let id = uuid::Uuid::new_v4();
-            let key = format!("syncs/batch-{}", id);
-
-            let response = s3_client
-                .put_object()
-                .bucket("ingest-fetch-logs")
-                .key(key.to_string())
-                .body(ByteStream::new(SdkBody::from(
-                    serde_json::to_string(&batch).unwrap(),
-                )))
-                .send()
-                .await;
-
-            match response {
-                Ok(_) => {}
-                Err(e) => panic!("Error uploading response: {:?}", e),
-            }
-
-            api::upload_to_sqs(
-                &sqs_client,
-                syncer_config.tx_queue_url.clone(),
-                api::SQSPayload::Batch(Batch {
-                    bucket: "ingest-fetch-logs".to_string(),
-                    prefix: key.to_string(),
-                }),
-            )
-            .await;
-        }
+        delete_handles.push(tokio::spawn(async move {
+            delete_s3_results(&invocations).await;
+        }));
     }
+
+    join_all(delete_handles).await;
+
+    Ok(())
 }
 
 async fn invoke_lambdas(
@@ -149,7 +106,7 @@ async fn invoke_lambdas(
 ) -> Vec<Result<InvokeOutput, SdkError<InvokeError>>> {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let lambda_client = aws_sdk_lambda::Client::new(&config);
-    let syncer_config = syncer::load_config_from_env();
+    let syncer_config = load_config_from_env();
 
     let mut lambda_invocation_futures = Vec::new();
 
@@ -221,23 +178,56 @@ async fn get_s3_results(
         .await
         .into_iter()
         .map(|f| f.unwrap())
-        // .flatten()
         .collect::<Vec<S3Result>>()
 }
 
-fn get_block_configs(mut start_block: u64, end_block: u64) -> Vec<BlockConfig> {
+async fn delete_s3_results(invocations: &Vec<Result<InvokeOutput, SdkError<InvokeError>>>) {
+    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    let s3_client = aws_sdk_s3::Client::new(&config);
+
+    let mut s3_deletion_futures = Vec::new();
+    for invocation in invocations {
+        let output = match invocation {
+            Ok(v) => v.to_owned(),
+            Err(e) => panic!("Invocation Error: {e}"),
+        };
+
+        let payload = match output.payload {
+            Some(v) => v.into_inner(),
+            None => panic!("Blob is empty"),
+        };
+
+        let response: InvocationResponse = serde_json::from_slice(&payload).unwrap();
+        if response.s3_bucket.is_none() || response.s3_prefix.is_none() {
+            continue;
+        }
+
+        s3_deletion_futures.push(
+            s3_client
+                .delete_object()
+                .bucket(&response.s3_bucket.unwrap())
+                .key(&response.s3_prefix.unwrap())
+                .send(),
+        );
+    }
+
+    join_all(s3_deletion_futures).await;
+}
+
+fn get_block_configs(mut start_block: u64, end_block: u64, batch_size: u64) -> Vec<BlockConfig> {
     let mut result: Vec<BlockConfig> = Vec::new();
-    while start_block + BATCH_SIZE <= end_block {
+
+    while start_block + batch_size <= end_block {
         let id = uuid::Uuid::new_v4().to_string();
         result.push(BlockConfig {
             id,
             start_block,
-            end_block: start_block + BATCH_SIZE,
+            end_block: start_block + batch_size,
         });
-        start_block += BATCH_SIZE + 1;
+        start_block += batch_size + 1;
     }
 
-    if end_block as i64 - start_block as i64 >= 0 {
+    if (end_block as i64 - start_block as i64) >= 0 {
         let id = uuid::Uuid::new_v4().to_string();
 
         result.push(BlockConfig {
@@ -248,4 +238,50 @@ fn get_block_configs(mut start_block: u64, end_block: u64) -> Vec<BlockConfig> {
     }
 
     return result;
+}
+
+use std::env;
+
+pub struct Config {
+    pub handler_id: String,
+    pub start_block: u64,
+    pub end_block: u64,
+    pub function_name: String,
+    pub tx_queue_url: String,
+}
+
+pub fn load_config_from_env() -> Config {
+    return Config {
+        handler_id: env::var("HANDLER_ID").expect("Handler ID not set"),
+        start_block: env::var("START_BLOCK")
+            .expect("START_BLOCK is not present")
+            .parse()
+            .expect("START_BLOCK is not a u64"),
+        end_block: env::var("END_BLOCK")
+            .expect("END_BLOCK is not present")
+            .parse()
+            .expect("END_BLOCK is not a u64"),
+        function_name: env::var("LOG_FETCHER_LAMBDA_ARN")
+            .expect("LOG_FETCHER_LAMBDA_ARN is not present"),
+        tx_queue_url: env::var("TRANSACTION_QUEUE_URL")
+            .expect("TRANSACTION_QUEUE_URL is not present"),
+    };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_block_configs() {
+        let actual_block_configs = get_block_configs(0u64, 200u64, 49u64);
+
+        assert_eq!(
+            actual_block_configs
+                .into_iter()
+                .map(|c| (c.start_block, c.end_block))
+                .collect::<Vec<(u64, u64)>>(),
+            vec![(0, 49), (50, 99), (100, 149), (150, 199), (200, 200)]
+        );
+    }
 }

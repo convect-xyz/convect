@@ -7,7 +7,6 @@ import { Address, Narrow, encodeEventTopics } from "viem";
 
 type Error<T extends string | string[]> = T extends string
   ? [
-      // Surrounding with array to prevent `T` from being widened to `string`
       `Error: ${T}`,
     ]
   : {
@@ -26,7 +25,7 @@ export type S<
           : Signature<TSignature>
         : never)
     | (TSignature extends readonly string[]
-        ? TSignature extends readonly [] // empty array
+        ? TSignature extends readonly []
           ? Error<"At least one signature required.">
           : string[] extends TSignature
             ? unknown
@@ -34,36 +33,20 @@ export type S<
         : never)
   );
 
-export class Log<
-  TAbiEvent extends AbiEvent = AbiEvent,
-  TOptional extends true | false = false,
-> {
+export class Log<const TAbiEvent extends AbiEvent = AbiEvent> {
   private _topics: string[];
   private _event: TAbiEvent;
   private _origin: Address;
-  private _optional: TOptional;
 
   constructor(options: {
     event: TAbiEvent;
     origin: Address;
-    optional: TOptional;
   }) {
     this._event = options.event;
-    this._optional = options.optional;
     this._origin = options.origin;
     this._topics = encodeEventTopics({
       abi: [options.event as AbiEvent],
     });
-  }
-
-  optional() {
-    const c = new Log({
-      event: this._event,
-      optional: true,
-      origin: this._origin,
-    });
-
-    return c;
   }
 }
 
@@ -72,15 +55,11 @@ export function log<
 >(options: { signature: S<TSignature>; origin: Address }) {
   const parsedSignature = parseAbiItem(options.signature);
   if (parsedSignature.type !== "event") {
-    throw new Error("Only events supported");
+    throw new Error("Only events are supported");
   }
 
-  return new Log<
-    typeof parsedSignature extends AbiEvent ? typeof parsedSignature : any,
-    false
-  >({
+  return new Log<typeof parsedSignature extends AbiEvent ? typeof parsedSignature : any>({
     event: parsedSignature,
-    optional: false,
     origin: options.origin,
   });
 }

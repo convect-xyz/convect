@@ -56,28 +56,25 @@ export const POST = async (req: NextRequest) => {
   const bundledHandler = formData.handler;
   const manifest = formData.manifest;
 
+  const sourcePrefix = `code/${handler.internalId}.zip`;
   const response = await Promise.all([
     s3.putObject({
       Bucket: "ingest-build-outputs",
-      Key: `code/${handler.projectId}/${handler.id}`,
+      Key: sourcePrefix,
       Body: await bundledHandler.text(),
     }),
     s3.putObject({
       Bucket: MANIFEST_BUCKET,
-      Key: path.join(
-        "manifests",
-        handler.projectId.toString(),
-        handler.id + ".json",
-      ),
+      Key: path.join("manifests", handler.internalId + ".json"),
       Body: await manifest.text(),
     }),
   ]);
 
   await createDeployment({
     version: env.VERSION,
+    sourcePrefix,
     deploymentId: v4(),
-    projectId: handler.projectId,
-    handlerId: handler.id,
+    internalHandlerId: handler.internalId,
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
     mode: formData.mode,

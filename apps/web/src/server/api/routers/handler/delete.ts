@@ -1,29 +1,48 @@
+import {
+  getEventsArn,
+  getHandlerArn,
+  getLogFetcherArn,
+  getOrchestratorArn,
+  getTxQueueUrl,
+} from "@kayakthedev/lib";
 import { TRPCError } from "@trpc/server";
 import { InferSelectModel, eq } from "drizzle-orm";
 import { z } from "zod";
-import { lambda, sns, sqs } from "~/lib/server/aws";
+import { lambda, sqs } from "~/lib/server/aws";
 import { protectedProcedure } from "~/server/api/trpc";
 import schema from "~/server/db/schema";
 
 async function cleanup(handler: InferSelectModel<typeof schema.handler>) {
-  await Promise.all([
+  await Promise.allSettled([
     lambda.deleteFunction({
-      FunctionName: handler.handlerArn!,
+      FunctionName: getHandlerArn({
+        handlerId: handler.internalId,
+        region: "eu-west-1",
+      }),
     }),
     lambda.deleteFunction({
-      FunctionName: handler.logFetcherArn!,
+      FunctionName: getLogFetcherArn({
+        handlerId: handler.internalId,
+        region: "eu-west-1",
+      }),
     }),
     lambda.deleteFunction({
-      FunctionName: handler.orchestratorArn!,
+      FunctionName: getOrchestratorArn({
+        handlerId: handler.internalId,
+        region: "eu-west-1",
+      }),
+    }),
+    lambda.deleteFunction({
+      FunctionName: getEventsArn({
+        handlerId: handler.internalId,
+        region: "eu-west-1",
+      }),
     }),
     sqs.deleteQueue({
-      QueueUrl: handler.txQueueUrl!,
-    }),
-    lambda.deleteEventSourceMapping({
-      UUID: handler.handlerToTxQueueEventSourceMappingUuid!,
-    }),
-    sns.unsubscribe({
-      SubscriptionArn: handler.orchestratorSubscriptionArn!,
+      QueueUrl: getTxQueueUrl({
+        handlerId: handler.internalId,
+        region: "eu-west-1",
+      }),
     }),
   ]);
 }

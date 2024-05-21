@@ -11,6 +11,7 @@ import { getEnvs } from "./routers/handler/getEnvs";
 import { getHandler } from "./routers/handler/getHandler";
 import { getHandlers } from "./routers/handler/getHandlers";
 import { getLogs } from "./routers/handler/getLogs";
+import { getOverview } from "./routers/handler/getOverview";
 import { updateEnv } from "./routers/handler/updateEnv";
 import { createProducer } from "./routers/producers/create";
 import { getProducers } from "./routers/producers/getProducers";
@@ -34,6 +35,7 @@ export const handlerRouter = createTRPCRouter({
   addEnv,
   deleteEnv,
   updateEnv,
+  getOverview,
 });
 
 type RouterInput = inferRouterInputs<typeof handlerRouter>;

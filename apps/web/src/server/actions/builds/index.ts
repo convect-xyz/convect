@@ -1,25 +1,25 @@
 import { RunTaskCommand } from "@aws-sdk/client-ecs";
 import { env } from "~/env";
 import { ecs } from "~/lib/server/aws";
-import { db } from "~/server/db";
-import schema from "~/server/db/schema";
 
 type TriggerBuildOptions = {
   version: string;
   deploymentId: string;
-  projectId: number;
-  handlerId: number;
+  internalHandlerId: string;
   pollingUrl: string;
   chainSns: string;
   envs: Array<{ key: string; value: string }>;
   mode: "new" | "update";
+  sourcePrefix: string;
 };
 
 export async function createDeployment(options: TriggerBuildOptions) {
   const command = new RunTaskCommand({
     cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
-    taskDefinition:
-      `arn:aws:ecs:eu-west-1:730335604495:task-definition/builder-${options.version.replaceAll(".", "-")}:1`,
+    taskDefinition: `arn:aws:ecs:eu-west-1:730335604495:task-definition/builder-${options.version.replaceAll(
+      ".",
+      "-",
+    )}`,
     networkConfiguration: {
       awsvpcConfiguration: {
         subnets: ["subnet-05d39f2476de29dc7"],
@@ -35,12 +35,8 @@ export async function createDeployment(options: TriggerBuildOptions) {
             { name: "VERSION", value: options.version },
             { name: "MODE", value: options.mode },
             {
-              name: "PROJECT_ID",
-              value: options.projectId.toString(),
-            },
-            {
               name: "HANDLER_ID",
-              value: options.handlerId.toString(),
+              value: options.internalHandlerId.toString(),
             },
             {
               name: "SOURCE_BUCKET",
@@ -48,7 +44,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
             },
             {
               name: "SOURCE_PREFIX",
-              value: `code/${options.projectId}/${options.handlerId}`,
+              value: options.sourcePrefix,
             },
             {
               name: "POLLING_URL",
@@ -83,10 +79,10 @@ export async function createDeployment(options: TriggerBuildOptions) {
     throw new Error("Task did not start");
   }
 
-  await db.insert(schema.deployment).values({
-    handlerId: options.handlerId,
-    ecsTaskId: task.taskArn,
-  });
+  // await db.insert(schema.deployment).values({
+  //   handlerId: options.internalHandlerId,
+  //   ecsTaskId: task.taskArn,
+  // });
 
   return {
     ecsOutput: output,
