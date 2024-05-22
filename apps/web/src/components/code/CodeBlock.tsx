@@ -19,7 +19,7 @@ export function CodeBlock(props: CodeBlockProps) {
 
   return (
     <div className="rounded-lg border bg-muted">
-      <div className="px-4 py-8">
+      <div className="px-4 py-5">
         <code
           className={cn("whitespace-pre-wrap text-sm", roboto_mono.className)}
           dangerouslySetInnerHTML={{ __html: highlighted.value }}

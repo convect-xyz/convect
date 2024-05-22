@@ -12,7 +12,9 @@ import { lambda, sqs } from "~/lib/server/aws";
 import { protectedProcedure } from "~/server/api/trpc";
 import schema from "~/server/db/schema";
 
-async function cleanup(handler: InferSelectModel<typeof schema.handler>) {
+export async function cleanup(
+  handler: InferSelectModel<typeof schema.handler>,
+) {
   await Promise.allSettled([
     lambda.deleteFunction({
       FunctionName: getHandlerArn({
