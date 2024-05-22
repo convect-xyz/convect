@@ -27,6 +27,7 @@ export const users = createTable("user", {
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
+  apiKeys: many(apiKey)
 }));
 
 export const accounts = createTable(
@@ -60,6 +61,25 @@ export const accounts = createTable(
 export const accountsRelations = relations(accounts, ({ one }) => ({
   user: one(users, { fields: [accounts.userId], references: [users.id] }),
 }));
+
+export const apiKey = createTable(
+  "api_key",
+  {
+    id: serial("id").notNull().primaryKey(),
+    userId: varchar("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: varchar("token", { length: 255 }).notNull().unique(),
+  },
+  (account) => ({
+    userIdIdx: index("account_userId_idx").on(account.userId),
+  })
+);
+
+export const apiKeyRelations = relations(apiKey, ({ one }) => ({
+  user: one(users, { fields: [apiKey.userId], references: [users.id] }),
+}));
+
 
 export const sessions = createTable(
   "session",

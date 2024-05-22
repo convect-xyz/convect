@@ -9,7 +9,7 @@ type TriggerBuildOptions = {
   pollingUrl: string;
   chainSns: string;
   envs: Array<{ key: string; value: string }>;
-  mode: "new" | "update";
+  mode: "init" | "update";
   sourcePrefix: string;
 };
 

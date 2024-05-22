@@ -33,7 +33,7 @@ const redisClient = new Redis.Cluster(
 );
 
 const VERSION = process.env.VERSION!;
-const MODE = process.env.MODE as "new" | "update";
+const MODE = process.env.MODE as "init" | "update";
 const CURR_DIR = process.env.CURR_DIR!;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
 const HANDLER_ID = process.env.HANDLER_ID!;
@@ -73,7 +73,7 @@ async function main() {
   await zipLambda();
   await zipEventsLambda();
 
-  if (MODE === "new") {
+  if (MODE === "init") {
     await createPipelineState();
     const { eventsLambdaArn } = await allocateResources();
     // await initialiseHandler({
