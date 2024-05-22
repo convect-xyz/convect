@@ -8,6 +8,7 @@ import { env } from "~/env";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
 import { createDeployment } from "~/server/actions/builds";
+import { cleanup } from "~/server/api/routers/handler/delete";
 import { db } from "~/server/db";
 
 const MANIFEST_BUCKET = "ingest-fetch-logs";
@@ -64,6 +65,8 @@ export const POST = async (req: NextRequest) => {
   });
 
   if (existingHandler) {
+    await cleanup(existingHandler);
+
     await db
       .update(schema.handler)
       .set({

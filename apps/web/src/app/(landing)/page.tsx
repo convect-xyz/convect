@@ -5,6 +5,7 @@ import Link from "next/link";
 import React from "react";
 import { CodeBlock, FrameCodeBlock } from "~/components/code/CodeBlock";
 import FullLogoIcon from "~/components/icons/FullLogoIcon";
+import { BorderBeam } from "~/components/magicui/border-beam/BorderBeam";
 import { getDocsUrl } from "~/lib/shared/validation";
 
 const c = `import { db } from "../db/db";
@@ -51,7 +52,7 @@ export default function Page() {
           <Link className="text-sm font-medium hover:underline" href="#">
             Features
           </Link>
-          <Link className="text-sm font-medium hover:underline" href="#">
+          <Link className="text-sm font-medium hover:underline" href="/pricing">
             Pricing
           </Link>
           <Link className="text-sm font-medium hover:underline" href="#">
@@ -67,7 +68,16 @@ export default function Page() {
                 <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
                   Serverless transaction processing for Ethereum Networks
                 </h1>
-                <CodeBlock code={`npx @convect-xyz/cli init`} />
+                <div className="relative rounded-md">
+                  <CodeBlock code="npx @convect-xyz/cli init" />
+                  <BorderBeam
+                    size={80}
+                    duration={6}
+                    delay={4}
+                    colorFrom="#FFF"
+                    colorTo="#FFF"
+                  />
+                </div>
 
                 <div className="flex gap-2">
                   <form
