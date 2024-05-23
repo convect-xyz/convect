@@ -157,7 +157,7 @@ const snsOrchestratorPermission = new aws.lambda.Permission(
     action: "lambda:InvokeFunction",
     principal: "sns.amazonaws.com",
     sourceArn: CHAIN_SNS,
-    function: handler.arn,
+    function: orchestrator.arn,
   }
 );
 
