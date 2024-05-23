@@ -2,10 +2,17 @@ import axios from 'axios';
 import FormData from 'form-data';
 import fs from 'fs';
 
-type UploadOutputsOptions = {outfile: string; outmanifest: string; project: string, handlerName: string}
+type UploadOutputsOptions = {
+  mode: 'init'
+  outfile: string; outmanifest: string; project: string, handlerName: string
+} |  {
+  mode: 'update',
+  project: string, handlerName: string;
+  outfile: string;
+}
 
 export async function uploadOutputs( options: UploadOutputsOptions ) {
-  const { outfile, outmanifest, project, handlerName} = options;
+  const { outfile, project, handlerName} = options;
 
   const apiKey = process.env['CONVECT_API_KEY'];
   if(!apiKey) {
@@ -13,11 +20,13 @@ export async function uploadOutputs( options: UploadOutputsOptions ) {
   }
 
   const bodyFormData = new FormData();
-  bodyFormData.append('mode', 'init')
+  bodyFormData.append('mode', options.mode)
   bodyFormData.append('project', project);
   bodyFormData.append('handlerName', handlerName);
   bodyFormData.append('handler', fs.readFileSync(outfile));
-  bodyFormData.append('manifest', fs.readFileSync(outmanifest));
+  if(options.mode === "init") {
+    bodyFormData.append('manifest', fs.readFileSync(options.outmanifest));
+  }
   bodyFormData.append('override', 'true');
   bodyFormData.append('node', '81457');
 

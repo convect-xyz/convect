@@ -62,6 +62,7 @@ function Content(_: Props) {
 			if (!handlerName) throw new Error('Handler name is not specified');
 
 			triggerUpload({
+				mode: 'init',
 				project,
 				handlerName,
 				outfile: data.outfile,
@@ -194,7 +195,7 @@ function BundleState() {
 	}
 
 	return (
-		<StatusMessage variant="error">Failed to bundle source code</StatusMessage>
+		<StatusMessage variant="error">{bundleState.error?.stack}</StatusMessage>
 	);
 }
 
