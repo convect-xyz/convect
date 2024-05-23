@@ -7,6 +7,8 @@ const MANIFEST_BUCKET = "ingest-fetch-logs";
 const MANIFEST_PREFIX = path.join("manifests", HANDLER_ID + ".json");
 const POLLING_URL = process.env.POLLING_URL!;
 const CHAIN_SNS = process.env.CHAIN_SNS!;
+const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
+
 const HANDLER_ENVS = (
   JSON.parse(process.env.HANDLER_ENVS!) as Array<{
     key: string;
@@ -74,7 +76,7 @@ const orchestrator = new aws.lambda.Function(`orchestrator-${HANDLER_ID}`, {
 const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-build-outputs",
-  s3Key: path.join("outputs", HANDLER_ID + ".zip"),
+  s3Key: path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + ".zip"),
   environment: {
     variables: {
       HANDLER_ID,
@@ -98,7 +100,7 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
 const events = new aws.lambda.Function(`events-${HANDLER_ID}`, {
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-build-outputs",
-  s3Key: path.join("outputs", HANDLER_ID + "-events.zip"),
+  s3Key: path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + "-events.zip"),
   environment: {
     variables: {
       HANDLER_ID,
