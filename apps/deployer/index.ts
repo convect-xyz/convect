@@ -23,11 +23,13 @@ const HANDLER_ENVS = (
 );
 
 const transactionQueue = new aws.sqs.Queue(`tx-queue-${HANDLER_ID}`, {
+  name: `tx-queue-${HANDLER_ID}`,
   visibilityTimeoutSeconds: 900,
   fifoQueue: true,
 });
 
 const logFetcher = new aws.lambda.Function(`log-fetcher-${HANDLER_ID}`, {
+  name: `log-fetcher-${HANDLER_ID}`,
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-functions",
   s3Key: `log-fetcher/${VERSION}.zip`,
@@ -48,6 +50,7 @@ const logFetcher = new aws.lambda.Function(`log-fetcher-${HANDLER_ID}`, {
 });
 
 const orchestrator = new aws.lambda.Function(`orchestrator-${HANDLER_ID}`, {
+  name: `orchestrator-${HANDLER_ID}`,
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-functions",
   s3Key: `orchestrator/${VERSION}.zip`,
@@ -74,6 +77,7 @@ const orchestrator = new aws.lambda.Function(`orchestrator-${HANDLER_ID}`, {
 });
 
 const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
+  name: `handler-${HANDLER_ID}`,
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-build-outputs",
   s3Key: path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + ".zip"),
@@ -98,6 +102,7 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
 });
 
 const events = new aws.lambda.Function(`events-${HANDLER_ID}`, {
+  name: `events-${HANDLER_ID}`,
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-build-outputs",
   s3Key: path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + "-events.zip"),
@@ -122,6 +127,7 @@ const events = new aws.lambda.Function(`events-${HANDLER_ID}`, {
 });
 
 const reporting = new aws.lambda.Function(`reporting-${HANDLER_ID}`, {
+  name: `reporting-${HANDLER_ID}`,
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-functions",
   s3Key: `reporting/${VERSION}.zip`,
