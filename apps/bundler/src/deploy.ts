@@ -60,8 +60,8 @@ const MANIFEST_PREFIX = path.join("manifests", HANDLER_ID + ".json");
 const HANDLER_SRC_FILE = path.join(CURR_DIR, SOURCE_PREFIX + ".js");
 const BUNDLE_SRC_DIR = path.join(CURR_DIR, "bundle_src");
 const BUNDLE_OUT_DIR = path.join(CURR_DIR, "bundle_out");
-const RUNTIME_SRC_FILE = path.join(CURR_DIR, "runtime.js");
-const EVENTS_RUNTIME_SRC_FILE = path.join(CURR_DIR, "events-runtime.js");
+const RUNTIME_SRC_FILE = "/scripts/runtime.js";
+const EVENTS_RUNTIME_SRC_FILE = "/scripts/events-runtime.js";
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 const EVENTS_OUT_FILE = path.join(BUNDLE_OUT_DIR, "events-index.js");
 
