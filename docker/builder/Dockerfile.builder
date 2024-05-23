@@ -17,7 +17,7 @@ FROM node:21-alpine
 RUN apk update
 RUN apk --no-cache add curl
 WORKDIR /deployer
-COPY --from=prune-deployer /out .
+COPY --from=prune-deployer out .
 WORKDIR /scripts
 RUN yarn global add esbuild
 COPY --from=bundle /runtime.js /deploy.js /events-runtime.js ./
