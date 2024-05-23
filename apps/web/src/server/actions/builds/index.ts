@@ -6,6 +6,7 @@ type TriggerBuildOptions = {
   version: string;
   deploymentId: string;
   internalHandlerId: string;
+  previousInternalHandlerId?: string;
   pollingUrl: string;
   chainSns: string;
   envs: Array<{ key: string; value: string }>;
@@ -34,6 +35,10 @@ export async function createDeployment(options: TriggerBuildOptions) {
           environment: [
             { name: "VERSION", value: options.version },
             { name: "MODE", value: options.mode },
+            {
+              name: "PREVIOUS_HANDLER_ID",
+              value: options.previousInternalHandlerId?.toString() ?? "",
+            },
             {
               name: "HANDLER_ID",
               value: options.internalHandlerId.toString(),

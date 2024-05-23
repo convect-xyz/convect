@@ -8,7 +8,6 @@ import { env } from "~/env";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
 import { createDeployment } from "~/server/actions/builds";
-import { cleanup } from "~/server/api/routers/handler/delete";
 import { db } from "~/server/db";
 
 const MANIFEST_BUCKET = "ingest-fetch-logs";
@@ -28,7 +27,7 @@ export const POST = async (req: NextRequest) => {
   if (parseResult.error) {
     return NextResponse.json(
       {
-        message: `Erorr parsing data: ${parseResult.error.message}`,
+        message: `Error parsing data: ${parseResult.error.message}`,
       },
       {
         status: 401,
@@ -37,7 +36,6 @@ export const POST = async (req: NextRequest) => {
   }
 
   const parsedData = parseResult.data;
-
   const project = await db.query.projects.findFirst({
     where(fields, { eq }) {
       return eq(fields.name, parsedData.project);
@@ -56,7 +54,6 @@ export const POST = async (req: NextRequest) => {
   }
 
   const deploymentId = v4();
-
   const existingHandler = await db.query.handler.findFirst({
     where(fields, { eq }) {
       return and(
@@ -66,9 +63,9 @@ export const POST = async (req: NextRequest) => {
     },
   });
 
-  if (existingHandler) {
-    await cleanup(existingHandler);
+  const previousInternalHandlerId = existingHandler?.internalId;
 
+  if (existingHandler) {
     await db
       .update(schema.handler)
       .set({
@@ -125,6 +122,7 @@ export const POST = async (req: NextRequest) => {
     sourcePrefix,
     deploymentId,
     internalHandlerId: handler.internalId,
+    previousInternalHandlerId,
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
     mode: parsedData.mode,
