@@ -13,7 +13,8 @@ RUN yarn esbuild ./packages/runtime/runtime.ts --external:'./pipeline' --bundle 
 RUN yarn esbuild ./packages/runtime/events-runtime.js --external:'./pipeline' --bundle --platform=node --target=node10.4 --outfile=/events-runtime.js
 
 FROM node:21-alpine
-RUN curl -fsSL https://get.pulumi.com | sh
+RUN apk update
+RUN apk --no-cache add curl
 WORKDIR /deployer
 COPY --from=prune-deployer /out .
 WORKDIR /scripts
