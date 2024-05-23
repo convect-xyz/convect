@@ -75,10 +75,10 @@ async function main() {
 
   if (MODE === "init") {
     await createPipelineState();
-    const { eventsLambdaArn } = await allocateResources();
-    await initialiseHandler({
-      eventsLambdaArn,
-    });
+    // const { eventsLambdaArn } = await allocateResources();
+    // await initialiseHandler({
+    //   eventsLambdaArn,
+    // });
   }
 
   if (MODE === "update") {
