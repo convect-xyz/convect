@@ -20,7 +20,10 @@ const HANDLER_ENVS = (
   {} as Record<string, string>
 );
 
-const transactionQueue = new aws.sqs.Queue(`tx-queue-${HANDLER_ID}`);
+const transactionQueue = new aws.sqs.Queue(`tx-queue-${HANDLER_ID}`, {
+  visibilityTimeoutSeconds: 900,
+  fifoQueue: true,
+});
 
 const logFetcher = new aws.lambda.Function(`log-fetcher-${HANDLER_ID}`, {
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
