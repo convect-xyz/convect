@@ -5,12 +5,9 @@ set -e
 
 curl -fsSL https://get.pulumi.com | sh
 export PATH="${PATH}:/root/.pulumi/bin"
-ls
 cd /deployer
-ls
-cd apps
-ls
-cd deployer
+ls -R
+cd /deployer/apps/deployer
 ls
 pulumi stack init kayakthedev/convect-v1/$HANDLER_ID
 pulumi up -f
