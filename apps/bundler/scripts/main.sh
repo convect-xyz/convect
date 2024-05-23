@@ -8,7 +8,6 @@ export PATH="${PATH}:/root/.pulumi/bin"
 cd /deployer
 ls -R
 cd /deployer/apps/deployer
-ls
 pulumi stack init kayakthedev/convect-v1/$HANDLER_ID
 pulumi up -f
 # export CURR_DIR=$(pwd)
