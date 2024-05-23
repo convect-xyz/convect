@@ -62,6 +62,7 @@ function Content(_: Props) {
 			if (!handlerName) throw new Error('Handler name is not specified');
 
 			triggerUpload({
+				mode: 'init',
 				project,
 				handlerName,
 				outfile: data.outfile,

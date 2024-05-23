@@ -12,15 +12,24 @@ import { db } from "~/server/db";
 
 const MANIFEST_BUCKET = "ingest-fetch-logs";
 
-const requestSchema = z.object({
-  mode: z.enum(["init", "update"]),
-  project: z.string(),
-  handlerName: z.string(),
-  handler: z.instanceof(Blob),
-  manifest: z.instanceof(Blob),
-  node: z.coerce.number(),
-  override: z.coerce.boolean(),
-});
+const requestSchema = z
+  .object({
+    mode: z.literal("init"),
+    project: z.string(),
+    handlerName: z.string(),
+    handler: z.instanceof(Blob),
+    manifest: z.instanceof(Blob),
+    node: z.coerce.number(),
+    override: z.coerce.boolean(),
+  })
+  .or(
+    z.object({
+      mode: z.literal("update"),
+      project: z.string(),
+      handlerName: z.string(),
+      handler: z.instanceof(Blob),
+    }),
+  );
 
 export const POST = async (req: NextRequest) => {
   const parseResult = await req.formData().then(parseFormData);
@@ -63,25 +72,28 @@ export const POST = async (req: NextRequest) => {
     },
   });
 
-  const previousInternalHandlerId = existingHandler?.internalId;
+  const previousInternalHandlerId =
+    parsedData.mode === "init" ? existingHandler?.internalId : undefined;
 
-  if (existingHandler) {
-    await db
-      .update(schema.handler)
-      .set({
-        internalId: v4(),
-      })
-      .where(eq(schema.handler.id, existingHandler.id));
-  } else {
-    await db
-      .insert(schema.handler)
-      .values({
-        name: parsedData.handlerName,
-        projectId: project.id,
-        producerId: 1,
-      })
-      .returning()
-      .then((v) => v[0]);
+  if (parsedData.mode === "init") {
+    if (existingHandler) {
+      await db
+        .update(schema.handler)
+        .set({
+          internalId: v4(),
+        })
+        .where(eq(schema.handler.id, existingHandler.id));
+    } else {
+      await db
+        .insert(schema.handler)
+        .values({
+          name: parsedData.handlerName,
+          projectId: project.id,
+          producerId: 1,
+        })
+        .returning()
+        .then((v) => v[0]);
+    }
   }
 
   const handler = await db.query.handler
@@ -101,21 +113,28 @@ export const POST = async (req: NextRequest) => {
     .then((v) => v!);
 
   const bundledHandler = parsedData.handler;
-  const manifest = parsedData.manifest;
-
   const sourcePrefix = `code/${handler.internalId}/${deploymentId}.zip`;
-  await Promise.all([
+  const promises: Promise<any>[] = [
     s3.putObject({
       Bucket: "ingest-build-outputs",
       Key: sourcePrefix,
       Body: await bundledHandler.text(),
     }),
-    s3.putObject({
-      Bucket: MANIFEST_BUCKET,
-      Key: path.join("manifests", handler.internalId + ".json"),
-      Body: await manifest.text(),
-    }),
-  ]);
+  ];
+
+  if (parsedData.mode === "init") {
+    const manifest = parsedData.manifest;
+
+    promises.push(
+      s3.putObject({
+        Bucket: MANIFEST_BUCKET,
+        Key: path.join("manifests", handler.internalId + ".json"),
+        Body: await manifest.text(),
+      }),
+    );
+  }
+
+  await Promise.all(promises);
 
   await createDeployment({
     version: env.VERSION,
