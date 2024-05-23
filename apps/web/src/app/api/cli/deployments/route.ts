@@ -8,27 +8,35 @@ import { env } from "~/env";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
 import { createDeployment } from "~/server/actions/builds";
-import { cleanup } from "~/server/api/routers/handler/delete";
 import { db } from "~/server/db";
 
 const MANIFEST_BUCKET = "ingest-fetch-logs";
 
-const requestSchema = z.object({
-  mode: z.enum(["init", "update"]),
-  project: z.string(),
-  handlerName: z.string(),
-  handler: z.instanceof(Blob),
-  manifest: z.instanceof(Blob),
-  node: z.coerce.number(),
-  override: z.coerce.boolean(),
-});
+const requestSchema = z
+  .object({
+    mode: z.literal("init"),
+    project: z.string(),
+    handlerName: z.string(),
+    handler: z.instanceof(Blob),
+    manifest: z.instanceof(Blob),
+    node: z.coerce.number(),
+    override: z.coerce.boolean(),
+  })
+  .or(
+    z.object({
+      mode: z.literal("update"),
+      project: z.string(),
+      handlerName: z.string(),
+      handler: z.instanceof(Blob),
+    }),
+  );
 
 export const POST = async (req: NextRequest) => {
   const parseResult = await req.formData().then(parseFormData);
   if (parseResult.error) {
     return NextResponse.json(
       {
-        message: `Erorr parsing data: ${parseResult.error.message}`,
+        message: `Error parsing data: ${parseResult.error.message}`,
       },
       {
         status: 401,
@@ -37,7 +45,6 @@ export const POST = async (req: NextRequest) => {
   }
 
   const parsedData = parseResult.data;
-
   const project = await db.query.projects.findFirst({
     where(fields, { eq }) {
       return eq(fields.name, parsedData.project);
@@ -55,6 +62,7 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
+  const deploymentId = v4();
   const existingHandler = await db.query.handler.findFirst({
     where(fields, { eq }) {
       return and(
@@ -64,25 +72,28 @@ export const POST = async (req: NextRequest) => {
     },
   });
 
-  if (existingHandler) {
-    await cleanup(existingHandler);
+  const previousInternalHandlerId =
+    parsedData.mode === "init" ? existingHandler?.internalId : undefined;
 
-    await db
-      .update(schema.handler)
-      .set({
-        internalId: v4(),
-      })
-      .where(eq(schema.handler.id, existingHandler.id));
-  } else {
-    await db
-      .insert(schema.handler)
-      .values({
-        name: parsedData.handlerName,
-        projectId: project.id,
-        producerId: 1,
-      })
-      .returning()
-      .then((v) => v[0]);
+  if (parsedData.mode === "init") {
+    if (existingHandler) {
+      await db
+        .update(schema.handler)
+        .set({
+          internalId: v4(),
+        })
+        .where(eq(schema.handler.id, existingHandler.id));
+    } else {
+      await db
+        .insert(schema.handler)
+        .values({
+          name: parsedData.handlerName,
+          projectId: project.id,
+          producerId: 1,
+        })
+        .returning()
+        .then((v) => v[0]);
+    }
   }
 
   const handler = await db.query.handler
@@ -102,27 +113,35 @@ export const POST = async (req: NextRequest) => {
     .then((v) => v!);
 
   const bundledHandler = parsedData.handler;
-  const manifest = parsedData.manifest;
-
-  const sourcePrefix = `code/${handler.internalId}.zip`;
-  const response = await Promise.all([
+  const sourcePrefix = `code/${handler.internalId}/${deploymentId}.zip`;
+  const promises: Promise<any>[] = [
     s3.putObject({
       Bucket: "ingest-build-outputs",
       Key: sourcePrefix,
       Body: await bundledHandler.text(),
     }),
-    s3.putObject({
-      Bucket: MANIFEST_BUCKET,
-      Key: path.join("manifests", handler.internalId + ".json"),
-      Body: await manifest.text(),
-    }),
-  ]);
+  ];
+
+  if (parsedData.mode === "init") {
+    const manifest = parsedData.manifest;
+
+    promises.push(
+      s3.putObject({
+        Bucket: MANIFEST_BUCKET,
+        Key: path.join("manifests", handler.internalId + ".json"),
+        Body: await manifest.text(),
+      }),
+    );
+  }
+
+  await Promise.all(promises);
 
   await createDeployment({
     version: env.VERSION,
     sourcePrefix,
-    deploymentId: v4(),
+    deploymentId,
     internalHandlerId: handler.internalId,
+    previousInternalHandlerId,
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
     mode: parsedData.mode,
