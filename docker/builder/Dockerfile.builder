@@ -14,9 +14,6 @@ RUN yarn esbuild ./packages/runtime/events-runtime.js --external:'./pipeline' --
 
 FROM node:21-alpine
 
-RUN curl -fsSL https://get.pulumi.com | sh
-ENV PATH="${PATH}:/root/.pulumi/bin"
-
 RUN apk update
 RUN apk --no-cache add curl
 WORKDIR /deployer
