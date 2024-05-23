@@ -55,6 +55,8 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
+  const deploymentId = v4();
+
   const existingHandler = await db.query.handler.findFirst({
     where(fields, { eq }) {
       return and(
@@ -104,8 +106,8 @@ export const POST = async (req: NextRequest) => {
   const bundledHandler = parsedData.handler;
   const manifest = parsedData.manifest;
 
-  const sourcePrefix = `code/${handler.internalId}.zip`;
-  const response = await Promise.all([
+  const sourcePrefix = `code/${handler.internalId}/${deploymentId}.zip`;
+  await Promise.all([
     s3.putObject({
       Bucket: "ingest-build-outputs",
       Key: sourcePrefix,
@@ -121,7 +123,7 @@ export const POST = async (req: NextRequest) => {
   await createDeployment({
     version: env.VERSION,
     sourcePrefix,
-    deploymentId: v4(),
+    deploymentId,
     internalHandlerId: handler.internalId,
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
