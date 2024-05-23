@@ -10,7 +10,7 @@ export NODE_PATH=$(yarn global dir)/node_modules
 
 if [ -n "${PREVIOUS_HANDLER_ID}" ]; then
   echo "Destroying previous handler"
-  pulumi destroy kayakthedev/convect-v1/$PREVIOUS_HANDLER_ID -f --remove --continue-on-error
+  pulumi destroy -s kayakthedev/convect-v1/$PREVIOUS_HANDLER_ID -f --remove --continue-on-error
 fi
 
 node /scripts/deploy.js
