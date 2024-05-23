@@ -18,7 +18,7 @@ node /scripts/deploy.js
 cd /deployer/apps/deployer
 yarn
 
-if [ -n "${MODE}" && [ "${MODE}" == "init" ] ]; then
+if [ -n "${MODE}" ] && [ "${MODE}" == "init" ]; then
   pulumi stack init kayakthedev/convect-v1/$HANDLER_ID
 fi
 pulumi up -f
