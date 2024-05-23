@@ -194,7 +194,7 @@ function BundleState() {
 	}
 
 	return (
-		<StatusMessage variant="error">Failed to bundle source code</StatusMessage>
+		<StatusMessage variant="error">{bundleState.error?.stack}</StatusMessage>
 	);
 }
 
