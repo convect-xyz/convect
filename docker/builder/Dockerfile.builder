@@ -1,7 +1,7 @@
 FROM node:21-alpine as prune-deployer
 COPY . .
 RUN yarn global add turbo
-RUN turbo prune deployer --docker
+RUN turbo prune deployer
 
 FROM node:21-alpine as bundle
 COPY . .
