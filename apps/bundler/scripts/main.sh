@@ -20,5 +20,8 @@ yarn
 
 if [ -n "${MODE}" ] && [ "${MODE}" == "init" ]; then
   pulumi stack init kayakthedev/convect-v1/$HANDLER_ID
+else 
+  pulumi stack select kayakthedev/convect-v1/$HANDLER_ID
 fi
+
 pulumi up -f
