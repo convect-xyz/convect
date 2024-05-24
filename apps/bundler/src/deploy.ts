@@ -1,7 +1,5 @@
 import { Lambda } from "@aws-sdk/client-lambda";
 import { S3 } from "@aws-sdk/client-s3";
-import { SNS } from "@aws-sdk/client-sns";
-import { SQS } from "@aws-sdk/client-sqs";
 import esbuild from "esbuild";
 import { backOff } from "exponential-backoff";
 import fs from "fs";
@@ -10,23 +8,15 @@ import JSZip from "jszip";
 import path from "path";
 
 const lambda = new Lambda({ region: "eu-west-1" });
-const sns = new SNS({ region: "eu-west-1" });
-const sqs = new SQS({ region: "eu-west-1" });
 const s3 = new S3({ region: "eu-west-1" });
 
-const redisClient = new Redis.Cluster(
-  [
-    {
-      host: "clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com",
-      port: 6379,
-    },
-  ],
+const redisClient = new Redis(
+  6379,
+  "rediss://default:AbeXAAIncDFjNTRiNjgyMmZjNzM0ZGQzOTZmYTQzZTA5ODQ4YjVkM3AxNDY5OTk@stirred-jawfish-46999.upstash.io",
   {
-    redisOptions: {
-      tls: {
-        checkServerIdentity: (servername, cert) => {
-          return undefined;
-        },
+    tls: {
+      checkServerIdentity: (servername, cert) => {
+        return undefined;
       },
     },
   }
