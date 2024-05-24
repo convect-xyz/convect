@@ -3,9 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 import path = require("path");
 
 const VERSION = process.env.VERSION!;
-
-const config = new pulumi.Config();
-const org = config.require("org");
+const org = "kayakthedev";
 
 const stackRef = new pulumi.StackReference(`${org}/infra/${VERSION}`);
 

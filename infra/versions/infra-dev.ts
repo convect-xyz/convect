@@ -17,7 +17,7 @@ const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
   containerDefinitions: JSON.stringify([
     {
       "name": "builder",
-      "image": "730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:latest",
+      "image": `730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:${VERSION}`,
       "cpu": 0,
       "portMappings": [
           {
@@ -35,7 +35,12 @@ const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
           }
       ],
       "essential": true,
-      "environment": [],
+      "environment": [
+        {
+          "name": "PULUMI_ACCESS_TOKEN",
+          "value": process.env.PULUMI_ACCESS_TOKEN
+        }
+      ],
       "environmentFiles": [],
       "mountPoints": [],
       "volumesFrom": [],
@@ -57,6 +62,10 @@ const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
   memory: "1024",
   volumes: [],
   placementConstraints: [],
+  requiresCompatibilities: ["FARGATE"],
+  taskRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
+  executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
+  networkMode: "awsvpc",
 })
 
 const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
@@ -64,7 +73,7 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
     containerDefinitions: JSON.stringify([
       {
           "name": "syncer",
-          "image": "730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:latest",
+          "image": `730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:${VERSION}`,
           "cpu": 0,
           "portMappings": [
               {
@@ -82,7 +91,12 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
               }
           ],
           "essential": true,
-          "environment": [],
+          "environment": [
+              {
+                  "name": "PULUMI_ACCESS_TOKEN",
+                  "value": process.env.PULUMI_ACCESS_TOKEN
+              }
+          ],
           "mountPoints": [],
           "volumesFrom": [],
           "logConfiguration": {
@@ -101,6 +115,10 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
   memory: "1024",
   volumes: [],
   placementConstraints: [],
+  requiresCompatibilities: ["FARGATE"],
+  taskRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
+  executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
+  networkMode: "awsvpc",
 });
 
 export const handler_extension_arn = extension.arn;
