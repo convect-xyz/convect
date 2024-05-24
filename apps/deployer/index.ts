@@ -13,8 +13,6 @@ const MANIFEST_PREFIX = path.join("manifests", HANDLER_ID + ".json");
 const POLLING_URL = process.env.POLLING_URL!;
 const CHAIN_SNS = process.env.CHAIN_SNS!;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
-const SYNCER_TASK_DEFINITION_ARN = process.env.SYNCER_TASK_DEFINITION_ARN!;
-
 const HANDLER_ENVS = (
   JSON.parse(process.env.HANDLER_ENVS!) as Array<{
     key: string;
@@ -69,7 +67,6 @@ const orchestrator = new aws.lambda.Function(`orchestrator-${HANDLER_ID}`, {
       NODE_ENDPOINT: POLLING_URL,
       HANDLER_ID,
       VERSION,
-      SYNCER_TASK_DEFINITION_ARN,
     },
   },
   vpcConfig: {
