@@ -1,3 +1,4 @@
+delete process.env.__SHOULD_REMOVE_CONVECT_TBK;
 import { Lambda } from "@aws-sdk/client-lambda";
 import axios from "axios";
 import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
