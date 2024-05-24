@@ -4,8 +4,8 @@ import axios from "axios";
 import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
 
 import { SQSEvent } from "aws-lambda";
-// @ts-ignore
-import pipeline from "./pipeline";
+
+const pipeline = require('./pipeline');
 
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
