@@ -44,17 +44,17 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         return Ok(());
     }
 
-    // It is the responsibility of the ECS task to revert this status
-    pipeline
-        .update()
-        .set_state(ingest::types::pipeline::SyncState::SYNCING)
-        .send()
-        .expect("Failed to update pipeline");
-
     println!("{:?}", pipeline.inner());
 
     // If block diff is too great, trigger fargate to do the work
     if incoming_block - pipeline.last_block().or(Some(0)).unwrap() > 1999 {
+        // It is the responsibility of the ECS task to revert this status
+        pipeline
+            .update()
+            .set_state(ingest::types::pipeline::SyncState::SYNCING)
+            .send()
+            .expect("Failed to update pipeline");
+
         return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block).await;
     }
 
@@ -91,11 +91,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .await;
 
     match result {
-        Ok(_) => pipeline
-            .update()
-            .set_last_block(incoming_block)
-            .set_state(ingest::types::pipeline::SyncState::IDLE)
-            .send(),
+        Ok(_) => pipeline.update().set_last_block(incoming_block).send(),
         Err(_) => pipeline
             .update()
             .set_state(ingest::types::pipeline::SyncState::FAILED)
