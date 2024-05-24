@@ -12,7 +12,6 @@ const extension = new aws.lambda.LayerVersion("handler_extension", {
   skipDestroy: false,
 });
 
-
 const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
     family: `${VERSION}_syncer`,
     containerDefinitions: JSON.stringify([
