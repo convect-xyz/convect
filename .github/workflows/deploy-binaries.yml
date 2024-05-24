@@ -1,4 +1,4 @@
-name: Build, Test, Deploy
+name: Build, Test
 
 on:
   release:
@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - "infra/**"
+
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
@@ -97,8 +98,8 @@ jobs:
       - name: Build
         run: |
           cd rust
-          cargo lambda build --release --extension --bin=extension
-          cargo lambda deploy --extension --binary-name=extension extension-$(echo "$VERSION" | tr '.' '-')
+          cargo lambda build --output-format zip --release --bin=extension
+          aws s3api put-object --bucket ingest-functions --key extension/$VERSION.zip --body "./target/lambda/extension/bootstrap.zip"
 
   build_images:
     runs-on: ubuntu-latest
