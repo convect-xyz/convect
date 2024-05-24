@@ -12,61 +12,6 @@ const extension = new aws.lambda.LayerVersion("handler_extension", {
   skipDestroy: false,
 });
 
-const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
-  family: `${VERSION}_builder`,
-  containerDefinitions: JSON.stringify([
-    {
-      "name": "builder",
-      "image": `730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:${VERSION}`,
-      "cpu": 0,
-      "portMappings": [
-          {
-              "name": "builder-80-tcp",
-              "containerPort": 80,
-              "hostPort": 80,
-              "protocol": "tcp",
-              "appProtocol": "http"
-          },
-          {
-              "name": "builder-443-tcp",
-              "containerPort": 443,
-              "hostPort": 443,
-              "protocol": "tcp"
-          }
-      ],
-      "essential": true,
-      "environment": [
-        {
-          "name": "PULUMI_ACCESS_TOKEN",
-          "value": process.env.PULUMI_ACCESS_TOKEN
-        }
-      ],
-      "environmentFiles": [],
-      "mountPoints": [],
-      "volumesFrom": [],
-      "ulimits": [],
-      "logConfiguration": {
-          "logDriver": "awslogs",
-          "options": {
-              "awslogs-create-group": "true",
-              "awslogs-group": "/ecs/builder",
-              "awslogs-region": "eu-west-1",
-              "awslogs-stream-prefix": "ecs"
-          },
-          "secretOptions": []
-      },
-      "systemControls": []
-    }
-  ]),
-  cpu: "512",
-  memory: "1024",
-  volumes: [],
-  placementConstraints: [],
-  requiresCompatibilities: ["FARGATE"],
-  taskRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
-  executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
-  networkMode: "awsvpc",
-})
 
 const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
     family: `${VERSION}_syncer`,
@@ -95,6 +40,10 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
               {
                   "name": "PULUMI_ACCESS_TOKEN",
                   "value": process.env.PULUMI_ACCESS_TOKEN
+              },
+              {
+                "name": "VERSION",
+                "value": VERSION
               }
           ],
           "mountPoints": [],
@@ -120,6 +69,71 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
   executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
   networkMode: "awsvpc",
 });
+
+
+const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
+  family: `${VERSION}_builder`,
+  containerDefinitions: JSON.stringify([
+    {
+      "name": "builder",
+      "image": `730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:${VERSION}`,
+      "cpu": 0,
+      "portMappings": [
+          {
+              "name": "builder-80-tcp",
+              "containerPort": 80,
+              "hostPort": 80,
+              "protocol": "tcp",
+              "appProtocol": "http"
+          },
+          {
+              "name": "builder-443-tcp",
+              "containerPort": 443,
+              "hostPort": 443,
+              "protocol": "tcp"
+          }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "PULUMI_ACCESS_TOKEN",
+          "value": process.env.PULUMI_ACCESS_TOKEN
+        },
+        {
+          "name": "VERSION",
+          "value": VERSION
+        },
+        {
+          "name": "SYNCER_TASK_DEFINITION_ARN",
+          "value": syncer.arn
+        }
+      ],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "ulimits": [],
+      "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+              "awslogs-create-group": "true",
+              "awslogs-group": "/ecs/builder",
+              "awslogs-region": "eu-west-1",
+              "awslogs-stream-prefix": "ecs"
+          },
+          "secretOptions": []
+      },
+      "systemControls": []
+    }
+  ]),
+  cpu: "512",
+  memory: "1024",
+  volumes: [],
+  placementConstraints: [],
+  requiresCompatibilities: ["FARGATE"],
+  taskRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
+  executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
+  networkMode: "awsvpc",
+})
 
 export const handler_extension_arn = extension.arn;
 export const builder_task_definition = builder.arn;
