@@ -95,7 +95,12 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
     securityGroupIds: ["sg-08b95d721fc52088f"],
     subnetIds: ["subnet-0d588c105766713a1"],
   },
-  layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension)],
+  layers: [
+    stackRef
+      .getOutput("outputs")
+      .apply((f) => f.handler_extension_arn)
+      .get(),
+  ],
   timeout: 900,
   memorySize: 512,
   handler: "index.handler",
