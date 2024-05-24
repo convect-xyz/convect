@@ -90,11 +90,9 @@ async function zipLambda() {
   });
 
   const content = fs.readFileSync(BUNDLE_OUT_FILE);
-  const pipeline = fs.readFileSync(path.join(BUNDLE_SRC_DIR, "pipeline.js"));
 
   const zip = new JSZip();
   zip.file("index.js", content.toString());
-  zip.file("pipeline.js", pipeline.toString());
 
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
@@ -122,9 +120,6 @@ async function zipEventsLambda() {
     nodePaths: [process.env.NODE_PATH!],
     target: "node10.4",
     platform: "node",
-    banner: {
-      js: `delete process.env.MUST_REMOVE_CONVECT_TBK;`
-    }
   });
 
   const content = fs.readFileSync(EVENTS_OUT_FILE);
