@@ -27,7 +27,7 @@ const HANDLER_ENVS = (
 );
 
 const transactionQueue = new aws.sqs.Queue(`tx-queue-${HANDLER_ID}`, {
-  name: `tx-queue-${HANDLER_ID}`,
+  name: `tx-queue-${HANDLER_ID}.fifo`,
   visibilityTimeoutSeconds: 900,
   fifoQueue: true,
 });
