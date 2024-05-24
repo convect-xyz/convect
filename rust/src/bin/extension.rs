@@ -21,6 +21,8 @@ pub struct ReportMetrics {
     pub restore_duration_ms: Option<f64>,
 }
 
+const TINYBIRD_API_KEY: &'static str = env!("TINYBIRD_API_KEY");
+
 async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     let handler_id = env::var("HANDLER_ID").expect("Handler ID is undefined");
 
@@ -39,8 +41,9 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     }).collect();
 
     let client = Client::new();
-    let res = client.post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_logs")
-        .header("Authorization", "Bearer REDACTED")
+    let res = client
+        .post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_logs")
+        .header("Authorization", format!("Bearer {TINYBIRD_API_KEY}"))
         .body(records.join("\n"))
         .send();
 

@@ -96,6 +96,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-extension
           restore-keys: ${{ runner.os }}-cargo-
       - name: Build
+        env:
+          TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
         run: |
           cd rust
           cargo lambda build --output-format zip --release --bin=extension
