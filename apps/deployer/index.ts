@@ -1,14 +1,20 @@
 import * as aws from "@pulumi/aws";
+import * as pulumi from "@pulumi/pulumi";
 import path = require("path");
 
-const HANDLER_ID = process.env.HANDLER_ID!;
 const VERSION = process.env.VERSION!;
+
+const config = new pulumi.Config();
+const org = config.require("org");
+
+const stackRef = new pulumi.StackReference(`${org}/infra/${VERSION}`);
+
+const HANDLER_ID = process.env.HANDLER_ID!;
 const MANIFEST_BUCKET = "ingest-fetch-logs";
 const MANIFEST_PREFIX = path.join("manifests", HANDLER_ID + ".json");
 const POLLING_URL = process.env.POLLING_URL!;
 const CHAIN_SNS = process.env.CHAIN_SNS!;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
-
 const HANDLER_ENVS = (
   JSON.parse(process.env.HANDLER_ENVS!) as Array<{
     key: string;
@@ -91,9 +97,7 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
     securityGroupIds: ["sg-08b95d721fc52088f"],
     subnetIds: ["subnet-0d588c105766713a1"],
   },
-  layers: [
-    `arn:aws:lambda:eu-west-1:730335604495:layer:extension-${VERSION.replaceAll(".", "-")}:1`,
-  ],
+  layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension)],
   timeout: 900,
   memorySize: 512,
   handler: "index.handler",
@@ -116,9 +120,7 @@ const events = new aws.lambda.Function(`events-${HANDLER_ID}`, {
     securityGroupIds: ["sg-08b95d721fc52088f"],
     subnetIds: ["subnet-0d588c105766713a1"],
   },
-  layers: [
-    `arn:aws:lambda:eu-west-1:730335604495:layer:extension-${VERSION.replaceAll(".", "-")}:1`,
-  ],
+  layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension)],
   timeout: 900,
   memorySize: 512,
   handler: "index.handler",
@@ -177,3 +179,8 @@ const snsSub = new aws.sns.TopicSubscription(
     endpoint: orchestrator.arn,
   }
 );
+
+export const txQueueUrl = transactionQueue.url;
+export const orchestratorArn = orchestrator.arn;
+export const logFetcherArn = logFetcher.arn;
+export const handlerArn = handler.arn;
