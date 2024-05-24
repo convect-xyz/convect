@@ -103,10 +103,6 @@ const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
           "name": "VERSION",
           "value": VERSION
         },
-        {
-          "name": "SYNCER_TASK_DEFINITION_ARN",
-          "value": syncer.arn
-        }
       ],
       "environmentFiles": [],
       "mountPoints": [],
@@ -133,7 +129,7 @@ const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
   taskRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
   executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
   networkMode: "awsvpc",
-})
+}, { dependsOn: [syncer] })
 
 export const handler_extension_arn = extension.arn;
 export const builder_task_definition = builder.arn;
