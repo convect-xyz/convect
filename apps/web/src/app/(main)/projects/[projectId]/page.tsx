@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
-import { GetHandlersOutput } from "~/server/api/root";
 import { api } from "~/trpc/react";
+import { RouterOutputs } from "~/trpc/shared";
 import CreateHandler from "./CreateHandler";
 import { useParams } from "./hooks/useParams";
 
@@ -38,7 +38,9 @@ export default function Page() {
   );
 }
 
-function HandlerRow(props: { handler: GetHandlersOutput["handlers"][number] }) {
+function HandlerRow(props: {
+  handler: RouterOutputs["handlers"]["getHandlers"]["handlers"][number];
+}) {
   const { mutateAsync: deleteHandler } =
     api.handlers.deleteHandler.useMutation();
   const router = useRouter();

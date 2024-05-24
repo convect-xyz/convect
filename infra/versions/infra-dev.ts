@@ -1,0 +1,108 @@
+import * as aws from "@pulumi/aws";
+
+const VERSION = "infra-dev"
+
+const extension = new aws.lambda.LayerVersion("handler_extension", {
+  layerName: `${VERSION}_handler_extension`,
+  compatibleArchitectures: ["x86_64"],
+  compatibleRuntimes: ["provided.al2", "provided.al2023"],
+  description: "Handler Extension",
+  s3Bucket: "ingest-functions",
+  s3Key: `extension/${VERSION}.zip`,
+  skipDestroy: false,
+});
+
+const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
+  family: `${VERSION}_builder`,
+  containerDefinitions: JSON.stringify([
+    {
+      "name": "builder",
+      "image": "730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:latest",
+      "cpu": 0,
+      "portMappings": [
+          {
+              "name": "builder-80-tcp",
+              "containerPort": 80,
+              "hostPort": 80,
+              "protocol": "tcp",
+              "appProtocol": "http"
+          },
+          {
+              "name": "builder-443-tcp",
+              "containerPort": 443,
+              "hostPort": 443,
+              "protocol": "tcp"
+          }
+      ],
+      "essential": true,
+      "environment": [],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "ulimits": [],
+      "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+              "awslogs-create-group": "true",
+              "awslogs-group": "/ecs/builder",
+              "awslogs-region": "eu-west-1",
+              "awslogs-stream-prefix": "ecs"
+          },
+          "secretOptions": []
+      },
+      "systemControls": []
+    }
+  ]),
+  cpu: "512",
+  memory: "1024",
+  volumes: [],
+  placementConstraints: [],
+})
+
+const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
+    family: `${VERSION}_syncer`,
+    containerDefinitions: JSON.stringify([
+      {
+          "name": "syncer",
+          "image": "730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:latest",
+          "cpu": 0,
+          "portMappings": [
+              {
+                  "name": "syncer-80-tcp",
+                  "containerPort": 80,
+                  "hostPort": 80,
+                  "protocol": "tcp",
+                  "appProtocol": "http"
+              },
+              {
+                  "name": "syncer-443-tcp",
+                  "containerPort": 443,
+                  "hostPort": 443,
+                  "protocol": "tcp"
+              }
+          ],
+          "essential": true,
+          "environment": [],
+          "mountPoints": [],
+          "volumesFrom": [],
+          "logConfiguration": {
+              "logDriver": "awslogs",
+              "options": {
+                  "awslogs-create-group": "true",
+                  "awslogs-group": "/ecs/syncers",
+                  "awslogs-region": "eu-west-1",
+                  "awslogs-stream-prefix": "ecs"
+              }
+          },
+          "systemControls": []
+      }
+  ]),
+  cpu: "512",
+  memory: "1024",
+  volumes: [],
+  placementConstraints: [],
+});
+
+export const handler_extension_arn = extension.arn;
+export const builder_task_definition = builder.arn;
+export const syncer_task_definition = syncer.arn;
