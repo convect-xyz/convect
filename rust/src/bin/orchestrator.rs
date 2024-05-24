@@ -115,7 +115,7 @@ async fn trigger_batch_sync_task(
         .run_task()
         .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
         .task_definition(format!(
-            "arn:aws:ecs:eu-west-1:730335604495:task-definition/syncer-{family_name}",
+            "arn:aws:ecs:eu-west-1:730335604495:task-definition/{family_name}_syncer",
             family_name = version.replace(".", "-")
         ))
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
