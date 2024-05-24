@@ -5,9 +5,6 @@ import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
 
 import { SQSEvent } from "aws-lambda";
 
-const pipeline = require('./pipeline');
-
-const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
 const lambda = new Lambda({ region: "eu-west-1" });
 
@@ -27,6 +24,9 @@ type EligibleTxConfig = {
 }
 
 export async function handler(event: SQSEvent) {
+  const pipeline = require('./pipeline');
+  const allTxConfigsWithLabels = [...Object.entries(pipeline)];
+
   const parsedTxs = [];
 
   console.time("parse");
