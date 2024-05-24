@@ -1,10 +1,16 @@
-delete process.env.MUST_REMOVE_CONVECT_TBK;
 import { Lambda } from "@aws-sdk/client-lambda";
 import axios from "axios";
 import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
 
 import { SQSEvent } from "aws-lambda";
 
+// Delete API Keys
+const MUST_REMOVE_CONVECT_TBK = process.env.MUST_REMOVE_CONVECT_TBK;
+delete process.env.MUST_REMOVE_CONVECT_TBK;
+
+const pipeline = require('./pipeline');
+console.log(pipeline);
+const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
 const lambda = new Lambda({ region: "eu-west-1" });
 
@@ -24,8 +30,6 @@ type EligibleTxConfig = {
 }
 
 export async function handler(event: SQSEvent) {
-  const pipeline = require('./pipeline');
-  const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
   const parsedTxs = [];
 
