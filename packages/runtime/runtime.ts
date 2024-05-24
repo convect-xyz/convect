@@ -8,7 +8,7 @@ import { SQSEvent } from "aws-lambda";
 const MUST_REMOVE_CONVECT_TBK = process.env.MUST_REMOVE_CONVECT_TBK;
 delete process.env.MUST_REMOVE_CONVECT_TBK;
 
-const pipeline = require('./pipeline');
+const { default: pipeline } = require('./pipeline');
 console.log(pipeline);
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
