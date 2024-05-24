@@ -114,10 +114,10 @@ async fn trigger_batch_sync_task(
     let result = ecs_client
         .run_task()
         .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
-        .task_definition(format!(
-            "arn:aws:ecs:eu-west-1:730335604495:task-definition/syncer-{family_name}",
-            family_name = version.replace(".", "-")
-        ))
+        .task_definition(
+            env::var("SYNCER_TASK_DEFINITION_ARN")
+                .expect("Syncer task definition arn is undefined"),
+        )
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(
             NetworkConfiguration::builder()
