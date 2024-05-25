@@ -50,16 +50,24 @@ type EligibleTxConfig = {
   config: any
 }
 
+type TransactionResult = {
+  transaction_hash: string;
+  successful_labels: Array<String>;
+  failed_label: string | undefined;
+};
+
 export async function handler(event: SQSEvent) {
   await axios.get("http://localhost:4121").then(console.log)
   const parsedTxs = [];
 
   console.time("parse");
-  const records = event.Records.map((record) => ({
+  const records: Array<ParsedRecord> = event.Records.map((record) => ({
     id: record.messageId,
+    isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
     data: JSON.parse(record.body),
   }));
-
+  const isRetry = event.Records.some((r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1)
+  
   const s3Results = await getS3Results(records);
 
   for (const record of records) {
@@ -74,26 +82,39 @@ export async function handler(event: SQSEvent) {
   }
   console.timeEnd("parse");
 
-  var succeeded = new Map();
-  var failed = new Map();
+  const txHashIdx = new Map<string, number>();
+  const results: Array<TransactionResult> = [];
 
   function addSuccessful(txHash: string, handler: string) {
-    if(succeeded.has(txHash)) {
-      succeeded.get(txHash).push(handler)
-    } else {
-      succeeded.set(txHash, [handler]);
+    if(!txHashIdx.has(txHash)) {
+      txHashIdx.set(txHash, results.length);
+      results.push({
+        transaction_hash: txHash,
+        successful_labels: [],
+        failed_label: undefined
+      });
     }
+
+    results[txHashIdx.get(txHash)!]!.successful_labels.push(handler);
   }
+
 
   function addFailure(txHash: string, handler: string) {
-    if(failed.has(txHash)) {
-      failed.get(txHash).push(handler)
-    } else {
-      failed.set(txHash, [handler]);
+    if(!txHashIdx.has(txHash)) {
+      txHashIdx.set(txHash, results.length);
+      results.push({
+        transaction_hash: txHash,
+        successful_labels: [],
+        failed_label: undefined
+      });
     }
+
+    results[txHashIdx.get(txHash)!]!.failed_label = handler;
   }
 
+  var hasError = false;
   let i = 0;
+  process_loop:
   while (i < parsedTxs.length) {
     const batch: Array<any> = [];
 
@@ -117,53 +138,26 @@ export async function handler(event: SQSEvent) {
     console.timeEnd("organise");
     
     for (const { label, config: txConfig } of processors) {
-      if (txConfig._independent) {
-        await Promise.all(
-          batch.map((tx) =>
-            txConfig
-              ._handler(decodeTx(tx, txConfig))
-              .then(() => addSuccessful(tx.transactionHash, label))
-          )
-        );
-      } else {
-        await txConfig
-          ._handler(batch.map((tx) => decodeTx(tx, txConfig)))
-          .then(() =>
-            batch.map((tx) => addSuccessful(tx.transactionHash, label))
-          );
+      try {
+        const _ = await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
+        batch.map((tx) => addSuccessful(tx.transactionHash, label))
+      } catch(e) {
+        addFailure(batch.at(0)!.transactionHash, label);
+        break process_loop;
       }
     }
   }
 
-  await uploadToTinybird(succeeded, failed);
-
+  await uploadResults(results);
+  if(hasError) {
+    throw new Error('Some handlers failed');
+  }
+  
   return {};
 }
 
-export async function uploadToTinybird(successful: Map<string, Array<string>>, failed: Map<string, Array<string>>) {
-  const allSuccessful = [...successful.entries()].map(([txHash, handlers]) => ({
-    transaction_hash: txHash,
-    handler_id: process.env.HANDLER_ID,
-    labels: handlers,
-    status: "SUCCESS",    
-    time: new Date().getTime()
-  }));
-
-  const allFailed = [...failed.entries()].map(([txHash, handlers]) => ({
-    transaction_hash: txHash,
-    handler_id: process.env.HANDLER_ID,
-    labels: handlers,
-    status: "FAILED",
-    time: new Date().getTime()
-  }));
-
-  const serialized = [...allSuccessful, ...allFailed].map((v) => JSON.stringify(v));
-
-  await axios.post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=convect_transactions", serialized.join("\n"), {
-    headers: {
-      Authorization: `Bearer ${MUST_REMOVE_CONVECT_TBK}`
-    }
-  });
+export async function uploadResults(results: Array<TransactionResult>) {
+  await axios.post("http://localhost:4121", { results });
 }
 
 export async function getS3Results(batchRecords: Array<ParsedRecord>) {
