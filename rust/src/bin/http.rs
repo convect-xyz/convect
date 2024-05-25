@@ -16,22 +16,21 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    let app = Router::new().route("/results", post(results::post_results));
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
+
+    tokio::spawn(async {
+        println!("Starting server");
+        axum::serve(listener, app).await.unwrap();
+    });
+
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
         .with_target(false)
         .without_time()
         .init();
 
-    let app = Router::new().route("/results", post(results::post_results));
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:4121")
-        .await
-        .unwrap();
-
     let func = service_fn(my_extension);
-
-    thread::spawn(|| async {
-        axum::serve(listener, app).await.unwrap();
-    });
 
     lambda_extension::run(func).await
 }
