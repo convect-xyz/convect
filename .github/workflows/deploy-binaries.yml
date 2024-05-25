@@ -101,7 +101,7 @@ jobs:
         run: |
           cd rust
           cargo lambda build --extension --output-format zip --release --bin=extension
-          aws s3api put-object --bucket ingest-functions --key extension/$VERSION.zip --body "./target/lambda/extension/bootstrap.zip"
+          aws s3api put-object --bucket ingest-functions --key extension/$VERSION.zip --body "./target/lambda/extensions/extension.zip"
 
   build_images:
     runs-on: ubuntu-latest
