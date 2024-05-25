@@ -1,3 +1,5 @@
+use std::thread;
+
 use lambda_extension::tracing;
 use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
 use rouille::Response;
@@ -22,13 +24,13 @@ async fn main() -> Result<(), Error> {
         .without_time()
         .init();
 
-    async {
+    thread::spawn(|| {
         println!("Starting server");
         rouille::start_server("localhost:4121", move |_request| {
             Response::text("hello world")
         })
-    }
-    .await;
+    });
+
     let func = service_fn(my_extension);
     lambda_extension::run(func).await
 }
