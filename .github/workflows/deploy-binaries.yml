@@ -63,6 +63,9 @@ jobs:
 
   build_extensions:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        binary: ["extension", "http"]
     steps:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -98,10 +101,11 @@ jobs:
       - name: Build
         env:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
+          BIN: ${{ matrix.binary }}
         run: |
           cd rust
-          cargo lambda build --extension --output-format zip --release --bin=extension
-          aws s3api put-object --bucket ingest-functions --key extension/$VERSION.zip --body "./target/lambda/extensions/extension.zip"
+          cargo lambda build --extension --output-format zip --release --bin=$BIN
+          aws s3api put-object --bucket ingest-functions --key $BIN/$VERSION.zip --body "./target/lambda/extensions/$BIN.zip"
 
   build_images:
     runs-on: ubuntu-latest
