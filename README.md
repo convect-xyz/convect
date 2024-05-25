@@ -14,3 +14,24 @@ BIN=log-fetcher sh ./rust/scripts/build.sh
 
 INSERT INTO public.web_producer ("altId","pollingUrl","wsUrl","userId","serviceArn","topicArn",name) VALUES
 	 ('blast','https://rpc.blast.io','https://rpc.blast.io',NULL,'arn:aws:ecs:eu-west-1:730335604495:cluster/mainnet','arn:aws:sns:eu-west-1:730335604495:blast','Blast');
+
+
+
+
+NAT 
+
+sudo yum install iptables-services -y
+sudo systemctl enable iptables
+sudo systemctl start iptables
+
+# Turning on IP Forwarding
+echo "net.ipv4.ip_forward = 1" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+
+# Making a catchall rule for routing and masking the private IP
+sudo iptables -t nat -A POSTROUTING -o ens5 -s 0.0.0.0/0 -j MASQUERADE
+
+
+
+
+<!-- 7aPRm00UwmMEj59AHOKlF -->

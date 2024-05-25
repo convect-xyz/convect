@@ -1,7 +1,7 @@
 "use client";
 
 import { PlusCircle } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import LogoIcon from "~/components/icons/LogoIcon";
 import { Button } from "~/components/ui/button";
@@ -16,6 +16,23 @@ import {
 import { Skeleton } from "~/components/ui/skeleton";
 import { api } from "~/trpc/react";
 import { NewProjectDialog } from "./NewProject";
+
+export function NavbarLeading() {
+  const pathname = usePathname();
+
+  const isApiKeysRoute = pathname === "/account/api-keys";
+
+  if (isApiKeysRoute) {
+    return (
+      <div className="flex items-center gap-2">
+        <LogoIcon className="h-6 w-6" />
+        <div className="text-md">API Keys</div>
+      </div>
+    );
+  }
+
+  return <ProjectsDropdown />;
+}
 
 export function ProjectsDropdown() {
   const { data: projects } = api.project.getProjects.useQuery();

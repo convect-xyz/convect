@@ -72,7 +72,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .set_start_block(from_block)
         .set_end_block(incoming_block)
         .send()
-        .inspect_err(|_| {
+        .inspect_err(|e| {
+            println!("{:?}", e);
             let _ = pipeline
                 .update()
                 .set_state(ingest::types::pipeline::SyncState::FAILED)

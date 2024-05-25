@@ -1,7 +1,20 @@
 import { TRPCError } from "@trpc/server";
 import axios from "axios";
+import { Redis } from "ioredis";
 import { z } from "zod";
 import { protectedProcedure } from "~/server/api/trpc";
+
+const redisClient = new Redis(
+  6379,
+  "rediss://default:AbeXAAIncDFjNTRiNjgyMmZjNzM0ZGQzOTZmYTQzZTA5ODQ4YjVkM3AxNDY5OTk@stirred-jawfish-46999.upstash.io",
+  {
+    tls: {
+      checkServerIdentity: (servername, cert) => {
+        return undefined;
+      },
+    },
+  },
+);
 
 export const getOverview = protectedProcedure
   .input(
@@ -37,11 +50,12 @@ export const getOverview = protectedProcedure
     }
 
     try {
-      const response = await axios.post(
-        "https://gfxa802p84.execute-api.eu-west-1.amazonaws.com/dev/status",
-        {
-          handlerId: handler.internalId.toString(),
-        },
+      const response = await redisClient
+        .call(`JSON.GET`, handler.internalId)
+        .then((v) => JSON.parse(v as string));
+      const [txCount, processedTxCount] = await redisClient.mget(
+        `tx-count-${handler.internalId}`,
+        `processed-tx-count-${handler.internalId}`,
       );
 
       const avgDuration = await axios
@@ -49,7 +63,7 @@ export const getOverview = protectedProcedure
           "https://api.eu-central-1.aws.tinybird.co/v0/sql",
           {
             q: `%
-        SELECT AVG(duration_ms) FROM ingest_metrics_pipe WHERE handler_id = {{String(handler_id)}}`,
+        SELECT AVG(duration_ms) FROM ingest_metrics WHERE handler_id = {{String(handler_id)}}`,
             handler_id: handler.internalId,
           },
           {
@@ -61,7 +75,28 @@ export const getOverview = protectedProcedure
         )
         .then((r) => r.data)
         .catch((e) => {
-          console.log(e.response.data);
+          console.log(e);
+          throw e;
+        });
+
+      const successfulTx = await axios
+        .post(
+          "https://api.eu-central-1.aws.tinybird.co/v0/sql",
+          {
+            q: `%
+        SELECT COUNT(DISTINCT(transaction_hash)) FROM convect_transactions WHERE handler_id = {{String(handler_id)}} AND status = 'SUCCESS'`,
+            handler_id: handler.internalId,
+          },
+          {
+            headers: {
+              Authorization:
+                "Bearer p.eyJ1IjogIjJlYjlhNzU2LWFjMDMtNDJmOC1iNGY2LWI2M2RhN2JiMjkyNiIsICJpZCI6ICJjZTE2YmI1Yi04NDBiLTQwNGMtYjk4Yi0zMjJiNDc4ZDMyYWEiLCAiaG9zdCI6ICJhd3MtZXUtY2VudHJhbC0xIn0.1Bvj9OA-NZQ0cU62T1sweLScNLMPsv8FIGaP8nkHoRw",
+            },
+          },
+        )
+        .then((r) => r.data)
+        .catch((e) => {
+          console.log(e);
           throw e;
         });
 
@@ -86,9 +121,7 @@ export const getOverview = protectedProcedure
               z
                 .object({
                   transaction_hash: z.string(),
-                  labels: z
-                    .string()
-                    .transform((v) => z.array(z.string()).parse(JSON.parse(v))),
+                  labels: z.array(z.string()),
                 })
                 .transform((v) => ({
                   transactionHash: v.transaction_hash,
@@ -98,15 +131,16 @@ export const getOverview = protectedProcedure
             .parse(r.data.data);
         })
         .catch((e) => {
-          console.log(e.response.data);
+          console.log(e);
           throw e;
         });
 
+      console.log(avgDuration);
       return {
-        transactionCount: response.data.transactionCount,
-        processedTransactionsCount: response.data.processedTransactionsCount,
-        lastFetchedBlock: response.data.lastBlock,
-        avgDuration,
+        transactionCount: Number(txCount),
+        processedTransactionsCount: successfulTx,
+        lastFetchedBlock: Number(response.LastBlock_),
+        avgDuration: 0,
         recentTransactions: processedTransactions,
       };
     } catch (e) {
