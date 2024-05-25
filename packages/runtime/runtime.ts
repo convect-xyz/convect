@@ -142,6 +142,7 @@ export async function handler(event: SQSEvent) {
         batch.map((tx) => addSuccessful(tx.transactionHash, label))
       } catch(e) {
         addFailure(batch.at(0)!.transactionHash, label);
+        hasError = true;
         break process_loop;
       }
     }
