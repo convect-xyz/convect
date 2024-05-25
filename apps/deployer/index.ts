@@ -13,18 +13,7 @@ const MANIFEST_PREFIX = path.join("manifests", HANDLER_ID + ".json");
 const POLLING_URL = process.env.POLLING_URL!;
 const CHAIN_SNS = process.env.CHAIN_SNS!;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
-const HANDLER_ENVS = (
-  JSON.parse(process.env.HANDLER_ENVS!) as Array<{
-    key: string;
-    value: string;
-  }>
-).reduce(
-  (acc, curr) => {
-    acc[curr.key] = curr.value;
-    return acc;
-  },
-  {} as Record<string, string>
-);
+const HANDLER_ENVS = process.env.HANDLER_ENVS!;
 
 const transactionQueue = new aws.sqs.Queue(`tx-queue-${HANDLER_ID}`, {
   name: `tx-queue-${HANDLER_ID}.fifo`,
@@ -86,7 +75,7 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
       HANDLER_ID,
       MUST_REMOVE_CONVECT_TBK:
         "REDACTED",
-      ...HANDLER_ENVS,
+      USER_ENVS: HANDLER_ENVS,
     },
   },
   layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn)],
@@ -105,7 +94,7 @@ const events = new aws.lambda.Function(`events-${HANDLER_ID}`, {
   environment: {
     variables: {
       HANDLER_ID,
-      ...HANDLER_ENVS,
+      USER_ENVS: HANDLER_ENVS,
     },
   },
   layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn)],

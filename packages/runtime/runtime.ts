@@ -3,12 +3,35 @@ import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
 
 import { SQSEvent } from "aws-lambda";
 
+const USER_ENVS = (
+  JSON.parse(process.env.USER_ENVS!) as Array<{
+    key: string;
+    value: string;
+  }>
+).reduce(
+  (acc, curr) => {
+    acc[curr.key] = curr.value;
+    return acc;
+  },
+  {} as Record<string, string>
+)
+
+const HANDLER_ID = process.env.HANDLER_ID;
+
 // Delete API Keys
 const MUST_REMOVE_CONVECT_TBK = process.env.MUST_REMOVE_CONVECT_TBK;
 delete process.env.MUST_REMOVE_CONVECT_TBK;
 
+for(const env of Object.keys(process.env)) {
+  delete process.env[env];
+}
+
+for(const [name, value] of Object.entries(USER_ENVS)) {
+  process.env[name] = value;
+}
+process.env['HANDLER_ID'] = HANDLER_ID;
+
 const { default: pipeline } = require('./pipeline');
-console.log(pipeline);
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
 
