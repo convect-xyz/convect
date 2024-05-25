@@ -4,7 +4,7 @@ use std::env;
 use tokio::join;
 
 use lambda_extension::{
-    service_fn, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
+    service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
 };
 use reqwest::blocking::Client;
 use serde_json::json;
@@ -112,6 +112,8 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    tracing::init_default_subscriber();
+
     let telemetry_processor = SharedService::new(service_fn(telemetry));
 
     Extension::new()
