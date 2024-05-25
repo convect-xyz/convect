@@ -13,6 +13,16 @@ const extension = new aws.lambda.LayerVersion("handler_extension", {
   skipDestroy: false,
 });
 
+const http_extension = new aws.lambda.LayerVersion("http_extension", {
+  layerName: `${VERSION}_http_extension`,
+  compatibleArchitectures: ["x86_64"],
+  compatibleRuntimes: ["provided.al2", "provided.al2023"],
+  description: "Handler HTTP Extension",
+  s3Bucket: "ingest-functions",
+  s3Key: `http/${VERSION}.zip`,
+  skipDestroy: false,
+});
+
 const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
     family: `${VERSION}_syncer`,
     containerDefinitions: JSON.stringify([
@@ -132,5 +142,6 @@ const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
 }, { dependsOn: [syncer] })
 
 export const handler_extension_arn = extension.arn;
+export const http_extension_arn = http_extension.arn;
 export const builder_task_definition = builder.arn;
 export const syncer_task_definition = syncer.arn;

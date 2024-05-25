@@ -40,6 +40,10 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
       })).unwrap()
     }).collect();
 
+    if records.is_empty() {
+        return Ok(());
+    }
+
     let client = Client::new();
     let res = client
         .post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_logs")
