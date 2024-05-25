@@ -157,7 +157,7 @@ export async function handler(event: SQSEvent) {
 }
 
 export async function uploadResults(results: Array<TransactionResult>) {
-  await axios.post("http://localhost:4121", { results });
+  await axios.post("http://localhost:4121/results", { results });
 }
 
 export async function getS3Results(batchRecords: Array<ParsedRecord>) {
