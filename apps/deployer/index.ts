@@ -78,7 +78,10 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
       USER_ENVS: HANDLER_ENVS,
     },
   },
-  layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn)],
+  layers: [
+    stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn),
+    stackRef.getOutput("outputs").apply((f) => f.http_extension_arn),
+  ],
   timeout: 900,
   memorySize: 512,
   handler: "index.handler",
