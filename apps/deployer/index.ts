@@ -69,10 +69,6 @@ const orchestrator = new aws.lambda.Function(`orchestrator-${HANDLER_ID}`, {
       VERSION,
     },
   },
-  vpcConfig: {
-    securityGroupIds: ["sg-08b95d721fc52088f"],
-    subnetIds: ["subnet-0d588c105766713a1"],
-  },
   timeout: 200,
   handler: "bootstrap",
   packageType: "Zip",
@@ -93,10 +89,6 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
       ...HANDLER_ENVS,
     },
   },
-  vpcConfig: {
-    securityGroupIds: ["sg-08b95d721fc52088f"],
-    subnetIds: ["subnet-0d588c105766713a1"],
-  },
   layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn)],
   timeout: 900,
   memorySize: 512,
@@ -116,40 +108,12 @@ const events = new aws.lambda.Function(`events-${HANDLER_ID}`, {
       ...HANDLER_ENVS,
     },
   },
-  vpcConfig: {
-    securityGroupIds: ["sg-08b95d721fc52088f"],
-    subnetIds: ["subnet-0d588c105766713a1"],
-  },
-  layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension)],
+  layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn)],
   timeout: 900,
   memorySize: 512,
   handler: "index.handler",
   packageType: "Zip",
   runtime: "nodejs20.x",
-});
-
-const reporting = new aws.lambda.Function(`reporting-${HANDLER_ID}`, {
-  name: `reporting-${HANDLER_ID}`,
-  role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-  s3Bucket: "ingest-functions",
-  s3Key: `reporting/${VERSION}.zip`,
-  environment: {
-    variables: {
-      TRANSACTION_QUEUE_URL: transactionQueue.url,
-      MANIFEST_BUCKET,
-      MANIFEST_PREFIX,
-      HANDLER_ID,
-      VERSION,
-    },
-  },
-  vpcConfig: {
-    securityGroupIds: ["sg-08b95d721fc52088f"],
-    subnetIds: ["subnet-0d588c105766713a1"],
-  },
-  timeout: 200,
-  handler: "bootstrap",
-  packageType: "Zip",
-  runtime: "provided.al2023",
 });
 
 const handlerSourceMapping = new aws.lambda.EventSourceMapping(
