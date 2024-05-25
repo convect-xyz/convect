@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["log-fetcher", "orchestrator", "reporting"]
+        binary: ["log-fetcher", "orchestrator"]
     steps:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -100,7 +100,7 @@ jobs:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
         run: |
           cd rust
-          cargo lambda build --output-format zip --release --bin=extension
+          cargo lambda build --extension --output-format zip --release --bin=extension
           aws s3api put-object --bucket ingest-functions --key extension/$VERSION.zip --body "./target/lambda/extension/bootstrap.zip"
 
   build_images:
