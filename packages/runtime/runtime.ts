@@ -56,6 +56,22 @@ export async function handler(event: SQSEvent) {
   var succeeded = new Map();
   var failed = new Map();
 
+  function addSuccessful(txHash: string, handler: string) {
+    if(succeeded.has(txHash)) {
+      succeeded.get(txHash).push(handler)
+    } else {
+      succeeded.set(txHash, [handler]);
+    }
+  }
+
+  function addFailure(txHash: string, handler: string) {
+    if(failed.has(txHash)) {
+      failed.get(txHash).push(handler)
+    } else {
+      failed.set(txHash, [handler]);
+    }
+  }
+
   let i = 0;
   while (i < parsedTxs.length) {
     const batch: Array<any> = [];
@@ -75,8 +91,6 @@ export async function handler(event: SQSEvent) {
     ) {
       const tx = parsedTxs[i];
       batch.push(tx);
-      succeeded.set(tx.transactionHash, []);
-      failed.set(tx.transactionHash, []);
       i++;
     }
     console.timeEnd("organise");
@@ -87,14 +101,14 @@ export async function handler(event: SQSEvent) {
           batch.map((tx) =>
             txConfig
               ._handler(decodeTx(tx, txConfig))
-              .then(() => succeeded.get(tx.transactionHash).push(label))
+              .then(() => addSuccessful(tx.transactionHash, label))
           )
         );
       } else {
         await txConfig
           ._handler(batch.map((tx) => decodeTx(tx, txConfig)))
           .then(() =>
-            batch.map((tx) => succeeded.get(tx.transactionHash).push(label))
+            batch.map((tx) => addSuccessful(tx.transactionHash, label))
           );
       }
     }
