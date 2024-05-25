@@ -57,7 +57,6 @@ type TransactionResult = {
 };
 
 export async function handler(event: SQSEvent) {
-  await axios.get("http://localhost:4121").then(console.log)
   const parsedTxs = [];
 
   console.time("parse");
