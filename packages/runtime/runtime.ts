@@ -1,4 +1,3 @@
-import { Lambda } from "@aws-sdk/client-lambda";
 import axios from "axios";
 import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
 
@@ -12,7 +11,6 @@ const { default: pipeline } = require('./pipeline');
 console.log(pipeline);
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
-const lambda = new Lambda({ region: "eu-west-1" });
 
 type ParsedRecord = {
   id: string;
@@ -124,14 +122,16 @@ export async function uploadToTinybird(successful: Map<string, Array<string>>, f
     transaction_hash: txHash,
     handler_id: process.env.HANDLER_ID,
     labels: handlers,
-    status: "SUCCESS"
+    status: "SUCCESS",    
+    time: new Date().getTime()
   }));
 
   const allFailed = [...failed.entries()].map(([txHash, handlers]) => ({
     transaction_hash: txHash,
     handler_id: process.env.HANDLER_ID,
     labels: handlers,
-    status: "FAILED"
+    status: "FAILED",
+    time: new Date().getTime()
   }));
 
   const serialized = [...allSuccessful, ...allFailed].map((v) => JSON.stringify(v));
