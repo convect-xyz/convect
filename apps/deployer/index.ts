@@ -88,7 +88,8 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
   environment: {
     variables: {
       HANDLER_ID,
-      MUST_REMOVE_CONVECT_TBK: "my super secret tbk",
+      MUST_REMOVE_CONVECT_TBK:
+        "REDACTED",
       ...HANDLER_ENVS,
     },
   },

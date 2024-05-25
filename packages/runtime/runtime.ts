@@ -54,6 +54,7 @@ export async function handler(event: SQSEvent) {
   console.timeEnd("parse");
 
   var succeeded = new Map();
+  var failed = new Map();
 
   let i = 0;
   while (i < parsedTxs.length) {
@@ -75,6 +76,7 @@ export async function handler(event: SQSEvent) {
       const tx = parsedTxs[i];
       batch.push(tx);
       succeeded.set(tx.transactionHash, []);
+      failed.set(tx.transactionHash, []);
       i++;
     }
     console.timeEnd("organise");
@@ -98,26 +100,34 @@ export async function handler(event: SQSEvent) {
     }
   }
 
-  await report({
-    transactions: Object.fromEntries(succeeded),
-  });
+  await uploadToTinybird(succeeded, failed);
 
   return {};
 }
 
+export async function uploadToTinybird(successful: Map<string, Array<string>>, failed: Map<string, Array<string>>) {
+  const allSuccessful = [...successful.entries()].map((txHash, handlers) => ({
+    transaction_hash: txHash,
+    handler_id: process.env.HANDLER_ID,
+    labels: handlers,
+    status: "SUCCESS"
+  }));
 
-type ReportOptions = {
-  transactions: Record<string, any>
-}
-export async function report(options: ReportOptions) {
-  console.time("report");
-  await lambda.invokeAsync({
-    FunctionName: `arn:aws:lambda:eu-west-1:730335604495:function:reporting-${process.env.HANDLER_ID}`,
-    InvokeArgs: JSON.stringify({
-      transactions: options.transactions,
-    }),
+  const allFailed = [...failed.entries()].map((txHash, handlers) => ({
+    transaction_hash: txHash,
+    handler_id: process.env.HANDLER_ID,
+    labels: handlers,
+    status: "FAILED"
+  }));
+
+  const serialized = [...allSuccessful, ...allFailed].map((v) => JSON.stringify(v));
+
+  await axios.post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=convect_transactions", serialized.join("\n"), {
+    headers: {
+      Authorization: `Bearer ${MUST_REMOVE_CONVECT_TBK}`
+    }
   });
-  console.timeEnd("report");
+
 }
 
 export async function getS3Results(batchRecords: Array<ParsedRecord>) {
