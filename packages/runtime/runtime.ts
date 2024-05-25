@@ -106,14 +106,14 @@ export async function handler(event: SQSEvent) {
 }
 
 export async function uploadToTinybird(successful: Map<string, Array<string>>, failed: Map<string, Array<string>>) {
-  const allSuccessful = [...successful.entries()].map((txHash, handlers) => ({
+  const allSuccessful = [...successful.entries()].map(([txHash, handlers]) => ({
     transaction_hash: txHash,
     handler_id: process.env.HANDLER_ID,
     labels: handlers,
     status: "SUCCESS"
   }));
 
-  const allFailed = [...failed.entries()].map((txHash, handlers) => ({
+  const allFailed = [...failed.entries()].map(([txHash, handlers]) => ({
     transaction_hash: txHash,
     handler_id: process.env.HANDLER_ID,
     labels: handlers,
@@ -127,7 +127,6 @@ export async function uploadToTinybird(successful: Map<string, Array<string>>, f
       Authorization: `Bearer ${MUST_REMOVE_CONVECT_TBK}`
     }
   });
-
 }
 
 export async function getS3Results(batchRecords: Array<ParsedRecord>) {
