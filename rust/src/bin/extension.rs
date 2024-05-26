@@ -28,7 +28,7 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
 
     let records: Vec<String> = logs.into_iter().map(|record|{
       let re = Regex::new(r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$").unwrap();
-
+      print!("{:?}", re);
       re.captures(&record).map(|result| serde_json::to_string(&json!({
         "handler_id": handler_id,
         "time": result["time"].to_string(),
