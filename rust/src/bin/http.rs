@@ -43,7 +43,7 @@ mod results {
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::Json;
     use diesel_async::RunQueryDsl;
-    use ingest::establish_connection;
+    use ingest::connection::establish_connection;
     use ingest::types::processing;
     use ingest::{models::ProcessedTransaction, schema::processed_transactions};
     use serde::Deserialize;
