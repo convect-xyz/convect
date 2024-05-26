@@ -13,7 +13,7 @@ use ingest::{
         Api,
     },
     log_fetcher::invocation::{InvocationRequest, InvocationResponse},
-    types::{self, pipeline::Pipeline, transactions::IngestTransaction},
+    types::{self, syncing::State, transactions::IngestTransaction},
 };
 use serde::Serialize;
 use std::error::Error;
@@ -33,7 +33,7 @@ const BATCH_SIZE: u64 = 1500;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
-    let mut pipeline = Pipeline::load(syncer_config.handler_id.clone());
+    let mut pipeline = State::load(syncer_config.handler_id.clone());
     let config = aws_config::load_from_env().await;
     let api: ApiInstance = Api::new(&config);
 
@@ -42,12 +42,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let update_result = match result {
         Ok(_) => pipeline
             .update()
-            .set_state(types::pipeline::SyncState::IDLE)
+            .set_state(types::syncing::SyncState::IDLE)
             .set_last_block(syncer_config.end_block)
             .send(),
         Err(_) => pipeline
             .update()
-            .set_state(types::pipeline::SyncState::FAILED)
+            .set_state(types::syncing::SyncState::FAILED)
             .send(),
     };
 
@@ -59,7 +59,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn run(api: &ApiInstance, pipeline: &mut Pipeline) -> Result<(), Box<dyn Error>> {
+async fn run(api: &ApiInstance, pipeline: &mut State) -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
     let configs = get_block_configs(
         syncer_config.start_block,

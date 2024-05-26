@@ -1,5 +1,5 @@
 use crate::s3::S3;
-use crate::types::pipeline::Pipeline;
+use crate::types::syncing::State;
 use crate::types::transactions::IngestTransaction;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -21,7 +21,7 @@ struct BatchPayload {
 pub trait TransactionEnqueuer {
     async fn enqueue_transactions(
         &self,
-        pipeline: &mut Pipeline,
+        pipeline: &mut State,
         queue_url: String,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), web3::Error>;
@@ -42,7 +42,7 @@ impl<T: S3> TransactionEnqueuerImpl<T> {
 
     async fn upload_raw(
         &self,
-        pipeline: &mut Pipeline,
+        pipeline: &mut State,
         queue_url: String,
         txs: &Vec<IngestTransaction>,
     ) {
@@ -98,7 +98,7 @@ impl<T: S3> TransactionEnqueuerImpl<T> {
 
     async fn upload_batch(
         &self,
-        pipeline: &mut Pipeline,
+        pipeline: &mut State,
         queue_url: String,
         txs: &Vec<IngestTransaction>,
     ) {
@@ -168,7 +168,7 @@ impl<T: S3> TransactionEnqueuerImpl<T> {
 impl<T: S3> TransactionEnqueuer for TransactionEnqueuerImpl<T> {
     async fn enqueue_transactions(
         &self,
-        pipeline: &mut Pipeline,
+        pipeline: &mut State,
         queue_url: String,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), web3::Error> {

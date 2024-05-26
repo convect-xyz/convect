@@ -41,7 +41,7 @@ mod results {
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::Json;
-    use ingest::types::pipeline::Pipeline;
+    use ingest::types::processing;
     use serde::Deserialize;
     use serde_json::{json, Value};
 
@@ -52,7 +52,7 @@ mod results {
         pub failed_label: Option<String>,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Debug)]
     pub struct Request {
         pub message_ids: Vec<String>,
         pub results: Vec<TransactionResult>,
@@ -62,16 +62,22 @@ mod results {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let sqs_client = aws_sdk_sqs::Client::new(&config);
         let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-        let mut pipeline = Pipeline::load(handler_id);
+        let mut state = processing::State::load(handler_id);
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
+        println!("Payload: {:?}", payload);
         if let Some(failed_tx) = failed_tx {
-            let _ = pipeline
+            let update_r = state
                 .update()
                 .set_error_label(failed_tx.failed_label.as_ref().unwrap().to_string())
                 .set_error_tx(failed_tx.transaction_hash.to_string())
                 .send();
+
+            match update_r {
+                Ok(_) => println!("Updated pipeline"),
+                Err(e) => println!("Error: {:?}", e),
+            }
 
             let result = sqs_client
                 .change_message_visibility_batch()
@@ -103,7 +109,7 @@ mod results {
             return Json(json!({"ok": true}));
         }
 
-        let _ = pipeline
+        let _ = state
             .update()
             .set_error_label("".to_string())
             .set_error_tx("".to_string())
@@ -115,12 +121,12 @@ mod results {
 
 mod get_pipeline {
     use axum::extract::Json;
-    use ingest::types::pipeline::{self, Pipeline};
+    use ingest::types::processing;
     use std::env;
 
-    pub async fn handler() -> Json<pipeline::Inner> {
+    pub async fn handler() -> Json<processing::Inner> {
         let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-        let pipeline = Pipeline::load(handler_id);
+        let pipeline: processing::State = processing::State::load(handler_id);
 
         return Json(pipeline.into_inner());
     }

@@ -46,7 +46,6 @@ async function main() {
   await zipEventsLambda();
 
   if (MODE === "init") {
-    await createPipelineState();
     // const { eventsLambdaArn } = await allocateResources();
     // await initialiseHandler({
     //   eventsLambdaArn,
@@ -157,24 +156,4 @@ async function initialiseHandler(opts: { eventsLambdaArn: string }) {
       maxDelay: 3000,
     }
   );
-}
-
-async function createPipelineState() {
-  redisClient.on("error", (err) => console.log("Redis redisClient Error", err));
-
-  console.log("Connecting to redis");
-  await redisClient.call(
-    "JSON.SET",
-    HANDLER_ID,
-    "$",
-    JSON.stringify({
-      HandlerId_: HANDLER_ID,
-      State_: "IDLE",
-    })
-  );
-
-  await redisClient.set(`tx-count-${HANDLER_ID}`, 0);
-  await redisClient.set(`processed-tx-count-${HANDLER_ID}`, 0);
-
-  console.log("Disonnecting from redis");
 }
