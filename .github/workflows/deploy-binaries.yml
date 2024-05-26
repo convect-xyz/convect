@@ -80,10 +80,6 @@ jobs:
           platform: linux
           arch: x86_64
       - uses: actions/checkout@master
-      - name: Install postgres
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libpq-dev postgresql
       - name: Set version
         env:
           VERSION: ${{ github.event.release.tag_name || github.ref_name }}
@@ -106,6 +102,8 @@ jobs:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
           BIN: ${{ matrix.binary }}
         run: |
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev postgresql
           cd rust
           cargo lambda build --extension --output-format zip --release --bin=$BIN
           aws s3api put-object --bucket ingest-functions --key $BIN/$VERSION.zip --body "./target/lambda/extensions/$BIN.zip"
