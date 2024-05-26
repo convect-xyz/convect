@@ -125,6 +125,10 @@ pub mod pipeline {
         pub state: SyncState,
         #[serde(rename(serialize = "LastBlock_", deserialize = "LastBlock_"))]
         pub last_block: Option<String>,
+        // #[serde(rename(serialize = "Error_", deserialize = "Error_"))]
+        // pub error_tx: Option<String>,
+        // #[serde(rename(serialize = "ErrorLabel_", deserialize = "ErrorLabel_"))]
+        // pub error_label: Option<String>,
     }
 
     pub struct Pipeline {
