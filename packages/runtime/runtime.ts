@@ -59,17 +59,16 @@ type TransactionResult = {
 export async function handler(event: SQSEvent) {
   const parsedTxs = [];
 
-  console.time("parse");
-  const records: Array<ParsedRecord> = event.Records.map((record) => ({
+  const parsedRecords: Array<ParsedRecord> = event.Records.map((record) => ({
     id: record.messageId,
     isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
     data: JSON.parse(record.body),
   }));
   const isRetry = event.Records.some((r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1)
   
-  const s3Results = await getS3Results(records);
+  const s3Results = await getS3Results(parsedRecords);
 
-  for (const record of records) {
+  for (const record of parsedRecords) {
     const payload = record.data;
     var txs = [];
     if (payload.type === "non-batch") {
@@ -111,8 +110,11 @@ export async function handler(event: SQSEvent) {
     results[txHashIdx.get(txHash)!]!.failed_label = handler;
   }
 
+  const pipeline = await axios.get("http://localhost:4121/pipeline").then((r) => r.data);
+
   var hasError = false;
-  let i = 0;
+  var isInitialised = false;
+  let i = isRetry ? findErrorTxIdx(parsedTxs, pipeline) : 0;
   process_loop:
   while (i < parsedTxs.length) {
     const batch: Array<any> = [];
@@ -121,7 +123,7 @@ export async function handler(event: SQSEvent) {
     // tx at the front of parsedTxs
     const frontTx = parsedTxs.at(i);
     const processors = getEligibleTxConfigs(frontTx, allTxConfigsWithLabels);
-
+    
     // batch transactions that can be processed by the exact same processors
     while (
       i < parsedTxs.length &&
@@ -137,6 +139,14 @@ export async function handler(event: SQSEvent) {
     console.timeEnd("organise");
     
     for (const { label, config: txConfig } of processors) {
+      if(!isInitialised && pipeline.ErrorLabel_ && pipeline.ErrorLabel_ !== label) {
+        continue;
+      }
+
+      if(!isInitialised && pipeline.ErrorLabel_ && pipeline.ErrorLabel_ === label) {
+        isInitialised = true;
+      }
+
       try {
         const _ = await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
         batch.map((tx) => addSuccessful(tx.transactionHash, label))
@@ -149,12 +159,20 @@ export async function handler(event: SQSEvent) {
   }
 
   await uploadResults(results, event.Records.map(r => r.receiptHandle));
-  
+
   if(hasError) {
     throw new Error('Some handlers failed');
   }
   
   return {};
+}
+
+export function findErrorTxIdx(parsedTxs: Array<any>, pipeline: any) {
+
+  const index = parsedTxs.findIndex((v) => pipeline.ErrorTx_ === v.transactionHash);
+  if(index === -1) throw new Error('Index for failed tx not found');
+
+  return index;
 }
 
 export async function uploadResults(results: Array<TransactionResult>, message_ids: Array<string>) {

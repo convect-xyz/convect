@@ -125,10 +125,10 @@ pub mod pipeline {
         pub state: SyncState,
         #[serde(rename(serialize = "LastBlock_", deserialize = "LastBlock_"))]
         pub last_block: Option<String>,
-        // #[serde(rename(serialize = "Error_", deserialize = "Error_"))]
-        // pub error_tx: Option<String>,
-        // #[serde(rename(serialize = "ErrorLabel_", deserialize = "ErrorLabel_"))]
-        // pub error_label: Option<String>,
+        #[serde(rename(serialize = "ErrorTx_", deserialize = "ErrorTx_"))]
+        pub error_tx: Option<String>,
+        #[serde(rename(serialize = "ErrorLabel_", deserialize = "ErrorLabel_"))]
+        pub error_label: Option<String>,
     }
 
     pub struct Pipeline {
@@ -218,6 +218,10 @@ pub mod pipeline {
         pub fn inner(&self) -> &Inner {
             &self.inner
         }
+
+        pub fn into_inner(self) -> Inner {
+            self.inner
+        }
     }
 
     pub struct UpdatePipelineFluentBuilder<'a> {
@@ -233,6 +237,16 @@ pub mod pipeline {
 
         pub fn set_last_block(mut self, new_last_block: u64) -> Self {
             self.inner.last_block = Some(new_last_block.to_string());
+            self
+        }
+
+        pub fn set_error_tx(mut self, error_tx: String) -> Self {
+            self.inner.error_tx = Some(error_tx);
+            self
+        }
+
+        pub fn set_error_label(mut self, error_label: String) -> Self {
+            self.inner.error_label = Some(error_label);
             self
         }
 
