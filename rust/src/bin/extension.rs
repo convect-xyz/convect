@@ -29,16 +29,14 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     let records: Vec<String> = logs.into_iter().map(|record|{
       let re = Regex::new(r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$").unwrap();
 
-      let result = re.captures(&record).unwrap();
-
-      serde_json::to_string(&json!({
+      re.captures(&record).map(|result| serde_json::to_string(&json!({
         "handler_id": handler_id,
         "time": result["time"].to_string(),
         "invocation_id": result["uuid"].to_string(),
         "log_level": result["log_level"].to_string(),
         "log_message": result["log_message"].to_string(),
-      })).unwrap()
-    }).collect();
+      })).unwrap())
+    }).filter(Option::is_some).map(Option::unwrap).collect();
 
     if records.is_empty() {
         return Ok(());
