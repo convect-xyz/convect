@@ -2561,7 +2561,6 @@ dependencies = [
  "lambda_runtime",
  "mockall",
  "openssl",
- "postgresql",
  "redis",
  "regex",
  "reqwest",
@@ -3465,12 +3464,6 @@ dependencies = [
  "fallible-iterator",
  "postgres-protocol",
 ]
-
-[[package]]
-name = "postgresql"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89f8d76196cd00ffdfdf2c0522bfc593078ab789100fa4907d31d9fe6f8b5fcf"
 
 [[package]]
 name = "powerfmt"
