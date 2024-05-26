@@ -37,11 +37,15 @@ async fn main() -> Result<(), Error> {
 
 mod results {
     use std::env;
+    use std::time::SystemTime;
 
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::Json;
+    use diesel::RunQueryDsl;
+    use ingest::establish_connection;
     use ingest::types::processing;
+    use ingest::{models::ProcessedTransaction, schema::processed_transactions};
     use serde::Deserialize;
     use serde_json::{json, Value};
 
@@ -66,7 +70,6 @@ mod results {
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
-        println!("Payload: {:?}", payload);
         if let Some(failed_tx) = failed_tx {
             let update_r = state
                 .update()
@@ -107,13 +110,48 @@ mod results {
             }
 
             return Json(json!({"ok": true}));
+        } else {
+            let _ = state
+                .update()
+                .set_error_label("".to_string())
+                .set_error_tx("".to_string())
+                .send();
         }
 
-        let _ = state
-            .update()
-            .set_error_label("".to_string())
-            .set_error_tx("".to_string())
-            .send();
+        let data: Vec<_> = payload
+            .results
+            .iter()
+            .map(|r| {
+                let mut rows = Vec::new();
+
+                for label in r.successful_labels.iter() {
+                    rows.push(ProcessedTransaction {
+                        transaction_hash: r.transaction_hash.clone(),
+                        label: label.clone(),
+                        status: "SUCCESS".to_string(),
+                        timestamp: SystemTime::now(),
+                    })
+                }
+
+                if let Some(label) = r.failed_label.as_ref() {
+                    rows.push(ProcessedTransaction {
+                        transaction_hash: r.transaction_hash.clone(),
+                        label: label.clone(),
+                        status: "SUCCESS".to_string(),
+                        timestamp: SystemTime::now(),
+                    })
+                }
+
+                rows
+            })
+            .flatten()
+            .collect();
+
+        let mut conn = establish_connection();
+        diesel::insert_into(processed_transactions::table)
+            .values(data)
+            .execute(&mut conn)
+            .expect("Error saving new post");
 
         return Json(json!({"ok": true}));
     }
