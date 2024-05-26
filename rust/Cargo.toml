@@ -7,6 +7,11 @@ edition = "2021"
 name = "log-fetcher"
 path = "src/bin/log_fetcher.rs"
 
+[[bin]]
+name = "http"
+path = "src/bin/http.rs"
+required-features = ["pg"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

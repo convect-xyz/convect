@@ -108,8 +108,6 @@ mod results {
                 Ok(_) => println!("Changed message visibility"),
                 Err(e) => println!("Error: {:?}", e),
             }
-
-            return Json(json!({"ok": true}));
         } else {
             let _ = state
                 .update()
