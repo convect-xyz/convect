@@ -38,6 +38,7 @@ async fn main() -> Result<(), Error> {
 mod results {
     use axum::Json;
     use serde::Deserialize;
+    use serde_json::{json, Value};
 
     #[derive(Deserialize, Debug)]
     pub struct TransactionResult {
@@ -51,7 +52,9 @@ mod results {
         pub results: Vec<TransactionResult>,
     }
 
-    pub async fn post_results(Json(payload): Json<Request>) {
+    pub async fn post_results(Json(payload): Json<Request>) -> Json<Value> {
         println!("{:?}", payload.results);
+
+        return Json(json!({"ok": true}));
     }
 }
