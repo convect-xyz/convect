@@ -9,7 +9,7 @@ const extension = new aws.lambda.LayerVersion("handler_extension", {
   description: "Handler Extension",
   s3Bucket: "ingest-functions",
   s3Key: `extension/${VERSION}.zip`,
-  s3ObjectVersion: "M1S0o_Q4bzr2FikXQIlUcidCOZLow3vv",
+  s3ObjectVersion: "suyh8onXJnD8wnl__LWhJeWJcVkFpuqi",
   skipDestroy: false,
 });
 
@@ -20,7 +20,7 @@ const http_extension = new aws.lambda.LayerVersion("http_extension", {
   description: "Handler HTTP Extension",
   s3Bucket: "ingest-functions",
   s3Key: `http/${VERSION}.zip`,
-  s3ObjectVersion: "iEV_.pz.7X_bGTfk3kErGd3NtNyCwtBD",
+  s3ObjectVersion: "iIZXFI1EMpFRyNzySdn.KLRvb9kt66NE",
   skipDestroy: false,
 });
 

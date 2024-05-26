@@ -148,7 +148,8 @@ export async function handler(event: SQSEvent) {
     }
   }
 
-  await uploadResults(results);
+  await uploadResults(results, event.Records.map(r => r.receiptHandle));
+  
   if(hasError) {
     throw new Error('Some handlers failed');
   }
@@ -156,8 +157,8 @@ export async function handler(event: SQSEvent) {
   return {};
 }
 
-export async function uploadResults(results: Array<TransactionResult>) {
-  await axios.post("http://localhost:4121/results", { results }).then(console.log);
+export async function uploadResults(results: Array<TransactionResult>, message_ids: Array<string>) {
+  await axios.post("http://localhost:4121/results", { results, message_ids }).then(console.log);
 }
 
 export async function getS3Results(batchRecords: Array<ParsedRecord>) {

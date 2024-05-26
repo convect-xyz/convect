@@ -76,6 +76,7 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
       MUST_REMOVE_CONVECT_TBK:
         "REDACTED",
       USER_ENVS: HANDLER_ENVS,
+      TRANSACTION_QUEUE_URL: transactionQueue.url,
     },
   },
   layers: [
