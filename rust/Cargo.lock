@@ -2541,6 +2541,7 @@ dependencies = [
  "lambda_runtime",
  "mockall",
  "openssl",
+ "postgresql",
  "redis",
  "regex",
  "reqwest",
@@ -3415,6 +3416,12 @@ name = "pkg-config"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec"
+
+[[package]]
+name = "postgresql"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89f8d76196cd00ffdfdf2c0522bfc593078ab789100fa4907d31d9fe6f8b5fcf"
 
 [[package]]
 name = "powerfmt"
