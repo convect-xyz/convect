@@ -44,3 +44,6 @@ tower = "0.4.13"
 mockall = "0.12.1"
 # [build-dependencies]
 # prost-build = { version = "0.12.4" }
+
+[env]
+TINYBIRD_API_KEY = "default val"
