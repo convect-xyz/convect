@@ -42,7 +42,7 @@ mod results {
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::Json;
-    use diesel::RunQueryDsl;
+    use diesel_async::RunQueryDsl;
     use ingest::establish_connection;
     use ingest::types::processing;
     use ingest::{models::ProcessedTransaction, schema::processed_transactions};
@@ -137,7 +137,7 @@ mod results {
                     rows.push(ProcessedTransaction {
                         transaction_hash: r.transaction_hash.clone(),
                         label: label.clone(),
-                        status: "SUCCESS".to_string(),
+                        status: "FAILED".to_string(),
                         timestamp: SystemTime::now(),
                     })
                 }
@@ -147,11 +147,16 @@ mod results {
             .flatten()
             .collect();
 
-        let mut conn = establish_connection();
-        diesel::insert_into(processed_transactions::table)
+        let mut conn = establish_connection().await;
+        let r = diesel::insert_into(processed_transactions::table)
             .values(data)
             .execute(&mut conn)
-            .expect("Error saving new post");
+            .await;
+
+        match r {
+            Ok(_) => println!("Inserted"),
+            Err(e) => println!("Error {:?}", e),
+        }
 
         return Json(json!({"ok": true}));
     }
