@@ -190,10 +190,10 @@ pub mod syncing {
         }
 
         pub fn update(&mut self) -> UpdateStateFluentBuilder {
-            return UpdateStateFluentBuilder {
+            UpdateStateFluentBuilder {
                 connection: &mut self.connection,
                 inner: self.inner.clone(),
-            };
+            }
         }
 
         pub fn increment_transaction_count(&mut self, tx_count: usize) {
@@ -279,7 +279,6 @@ pub mod processing {
           .unwrap();
 
             let mut con = client.get_connection().unwrap();
-
             let result: Option<String> = con
                 .json_get(format!("process-state-{handler_id}"), "$")
                 .unwrap();
@@ -316,10 +315,10 @@ pub mod processing {
         }
 
         pub fn update(&mut self) -> UpdateStateFluentBuilder {
-            return UpdateStateFluentBuilder {
+            UpdateStateFluentBuilder {
                 connection: &mut self.connection,
                 inner: self.inner.clone(),
-            };
+            }
         }
 
         pub fn inner(&self) -> &Inner {

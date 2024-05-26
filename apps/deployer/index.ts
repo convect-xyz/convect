@@ -77,6 +77,8 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
         "REDACTED",
       USER_ENVS: HANDLER_ENVS,
       TRANSACTION_QUEUE_URL: transactionQueue.url,
+      DATABASE_URL:
+        "postgresql://postgres:REDACTED@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres",
     },
   },
   layers: [
