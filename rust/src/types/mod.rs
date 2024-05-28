@@ -251,7 +251,7 @@ pub mod syncing {
 
 pub mod processing {
     use lambda_runtime::tower::BoxError;
-    use redis::JsonCommands;
+    use redis::JsonAsyncCommands;
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -265,7 +265,7 @@ pub mod processing {
     }
 
     pub struct State {
-        connection: redis::Connection,
+        connection: redis::aio::MultiplexedConnection,
         inner: Inner,
     }
 
@@ -274,13 +274,14 @@ pub mod processing {
             self.inner.handler_id.clone()
         }
 
-        pub fn load(handler_id: String) -> Self {
-            let client = redis::Client::open("rediss://default:REDACTED@stirred-jawfish-46999.upstash.io:6379")
-          .unwrap();
+        pub async fn load(handler_id: String) -> Self {
+            let client = redis::Client::open("rediss://default:REDACTED@stirred-jawfish-46999.upstash.io:6379").unwrap();
 
-            let mut con = client.get_connection().unwrap();
+            let mut con = client.get_multiplexed_async_connection().await.unwrap();
+
             let result: Option<String> = con
                 .json_get(format!("process-state-{handler_id}"), "$")
+                .await
                 .unwrap();
 
             let inner = match result {
@@ -317,7 +318,8 @@ pub mod processing {
         pub fn update(&mut self) -> UpdateStateFluentBuilder {
             UpdateStateFluentBuilder {
                 connection: &mut self.connection,
-                inner: self.inner.clone(),
+                temp_inner: self.inner.clone(),
+                inner: &mut self.inner,
             }
         }
 
@@ -331,25 +333,30 @@ pub mod processing {
     }
 
     pub struct UpdateStateFluentBuilder<'a> {
-        connection: &'a mut redis::Connection,
-        inner: Inner,
+        connection: &'a mut redis::aio::MultiplexedConnection,
+        temp_inner: Inner,
+        inner: &'a mut Inner,
     }
 
     impl<'a> UpdateStateFluentBuilder<'a> {
         pub fn set_error_tx(mut self, error_tx: String) -> Self {
-            self.inner.error_tx = Some(error_tx);
+            self.temp_inner.error_tx = Some(error_tx);
             self
         }
 
         pub fn set_error_label(mut self, error_label: String) -> Self {
-            self.inner.error_label = Some(error_label);
+            self.temp_inner.error_label = Some(error_label);
             self
         }
 
-        pub fn send(self) -> Result<(), BoxError> {
+        pub async fn send(self) -> Result<(), BoxError> {
             let handler_id = self.inner.handler_id.to_string();
             self.connection
-                .json_set(format!("process-state-{handler_id}"), "$", &self.inner)?;
+                .json_set(format!("process-state-{handler_id}"), "$", &self.inner)
+                .await?;
+
+            self.inner.error_label = self.temp_inner.error_label;
+            self.inner.error_label = self.temp_inner.error_tx;
 
             Ok(())
         }
