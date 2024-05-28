@@ -65,7 +65,7 @@ export async function handler(event: SQSEvent) {
   const isRetry = event.Records.some((r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1)
 
   const s3Results = await getS3Results(parsedRecords);
-  const parsedTxs = parseTxs(parsedRecords, s3Results);
+  const parsedTxs = parseTransactions(parsedRecords, s3Results);
 
   const { results, addFailure, addSuccessful, failureCount } = createStateManager();
   var { startTransactionIdx, startProcessor } = await getInitialisation({
@@ -105,7 +105,7 @@ export async function handler(event: SQSEvent) {
   return {};
 }
 
-export function parseTxs(parsedRecords: Array<ParsedRecord>, s3Results: Map<any, any>) {
+export function parseTransactions(parsedRecords: Array<ParsedRecord>, s3Results: Map<any, any>) {
   const transactions: Array<Transaction> = [];
   for (const record of parsedRecords) {
     const payload = record.data;
@@ -214,7 +214,6 @@ function createStateManager() {
     results[txHashIdx.get(txHash)!]!.successful_labels.push(handler);
     successCount++;
   }
-
 
   function addFailure(txHash: string, handler: string) {
     if(!txHashIdx.has(txHash)) {

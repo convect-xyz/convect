@@ -1,7 +1,11 @@
+use std::{env, sync::Arc};
+
 use axum::{
     routing::{get, post},
     Router,
 };
+use futures::lock::Mutex;
+use ingest::types::processing;
 use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
 
 async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
@@ -14,9 +18,14 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
+    let state = processing::State::load(handler_id).await;
+    let pipeline = Arc::new(Mutex::new(state));
+
     let app = Router::new()
         .route("/results", post(results::handler))
-        .route("/pipeline", get(get_pipeline::handler));
+        .route("/pipeline", get(get_pipeline::handler))
+        .with_state(pipeline);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
 
     tokio::spawn(async {
@@ -37,12 +46,15 @@ async fn main() -> Result<(), Error> {
 
 mod results {
     use std::env;
+    use std::sync::Arc;
     use std::time::SystemTime;
 
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
-    use axum::Json;
+    use axum::extract::State;
+    use axum::{debug_handler, Json};
     use diesel_async::RunQueryDsl;
+    use futures::lock::Mutex;
     use ingest::connection::establish_connection;
     use ingest::types::processing;
     use ingest::{models::ProcessedTransaction, schema::processed_transactions};
@@ -62,20 +74,25 @@ mod results {
         pub results: Vec<TransactionResult>,
     }
 
-    pub async fn handler(Json(payload): Json<Request>) -> Json<Value> {
+    #[debug_handler]
+    pub async fn handler(
+        State(process_state): State<Arc<Mutex<processing::State>>>,
+        Json(payload): Json<Request>,
+    ) -> Json<Value> {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let sqs_client = aws_sdk_sqs::Client::new(&config);
         let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-        let mut state = processing::State::load(handler_id.clone());
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
+        let mut state = process_state.lock().await;
         if let Some(failed_tx) = failed_tx {
             let update_r = state
                 .update()
                 .set_error_label(failed_tx.failed_label.as_ref().unwrap().to_string())
                 .set_error_tx(failed_tx.transaction_hash.to_string())
-                .send();
+                .send()
+                .await;
 
             match update_r {
                 Ok(_) => println!("Updated pipeline"),
@@ -113,7 +130,8 @@ mod results {
                 .update()
                 .set_error_label("".to_string())
                 .set_error_tx("".to_string())
-                .send();
+                .send()
+                .await;
         }
 
         let data: Vec<_> = payload
@@ -166,14 +184,15 @@ mod results {
 }
 
 mod get_pipeline {
-    use axum::extract::Json;
+    use axum::extract::{Json, State};
+    use futures::lock::Mutex;
     use ingest::types::processing;
-    use std::env;
+    use std::sync::Arc;
 
-    pub async fn handler() -> Json<processing::Inner> {
-        let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-        let pipeline: processing::State = processing::State::load(handler_id);
-
-        return Json(pipeline.into_inner());
+    pub async fn handler(
+        State(process_state): State<Arc<Mutex<processing::State>>>,
+    ) -> Json<processing::Inner> {
+        let process_state = process_state.lock().await;
+        return Json(process_state.inner().clone());
     }
 }

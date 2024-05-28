@@ -660,6 +660,7 @@ checksum = "3a6c9af12842a67734c9a2e355436e5d03b22383ed60cf13cd0c18fbfe3dcbcf"
 dependencies = [
  "async-trait",
  "axum-core",
+ "axum-macros",
  "bytes",
  "futures-util",
  "http 1.1.0",
@@ -705,6 +706,18 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "axum-macros"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00c055ee2d014ae5981ce1016374e8213682aa14d9bf40e48ab48b5f3ef20eaa"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.58",
 ]
 
 [[package]]
@@ -1025,7 +1038,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
 dependencies = [
  "bytes",
+ "futures-core",
  "memchr",
+ "pin-project-lite",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -2550,6 +2567,7 @@ dependencies = [
  "aws-smithy-types",
  "aws_lambda_events",
  "axum",
+ "axum-macros",
  "diesel",
  "diesel-async",
  "dotenvy",
@@ -3699,17 +3717,24 @@ version = "0.25.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6472825949c09872e8f2c50bde59fcefc17748b6be5c90fd67cd8b4daca73bfd"
 dependencies = [
+ "async-trait",
+ "bytes",
  "combine",
  "crc16",
+ "futures-util",
  "itoa",
  "native-tls",
  "percent-encoding",
+ "pin-project-lite",
  "rand",
  "ryu",
  "serde",
  "serde_json",
  "sha1_smol",
  "socket2",
+ "tokio",
+ "tokio-native-tls",
+ "tokio-util",
  "url",
 ]
 
