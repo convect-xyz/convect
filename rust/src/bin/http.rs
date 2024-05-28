@@ -66,7 +66,7 @@ mod results {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let sqs_client = aws_sdk_sqs::Client::new(&config);
         let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-        let mut state = processing::State::load(handler_id);
+        let mut state = processing::State::load(handler_id.clone());
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
@@ -107,7 +107,7 @@ mod results {
             match result {
                 Ok(_) => println!("Changed message visibility"),
                 Err(e) => println!("Error: {:?}", e),
-            }
+            };
         } else {
             let _ = state
                 .update()
@@ -128,6 +128,7 @@ mod results {
                         label: label.clone(),
                         status: "SUCCESS".to_string(),
                         timestamp: SystemTime::now(),
+                        handler_id: &handler_id,
                     })
                 }
 
@@ -137,6 +138,7 @@ mod results {
                         label: label.clone(),
                         status: "FAILED".to_string(),
                         timestamp: SystemTime::now(),
+                        handler_id: &handler_id,
                     })
                 }
 
@@ -145,7 +147,10 @@ mod results {
             .flatten()
             .collect();
 
+        println!("Establishing connection");
         let mut conn = establish_connection().await;
+        println!("Established connection");
+
         let r = diesel::insert_into(processed_transactions::table)
             .values(data)
             .execute(&mut conn)

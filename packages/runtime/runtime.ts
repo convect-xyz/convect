@@ -18,10 +18,6 @@ const USER_ENVS = (
 
 const HANDLER_ID = process.env.HANDLER_ID;
 
-// Delete API Keys
-const MUST_REMOVE_CONVECT_TBK = process.env.MUST_REMOVE_CONVECT_TBK;
-delete process.env.MUST_REMOVE_CONVECT_TBK;
-
 for(const env of Object.keys(process.env)) {
   delete process.env[env];
 }
@@ -33,7 +29,6 @@ process.env['HANDLER_ID'] = HANDLER_ID;
 
 const { default: pipeline } = require('./pipeline');
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
-
 
 type ParsedRecord = {
   id: string;
@@ -56,18 +51,62 @@ type TransactionResult = {
   failed_label: string | undefined;
 };
 
-export async function handler(event: SQSEvent) {
-  const parsedTxs = [];
+type Transaction = {
+  transactionHash: string
+}
 
+export async function handler(event: SQSEvent) {
   const parsedRecords: Array<ParsedRecord> = event.Records.map((record) => ({
     id: record.messageId,
     isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
     data: JSON.parse(record.body),
   }));
-  const isRetry = event.Records.some((r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1)
-  
-  const s3Results = await getS3Results(parsedRecords);
 
+  const isRetry = event.Records.some((r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1)
+
+  const s3Results = await getS3Results(parsedRecords);
+  const parsedTxs = parseTxs(parsedRecords, s3Results);
+
+  const { results, addFailure, addSuccessful, failureCount } = createStateManager();
+  var { startTransactionIdx, startProcessor } = await getInitialisation({
+    parsedTxs,
+    isRetry
+  })
+  
+  const iterator = new TransactionIterator(parsedTxs, startTransactionIdx);
+
+  process_loop:
+  while (iterator.hasNext()) {
+    const { batch, processors } = getNextTransactionBatch(iterator);
+    
+    for (const { label, config: txConfig } of processors) {
+      if(startProcessor && label !== startProcessor) {
+        continue
+      }
+
+      try {
+        await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
+        batch.map((tx) => addSuccessful(tx.transactionHash, label))
+      } catch(e) {
+        addFailure(batch.at(0)!.transactionHash, label);
+        break process_loop;
+      }
+
+      startProcessor = undefined;
+    }
+  }
+
+  await uploadResults(results, event.Records.map(r => r.receiptHandle));
+
+  if(failureCount > 0) {
+    throw new Error('Some handlers failed');
+  }
+  
+  return {};
+}
+
+export function parseTxs(parsedRecords: Array<ParsedRecord>, s3Results: Map<any, any>) {
+  const transactions: Array<Transaction> = [];
   for (const record of parsedRecords) {
     const payload = record.data;
     var txs = [];
@@ -76,99 +115,35 @@ export async function handler(event: SQSEvent) {
     } else {
       txs = s3Results.get(record.id);
     }
-    parsedTxs.push(...txs);
+    transactions.push(...txs);
   }
-  console.timeEnd("parse");
+  return transactions;
+}
 
-  const txHashIdx = new Map<string, number>();
-  const results: Array<TransactionResult> = [];
+type GetInitialisationOptions = {
+  parsedTxs: Array<Transaction>;
+  isRetry: boolean
+}
 
-  function addSuccessful(txHash: string, handler: string) {
-    if(!txHashIdx.has(txHash)) {
-      txHashIdx.set(txHash, results.length);
-      results.push({
-        transaction_hash: txHash,
-        successful_labels: [],
-        failed_label: undefined
-      });
+export async function getInitialisation(options: GetInitialisationOptions) {
+  if(!options.isRetry) {
+    return {
+      startTransactionIdx: 0,
+      startProcessor: undefined
     }
-
-    results[txHashIdx.get(txHash)!]!.successful_labels.push(handler);
-  }
-
-
-  function addFailure(txHash: string, handler: string) {
-    if(!txHashIdx.has(txHash)) {
-      txHashIdx.set(txHash, results.length);
-      results.push({
-        transaction_hash: txHash,
-        successful_labels: [],
-        failed_label: undefined
-      });
-    }
-
-    results[txHashIdx.get(txHash)!]!.failed_label = handler;
   }
 
   const pipeline = await axios.get("http://localhost:4121/pipeline").then((r) => r.data);
+  const txIdx = findErrorTxIdx(options.parsedTxs, pipeline);
 
-  var hasError = false;
-  var isInitialised = false;
-  let i = isRetry ? findErrorTxIdx(parsedTxs, pipeline) : 0;
-  process_loop:
-  while (i < parsedTxs.length) {
-    const batch: Array<any> = [];
-
-    console.time("organise");
-    // tx at the front of parsedTxs
-    const frontTx = parsedTxs.at(i);
-    const processors = getEligibleTxConfigs(frontTx, allTxConfigsWithLabels);
-    
-    // batch transactions that can be processed by the exact same processors
-    while (
-      i < parsedTxs.length &&
-      sameEligibleProcessors(
-        processors,
-        getEligibleTxConfigs(parsedTxs[i], allTxConfigsWithLabels)
-      )
-    ) {
-      const tx = parsedTxs[i];
-      batch.push(tx);
-      i++;
-    }
-    console.timeEnd("organise");
-    
-    for (const { label, config: txConfig } of processors) {
-      if(!isInitialised && pipeline.ErrorLabel_ && pipeline.ErrorLabel_ !== label) {
-        continue;
-      }
-
-      if(!isInitialised && pipeline.ErrorLabel_ && pipeline.ErrorLabel_ === label) {
-        isInitialised = true;
-      }
-
-      try {
-        const _ = await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
-        batch.map((tx) => addSuccessful(tx.transactionHash, label))
-      } catch(e) {
-        addFailure(batch.at(0)!.transactionHash, label);
-        hasError = true;
-        break process_loop;
-      }
-    }
+  return {
+    startTransactionIdx: txIdx,
+    startProcessor: pipeline.ErrorLabel_
   }
-
-  await uploadResults(results, event.Records.map(r => r.receiptHandle));
-
-  if(hasError) {
-    throw new Error('Some handlers failed');
-  }
-  
-  return {};
 }
 
-export function findErrorTxIdx(parsedTxs: Array<any>, pipeline: any) {
 
+export function findErrorTxIdx(parsedTxs: Array<Transaction>, pipeline: any) {
   const index = parsedTxs.findIndex((v) => pipeline.ErrorTx_ === v.transactionHash);
   if(index === -1) throw new Error('Index for failed tx not found');
 
@@ -177,6 +152,31 @@ export function findErrorTxIdx(parsedTxs: Array<any>, pipeline: any) {
 
 export async function uploadResults(results: Array<TransactionResult>, message_ids: Array<string>) {
   await axios.post("http://localhost:4121/results", { results, message_ids }).then(console.log);
+}
+
+export function getNextTransactionBatch(iterator: TransactionIterator) {
+  const batch: Array<Transaction> = [];
+
+  // tx at the front of parsedTxs
+  const frontTx = iterator.peek()
+  const processors = getEligibleTxConfigs(frontTx, allTxConfigsWithLabels);
+
+  // batch transactions that can be processed by the exact same processors
+  while (
+    iterator.hasNext() &&
+    sameEligibleProcessors(
+      processors,
+      getEligibleTxConfigs(iterator.peek(), allTxConfigsWithLabels)
+    )
+  ) {
+    const tx = iterator.next()!;
+    batch.push(tx);
+  }
+
+  return {
+    batch,
+    processors
+  };
 }
 
 export async function getS3Results(batchRecords: Array<ParsedRecord>) {
@@ -193,6 +193,50 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
   );
 
   return s3Results;
+}
+
+function createStateManager() {  
+  const txHashIdx = new Map<string, number>();
+  const results: Array<TransactionResult> = [];
+  var failureCount = 0;
+  var successCount = 0;
+
+  function addSuccessful(txHash: string, handler: string) {
+    if(!txHashIdx.has(txHash)) {
+      txHashIdx.set(txHash, results.length);
+      results.push({
+        transaction_hash: txHash,
+        successful_labels: [],
+        failed_label: undefined
+      });
+    }
+
+    results[txHashIdx.get(txHash)!]!.successful_labels.push(handler);
+    successCount++;
+  }
+
+
+  function addFailure(txHash: string, handler: string) {
+    if(!txHashIdx.has(txHash)) {
+      txHashIdx.set(txHash, results.length);
+      results.push({
+        transaction_hash: txHash,
+        successful_labels: [],
+        failed_label: undefined
+      });
+    }
+
+    results[txHashIdx.get(txHash)!]!.failed_label = handler;
+    failureCount++
+  }
+
+  return {
+    addSuccessful,
+    addFailure,
+    results,
+    failureCount,
+    successCount
+  }
 }
 
 // Eligible Tx configs are configs that match the given transaction
@@ -316,4 +360,27 @@ export function logConfigMatches(logConfig: any, logIdentifier: LogIdentifier) {
       logConfig._topics.at(0) === logIdentifier.signature) ||
     (!logConfig.address && logConfig._topics.at(0) === logIdentifier.signature)
   );
+}
+
+
+class TransactionIterator {
+  #transactions: Array<Transaction>;
+  #index: number;
+
+  constructor(transactions: Array<Transaction>, startIndex: number) {
+    this.#transactions = transactions
+    this.#index = startIndex;
+  }
+ 
+  hasNext() {
+    return this.#index < this.#transactions.length;
+  }
+ 
+  next() {
+    return this.#transactions[this.#index++];
+  } 
+
+  peek() {
+    return this.#transactions[this.#index];
+  }
 }
