@@ -68,12 +68,12 @@ export async function handler(event: SQSEvent) {
   const parsedTxs = parseTransactions(parsedRecords, s3Results);
 
   const { results, addFailure, addSuccessful, failureCount } = createStateManager();
-  var { startTransactionIdx, startProcessor } = await getInitialisation({
+
+  var { iterator, startProcessor } = await getTransactionIterator({
     parsedTxs,
     isRetry
-  })
+  });
   
-  const iterator = new TransactionIterator(parsedTxs, startTransactionIdx);
 
   process_loop:
   while (iterator.hasNext()) {
@@ -125,10 +125,10 @@ type GetInitialisationOptions = {
   isRetry: boolean
 }
 
-export async function getInitialisation(options: GetInitialisationOptions) {
+export async function getTransactionIterator(options: GetInitialisationOptions) {
   if(!options.isRetry) {
     return {
-      startTransactionIdx: 0,
+      iterator: new TransactionIterator(options.parsedTxs, 0),
       startProcessor: undefined
     }
   }
@@ -137,7 +137,7 @@ export async function getInitialisation(options: GetInitialisationOptions) {
   const txIdx = findErrorTxIdx(options.parsedTxs, pipeline);
 
   return {
-    startTransactionIdx: txIdx,
+    iterator: new TransactionIterator(options.parsedTxs, txIdx),
     startProcessor: pipeline.ErrorLabel_
   }
 }

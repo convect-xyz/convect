@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  formatDistanceToNow,
   millisecondsToMinutes,
   millisecondsToSeconds,
   minutesToMilliseconds,
@@ -12,6 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useParams } from "./hooks/useParams";
 
@@ -118,28 +120,16 @@ function RecentTransactions() {
               className="flex items-center gap-2 py-4"
               key={tx.transactionHash}
             >
-              <span className="h-2 w-2 rounded-full bg-green-400"></span>
-              <div className="flex-1 text-sm">{tx.transactionHash}</div>
-              <div className="flex gap-2">
-                {tx.labels.map((v) => (
-                  <div
-                    key={v}
-                    className="flex max-w-[100px] items-center gap-2 rounded-sm border bg-background p-1 text-xs"
-                  >
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: stringToColour(v) }}
-                    ></span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger className="flex-1 truncate">
-                          <span>{v}</span>
-                        </TooltipTrigger>
-                        <TooltipContent>{v}</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                ))}
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  tx.status === "SUCCESS" && "bg-green-400",
+                  tx.status === "FAILURE" && "bg-red-400",
+                )}
+              ></span>
+              <div className="flex-1">{tx.transactionHash}</div>
+              <div className="text-sm text-muted-foreground">
+                {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
               </div>
             </div>
           ))}
