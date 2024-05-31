@@ -92,14 +92,14 @@ function Content(props: DialogProps) {
   function getButtonProps() {
     if (createData) {
       return {
-        type: "button",
+        type: "button" as const,
         children: "Okay",
         onClick: () => props.onOpenChange?.(false),
       };
     }
 
     return {
-      type: "submit",
+      type: "submit" as const,
       children: "Create",
     };
   }

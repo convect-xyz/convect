@@ -26,7 +26,7 @@ export const processedTransactions = pgTable("processed_transactions", {
   handlerId: varchar("handler_id").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
   status: varchar("status", { length: 256 }).notNull(),
-  timestamp: timestamp("timestamp").notNull(),
+  timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
 });
 
 const db = drizzle(conn, { schema: { processedTransactions } });
@@ -65,8 +65,15 @@ export const getTransactions = protectedProcedure
     }
 
     const recentTransactions = await db.query.processedTransactions.findMany({
-      where(fields, { eq }) {
-        return eq(fields.handlerId, handler.internalId);
+      where(fields, { eq, and, ilike }) {
+        let baseFilter = eq(fields.handlerId, handler.internalId);
+        if (input.search) {
+          baseFilter = and(
+            baseFilter,
+            ilike(fields.transactionHash, `%${input.search}%`),
+          )!;
+        }
+        return baseFilter;
       },
       orderBy(fields, { desc }) {
         return desc(fields.timestamp);
@@ -74,7 +81,6 @@ export const getTransactions = protectedProcedure
       limit: 25,
     });
 
-    console.log(recentTransactions);
     return {
       transactions: recentTransactions.map((tx) => ({
         transactionHash: tx.transactionHash,

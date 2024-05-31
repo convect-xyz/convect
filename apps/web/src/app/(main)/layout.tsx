@@ -1,6 +1,7 @@
 import { PropsWithChildren } from "react";
 
 import Link from "next/link";
+import { auth, signOut } from "~/auth";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import {
   DropdownMenu,
@@ -30,13 +31,16 @@ export default function Layout(props: PropsWithChildren) {
   );
 }
 
-function Profile() {
+async function Profile() {
+  const session = await auth();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button>
           <Avatar>
-            <AvatarFallback>US</AvatarFallback>
+            <AvatarFallback>
+              {session!.user.name?.charAt(0) ?? "A"}
+            </AvatarFallback>
           </Avatar>
         </button>
       </DropdownMenuTrigger>
@@ -46,6 +50,16 @@ function Profile() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/account/api-keys">API Keys</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <form
+              action={async (formData) => {
+                "use server";
+                await signOut({ redirectTo: "/" });
+              }}
+            >
+              <button type="submit">Sign out</button>
+            </form>
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

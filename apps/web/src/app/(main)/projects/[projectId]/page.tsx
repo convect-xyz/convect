@@ -41,8 +41,6 @@ export default function Page() {
 function HandlerRow(props: {
   handler: RouterOutputs["handlers"]["getHandlers"]["handlers"][number];
 }) {
-  const { mutateAsync: deleteHandler } =
-    api.handlers.deleteHandler.useMutation();
   const router = useRouter();
   const { projectId } = useParams();
   return (
