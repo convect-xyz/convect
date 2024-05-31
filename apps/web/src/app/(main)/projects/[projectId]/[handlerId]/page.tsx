@@ -122,7 +122,7 @@ function RecentTransactions() {
                 className={cn(
                   "h-2 w-2 rounded-full",
                   tx.status === "SUCCESS" && "bg-green-400",
-                  tx.status === "FAILURE" && "bg-red-400",
+                  tx.status === "FAILED" && "bg-red-400",
                 )}
               ></span>
               <div className="flex-1">{tx.transactionHash}</div>

@@ -93,6 +93,7 @@ export async function handler(event: SQSEvent) {
         batch.map((tx) => addSuccessful(tx.transactionHash, label))
       } catch(e) {
         addFailure(batch.at(0)!.transactionHash, label);
+        console.error(e);
         break process_loop;
       }
 
@@ -236,7 +237,7 @@ function createStateManager() {
       label: handler,
       timestamp_ms: Date.now()
     };
-    failureCount++
+    failureCount++;
   }
 
   return {
