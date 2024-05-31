@@ -65,7 +65,5 @@ export const getLogs = protectedProcedure
         throw e;
       });
 
-    console.log(logs);
-
     return logs.data;
   });

@@ -1,35 +1,36 @@
 import * as aws from "@pulumi/aws";
+import * as pulumi from '@pulumi/pulumi';
 
-const VERSION = "infra-dev"
+const stackName = pulumi.getStack();
 
 const extension = new aws.lambda.LayerVersion("handler_extension", {
-  layerName: `${VERSION}_handler_extension`,
+  layerName: `${stackName}_handler_extension`,
   compatibleArchitectures: ["x86_64"],
   compatibleRuntimes: ["provided.al2", "provided.al2023"],
   description: "Handler Extension",
   s3Bucket: "ingest-functions",
-  s3Key: `extension/${VERSION}.zip`,
+  s3Key: `extension/${stackName}.zip`,
   s3ObjectVersion: "jyH6KN9A5E2O8a9wVuSK1gkaS9eU.u3C",
   skipDestroy: false,
 });
 
 const http_extension = new aws.lambda.LayerVersion("http_extension", {
-  layerName: `${VERSION}_http_extension`,
+  layerName: `${stackName}_http_extension`,
   compatibleArchitectures: ["x86_64"],
   compatibleRuntimes: ["provided.al2", "provided.al2023"],
   description: "Handler HTTP Extension",
   s3Bucket: "ingest-functions",
-  s3Key: `http/${VERSION}.zip`,
+  s3Key: `http/${stackName}.zip`,
   s3ObjectVersion: "IRuo0VdYIbC.uLzWJ7YPHvlfJH7vjica",
   skipDestroy: false,
 });
 
 const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
-    family: `${VERSION}_syncer`,
+    family: `${stackName}_syncer`,
     containerDefinitions: JSON.stringify([
       {
           "name": "syncer",
-          "image": `730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:${VERSION}`,
+          "image": `730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:${stackName}`,
           "cpu": 0,
           "portMappings": [
               {
@@ -54,7 +55,7 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
               },
               {
                 "name": "VERSION",
-                "value": VERSION
+                "value": stackName
               }
           ],
           "mountPoints": [],
@@ -83,11 +84,11 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
 
 
 const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
-  family: `${VERSION}_builder`,
+  family: `${stackName}_builder`,
   containerDefinitions: JSON.stringify([
     {
       "name": "builder",
-      "image": `730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:${VERSION}`,
+      "image": `730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:${stackName}`,
       "cpu": 0,
       "portMappings": [
           {
@@ -112,7 +113,7 @@ const builder = new aws.ecs.TaskDefinition("builder_task_definition", {
         },
         {
           "name": "VERSION",
-          "value": VERSION
+          "value": stackName
         },
       ],
       "environmentFiles": [],
@@ -146,3 +147,5 @@ export const handler_extension_arn = extension.arn;
 export const http_extension_arn = http_extension.arn;
 export const builder_task_definition = builder.arn;
 export const syncer_task_definition = syncer.arn;
+
+export * from './vpc';
