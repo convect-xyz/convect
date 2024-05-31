@@ -203,8 +203,8 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
 function createStateManager() {  
   const txHashIdx = new Map<string, number>();
   const results: Array<TransactionResult> = [];
-  var failureCount = 0;
-  var successCount = 0;
+  let failureCount = 0;
+  let successCount = 0;
 
   function addSuccessful(txHash: string, handler: string) {
     if(!txHashIdx.has(txHash)) {
