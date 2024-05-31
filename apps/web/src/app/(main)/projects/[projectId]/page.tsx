@@ -3,10 +3,9 @@
 import { times } from "lodash";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
-import { GetHandlersOutput } from "~/server/api/root";
 import { api } from "~/trpc/react";
+import { RouterOutputs } from "~/trpc/shared";
 import CreateHandler from "./CreateHandler";
 import { useParams } from "./hooks/useParams";
 
@@ -20,9 +19,9 @@ export default function Page() {
   return (
     <div className="mx-auto w-full max-w-screen-md">
       <div className="flex flex-col gap-3">
-        <div className="flex justify-end">
+        {/* <div className="flex justify-end">
           <Button onClick={() => setIsOpen(true)}>New Handler</Button>
-        </div>
+        </div> */}
         <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
 
         <div className="flex flex-col gap-2 divide-y rounded-md border bg-muted/20 p-2">
@@ -38,9 +37,9 @@ export default function Page() {
   );
 }
 
-function HandlerRow(props: { handler: GetHandlersOutput["handlers"][number] }) {
-  const { mutateAsync: deleteHandler } =
-    api.handlers.deleteHandler.useMutation();
+function HandlerRow(props: {
+  handler: RouterOutputs["handlers"]["getHandlers"]["handlers"][number];
+}) {
   const router = useRouter();
   const { projectId } = useParams();
   return (

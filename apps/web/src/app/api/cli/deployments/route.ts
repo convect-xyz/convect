@@ -9,6 +9,7 @@ import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
 import { createDeployment } from "~/server/actions/builds";
 import { db } from "~/server/db";
+import { getData, getUserContext } from "../utils";
 
 const MANIFEST_BUCKET = "ingest-fetch-logs";
 
@@ -32,33 +33,26 @@ const requestSchema = z
   );
 
 export const POST = async (req: NextRequest) => {
-  const parseResult = await req.formData().then(parseFormData);
-  if (parseResult.error) {
-    return NextResponse.json(
-      {
-        message: `Error parsing data: ${parseResult.error.message}`,
-      },
-      {
-        status: 401,
-      },
-    );
+  const { user, error: userError } = await getUserContext(req);
+  if (userError) {
+    return NextResponse.json({ message: userError.message }, { status: 401 });
   }
 
-  const parsedData = parseResult.data;
+  const { data, error: dataError } = await getData(req, requestSchema);
+  if (dataError) {
+    return NextResponse.json({ message: dataError.message }, { status: 401 });
+  }
+
   const project = await db.query.projects.findFirst({
-    where(fields, { eq }) {
-      return eq(fields.name, parsedData.project);
+    where(fields, { eq, and }) {
+      return and(eq(fields.name, data.project), eq(fields.userId, user.id));
     },
   });
 
   if (!project) {
     return NextResponse.json(
-      {
-        message: `Could not find project (${parsedData.project}).`,
-      },
-      {
-        status: 401,
-      },
+      { message: `Could not find project (${data.project}).` },
+      { status: 401 },
     );
   }
 
@@ -66,16 +60,16 @@ export const POST = async (req: NextRequest) => {
   const existingHandler = await db.query.handler.findFirst({
     where(fields, { eq }) {
       return and(
-        eq(fields.name, parsedData.handlerName),
+        eq(fields.name, data.handlerName),
         eq(fields.projectId, project.id),
       );
     },
   });
 
   const previousInternalHandlerId =
-    parsedData.mode === "init" ? existingHandler?.internalId : undefined;
+    data.mode === "init" ? existingHandler?.internalId : undefined;
 
-  if (parsedData.mode === "init") {
+  if (data.mode === "init") {
     if (existingHandler) {
       await db
         .update(schema.handler)
@@ -87,7 +81,7 @@ export const POST = async (req: NextRequest) => {
       await db
         .insert(schema.handler)
         .values({
-          name: parsedData.handlerName,
+          name: data.handlerName,
           projectId: project.id,
           producerId: 1,
         })
@@ -100,7 +94,7 @@ export const POST = async (req: NextRequest) => {
     .findFirst({
       where(fields, { eq }) {
         return and(
-          eq(fields.name, parsedData.handlerName),
+          eq(fields.name, data.handlerName),
           eq(fields.projectId, project.id),
         );
       },
@@ -112,7 +106,7 @@ export const POST = async (req: NextRequest) => {
     })
     .then((v) => v!);
 
-  const bundledHandler = parsedData.handler;
+  const bundledHandler = data.handler;
   const sourcePrefix = `code/${handler.internalId}/${deploymentId}.zip`;
   const promises: Promise<any>[] = [
     s3.putObject({
@@ -122,8 +116,8 @@ export const POST = async (req: NextRequest) => {
     }),
   ];
 
-  if (parsedData.mode === "init") {
-    const manifest = parsedData.manifest;
+  if (data.mode === "init") {
+    const manifest = data.manifest;
 
     promises.push(
       s3.putObject({
@@ -144,7 +138,7 @@ export const POST = async (req: NextRequest) => {
     previousInternalHandlerId,
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
-    mode: parsedData.mode,
+    mode: data.mode,
     envs: handler.envs.map((env) => ({
       ...env,
       value: decryptEnvValue(env.value, env.iv),
@@ -153,14 +147,3 @@ export const POST = async (req: NextRequest) => {
 
   return NextResponse.json({});
 };
-
-function parseFormData(formData: FormData) {
-  try {
-    return {
-      data: requestSchema.parse(Object.fromEntries(formData.entries())),
-      error: undefined,
-    };
-  } catch (e: any) {
-    return { data: undefined, error: e as Error };
-  }
-}

@@ -1,14 +1,34 @@
-import { Lambda } from "@aws-sdk/client-lambda";
 import axios from "axios";
 import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
 
 import { SQSEvent } from "aws-lambda";
-// @ts-ignore
-import pipeline from "./pipeline";
 
+const USER_ENVS = (
+  JSON.parse(process.env.USER_ENVS!) as Array<{
+    key: string;
+    value: string;
+  }>
+).reduce(
+  (acc, curr) => {
+    acc[curr.key] = curr.value;
+    return acc;
+  },
+  {} as Record<string, string>
+)
+
+const HANDLER_ID = process.env.HANDLER_ID;
+
+for(const env of Object.keys(process.env)) {
+  delete process.env[env];
+}
+
+for(const [name, value] of Object.entries(USER_ENVS)) {
+  process.env[name] = value;
+}
+process.env['HANDLER_ID'] = HANDLER_ID;
+
+const { default: pipeline } = require('./pipeline');
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
-
-const lambda = new Lambda({ region: "eu-west-1" });
 
 type ParsedRecord = {
   id: string;
@@ -25,18 +45,74 @@ type EligibleTxConfig = {
   config: any
 }
 
-export async function handler(event: SQSEvent) {
-  const parsedTxs = [];
+type TransactionResultLabel = {
+  label: String;
+  timestamp_ms: number;
+}
+type TransactionResult = {
+  transaction_hash: string;
+  successful_labels: Array<TransactionResultLabel>;
+  failed_label: TransactionResultLabel | undefined;
+};
 
-  console.time("parse");
-  const records = event.Records.map((record) => ({
+type Transaction = {
+  transactionHash: string
+}
+
+export async function handler(event: SQSEvent) {
+  const parsedRecords: Array<ParsedRecord> = event.Records.map((record) => ({
     id: record.messageId,
+    isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
     data: JSON.parse(record.body),
   }));
 
-  const s3Results = await getS3Results(records);
+  const isRetry = event.Records.some((r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1)
 
-  for (const record of records) {
+  const s3Results = await getS3Results(parsedRecords);
+  const parsedTxs = parseTransactions(parsedRecords, s3Results);
+
+  const { results, addFailure, addSuccessful, getFailureCount } = createStateManager();
+
+  var { iterator, startProcessor } = await getTransactionIterator({
+    parsedTxs,
+    isRetry
+  });
+  
+
+  process_loop:
+  while (iterator.hasNext()) {
+    const { batch, processors } = getNextTransactionBatch(iterator);
+    
+    for (const { label, config: txConfig } of processors) {
+      if(startProcessor && label !== startProcessor) {
+        continue
+      }
+
+      try {
+        await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
+        batch.map((tx) => addSuccessful(tx.transactionHash, label))
+      } catch(e) {
+        addFailure(batch.at(0)!.transactionHash, label);
+        console.error(e);
+        break process_loop;
+      }
+
+      startProcessor = undefined;
+    }
+  }
+
+  await uploadResults(results, event.Records.map(r => r.receiptHandle));
+
+  if(getFailureCount() > 0) {
+    throw new Error('Some handlers failed');
+  }
+  
+  return {};
+}
+
+export function parseTransactions(parsedRecords: Array<ParsedRecord>, s3Results: Map<any, any>) {
+  const transactions: Array<Transaction> = [];
+  for (const record of parsedRecords) {
     const payload = record.data;
     var txs = [];
     if (payload.type === "non-batch") {
@@ -44,75 +120,68 @@ export async function handler(event: SQSEvent) {
     } else {
       txs = s3Results.get(record.id);
     }
-    parsedTxs.push(...txs);
+    transactions.push(...txs);
   }
-  console.timeEnd("parse");
+  return transactions;
+}
 
-  var succeeded = new Map();
+type GetInitialisationOptions = {
+  parsedTxs: Array<Transaction>;
+  isRetry: boolean
+}
 
-  let i = 0;
-  while (i < parsedTxs.length) {
-    const batch: Array<any> = [];
-
-    console.time("organise");
-    // tx at the front of parsedTxs
-    const frontTx = parsedTxs.at(i);
-    const processors = getEligibleTxConfigs(frontTx, allTxConfigsWithLabels);
-
-    // batch transactions that can be processed by the exact same processors
-    while (
-      i < parsedTxs.length &&
-      sameEligibleProcessors(
-        processors,
-        getEligibleTxConfigs(parsedTxs[i], allTxConfigsWithLabels)
-      )
-    ) {
-      const tx = parsedTxs[i];
-      batch.push(tx);
-      succeeded.set(tx.transactionHash, []);
-      i++;
-    }
-    console.timeEnd("organise");
-    
-    for (const { label, config: txConfig } of processors) {
-      if (txConfig._independent) {
-        await Promise.all(
-          batch.map((tx) =>
-            txConfig
-              ._handler(decodeTx(tx, txConfig))
-              .then(() => succeeded.get(tx.transactionHash).push(label))
-          )
-        );
-      } else {
-        await txConfig
-          ._handler(batch.map((tx) => decodeTx(tx, txConfig)))
-          .then(() =>
-            batch.map((tx) => succeeded.get(tx.transactionHash).push(label))
-          );
-      }
+export async function getTransactionIterator(options: GetInitialisationOptions) {
+  if(!options.isRetry) {
+    return {
+      iterator: new TransactionIterator(options.parsedTxs, 0),
+      startProcessor: undefined
     }
   }
 
-  await report({
-    transactions: Object.fromEntries(succeeded),
-  });
+  const pipeline = await axios.get("http://localhost:4121/pipeline").then((r) => r.data);
+  const txIdx = findErrorTxIdx(options.parsedTxs, pipeline);
 
-  return {};
+  return {
+    iterator: new TransactionIterator(options.parsedTxs, txIdx),
+    startProcessor: pipeline.ErrorLabel_
+  }
 }
 
 
-type ReportOptions = {
-  transactions: Record<string, any>
+export function findErrorTxIdx(parsedTxs: Array<Transaction>, pipeline: any) {
+  const index = parsedTxs.findIndex((v) => pipeline.ErrorTx_ === v.transactionHash);
+  if(index === -1) throw new Error('Index for failed tx not found');
+
+  return index;
 }
-export async function report(options: ReportOptions) {
-  console.time("report");
-  await lambda.invokeAsync({
-    FunctionName: `arn:aws:lambda:eu-west-1:730335604495:function:reporting-${process.env.HANDLER_ID}`,
-    InvokeArgs: JSON.stringify({
-      transactions: options.transactions,
-    }),
-  });
-  console.timeEnd("report");
+
+export async function uploadResults(results: Array<TransactionResult>, message_ids: Array<string>) {
+  await axios.post("http://localhost:4121/results", { results, message_ids });
+}
+
+export function getNextTransactionBatch(iterator: TransactionIterator) {
+  const batch: Array<Transaction> = [];
+
+  // tx at the front of parsedTxs
+  const frontTx = iterator.peek()
+  const processors = getEligibleTxConfigs(frontTx, allTxConfigsWithLabels);
+
+  // batch transactions that can be processed by the exact same processors
+  while (
+    iterator.hasNext() &&
+    sameEligibleProcessors(
+      processors,
+      getEligibleTxConfigs(iterator.peek(), allTxConfigsWithLabels)
+    )
+  ) {
+    const tx = iterator.next()!;
+    batch.push(tx);
+  }
+
+  return {
+    batch,
+    processors
+  };
 }
 
 export async function getS3Results(batchRecords: Array<ParsedRecord>) {
@@ -129,6 +198,55 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
   );
 
   return s3Results;
+}
+
+function createStateManager() {  
+  const txHashIdx = new Map<string, number>();
+  const results: Array<TransactionResult> = [];
+  let failureCount = 0;
+  let successCount = 0;
+
+  function addSuccessful(txHash: string, handler: string) {
+    if(!txHashIdx.has(txHash)) {
+      txHashIdx.set(txHash, results.length);
+      results.push({
+        transaction_hash: txHash,
+        successful_labels: [],
+        failed_label: undefined
+      });
+    }
+
+    results[txHashIdx.get(txHash)!]!.successful_labels.push({
+      label: handler,
+      timestamp_ms: Date.now()
+    });
+    successCount++;
+  }
+
+  function addFailure(txHash: string, handler: string) {
+    if(!txHashIdx.has(txHash)) {
+      txHashIdx.set(txHash, results.length);
+      results.push({
+        transaction_hash: txHash,
+        successful_labels: [],
+        failed_label: undefined
+      });
+    }
+
+    results[txHashIdx.get(txHash)!]!.failed_label = {
+      label: handler,
+      timestamp_ms: Date.now()
+    };
+    failureCount++;
+  }
+
+  return {
+    addSuccessful,
+    addFailure,
+    results,
+    getFailureCount: () => failureCount,
+    getSuccessCount: () => successCount
+  }
 }
 
 // Eligible Tx configs are configs that match the given transaction
@@ -252,4 +370,26 @@ export function logConfigMatches(logConfig: any, logIdentifier: LogIdentifier) {
       logConfig._topics.at(0) === logIdentifier.signature) ||
     (!logConfig.address && logConfig._topics.at(0) === logIdentifier.signature)
   );
+}
+
+class TransactionIterator {
+  #transactions: Array<Transaction>;
+  #index: number;
+
+  constructor(transactions: Array<Transaction>, startIndex: number) {
+    this.#transactions = transactions
+    this.#index = startIndex;
+  }
+ 
+  hasNext() {
+    return this.#index < this.#transactions.length;
+  }
+ 
+  next() {
+    return this.#transactions[this.#index++];
+  } 
+
+  peek() {
+    return this.#transactions[this.#index];
+  }
 }

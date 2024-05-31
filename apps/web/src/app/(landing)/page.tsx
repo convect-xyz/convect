@@ -48,7 +48,7 @@ export default function Page() {
         <Link className="flex items-center" href="#">
           <FullLogoIcon className="h-6" />
         </Link>
-        <nav className="hidden space-x-4 justify-self-center md:flex">
+        <nav className="hidden items-center space-x-4 justify-self-center md:flex">
           <Link className="text-sm font-medium hover:underline" href="#">
             Features
           </Link>
@@ -58,6 +58,20 @@ export default function Page() {
           <Link className="text-sm font-medium hover:underline" href="#">
             Contact
           </Link>
+
+          <form
+            action={async () => {
+              "use server";
+              await signIn("github", { redirectTo: "/projects" });
+            }}
+          >
+            <Button
+              type="submit"
+              disabled={process.env.NODE_ENV === "production"}
+            >
+              Sign In
+            </Button>
+          </form>
         </nav>
       </header>
       <main>

@@ -105,7 +105,7 @@ pub mod manifest {
     }
 }
 
-pub mod pipeline {
+pub mod syncing {
     use lambda_runtime::tower::BoxError;
     use redis::{Commands, JsonCommands};
     use serde::{Deserialize, Serialize};
@@ -127,12 +127,12 @@ pub mod pipeline {
         pub last_block: Option<String>,
     }
 
-    pub struct Pipeline {
-        connection: redis::cluster::ClusterConnection,
+    pub struct State {
+        connection: redis::Connection,
         inner: Inner,
     }
 
-    impl Pipeline {
+    impl State {
         pub fn handler_id(&self) -> String {
             self.inner.handler_id.clone()
         }
@@ -152,41 +152,53 @@ pub mod pipeline {
         }
 
         pub fn load(handler_id: String) -> Self {
-            let client = redis::cluster::ClusterClient::new(vec![
-                "rediss://clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com:6379",
-            ])
+            let client = redis::Client::open("rediss://default:REDACTED@stirred-jawfish-46999.upstash.io:6379")
             .unwrap();
 
             let mut con = client.get_connection().unwrap();
+            let result: Option<String> = con.json_get(&handler_id, "$").unwrap();
 
-            let result: String = con.json_get(handler_id, "$").unwrap();
-            let inner: Vec<Inner> = serde_json::from_str(result.as_str()).unwrap();
+            let inner = match result {
+                Some(result) => {
+                    let inner: Vec<Inner> = serde_json::from_str(result.as_str()).unwrap();
+                    inner
+                }
+                None => {
+                    vec![Inner {
+                        handler_id: handler_id.clone(),
+                        state: SyncState::IDLE,
+                        last_block: None,
+                    }]
+                }
+            };
+
+            if let Some(inner) = inner.first() {
+                return Self {
+                    connection: con,
+                    inner: inner.to_owned(),
+                };
+            }
 
             Self {
                 connection: con,
-                inner: inner.first().unwrap().clone(),
+                inner: Inner {
+                    handler_id: handler_id.clone(),
+                    state: SyncState::IDLE,
+                    last_block: None,
+                },
             }
         }
 
-        pub fn update(&mut self) -> UpdatePipelineFluentBuilder {
-            return UpdatePipelineFluentBuilder {
+        pub fn update(&mut self) -> UpdateStateFluentBuilder {
+            UpdateStateFluentBuilder {
                 connection: &mut self.connection,
                 inner: self.inner.clone(),
-            };
+            }
         }
 
         pub fn increment_transaction_count(&mut self, tx_count: usize) {
             let key = format!(
                 "tx-count-{handler_id}",
-                handler_id = self.inner.handler_id.to_string()
-            );
-
-            let _: u64 = self.connection.incr(key, tx_count).unwrap();
-        }
-
-        pub fn increment_processed_transaction_count(&mut self, tx_count: u64) {
-            let key = format!(
-                "processed-tx-count-{handler_id}",
                 handler_id = self.inner.handler_id.to_string()
             );
 
@@ -203,27 +215,21 @@ pub mod pipeline {
             count
         }
 
-        pub fn get_processed_transaction_count(&mut self) -> u64 {
-            let key = format!(
-                "processed-tx-count-{handler_id}",
-                handler_id = self.inner.handler_id.to_string()
-            );
-
-            let count: u64 = self.connection.get(key).unwrap();
-            count
-        }
-
         pub fn inner(&self) -> &Inner {
             &self.inner
         }
+
+        pub fn into_inner(self) -> Inner {
+            self.inner
+        }
     }
 
-    pub struct UpdatePipelineFluentBuilder<'a> {
-        connection: &'a mut redis::cluster::ClusterConnection,
+    pub struct UpdateStateFluentBuilder<'a> {
+        connection: &'a mut redis::Connection,
         inner: Inner,
     }
 
-    impl<'a> UpdatePipelineFluentBuilder<'a> {
+    impl<'a> UpdateStateFluentBuilder<'a> {
         pub fn set_state(mut self, new_state: SyncState) -> Self {
             self.inner.state = new_state;
             self
@@ -237,6 +243,120 @@ pub mod pipeline {
         pub fn send(self) -> Result<(), BoxError> {
             self.connection
                 .json_set(self.inner.handler_id.to_string(), "$", &self.inner)?;
+
+            Ok(())
+        }
+    }
+}
+
+pub mod processing {
+    use lambda_runtime::tower::BoxError;
+    use redis::JsonAsyncCommands;
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, Clone, Debug)]
+    pub struct Inner {
+        #[serde(rename = "HandlerId_")]
+        pub handler_id: String,
+        #[serde(rename = "ErrorTx_")]
+        pub error_tx: Option<String>,
+        #[serde(rename = "ErrorLabel_")]
+        pub error_label: Option<String>,
+    }
+
+    pub struct State {
+        connection: redis::aio::MultiplexedConnection,
+        inner: Inner,
+    }
+
+    impl State {
+        pub fn handler_id(&self) -> String {
+            self.inner.handler_id.clone()
+        }
+
+        pub async fn load(handler_id: String) -> Self {
+            let client = redis::Client::open("rediss://default:REDACTED@stirred-jawfish-46999.upstash.io:6379").unwrap();
+
+            let mut con = client.get_multiplexed_async_connection().await.unwrap();
+
+            let result: Option<String> = con
+                .json_get(format!("process-state-{handler_id}"), "$")
+                .await
+                .unwrap();
+
+            let inner = match result {
+                Some(result) => {
+                    let inner: Vec<Inner> = serde_json::from_str(result.as_str()).unwrap();
+                    inner
+                }
+                None => {
+                    vec![Inner {
+                        handler_id: handler_id.clone(),
+                        error_tx: None,
+                        error_label: None,
+                    }]
+                }
+            };
+
+            if let Some(inner) = inner.first() {
+                return Self {
+                    connection: con,
+                    inner: inner.to_owned(),
+                };
+            }
+
+            Self {
+                connection: con,
+                inner: Inner {
+                    handler_id: handler_id.clone(),
+                    error_tx: None,
+                    error_label: None,
+                },
+            }
+        }
+
+        pub fn update(&mut self) -> UpdateStateFluentBuilder {
+            UpdateStateFluentBuilder {
+                connection: &mut self.connection,
+                temp_inner: self.inner.clone(),
+                inner: &mut self.inner,
+            }
+        }
+
+        pub fn inner(&self) -> &Inner {
+            &self.inner
+        }
+
+        pub fn into_inner(self) -> Inner {
+            self.inner
+        }
+    }
+
+    pub struct UpdateStateFluentBuilder<'a> {
+        connection: &'a mut redis::aio::MultiplexedConnection,
+        temp_inner: Inner,
+        inner: &'a mut Inner,
+    }
+
+    impl<'a> UpdateStateFluentBuilder<'a> {
+        pub fn set_error_tx(mut self, error_tx: String) -> Self {
+            self.temp_inner.error_tx = Some(error_tx);
+            self
+        }
+
+        pub fn set_error_label(mut self, error_label: String) -> Self {
+            self.temp_inner.error_label = Some(error_label);
+            self
+        }
+
+        pub async fn send(self) -> Result<(), BoxError> {
+            let handler_id = self.inner.handler_id.to_string();
+            self.connection
+                .json_set(format!("process-state-{handler_id}"), "$", &self.inner)
+                .await?;
+
+            self.inner.error_label = self.temp_inner.error_label;
+            self.inner.error_label = self.temp_inner.error_tx;
 
             Ok(())
         }

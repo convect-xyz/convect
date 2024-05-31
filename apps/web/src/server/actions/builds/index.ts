@@ -17,10 +17,9 @@ type TriggerBuildOptions = {
 export async function createDeployment(options: TriggerBuildOptions) {
   const command = new RunTaskCommand({
     cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
-    taskDefinition: `arn:aws:ecs:eu-west-1:730335604495:task-definition/builder-${options.version.replaceAll(
-      ".",
-      "-",
-    )}`,
+    taskDefinition: `arn:aws:ecs:eu-west-1:730335604495:task-definition/${options.version
+      .replaceAll(".", "-")
+      .replaceAll("/", "-")}_builder`,
     networkConfiguration: {
       awsvpcConfiguration: {
         subnets: ["subnet-05d39f2476de29dc7"],

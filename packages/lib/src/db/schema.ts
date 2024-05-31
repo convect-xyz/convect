@@ -66,13 +66,15 @@ export const apiKey = createTable(
   "api_key",
   {
     id: serial("id").notNull().primaryKey(),
+    name: varchar("name", { length: 255}).notNull(),
     userId: varchar("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     token: varchar("token", { length: 255 }).notNull().unique(),
   },
-  (account) => ({
-    userIdIdx: index("account_userId_idx").on(account.userId),
+  (apiKey) => ({
+    name_user_unique: unique().on(apiKey.name, apiKey.userId),
+    userIdIdx: index("apiKey_userId_idx").on(apiKey.userId),
   })
 );
 

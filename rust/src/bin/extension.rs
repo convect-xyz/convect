@@ -4,7 +4,7 @@ use std::env;
 use tokio::join;
 
 use lambda_extension::{
-    service_fn, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
+    service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
 };
 use reqwest::blocking::Client;
 use serde_json::json;
@@ -21,26 +21,31 @@ pub struct ReportMetrics {
     pub restore_duration_ms: Option<f64>,
 }
 
+const TINYBIRD_API_KEY: &'static str = env!("TINYBIRD_API_KEY");
+
 async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     let handler_id = env::var("HANDLER_ID").expect("Handler ID is undefined");
 
     let records: Vec<String> = logs.into_iter().map(|record|{
       let re = Regex::new(r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$").unwrap();
-
-      let result = re.captures(&record).unwrap();
-
-      serde_json::to_string(&json!({
+      print!("{:?}", re);
+      re.captures(&record).map(|result| serde_json::to_string(&json!({
         "handler_id": handler_id,
         "time": result["time"].to_string(),
         "invocation_id": result["uuid"].to_string(),
         "log_level": result["log_level"].to_string(),
         "log_message": result["log_message"].to_string(),
-      })).unwrap()
-    }).collect();
+      })).unwrap())
+    }).filter(Option::is_some).map(Option::unwrap).collect();
+
+    if records.is_empty() {
+        return Ok(());
+    }
 
     let client = Client::new();
-    let res = client.post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_logs")
-        .header("Authorization", "Bearer REDACTED")
+    let res = client
+        .post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_logs")
+        .header("Authorization", format!("Bearer {TINYBIRD_API_KEY}"))
         .body(records.join("\n"))
         .send();
 
@@ -109,6 +114,8 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    tracing::init_default_subscriber();
+
     let telemetry_processor = SharedService::new(service_fn(telemetry));
 
     Extension::new()
