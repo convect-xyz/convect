@@ -1,5 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import { sql } from "drizzle-orm";
 import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { Redis } from "ioredis";
@@ -45,7 +44,7 @@ export const getTransactions = protectedProcedure
       transactions: z.array(
         z.object({
           transactionHash: z.string(),
-          status: z.enum(["SUCCESS", "FAILURE"]),
+          status: z.enum(["SUCCESS", "FAILED"]),
           timestamp: z.number(),
         }),
       ),
@@ -64,21 +63,18 @@ export const getTransactions = protectedProcedure
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
-    const recentTransactions = await db.execute<{
-      transaction_hash: string;
-      status: string;
-      timestamp: Date;
-    }>(sql`SELECT *
-          FROM (SELECT DISTINCT ON (${processedTransactions.transactionHash}) ${processedTransactions.transactionHash}, ${processedTransactions.status}, ${processedTransactions.timestamp} 
-                FROM ${processedTransactions}
-                WHERE handler_id = ${handler.internalId}) as transactions
-          ORDER BY transactions.timestamp DESC
-          LIMIT ${input.limit}`);
+    const recentTransactions = await db.query.processedTransactions.findMany({
+      orderBy(fields, { desc }) {
+        return desc(fields.timestamp);
+      },
+      limit: 25,
+    });
 
+    console.log(recentTransactions);
     return {
       transactions: recentTransactions.map((tx) => ({
-        transactionHash: tx.transaction_hash,
-        status: tx.status as "SUCCESS" | "FAILURE",
+        transactionHash: tx.transactionHash,
+        status: tx.status as "SUCCESS" | "FAILED",
         timestamp: tx.timestamp.getTime(),
       })),
     };
