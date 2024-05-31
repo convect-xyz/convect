@@ -37,6 +37,7 @@ export const getTransactions = protectedProcedure
       limit: z.number().min(1).max(25).default(25),
       cursor: z.number().nullish(),
       search: z.string().nullish(),
+      status: z.enum(["FAILED", "SUCCESS"]).nullish(),
       handlerId: z.number(),
     }),
   )
@@ -44,6 +45,7 @@ export const getTransactions = protectedProcedure
     z.object({
       transactions: z.array(
         z.object({
+          id: z.number(),
           transactionHash: z.string(),
           status: z.enum(["SUCCESS", "FAILED"]),
           timestamp: z.number(),
@@ -73,6 +75,9 @@ export const getTransactions = protectedProcedure
             ilike(fields.transactionHash, `%${input.search}%`),
           )!;
         }
+        if (input.status) {
+          baseFilter = and(baseFilter, eq(fields.status, input.status))!;
+        }
         return baseFilter;
       },
       orderBy(fields, { desc }) {
@@ -83,6 +88,7 @@ export const getTransactions = protectedProcedure
 
     return {
       transactions: recentTransactions.map((tx) => ({
+        id: tx.id,
         transactionHash: tx.transactionHash,
         status: tx.status as "SUCCESS" | "FAILED",
         timestamp: tx.timestamp.getTime(),

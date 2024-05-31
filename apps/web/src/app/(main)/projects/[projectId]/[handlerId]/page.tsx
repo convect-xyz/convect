@@ -10,6 +10,13 @@ import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
 import {
   Tooltip,
@@ -128,7 +135,7 @@ function LastUpdatedAt() {
   });
 
   if (isLoading) {
-    return <Skeleton className="h-4 w-[100px] bg-muted" />;
+    return <Skeleton className="h-6 w-[200px] bg-muted" />;
   }
 
   return (
@@ -152,6 +159,7 @@ function RecentTransactions() {
     {
       handlerId,
       search: filters.debouncedSearch,
+      status: filters.status,
     },
     {
       refetchInterval: DASHBOARD_REFETCH_INTERVAL,
@@ -167,12 +175,15 @@ function RecentTransactions() {
         {!maybeTransactions ? (
           <Skeleton className="h-8 bg-background" />
         ) : (
-          <Input
-            className="bg-background"
-            placeholder="Search transactions by hash"
-            value={filters.search}
-            onChange={(e) => filters.setSearch(e.target.value)}
-          />
+          <div className="flex gap-2">
+            <Input
+              className="flex-1 bg-background"
+              placeholder="Search transactions by hash"
+              value={filters.search}
+              onChange={(e) => filters.setSearch(e.target.value)}
+            />
+            <StatusFilter />
+          </div>
         )}
       </div>
       <div className="flex flex-col divide-y">
@@ -186,7 +197,10 @@ function RecentTransactions() {
           ))}
         {maybeTransactions &&
           maybeTransactions.transactions.map((tx) => (
-            <div className="flex items-center gap-2 py-4" key={tx.timestamp}>
+            <div
+              className="flex items-center gap-2 py-4"
+              key={tx.id.toString()}
+            >
               <span
                 className={cn(
                   "h-2 w-2 rounded-full",
@@ -204,5 +218,60 @@ function RecentTransactions() {
           ))}
       </div>
     </div>
+  );
+}
+
+function StatusFilter() {
+  const filters = useTransactionFilters();
+
+  const renderStatusText = (status: typeof filters.status) => {
+    if (status === "FAILED") return "Failed";
+    if (status === "SUCCESS") return "Success";
+
+    return "All";
+  };
+
+  const handleValueChange = (v: string) => {
+    switch (v) {
+      case "ALL":
+        filters.setStatus();
+        return;
+      case "SUCCESS":
+        filters.setStatus("SUCCESS");
+        return;
+      case "FAILED":
+        filters.setStatus("FAILED");
+        return;
+      default:
+        throw new Error("Unsupported status: " + v);
+    }
+  };
+
+  return (
+    <Select value={filters.status ?? "ALL"} onValueChange={handleValueChange}>
+      <SelectTrigger className="w-[120px] bg-background">
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="ALL">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-gray-800"></div>
+            {renderStatusText(undefined)}
+          </div>
+        </SelectItem>
+        <SelectItem value="SUCCESS">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-green-400"></div>
+            {renderStatusText("SUCCESS")}
+          </div>
+        </SelectItem>
+        <SelectItem value="FAILED">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-red-400"></div>
+            {renderStatusText("FAILED")}
+          </div>
+        </SelectItem>
+      </SelectContent>
+    </Select>
   );
 }

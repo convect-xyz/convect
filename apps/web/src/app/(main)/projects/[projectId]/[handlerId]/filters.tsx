@@ -5,6 +5,8 @@ type TransactionFilters = {
   search?: string;
   debouncedSearch?: string;
   setSearch: (v: string) => void;
+  status?: "FAILED" | "SUCCESS";
+  setStatus: (v?: "FAILED" | "SUCCESS") => void;
 };
 
 const TransactionFiltersContext = createContext<TransactionFilters>({} as any);
@@ -15,6 +17,7 @@ export function useTransactionFilters() {
 
 export default function TransactionFilters(props: PropsWithChildren) {
   const [search, setSearch] = useState<string>();
+  const [status, setStatus] = useState<"FAILED" | "SUCCESS">();
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -24,6 +27,8 @@ export default function TransactionFilters(props: PropsWithChildren) {
         search,
         debouncedSearch,
         setSearch,
+        status,
+        setStatus,
       }}
     >
       {props.children}
