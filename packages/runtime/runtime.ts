@@ -103,6 +103,7 @@ export async function handler(event: SQSEvent) {
 
   await uploadResults(results, event.Records.map(r => r.receiptHandle));
 
+  console.log(failureCount)
   if(failureCount > 0) {
     throw new Error('Some handlers failed');
   }
