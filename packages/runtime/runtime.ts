@@ -103,7 +103,6 @@ export async function handler(event: SQSEvent) {
 
   await uploadResults(results, event.Records.map(r => r.receiptHandle));
 
-  console.log(getFailureCount())
   if(getFailureCount() > 0) {
     throw new Error('Some handlers failed');
   }
@@ -157,7 +156,7 @@ export function findErrorTxIdx(parsedTxs: Array<Transaction>, pipeline: any) {
 }
 
 export async function uploadResults(results: Array<TransactionResult>, message_ids: Array<string>) {
-  await axios.post("http://localhost:4121/results", { results, message_ids }).then(console.log);
+  await axios.post("http://localhost:4121/results", { results, message_ids });
 }
 
 export function getNextTransactionBatch(iterator: TransactionIterator) {
