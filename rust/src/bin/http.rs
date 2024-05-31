@@ -47,12 +47,12 @@ async fn main() -> Result<(), Error> {
 mod results {
     use std::env;
     use std::sync::Arc;
-    use std::time::SystemTime;
 
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
     use axum::{debug_handler, Json};
+    use chrono::DateTime;
     use diesel_async::RunQueryDsl;
     use futures::lock::Mutex;
     use ingest::connection::establish_connection;
@@ -62,10 +62,16 @@ mod results {
     use serde_json::{json, Value};
 
     #[derive(Deserialize, Debug)]
+    pub struct TransactionResultLabel {
+        pub label: String,
+        pub timestamp_ms: i64,
+    }
+
+    #[derive(Deserialize, Debug)]
     pub struct TransactionResult {
         pub transaction_hash: String,
-        pub successful_labels: Vec<String>,
-        pub failed_label: Option<String>,
+        pub successful_labels: Vec<TransactionResultLabel>,
+        pub failed_label: Option<TransactionResultLabel>,
     }
 
     #[derive(Deserialize, Debug)]
@@ -89,7 +95,7 @@ mod results {
         if let Some(failed_tx) = failed_tx {
             let update_r = state
                 .update()
-                .set_error_label(failed_tx.failed_label.as_ref().unwrap().to_string())
+                .set_error_label(failed_tx.failed_label.as_ref().unwrap().label.to_string())
                 .set_error_tx(failed_tx.transaction_hash.to_string())
                 .send()
                 .await;
@@ -143,9 +149,9 @@ mod results {
                 for label in r.successful_labels.iter() {
                     rows.push(ProcessedTransaction {
                         transaction_hash: r.transaction_hash.clone(),
-                        label: label.clone(),
+                        label: label.label.clone(),
                         status: "SUCCESS".to_string(),
-                        timestamp: SystemTime::now(),
+                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
                         handler_id: &handler_id,
                     })
                 }
@@ -153,9 +159,9 @@ mod results {
                 if let Some(label) = r.failed_label.as_ref() {
                     rows.push(ProcessedTransaction {
                         transaction_hash: r.transaction_hash.clone(),
-                        label: label.clone(),
+                        label: label.label.clone(),
                         status: "FAILED".to_string(),
-                        timestamp: SystemTime::now(),
+                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
                         handler_id: &handler_id,
                     })
                 }

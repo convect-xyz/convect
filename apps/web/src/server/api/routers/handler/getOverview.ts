@@ -44,13 +44,6 @@ export const getOverview = protectedProcedure
       transactionCount: z.number(),
       processedTransactionsCount: z.number(),
       avgDuration: z.number(),
-      recentTransactions: z.array(
-        z.object({
-          transactionHash: z.string(),
-          status: z.enum(["SUCCESS", "FAILURE"]),
-          timestamp: z.number(),
-        }),
-      ),
     }),
   )
   .query(async (opts) => {
@@ -112,17 +105,11 @@ export const getOverview = protectedProcedure
           ORDER BY transactions.timestamp DESC
           LIMIT 25`);
 
-      console.log(recentTransactions.at(0)?.timestamp);
       return {
         transactionCount: Number(txCount),
         processedTransactionsCount: successfulTx,
         lastFetchedBlock: Number(response.LastBlock_),
-        avgDuration: 0,
-        recentTransactions: recentTransactions.map((tx) => ({
-          transactionHash: tx.transaction_hash,
-          status: tx.status,
-          timestamp: tx.timestamp.getTime(),
-        })),
+        avgDuration: Number(avgDuration),
       };
     } catch (e) {
       console.log(e);

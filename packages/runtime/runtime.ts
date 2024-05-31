@@ -45,10 +45,14 @@ type EligibleTxConfig = {
   config: any
 }
 
+type TransactionResultLabel = {
+  label: String;
+  timestamp_ms: number;
+}
 type TransactionResult = {
   transaction_hash: string;
-  successful_labels: Array<String>;
-  failed_label: string | undefined;
+  successful_labels: Array<TransactionResultLabel>;
+  failed_label: TransactionResultLabel | undefined;
 };
 
 type Transaction = {
@@ -211,7 +215,10 @@ function createStateManager() {
       });
     }
 
-    results[txHashIdx.get(txHash)!]!.successful_labels.push(handler);
+    results[txHashIdx.get(txHash)!]!.successful_labels.push({
+      label: handler,
+      timestamp_ms: Date.now()
+    });
     successCount++;
   }
 
@@ -225,7 +232,10 @@ function createStateManager() {
       });
     }
 
-    results[txHashIdx.get(txHash)!]!.failed_label = handler;
+    results[txHashIdx.get(txHash)!]!.failed_label = {
+      label: handler,
+      timestamp_ms: Date.now()
+    };
     failureCount++
   }
 
@@ -360,7 +370,6 @@ export function logConfigMatches(logConfig: any, logIdentifier: LogIdentifier) {
     (!logConfig.address && logConfig._topics.at(0) === logIdentifier.signature)
   );
 }
-
 
 class TransactionIterator {
   #transactions: Array<Transaction>;

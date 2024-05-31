@@ -102,20 +102,18 @@ const stringToColour = (str: string) => {
 
 function RecentTransactions() {
   const { handlerId } = useParams();
-  const { data: overview } = api.handlers.getOverview.useQuery({
+  const { data: maybeTransactions } = api.handlers.getTransactions.useQuery({
     handlerId,
   });
 
   return (
     <div className="rounded-md border border-[#191B1F] bg-muted p-4">
       <div className="flex items-center gap-2 text-sm">
-        <span className="uppercase text-muted-foreground">
-          Recently Processed
-        </span>
+        <span className="uppercase text-muted-foreground">TRANSACTIONS</span>
       </div>
       <div className="flex flex-col divide-y">
-        {overview &&
-          overview.recentTransactions.map((tx) => (
+        {maybeTransactions &&
+          maybeTransactions.transactions.map((tx) => (
             <div
               className="flex items-center gap-2 py-4"
               key={tx.transactionHash}

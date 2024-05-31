@@ -1,6 +1,5 @@
-use std::time::SystemTime;
-
-use diesel::prelude::*;
+use chrono::{DateTime, NaiveDateTime, Utc};
+use diesel::{prelude::*, sql_types::Timestamptz};
 
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::processed_transactions)]
@@ -9,6 +8,6 @@ pub struct ProcessedTransaction<'a> {
     pub transaction_hash: String,
     pub label: String,
     pub status: String,
-    pub timestamp: SystemTime,
+    pub timestamp: DateTime<Utc>,
     pub handler_id: &'a str,
 }
