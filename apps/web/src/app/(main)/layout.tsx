@@ -51,6 +51,9 @@ async function Profile() {
           <DropdownMenuItem asChild>
             <Link href="/account/api-keys">API Keys</Link>
           </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator className="bg-background" />
+        <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <form
               action={async (formData) => {
