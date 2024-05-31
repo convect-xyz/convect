@@ -23,6 +23,7 @@ const redisClient = new Redis(
 
 export const processedTransactions = pgTable("processed_transactions", {
   id: serial("id").primaryKey(),
+  handlerId: varchar("handler_id").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
   status: varchar("status", { length: 256 }).notNull(),
   timestamp: timestamp("timestamp").notNull(),
@@ -64,6 +65,9 @@ export const getTransactions = protectedProcedure
     }
 
     const recentTransactions = await db.query.processedTransactions.findMany({
+      where(fields, { eq }) {
+        return eq(fields.handlerId, handler.internalId);
+      },
       orderBy(fields, { desc }) {
         return desc(fields.timestamp);
       },
