@@ -1,4 +1,4 @@
-name: Build, Test, Deploy
+name: "Build, Test"
 
 on:
   release:
@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - "infra/**"
+
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
@@ -21,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["log-fetcher", "orchestrator", "reporting"]
+        binary: ["log-fetcher", "orchestrator"]
     steps:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -62,6 +63,9 @@ jobs:
 
   build_extensions:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        binary: ["extension", "http"]
     steps:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -76,7 +80,6 @@ jobs:
           platform: linux
           arch: x86_64
       - uses: actions/checkout@master
-
       - name: Set version
         env:
           VERSION: ${{ github.event.release.tag_name || github.ref_name }}
@@ -95,10 +98,15 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-extension
           restore-keys: ${{ runner.os }}-cargo-
       - name: Build
+        env:
+          TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
+          BIN: ${{ matrix.binary }}
         run: |
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev postgresql
           cd rust
-          cargo lambda build --release --extension --bin=extension
-          cargo lambda deploy --extension --binary-name=extension extension-$(echo "$VERSION" | tr '.' '-')
+          cargo lambda build --extension --output-format zip --release --bin=$BIN --features="pg"
+          aws s3api put-object --bucket ingest-functions --key $BIN/$VERSION.zip --body "./target/lambda/extensions/$BIN.zip"
 
   build_images:
     runs-on: ubuntu-latest

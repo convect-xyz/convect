@@ -6,12 +6,13 @@ import {
 	useMutationState,
 	useQuery,
 } from '@tanstack/react-query';
-import axios from 'axios';
+import axios, {AxiosError} from 'axios';
 import {Box} from 'ink';
 import React, {useState} from 'react';
 import {z} from 'zod';
 import {bundleFile} from '../actions/bundle.js';
 import {uploadOutputs} from '../actions/upload.js';
+import {getAuthHeaders} from '../lib/utils.js';
 
 export const args = z.tuple([]);
 
@@ -27,10 +28,23 @@ const uploadKey = ['upload'];
 function useProjects() {
 	return useQuery({
 		queryKey: ['projects'],
-		queryFn: () =>
-			axios
-				.get('http://localhost:3000/api/cli/projects')
-				.then(r => r.data as {projects: string[]}),
+		queryFn: async () => {
+			try {
+				return await axios
+					.get('http://localhost:3000/api/cli/projects', {
+						headers: getAuthHeaders(),
+					})
+					.then(r => r.data as {projects: string[]});
+			} catch (e) {
+				if (e instanceof AxiosError) {
+					throw new Error(
+						e.response?.data?.message ?? 'An unexpected error occurred',
+					);
+				}
+
+				throw e;
+			}
+		},
 	});
 }
 
@@ -99,10 +113,14 @@ function SelectProject(props: {
 	onSelect: (id: string) => void;
 	project?: string;
 }) {
-	const {data: projects} = useProjects();
+	const {data: projects, error, isLoading} = useProjects();
 
-	if (!projects) {
+	if (isLoading) {
 		return <Spinner label="Fetching your projects" />;
+	}
+
+	if (error) {
+		return <StatusMessage variant="error">{error.message}</StatusMessage>;
 	}
 
 	if (props.project) {

@@ -22,6 +22,20 @@
       "when": 1715982644054,
       "tag": "0002_huge_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1716506860434,
+      "tag": "0003_majestic_angel",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1716507109697,
+      "tag": "0004_lean_steve_rogers",
+      "breakpoints": true
     }
   ]
 }

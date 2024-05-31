@@ -20,10 +20,6 @@ export default function Layout(props: PropsWithChildren) {
       return <></>;
     }
 
-    // if (!handler.isInitialised) {
-    //   return <InitaliseInstructions />;
-    // }
-
     return <Main {...props} />;
   };
 

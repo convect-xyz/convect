@@ -1,5 +1,6 @@
-import { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { createTRPCRouter } from "~/server/api/trpc";
+import { createApiKey } from "./routers/apiKey/createApiKey";
+import { getApiKeys } from "./routers/apiKey/getApiKeys";
 import { getBranches } from "./routers/github/getBranches";
 import { getInstallations } from "./routers/github/getInstallations";
 import { getRepositories } from "./routers/github/getRepositories";
@@ -12,12 +13,18 @@ import { getHandler } from "./routers/handler/getHandler";
 import { getHandlers } from "./routers/handler/getHandlers";
 import { getLogs } from "./routers/handler/getLogs";
 import { getOverview } from "./routers/handler/getOverview";
+import { getTransactions } from "./routers/handler/getTransactions";
 import { updateEnv } from "./routers/handler/updateEnv";
 import { createProducer } from "./routers/producers/create";
 import { getProducers } from "./routers/producers/getProducers";
 import { createProject } from "./routers/project/create";
 import { getProjectById } from "./routers/project/getProjectById";
 import { getProjects } from "./routers/project/getProjects";
+
+export const apiKeysRouter = createTRPCRouter({
+  createApiKey,
+  getApiKeys,
+});
 
 export const githubRouter = createTRPCRouter({
   getBranches,
@@ -36,12 +43,8 @@ export const handlerRouter = createTRPCRouter({
   deleteEnv,
   updateEnv,
   getOverview,
+  getTransactions,
 });
-
-type RouterInput = inferRouterInputs<typeof handlerRouter>;
-type RouterOutput = inferRouterOutputs<typeof handlerRouter>;
-
-export type GetHandlersOutput = RouterOutput["getHandlers"];
 
 export const producersRouter = createTRPCRouter({
   create: createProducer,
@@ -59,6 +62,7 @@ export const appRouter = createTRPCRouter({
   producers: producersRouter,
   github: githubRouter,
   handlers: handlerRouter,
+  apiKeys: apiKeysRouter,
 });
 
 export type AppRouter = typeof appRouter;

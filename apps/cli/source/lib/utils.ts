@@ -6,3 +6,16 @@ export async function hashFileName(fileName: string) {
 		byte => byte.toString(16).padStart(2, '0'),
 	).join('');
 }
+
+export function getAuthHeaders() {
+	const apiKey = process.env['CONVECT_API_KEY'];
+	if (!apiKey) {
+		throw new Error(
+			'API Key is not set. Did you set it with `CONVECT_API_KEY=...`?',
+		);
+	}
+
+	return {
+		Authorization: `Bearer ${apiKey}`,
+	};
+}

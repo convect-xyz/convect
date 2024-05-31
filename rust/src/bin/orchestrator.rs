@@ -7,7 +7,7 @@ use aws_sdk_ecs::types::{
 use futures::TryFutureExt;
 use ingest::{
     api::{self},
-    types::{manifest::Manifest, pipeline::Pipeline},
+    types::{manifest::Manifest, syncing::State},
 };
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 
@@ -23,7 +23,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let ecs_client = aws_sdk_ecs::Client::new(&config);
     let api = api::Api::new(&config);
     let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
-    let mut pipeline = Pipeline::load(handler_id);
+    let mut pipeline = State::load(handler_id);
 
     let incoming_block: u64 = event
         .payload
@@ -39,22 +39,22 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     // TODO: this should be added to a DLQ
     if pipeline
         .state()
-        .eq(&ingest::types::pipeline::SyncState::SYNCING)
+        .eq(&ingest::types::syncing::SyncState::SYNCING)
     {
         return Ok(());
     }
-
-    // It is the responsibility of the ECS task to revert this status
-    pipeline
-        .update()
-        .set_state(ingest::types::pipeline::SyncState::SYNCING)
-        .send()
-        .expect("Failed to update pipeline");
 
     println!("{:?}", pipeline.inner());
 
     // If block diff is too great, trigger fargate to do the work
     if incoming_block - pipeline.last_block().or(Some(0)).unwrap() > 1999 {
+        // It is the responsibility of the ECS task to revert this status
+        pipeline
+            .update()
+            .set_state(ingest::types::syncing::SyncState::SYNCING)
+            .send()
+            .expect("Failed to update pipeline");
+
         return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block).await;
     }
 
@@ -72,10 +72,11 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .set_start_block(from_block)
         .set_end_block(incoming_block)
         .send()
-        .inspect_err(|_| {
+        .inspect_err(|e| {
+            println!("{:?}", e);
             let _ = pipeline
                 .update()
-                .set_state(ingest::types::pipeline::SyncState::FAILED)
+                .set_state(ingest::types::syncing::SyncState::FAILED)
                 .send();
         })
         .await?;
@@ -91,21 +92,17 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .await;
 
     match result {
-        Ok(_) => pipeline
-            .update()
-            .set_last_block(incoming_block)
-            .set_state(ingest::types::pipeline::SyncState::IDLE)
-            .send(),
+        Ok(_) => pipeline.update().set_last_block(incoming_block).send(),
         Err(_) => pipeline
             .update()
-            .set_state(ingest::types::pipeline::SyncState::FAILED)
+            .set_state(ingest::types::syncing::SyncState::FAILED)
             .send(),
     }
 }
 
 async fn trigger_batch_sync_task(
     ecs_client: &aws_sdk_ecs::Client,
-    pipeline: &mut Pipeline,
+    pipeline: &mut State,
     incoming_block: u64,
 ) -> Result<(), Error> {
     let version = env::var("VERSION").expect("Version ENV not defined");
@@ -115,7 +112,7 @@ async fn trigger_batch_sync_task(
         .run_task()
         .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
         .task_definition(format!(
-            "arn:aws:ecs:eu-west-1:730335604495:task-definition/syncer-{family_name}",
+            "arn:aws:ecs:eu-west-1:730335604495:task-definition/{family_name}_syncer",
             family_name = version.replace(".", "-")
         ))
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
@@ -180,7 +177,7 @@ async fn trigger_batch_sync_task(
             println!("{:?}", e);
             pipeline
                 .update()
-                .set_state(ingest::types::pipeline::SyncState::IDLE)
+                .set_state(ingest::types::syncing::SyncState::IDLE)
                 .send()
                 .unwrap()
         }

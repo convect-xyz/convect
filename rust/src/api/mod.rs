@@ -1,7 +1,7 @@
 use aws_sdk_s3::error::BoxError;
 
 use crate::{
-    types::manifest::Manifest, types::pipeline::Pipeline, types::transactions::IngestTransaction,
+    types::manifest::Manifest, types::syncing::State, types::transactions::IngestTransaction,
 };
 
 use self::enqueuer::{TransactionEnqueuer, TransactionEnqueuerImpl};
@@ -86,13 +86,13 @@ impl<'a, T: TransactionFetcher> TransactionFetcherFluentBuilder<'a, T> {
 
 pub struct TransactionEnqueuerFluentBuilder<'a, T: TransactionEnqueuer> {
     tx_enqueuer: &'a T,
-    pipeline: Option<&'a mut Pipeline>,
+    pipeline: Option<&'a mut State>,
     transactions: Option<&'a Vec<IngestTransaction>>,
     queue_url: Option<String>,
 }
 
 impl<'a, T: TransactionEnqueuer> TransactionEnqueuerFluentBuilder<'a, T> {
-    pub fn set_pipeline(&'a mut self, value: &'a mut Pipeline) -> &'a mut Self {
+    pub fn set_pipeline(&'a mut self, value: &'a mut State) -> &'a mut Self {
         self.pipeline = Some(value);
         self
     }

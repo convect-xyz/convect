@@ -1,36 +1,14 @@
 import { Lambda } from "@aws-sdk/client-lambda";
 import { S3 } from "@aws-sdk/client-s3";
-import { SNS } from "@aws-sdk/client-sns";
-import { SQS } from "@aws-sdk/client-sqs";
 import esbuild from "esbuild";
 import { backOff } from "exponential-backoff";
 import fs from "fs";
-import { Redis } from "ioredis";
 import JSZip from "jszip";
 import path from "path";
 
 const lambda = new Lambda({ region: "eu-west-1" });
-const sns = new SNS({ region: "eu-west-1" });
-const sqs = new SQS({ region: "eu-west-1" });
 const s3 = new S3({ region: "eu-west-1" });
 
-const redisClient = new Redis.Cluster(
-  [
-    {
-      host: "clustercfg.pipeline-state.cyg7zh.memorydb.eu-west-1.amazonaws.com",
-      port: 6379,
-    },
-  ],
-  {
-    redisOptions: {
-      tls: {
-        checkServerIdentity: (servername, cert) => {
-          return undefined;
-        },
-      },
-    },
-  }
-);
 
 const VERSION = process.env.VERSION!;
 const MODE = process.env.MODE as "init" | "update";
@@ -56,7 +34,6 @@ async function main() {
   await zipEventsLambda();
 
   if (MODE === "init") {
-    await createPipelineState();
     // const { eventsLambdaArn } = await allocateResources();
     // await initialiseHandler({
     //   eventsLambdaArn,
@@ -167,24 +144,4 @@ async function initialiseHandler(opts: { eventsLambdaArn: string }) {
       maxDelay: 3000,
     }
   );
-}
-
-async function createPipelineState() {
-  redisClient.on("error", (err) => console.log("Redis redisClient Error", err));
-
-  console.log("Connecting to redis");
-  await redisClient.call(
-    "JSON.SET",
-    HANDLER_ID,
-    "$",
-    JSON.stringify({
-      HandlerId_: HANDLER_ID,
-      State_: "IDLE",
-    })
-  );
-
-  await redisClient.set(`tx-count-${HANDLER_ID}`, 0);
-  await redisClient.set(`processed-tx-count-${HANDLER_ID}`, 0);
-
-  console.log("Disonnecting from redis");
 }
