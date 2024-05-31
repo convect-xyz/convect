@@ -3,24 +3,12 @@ import { S3 } from "@aws-sdk/client-s3";
 import esbuild from "esbuild";
 import { backOff } from "exponential-backoff";
 import fs from "fs";
-import { Redis } from "ioredis";
 import JSZip from "jszip";
 import path from "path";
 
 const lambda = new Lambda({ region: "eu-west-1" });
 const s3 = new S3({ region: "eu-west-1" });
 
-const redisClient = new Redis(
-  6379,
-  "rediss://default:AbeXAAIncDFjNTRiNjgyMmZjNzM0ZGQzOTZmYTQzZTA5ODQ4YjVkM3AxNDY5OTk@stirred-jawfish-46999.upstash.io",
-  {
-    tls: {
-      checkServerIdentity: (servername, cert) => {
-        return undefined;
-      },
-    },
-  }
-);
 
 const VERSION = process.env.VERSION!;
 const MODE = process.env.MODE as "init" | "update";

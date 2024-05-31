@@ -59,60 +59,64 @@ export const getOverview = protectedProcedure
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
-    try {
-      const response = await redisClient
-        .call(`JSON.GET`, handler.internalId)
-        .then((v) => JSON.parse(v as string));
-      const [txCount] = await redisClient.mget(
-        `tx-count-${handler.internalId}`,
-      );
+    const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
+      getFetchState(handler.internalId),
+      getTxCount(handler.internalId),
+      getAvgDuration(handler.internalId),
+      getSuccessfulTxCount(handler.internalId),
+    ]);
 
-      const avgDuration = await axios
-        .post(
-          "https://api.eu-central-1.aws.tinybird.co/v0/sql",
-          {
-            q: `%
-        SELECT AVG(duration_ms) FROM ingest_metrics WHERE handler_id = {{String(handler_id)}}`,
-            handler_id: handler.internalId,
-          },
-          {
-            headers: {
-              Authorization:
-                "Bearer p.eyJ1IjogIjJlYjlhNzU2LWFjMDMtNDJmOC1iNGY2LWI2M2RhN2JiMjkyNiIsICJpZCI6ICJjZTE2YmI1Yi04NDBiLTQwNGMtYjk4Yi0zMjJiNDc4ZDMyYWEiLCAiaG9zdCI6ICJhd3MtZXUtY2VudHJhbC0xIn0.1Bvj9OA-NZQ0cU62T1sweLScNLMPsv8FIGaP8nkHoRw",
-            },
-          },
-        )
-        .then((r) => r.data)
-        .catch((e) => {
-          console.log(e);
-          throw e;
-        });
-
-      const successfulTx = await db
-        .execute(
-          sql`SELECT COUNT(DISTINCT(transaction_hash)) FROM processed_transactions WHERE handler_id = ${handler.internalId} AND status = 'SUCCESS'`,
-        )
-        .then((r) => Number(r.at(0)!.count));
-
-      const recentTransactions = await db.execute<{
-        transaction_hash: string;
-        status: string;
-        timestamp: Date;
-      }>(sql`SELECT *
-          FROM (SELECT DISTINCT ON (${processedTransactions.transactionHash}) ${processedTransactions.transactionHash}, ${processedTransactions.status}, ${processedTransactions.timestamp} 
-                FROM ${processedTransactions}
-                WHERE handler_id = ${handler.internalId}) as transactions
-          ORDER BY transactions.timestamp DESC
-          LIMIT 25`);
-
-      return {
-        transactionCount: Number(txCount),
-        processedTransactionsCount: successfulTx,
-        lastFetchedBlock: Number(response.LastBlock_),
-        avgDuration: Number(avgDuration),
-      };
-    } catch (e) {
-      console.log(e);
-    }
-    return {} as any;
+    return {
+      transactionCount: txCount,
+      processedTransactionsCount: successfulTx,
+      lastFetchedBlock: fetchState.lastBlock,
+      avgDuration: avgDuration,
+    };
   });
+
+const getAvgDuration = async (internalId: string) => {
+  return axios
+    .post(
+      "https://api.eu-central-1.aws.tinybird.co/v0/sql",
+      {
+        q: `%
+    SELECT AVG(duration_ms) FROM ingest_metrics WHERE handler_id = {{String(handler_id)}}`,
+        handler_id: internalId,
+      },
+      {
+        headers: {
+          Authorization:
+            "Bearer p.eyJ1IjogIjJlYjlhNzU2LWFjMDMtNDJmOC1iNGY2LWI2M2RhN2JiMjkyNiIsICJpZCI6ICJjZTE2YmI1Yi04NDBiLTQwNGMtYjk4Yi0zMjJiNDc4ZDMyYWEiLCAiaG9zdCI6ICJhd3MtZXUtY2VudHJhbC0xIn0.1Bvj9OA-NZQ0cU62T1sweLScNLMPsv8FIGaP8nkHoRw",
+        },
+      },
+    )
+    .then((r) => r.data)
+    .then(Number);
+};
+
+const getSuccessfulTxCount = async (internalId: string) => {
+  return db
+    .execute(
+      sql`SELECT COUNT(DISTINCT(transaction_hash)) FROM processed_transactions WHERE handler_id = ${internalId} AND status = 'SUCCESS'`,
+    )
+    .then((r) => Number(r.at(0)!.count));
+};
+
+const getTxCount = async (internalId: string) => {
+  const [txCount] = await redisClient.mget(`tx-count-${internalId}`);
+  return txCount ? Number(txCount) : 0;
+};
+
+const getFetchState = async (internalId: string) => {
+  const response = await redisClient
+    .call(`JSON.GET`, internalId)
+    .then((v) => JSON.parse(v as string));
+
+  return response
+    ? {
+        lastBlock: Number(response.LastBlock_),
+      }
+    : {
+        lastBlock: 0,
+      };
+};

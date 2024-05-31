@@ -35,7 +35,8 @@ export function NavbarLeading() {
 }
 
 export function ProjectsDropdown() {
-  const { data: projects } = api.project.getProjects.useQuery();
+  const { data: projects, isLoading: isLoadingProjects } =
+    api.project.getProjects.useQuery();
   const { projectId } = useParams<{ projectId?: string }>();
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const router = useRouter();
@@ -45,19 +46,23 @@ export function ProjectsDropdown() {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-[180px] items-center justify-start gap-2"
-          >
-            <LogoIcon className="h-6 w-6" />
-            {currentProject ? (
-              <>{currentProject.name}</>
-            ) : (
-              <>Select a project</>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
+        {isLoadingProjects ? (
+          <Skeleton className="h-9 w-[180px]" />
+        ) : (
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-[180px] items-center justify-start gap-2"
+            >
+              <LogoIcon className="h-6 w-6" />
+              {currentProject ? (
+                <>{currentProject.name}</>
+              ) : (
+                <>Select a project</>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+        )}
         <DropdownMenuContent className="w-56">
           <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">
             Projects
