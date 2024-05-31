@@ -71,7 +71,7 @@ export async function handler(event: SQSEvent) {
   const s3Results = await getS3Results(parsedRecords);
   const parsedTxs = parseTransactions(parsedRecords, s3Results);
 
-  const { results, addFailure, addSuccessful, failureCount } = createStateManager();
+  const { results, addFailure, addSuccessful, getFailureCount } = createStateManager();
 
   var { iterator, startProcessor } = await getTransactionIterator({
     parsedTxs,
@@ -103,8 +103,8 @@ export async function handler(event: SQSEvent) {
 
   await uploadResults(results, event.Records.map(r => r.receiptHandle));
 
-  console.log(failureCount)
-  if(failureCount > 0) {
+  console.log(getFailureCount())
+  if(getFailureCount() > 0) {
     throw new Error('Some handlers failed');
   }
   
@@ -245,8 +245,8 @@ function createStateManager() {
     addSuccessful,
     addFailure,
     results,
-    failureCount,
-    successCount
+    getFailureCount: () => failureCount,
+    getSuccessCount: () => successCount
   }
 }
 
