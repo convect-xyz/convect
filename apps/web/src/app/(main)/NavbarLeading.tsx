@@ -1,6 +1,7 @@
 "use client";
 
 import { PlusCircle } from "lucide-react";
+import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import LogoIcon from "~/components/icons/LogoIcon";
@@ -25,7 +26,9 @@ export function NavbarLeading() {
   if (isApiKeysRoute) {
     return (
       <div className="flex items-center gap-2">
-        <LogoIcon className="h-6 w-6" />
+        <Link href="/">
+          <LogoIcon className="h-6 w-6" />
+        </Link>
         <div className="text-md">API Keys</div>
       </div>
     );
