@@ -158,7 +158,9 @@ pub mod syncing {
             .unwrap();
 
             let mut con = client.get_connection().unwrap();
-            let result: Option<String> = con.json_get(&handler_id, "$").unwrap();
+            let result: Option<String> = con
+                .json_get(format!("{handler_id}-{handler_version}"), "$")
+                .unwrap();
 
             let inner = match result {
                 Some(result) => {
