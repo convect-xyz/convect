@@ -2,7 +2,7 @@ use aws_config::BehaviorVersion;
 use ethers::prelude::*;
 use ethers::providers::{Middleware, Provider, Ws};
 use futures::future::join_all;
-use ingest::producer::{get_supported_networks, SupportedNetwork};
+use ingest::networks::{get_supported_networks, SupportedNetwork};
 
 #[tokio::main]
 async fn main() {

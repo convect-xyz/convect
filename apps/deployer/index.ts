@@ -14,6 +14,7 @@ const POLLING_URL = process.env.POLLING_URL!;
 const CHAIN_SNS = process.env.CHAIN_SNS!;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
 const HANDLER_ENVS = process.env.HANDLER_ENVS!;
+const STRIPE_CUSTOMER_ID = process.env.STRIPE_CUSTOMER_ID!;
 
 const transactionQueue = new aws.sqs.Queue(`tx-queue-${HANDLER_ID}`, {
   name: `tx-queue-${HANDLER_ID}.fifo`,
@@ -79,6 +80,7 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
       TRANSACTION_QUEUE_URL: transactionQueue.url,
       DATABASE_URL:
         "postgresql://postgres:postgres@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres?sslmode=require",
+      STRIPE_CUSTOMER_ID,
     },
   },
   layers: [

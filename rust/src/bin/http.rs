@@ -56,6 +56,7 @@ mod results {
     use diesel_async::RunQueryDsl;
     use futures::lock::Mutex;
     use ingest::connection::establish_connection;
+    use ingest::telemetry::{self, ProcessedTransactionTelemetry};
     use ingest::types::processing;
     use ingest::{models::ProcessedTransaction, schema::processed_transactions};
     use serde::Deserialize;
@@ -76,6 +77,7 @@ mod results {
 
     #[derive(Deserialize, Debug)]
     pub struct Request {
+        pub invocation_id: String,
         pub message_ids: Vec<String>,
         pub results: Vec<TransactionResult>,
     }
@@ -174,6 +176,20 @@ mod results {
         println!("Establishing connection");
         let mut conn = establish_connection().await;
         println!("Established connection");
+
+        let tx_telemtry = telemetry::stripe::StripeProcessedTransactionTelemetry::from_env();
+
+        let record = tx_telemtry
+            .record_invocation(
+                payload.invocation_id,
+                payload.results.len().try_into().unwrap(),
+            )
+            .await;
+
+        match record {
+            Err(e) => println!("Error recording tx usage: {:?}", e),
+            _ => {}
+        }
 
         let r = diesel::insert_into(processed_transactions::table)
             .values(data)
