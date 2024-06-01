@@ -1,0 +1,57 @@
+use aws_sdk_s3::error::BoxError;
+
+pub trait ProcessedTransactionTelemetry {
+    async fn record_invocation(
+        &self,
+        invocation_id: String,
+        num_processed: u64,
+    ) -> Result<(), BoxError>;
+}
+
+pub mod stripe {
+    use std::env;
+
+    use aws_sdk_s3::error::BoxError;
+    use serde_json::json;
+
+    use super::ProcessedTransactionTelemetry;
+
+    pub struct StripeProcessedTransactionTelemetry {
+        client: reqwest::Client,
+        customer_id: String,
+    }
+
+    impl StripeProcessedTransactionTelemetry {
+        pub fn from_env() -> Self {
+            Self {
+                client: reqwest::Client::new(),
+                customer_id: env::var("STRIPE_CUSTOMER_ID")
+                    .expect("STRIPE_CUSTOMER_ID should be set"),
+            }
+        }
+    }
+
+    impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
+        async fn record_invocation(
+            &self,
+            invocation_id: String,
+            num_processed: u64,
+        ) -> Result<(), BoxError> {
+            self.client
+                .post("https://api.stripe.com/v1/billing/meter_events")
+                .json(&json!({
+                  "event_name": "transactions_processed",
+                  "payload": {
+                    "transactions": num_processed.to_string(),
+                    "stripe_customer_id": &self.customer_id
+                  },
+                  "identifier": invocation_id
+                }))
+                .header("Authorization", format!("Basic REDACTED", ))
+                .send()
+                .await?;
+
+            Ok(())
+        }
+    }
+}

@@ -5,6 +5,7 @@ import { ecs } from "~/lib/server/aws";
 type TriggerBuildOptions = {
   version: string;
   deploymentId: string;
+  stripeCustomerId: string;
   internalHandlerId: string;
   previousInternalHandlerId?: string;
   pollingUrl: string;
@@ -65,6 +66,10 @@ export async function createDeployment(options: TriggerBuildOptions) {
             {
               name: "DEPLOYMENT_ID",
               value: options.deploymentId,
+            },
+            {
+              name: "STRIPE_CUSTOMER_ID",
+              value: options.stripeCustomerId,
             },
             {
               name: "HANDLER_ENVS",
