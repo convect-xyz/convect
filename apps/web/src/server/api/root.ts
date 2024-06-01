@@ -1,6 +1,12 @@
-import { createTRPCRouter } from "~/server/api/trpc";
+import { headers } from "next/headers";
+import {
+  createCallerFactory,
+  createTRPCContext,
+  createTRPCRouter,
+} from "~/server/api/trpc";
 import { createApiKey } from "./routers/apiKey/createApiKey";
 import { getApiKeys } from "./routers/apiKey/getApiKeys";
+import { switchPlan } from "./routers/billing/switchPlan";
 import { getBranches } from "./routers/github/getBranches";
 import { getInstallations } from "./routers/github/getInstallations";
 import { getRepositories } from "./routers/github/getRepositories";
@@ -20,6 +26,10 @@ import { getProducers } from "./routers/producers/getProducers";
 import { createProject } from "./routers/project/create";
 import { getProjectById } from "./routers/project/getProjectById";
 import { getProjects } from "./routers/project/getProjects";
+
+export const billingRouter = createTRPCRouter({
+  switchPlan,
+});
 
 export const apiKeysRouter = createTRPCRouter({
   createApiKey,
@@ -63,6 +73,12 @@ export const appRouter = createTRPCRouter({
   github: githubRouter,
   handlers: handlerRouter,
   apiKeys: apiKeysRouter,
+  billing: billingRouter,
 });
 
 export type AppRouter = typeof appRouter;
+
+const createCaller = createCallerFactory(appRouter);
+export const caller = createCaller(async () => {
+  return createTRPCContext({ headers: headers() });
+});
