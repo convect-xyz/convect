@@ -51,7 +51,7 @@ pub mod stripe {
                 .send()
                 .await?;
 
-            println!("{:?}", r.json());
+            println!("{:?}", r.json().await.unwrap());
 
             Ok(())
         }
