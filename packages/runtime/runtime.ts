@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
 
-import { SQSEvent } from "aws-lambda";
+import { Context, SQSEvent } from "aws-lambda";
 
 const USER_ENVS = (
   JSON.parse(process.env.USER_ENVS!) as Array<{
@@ -14,41 +14,41 @@ const USER_ENVS = (
     return acc;
   },
   {} as Record<string, string>
-)
+);
 
 const HANDLER_ID = process.env.HANDLER_ID;
 
-for(const env of Object.keys(process.env)) {
+for (const env of Object.keys(process.env)) {
   delete process.env[env];
 }
 
-for(const [name, value] of Object.entries(USER_ENVS)) {
+for (const [name, value] of Object.entries(USER_ENVS)) {
   process.env[name] = value;
 }
-process.env['HANDLER_ID'] = HANDLER_ID;
+process.env["HANDLER_ID"] = HANDLER_ID;
 
-const { default: pipeline } = require('./pipeline');
+const { default: pipeline } = require("./pipeline");
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
 type ParsedRecord = {
   id: string;
-  data: Record<string, any>
-}
+  data: Record<string, any>;
+};
 
 type LogIdentifier = {
   signature: Address;
-  address: Hex
-}
+  address: Hex;
+};
 
 type EligibleTxConfig = {
   label: string;
-  config: any
-}
+  config: any;
+};
 
 type TransactionResultLabel = {
   label: String;
   timestamp_ms: number;
-}
+};
 type TransactionResult = {
   transaction_hash: string;
   successful_labels: Array<TransactionResultLabel>;
@@ -56,42 +56,45 @@ type TransactionResult = {
 };
 
 type Transaction = {
-  transactionHash: string
-}
+  transactionHash: string;
+};
 
-export async function handler(event: SQSEvent) {
+export async function handler(event: SQSEvent, context: Context) {
   const parsedRecords: Array<ParsedRecord> = event.Records.map((record) => ({
     id: record.messageId,
     isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
     data: JSON.parse(record.body),
   }));
 
-  const isRetry = event.Records.some((r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1)
+  const isRetry = event.Records.some(
+    (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
+  );
 
   const s3Results = await getS3Results(parsedRecords);
   const parsedTxs = parseTransactions(parsedRecords, s3Results);
 
-  const { results, addFailure, addSuccessful, getFailureCount } = createStateManager();
+  const { results, addFailure, addSuccessful, getFailureCount } =
+    createStateManager();
 
   var { iterator, startProcessor } = await getTransactionIterator({
     parsedTxs,
-    isRetry
+    isRetry,
   });
-  
 
-  process_loop:
-  while (iterator.hasNext()) {
+  let err: any;
+  process_loop: while (iterator.hasNext()) {
     const { batch, processors } = getNextTransactionBatch(iterator);
-    
+
     for (const { label, config: txConfig } of processors) {
-      if(startProcessor && label !== startProcessor) {
-        continue
+      if (startProcessor && label !== startProcessor) {
+        continue;
       }
 
       try {
         await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
-        batch.map((tx) => addSuccessful(tx.transactionHash, label))
-      } catch(e) {
+        batch.map((tx) => addSuccessful(tx.transactionHash, label));
+      } catch (e) {
+        err = e;
         addFailure(batch.at(0)!.transactionHash, label);
         console.error(e);
         break process_loop;
@@ -101,16 +104,23 @@ export async function handler(event: SQSEvent) {
     }
   }
 
-  await uploadResults(results, event.Records.map(r => r.receiptHandle));
+  await uploadResults(
+    context.awsRequestId,
+    results,
+    event.Records.map((r) => r.receiptHandle)
+  );
 
-  if(getFailureCount() > 0) {
-    throw new Error('Some handlers failed');
+  if (getFailureCount() > 0) {
+    throw err;
   }
-  
+
   return {};
 }
 
-export function parseTransactions(parsedRecords: Array<ParsedRecord>, s3Results: Map<any, any>) {
+export function parseTransactions(
+  parsedRecords: Array<ParsedRecord>,
+  s3Results: Map<any, any>
+) {
   const transactions: Array<Transaction> = [];
   for (const record of parsedRecords) {
     const payload = record.data;
@@ -127,43 +137,56 @@ export function parseTransactions(parsedRecords: Array<ParsedRecord>, s3Results:
 
 type GetInitialisationOptions = {
   parsedTxs: Array<Transaction>;
-  isRetry: boolean
-}
+  isRetry: boolean;
+};
 
-export async function getTransactionIterator(options: GetInitialisationOptions) {
-  if(!options.isRetry) {
+export async function getTransactionIterator(
+  options: GetInitialisationOptions
+) {
+  if (!options.isRetry) {
     return {
       iterator: new TransactionIterator(options.parsedTxs, 0),
-      startProcessor: undefined
-    }
+      startProcessor: undefined,
+    };
   }
 
-  const pipeline = await axios.get("http://localhost:4121/pipeline").then((r) => r.data);
+  const pipeline = await axios
+    .get("http://localhost:4121/pipeline")
+    .then((r) => r.data);
   const txIdx = findErrorTxIdx(options.parsedTxs, pipeline);
 
   return {
     iterator: new TransactionIterator(options.parsedTxs, txIdx),
-    startProcessor: pipeline.ErrorLabel_
-  }
+    startProcessor: pipeline.ErrorLabel_,
+  };
 }
 
-
 export function findErrorTxIdx(parsedTxs: Array<Transaction>, pipeline: any) {
-  const index = parsedTxs.findIndex((v) => pipeline.ErrorTx_ === v.transactionHash);
-  if(index === -1) throw new Error('Index for failed tx not found');
+  const index = parsedTxs.findIndex(
+    (v) => pipeline.ErrorTx_ === v.transactionHash
+  );
+  if (index === -1) throw new Error("Index for failed tx not found");
 
   return index;
 }
 
-export async function uploadResults(results: Array<TransactionResult>, message_ids: Array<string>) {
-  await axios.post("http://localhost:4121/results", { results, message_ids });
+export async function uploadResults(
+  invocation_id: string,
+  results: Array<TransactionResult>,
+  message_ids: Array<string>
+) {
+  await axios.post("http://localhost:4121/results", {
+    invocation_id,
+    results,
+    message_ids,
+  });
 }
 
 export function getNextTransactionBatch(iterator: TransactionIterator) {
   const batch: Array<Transaction> = [];
 
   // tx at the front of parsedTxs
-  const frontTx = iterator.peek()
+  const frontTx = iterator.peek();
   const processors = getEligibleTxConfigs(frontTx, allTxConfigsWithLabels);
 
   // batch transactions that can be processed by the exact same processors
@@ -180,7 +203,7 @@ export function getNextTransactionBatch(iterator: TransactionIterator) {
 
   return {
     batch,
-    processors
+    processors,
   };
 }
 
@@ -200,42 +223,42 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
   return s3Results;
 }
 
-function createStateManager() {  
+function createStateManager() {
   const txHashIdx = new Map<string, number>();
   const results: Array<TransactionResult> = [];
   let failureCount = 0;
   let successCount = 0;
 
   function addSuccessful(txHash: string, handler: string) {
-    if(!txHashIdx.has(txHash)) {
+    if (!txHashIdx.has(txHash)) {
       txHashIdx.set(txHash, results.length);
       results.push({
         transaction_hash: txHash,
         successful_labels: [],
-        failed_label: undefined
+        failed_label: undefined,
       });
     }
 
     results[txHashIdx.get(txHash)!]!.successful_labels.push({
       label: handler,
-      timestamp_ms: Date.now()
+      timestamp_ms: Date.now(),
     });
     successCount++;
   }
 
   function addFailure(txHash: string, handler: string) {
-    if(!txHashIdx.has(txHash)) {
+    if (!txHashIdx.has(txHash)) {
       txHashIdx.set(txHash, results.length);
       results.push({
         transaction_hash: txHash,
         successful_labels: [],
-        failed_label: undefined
+        failed_label: undefined,
       });
     }
 
     results[txHashIdx.get(txHash)!]!.failed_label = {
       label: handler,
-      timestamp_ms: Date.now()
+      timestamp_ms: Date.now(),
     };
     failureCount++;
   }
@@ -245,12 +268,15 @@ function createStateManager() {
     addFailure,
     results,
     getFailureCount: () => failureCount,
-    getSuccessCount: () => successCount
-  }
+    getSuccessCount: () => successCount,
+  };
 }
 
 // Eligible Tx configs are configs that match the given transaction
-export function getEligibleTxConfigs(tx: any, allTxConfigs: Array<any>): Array<EligibleTxConfig> {
+export function getEligibleTxConfigs(
+  tx: any,
+  allTxConfigs: Array<any>
+): Array<EligibleTxConfig> {
   const eligibleTxConfigs = [];
   const txLogIdentifiers = getUniqueLogIdentifiers(tx);
 
@@ -295,7 +321,10 @@ export function txConfigComparison(tx: any) {
   };
 }
 
-export function sameEligibleProcessors(processorsA: Array<any>, processorsB: Array<any>) {
+export function sameEligibleProcessors(
+  processorsA: Array<any>,
+  processorsB: Array<any>
+) {
   let seen = new Set();
 
   if (processorsA.length != processorsB.length) return false;
@@ -377,17 +406,17 @@ class TransactionIterator {
   #index: number;
 
   constructor(transactions: Array<Transaction>, startIndex: number) {
-    this.#transactions = transactions
+    this.#transactions = transactions;
     this.#index = startIndex;
   }
- 
+
   hasNext() {
     return this.#index < this.#transactions.length;
   }
- 
+
   next() {
     return this.#transactions[this.#index++];
-  } 
+  }
 
   peek() {
     return this.#transactions[this.#index];

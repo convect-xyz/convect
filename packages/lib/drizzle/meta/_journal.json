@@ -50,6 +50,13 @@
       "when": 1717266918174,
       "tag": "0006_faithful_outlaw_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1717277729255,
+      "tag": "0007_parched_vengeance",
+      "breakpoints": true
     }
   ]
 }

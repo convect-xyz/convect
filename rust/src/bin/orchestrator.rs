@@ -23,7 +23,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let ecs_client = aws_sdk_ecs::Client::new(&config);
     let api = api::Api::new(&config);
     let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
-    let mut pipeline = State::load(handler_id);
+    let handler_version = env::var("HANDLER_VERSION").expect("Handler ID not set");
+    let mut pipeline = State::load(handler_id, handler_version);
 
     let incoming_block: u64 = event
         .payload
@@ -161,6 +162,10 @@ async fn trigger_batch_sync_task(
                             create_key_value_pair(
                                 "HANDLER_ID".to_string(),
                                 env::var("HANDLER_ID").unwrap(),
+                            ),
+                            create_key_value_pair(
+                                "HANDLER_VERSION".to_string(),
+                                env::var("HANDLER_VERSION").unwrap(),
                             ),
                             create_key_value_pair("VERSION".to_string(), version),
                         ]))

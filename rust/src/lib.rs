@@ -1,7 +1,8 @@
 pub mod api;
 pub mod log_fetcher;
-pub mod producer;
+pub mod networks;
 pub mod s3;
+pub mod telemetry;
 pub mod types;
 
 #[cfg(feature = "pg")]
