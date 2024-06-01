@@ -81,6 +81,7 @@ export async function handler(event: SQSEvent, context: Context) {
     isRetry,
   });
 
+  let err: any;
   process_loop: while (iterator.hasNext()) {
     const { batch, processors } = getNextTransactionBatch(iterator);
 
@@ -93,6 +94,7 @@ export async function handler(event: SQSEvent, context: Context) {
         await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
         batch.map((tx) => addSuccessful(tx.transactionHash, label));
       } catch (e) {
+        err = e;
         addFailure(batch.at(0)!.transactionHash, label);
         console.error(e);
         break process_loop;
@@ -109,7 +111,7 @@ export async function handler(event: SQSEvent, context: Context) {
   );
 
   if (getFailureCount() > 0) {
-    throw new Error("Some handlers failed");
+    throw err;
   }
 
   return {};
