@@ -37,7 +37,7 @@ pub mod stripe {
             invocation_id: String,
             num_processed: u64,
         ) -> Result<(), BoxError> {
-            self.client
+            let r = self.client
                 .post("https://api.stripe.com/v1/billing/meter_events")
                 .json(&json!({
                   "event_name": "transactions_processed",
@@ -50,6 +50,8 @@ pub mod stripe {
                 .basic_auth("REDACTED", None::<String>)
                 .send()
                 .await?;
+
+            println!("{:?}", r.json());
 
             Ok(())
         }
