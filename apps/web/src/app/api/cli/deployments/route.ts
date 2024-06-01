@@ -134,6 +134,7 @@ export const POST = async (req: NextRequest) => {
     version: env.VERSION,
     sourcePrefix,
     deploymentId,
+    stripeCustomerId: user.stripeCustomerId!,
     internalHandlerId: handler.internalId,
     previousInternalHandlerId,
     pollingUrl: handler.producer.pollingUrl,
