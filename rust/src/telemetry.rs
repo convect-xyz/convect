@@ -39,7 +39,7 @@ pub mod stripe {
         ) -> Result<(), BoxError> {
             let r = self.client
                 .post("https://api.stripe.com/v1/billing/meter_events")
-                .json(&json!({
+                .form(&json!({
                   "event_name": "transactions_processed",
                   "payload": {
                     "transactions": num_processed.to_string(),
