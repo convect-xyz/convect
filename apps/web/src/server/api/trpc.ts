@@ -59,6 +59,8 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
   },
 });
 
+export const { createCallerFactory, router } = t;
+
 /**
  * 3. ROUTER & PROCEDURE (THE IMPORTANT BIT)
  *

@@ -108,7 +108,14 @@ function Content(props: Props) {
 
 function ChainField() {
   const form = useFormContext<Values>();
-  const { data: producers } = api.producers.getProducers.useInfiniteQuery({});
+  const { data: producers } = api.producers.getProducers.useInfiniteQuery(
+    {},
+    {
+      getNextPageParam(_) {
+        return 0;
+      },
+    },
+  );
 
   return (
     <FormField

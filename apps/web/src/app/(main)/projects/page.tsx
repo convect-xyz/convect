@@ -1,17 +1,21 @@
 import { redirect } from "next/navigation";
-import { api } from "~/trpc/server";
+import { caller } from "~/server/api/root";
 
-export default async function Page() {
-  const projects = await api.project.getProjects.query();
+export default async function Page(props: {
+  searchParams: Record<string, any>;
+}) {
+  const projects = await caller.project.getProjects();
   var firstProjectId = projects.at(0)?.id;
 
   if (!firstProjectId) {
-    firstProjectId = await api.project.create
-      .mutate({
+    firstProjectId = await caller.project
+      .create({
         name: "default",
       })
       .then((p) => p.id);
   }
 
-  return redirect(`/projects/${firstProjectId}`);
+  const p = new URLSearchParams(props.searchParams);
+
+  return redirect(`/projects/${firstProjectId}?${p.toString()}`);
 }
