@@ -247,8 +247,13 @@ pub mod syncing {
         }
 
         pub fn send(self) -> Result<(), BoxError> {
-            self.connection
-                .json_set(self.inner.handler_id.to_string(), "$", &self.inner)?;
+            let handler_id = &self.inner.handler_id;
+            let handler_version = &self.inner.handler_version;
+            self.connection.json_set(
+                format!("{handler_id}-{handler_version}"),
+                "$",
+                &self.inner,
+            )?;
 
             Ok(())
         }
