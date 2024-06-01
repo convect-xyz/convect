@@ -46,14 +46,7 @@ pub mod stripe {
 
             let r = self.client
                 .post("https://api.stripe.com/v1/billing/meter_events")
-                .form(&json!({
-                  "event_name": "transactions_processed",
-                  "payload": {
-                    "transactions": num_processed.to_string(),
-                    "stripe_customer_id": &self.customer_id
-                  },
-                  "identifier": invocation_id
-                }))
+                .form(&form_data)
                 .basic_auth("REDACTED", None::<String>)
                 .send()
                 .await?;
