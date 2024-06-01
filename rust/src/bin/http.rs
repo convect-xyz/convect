@@ -91,6 +91,7 @@ mod results {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let sqs_client = aws_sdk_sqs::Client::new(&config);
         let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
+        let handler_version = env::var("HANDLER_VERSION").expect("Handler VERSION env not set");
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
@@ -156,6 +157,7 @@ mod results {
                         status: "SUCCESS".to_string(),
                         timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
                         handler_id: &handler_id,
+                        handler_version: &handler_version,
                     })
                 }
 
@@ -166,6 +168,7 @@ mod results {
                         status: "FAILED".to_string(),
                         timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
                         handler_id: &handler_id,
+                        handler_version: &handler_version,
                     })
                 }
 
