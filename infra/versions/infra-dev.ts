@@ -10,7 +10,7 @@ const extension = new aws.lambda.LayerVersion("handler_extension", {
   description: "Handler Extension",
   s3Bucket: "ingest-functions",
   s3Key: `extension/${stackName}.zip`,
-  s3ObjectVersion: "jyH6KN9A5E2O8a9wVuSK1gkaS9eU.u3C",
+  s3ObjectVersion: "AcpetryEJ7hLuc7pgYhCnaDAbJBeMoXk",
   skipDestroy: false,
 });
 
