@@ -27,7 +27,7 @@ export default function Page() {
 function DeleteHandler() {
   const { handlerId, projectId } = useParams();
   const router = useRouter();
-  const { mutateAsync: deleteHandler, isLoading: isDeleting } =
+  const { mutateAsync: deleteHandler, isPending: isDeleting } =
     api.handlers.deleteHandler.useMutation({
       onSuccess() {
         router.push(`/projects/${projectId}`);

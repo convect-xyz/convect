@@ -58,7 +58,11 @@ export function AddEnvSection() {
                 <FormItem className="flex-1">
                   <FormLabel>Key</FormLabel>
                   <FormControl>
-                    <Input placeholder="Key" {...field} />
+                    <Input
+                      className="bg-background"
+                      placeholder="Key"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -71,7 +75,11 @@ export function AddEnvSection() {
                 <FormItem className="flex-1">
                   <FormLabel>Value</FormLabel>
                   <FormControl>
-                    <Input placeholder="Value" {...field} />
+                    <Input
+                      className="bg-background"
+                      placeholder="Value"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
