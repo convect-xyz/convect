@@ -153,6 +153,7 @@ export const handler = createTable(
       .unique()
       .default(sql`gen_random_uuid()`)
       .notNull(),
+    version: integer("version").notNull().default(0),
     name: varchar("name").notNull(),
     producerId: integer("producerId")
       .notNull()

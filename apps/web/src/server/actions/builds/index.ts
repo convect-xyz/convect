@@ -7,7 +7,9 @@ type TriggerBuildOptions = {
   deploymentId: string;
   stripeCustomerId: string;
   internalHandlerId: string;
-  previousInternalHandlerId?: string;
+  internalHandlerVersion: number;
+  manifestBucket: string;
+  manifestPrefix: string;
   pollingUrl: string;
   chainSns: string;
   envs: Array<{ key: string; value: string }>;
@@ -36,8 +38,8 @@ export async function createDeployment(options: TriggerBuildOptions) {
             { name: "VERSION", value: options.version },
             { name: "MODE", value: options.mode },
             {
-              name: "PREVIOUS_HANDLER_ID",
-              value: options.previousInternalHandlerId?.toString() ?? "",
+              name: "HANDLER_VERSION",
+              value: options.internalHandlerVersion.toString(),
             },
             {
               name: "HANDLER_ID",
@@ -50,6 +52,14 @@ export async function createDeployment(options: TriggerBuildOptions) {
             {
               name: "SOURCE_PREFIX",
               value: options.sourcePrefix,
+            },
+            {
+              name: "MANIFEST_BUCKET",
+              value: options.manifestBucket,
+            },
+            {
+              name: "MANIFEST_PREFIX",
+              value: options.manifestPrefix,
             },
             {
               name: "POLLING_URL",

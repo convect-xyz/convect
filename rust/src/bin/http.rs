@@ -19,7 +19,8 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-    let state = processing::State::load(handler_id).await;
+    let handler_version = env::var("HANDLER_VERSION").expect("Handler ID env not set");
+    let state = processing::State::load(handler_id, handler_version).await;
     let pipeline = Arc::new(Mutex::new(state));
 
     let app = Router::new()

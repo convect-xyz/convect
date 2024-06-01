@@ -8,20 +8,21 @@ const org = "kayakthedev";
 const stackRef = new pulumi.StackReference(`${org}/infra/${VERSION}`);
 
 const HANDLER_ID = process.env.HANDLER_ID!;
-const MANIFEST_BUCKET = "ingest-fetch-logs";
-const MANIFEST_PREFIX = path.join("manifests", HANDLER_ID + ".json");
+const HANDLER_VERSION = process.env.HANDLER_VERSION!;
+const MANIFEST_BUCKET = process.env.MANIFEST_BUCKET!;
+const MANIFEST_PREFIX = process.env.MANIFEST_PREFIX!;
 const POLLING_URL = process.env.POLLING_URL!;
 const CHAIN_SNS = process.env.CHAIN_SNS!;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
 const HANDLER_ENVS = process.env.HANDLER_ENVS!;
 const STRIPE_CUSTOMER_ID = process.env.STRIPE_CUSTOMER_ID!;
 
-const transactionQueue = new aws.sqs.Queue(`tx-queue-${HANDLER_ID}`, {
+const transactionQueue = new aws.sqs.Queue(`tx-queue`, {
   visibilityTimeoutSeconds: 900,
   fifoQueue: true,
 });
 
-const logFetcher = new aws.lambda.Function(`log-fetcher-${HANDLER_ID}`, {
+const logFetcher = new aws.lambda.Function(`log-fetcher`, {
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-functions",
   s3Key: `log-fetcher/${VERSION}.zip`,
@@ -32,6 +33,7 @@ const logFetcher = new aws.lambda.Function(`log-fetcher-${HANDLER_ID}`, {
       MANIFEST_PREFIX,
       NODE_ENDPOINT: POLLING_URL,
       HANDLER_ID,
+      HANDLER_VERSION,
       VERSION,
     },
   },
@@ -41,7 +43,7 @@ const logFetcher = new aws.lambda.Function(`log-fetcher-${HANDLER_ID}`, {
   runtime: "provided.al2023",
 });
 
-const orchestrator = new aws.lambda.Function(`orchestrator-${HANDLER_ID}`, {
+const orchestrator = new aws.lambda.Function(`orchestrator`, {
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-functions",
   s3Key: `orchestrator/${VERSION}.zip`,
@@ -53,6 +55,7 @@ const orchestrator = new aws.lambda.Function(`orchestrator-${HANDLER_ID}`, {
       MANIFEST_PREFIX,
       NODE_ENDPOINT: POLLING_URL,
       HANDLER_ID,
+      HANDLER_VERSION,
       VERSION,
     },
   },
@@ -63,13 +66,14 @@ const orchestrator = new aws.lambda.Function(`orchestrator-${HANDLER_ID}`, {
   reservedConcurrentExecutions: 1,
 });
 
-const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
+const handler = new aws.lambda.Function(`handler`, {
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-build-outputs",
   s3Key: path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + ".zip"),
   environment: {
     variables: {
       HANDLER_ID,
+      HANDLER_VERSION,
       MUST_REMOVE_CONVECT_TBK:
         "p.eyJ1IjogIjJlYjlhNzU2LWFjMDMtNDJmOC1iNGY2LWI2M2RhN2JiMjkyNiIsICJpZCI6ICJjZTE2YmI1Yi04NDBiLTQwNGMtYjk4Yi0zMjJiNDc4ZDMyYWEiLCAiaG9zdCI6ICJhd3MtZXUtY2VudHJhbC0xIn0.1Bvj9OA-NZQ0cU62T1sweLScNLMPsv8FIGaP8nkHoRw",
       USER_ENVS: HANDLER_ENVS,
@@ -90,13 +94,14 @@ const handler = new aws.lambda.Function(`handler-${HANDLER_ID}`, {
   runtime: "nodejs20.x",
 });
 
-const events = new aws.lambda.Function(`events-${HANDLER_ID}`, {
+const events = new aws.lambda.Function(`events`, {
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-build-outputs",
   s3Key: path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + "-events.zip"),
   environment: {
     variables: {
       HANDLER_ID,
+      HANDLER_VERSION,
       USER_ENVS: HANDLER_ENVS,
     },
   },
@@ -117,7 +122,7 @@ const handlerSourceMapping = new aws.lambda.EventSourceMapping(
 );
 
 const snsOrchestratorPermission = new aws.lambda.Permission(
-  `allow_sns_invoke_orchestrator_${HANDLER_ID}`,
+  `allow_sns_invoke_orchestrator`,
   {
     statementId: `${HANDLER_ID}`,
     action: "lambda:InvokeFunction",
@@ -127,14 +132,11 @@ const snsOrchestratorPermission = new aws.lambda.Permission(
   }
 );
 
-const snsSub = new aws.sns.TopicSubscription(
-  `orchestrator_${HANDLER_ID}_sns_sub`,
-  {
-    topic: CHAIN_SNS,
-    protocol: "lambda",
-    endpoint: orchestrator.arn,
-  }
-);
+const snsSub = new aws.sns.TopicSubscription(`orchestrator_sns_sub`, {
+  topic: CHAIN_SNS,
+  protocol: "lambda",
+  endpoint: orchestrator.arn,
+});
 
 export const txQueueUrl = transactionQueue.url;
 export const orchestratorArn = orchestrator.arn;
