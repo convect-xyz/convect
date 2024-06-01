@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   index,
   integer,
+  pgEnum,
   pgTableCreator,
   primaryKey,
   serial,
@@ -15,6 +16,12 @@ import { v4 } from "uuid";
 
 export const createTable = pgTableCreator((name) => `web_${name}`);
 
+export const planEnum = pgEnum("plan_type", [
+  "FREE",
+  "STARTUP",
+  "PROFESSIONAL",
+]);
+
 export const users = createTable("user", {
   id: varchar("id").notNull().primaryKey(),
   name: varchar("name", { length: 255 }),
@@ -23,11 +30,13 @@ export const users = createTable("user", {
     mode: "date",
   }).default(sql`CURRENT_TIMESTAMP`),
   image: varchar("image", { length: 255 }),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  planType: planEnum("plan_type").default("FREE"),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
-  apiKeys: many(apiKey)
+  apiKeys: many(apiKey),
 }));
 
 export const accounts = createTable(
@@ -66,7 +75,7 @@ export const apiKey = createTable(
   "api_key",
   {
     id: serial("id").notNull().primaryKey(),
-    name: varchar("name", { length: 255}).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
     userId: varchar("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -81,7 +90,6 @@ export const apiKey = createTable(
 export const apiKeyRelations = relations(apiKey, ({ one }) => ({
   user: one(users, { fields: [apiKey.userId], references: [users.id] }),
 }));
-
 
 export const sessions = createTable(
   "session",
@@ -141,7 +149,10 @@ export const handler = createTable(
     projectId: integer("projectId")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
-    internalId: varchar("internal_id").unique().default(sql`gen_random_uuid()`).notNull(),
+    internalId: varchar("internal_id")
+      .unique()
+      .default(sql`gen_random_uuid()`)
+      .notNull(),
     name: varchar("name").notNull(),
     producerId: integer("producerId")
       .notNull()

@@ -60,7 +60,7 @@ export default function Page() {
       <LastUpdatedAt />
       <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
         {!overview &&
-          times(4).map((v) => <Skeleton className="h-20 bg-muted" />)}
+          times(3).map((v) => <Skeleton className="h-20 bg-muted" />)}
         {overview && (
           <>
             <div className="rounded-md border border-[#191B1F] bg-muted p-4">

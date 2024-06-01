@@ -36,6 +36,20 @@
       "when": 1716507109697,
       "tag": "0004_lean_steve_rogers",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1717262799508,
+      "tag": "0005_fair_thunderbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1717266918174,
+      "tag": "0006_faithful_outlaw_kid",
+      "breakpoints": true
     }
   ]
 }
