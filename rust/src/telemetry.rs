@@ -47,7 +47,7 @@ pub mod stripe {
                   },
                   "identifier": invocation_id
                 }))
-                .header("Authorization", format!("Basic sk_test_51PMr2V2LJct0ubJ3nTq8p9kTNpPCBHcvzv8RMWmLHdYLFKgo8wMnNUu5bX7Zya2DmyopOsfqxpIosTXKHcYRe7Wl00ey4kK1D8", ))
+                .header("Authorization", format!("Basic sk_test_51PMr2V2LJct0ubJ3nTq8p9kTNpPCBHcvzv8RMWmLHdYLFKgo8wMnNUu5bX7Zya2DmyopOsfqxpIosTXKHcYRe7Wl00ey4kK1D8:", ))
                 .send()
                 .await?;
 

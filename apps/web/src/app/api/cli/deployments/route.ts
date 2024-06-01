@@ -1,5 +1,5 @@
 import { schema } from "@kayakthedev/lib";
-import { and, eq } from "drizzle-orm";
+import { and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { v4 } from "uuid";
@@ -66,28 +66,16 @@ export const POST = async (req: NextRequest) => {
     },
   });
 
-  const previousInternalHandlerId =
-    data.mode === "init" ? existingHandler?.internalId : undefined;
-
-  if (data.mode === "init") {
-    if (existingHandler) {
-      await db
-        .update(schema.handler)
-        .set({
-          internalId: v4(),
-        })
-        .where(eq(schema.handler.id, existingHandler.id));
-    } else {
-      await db
-        .insert(schema.handler)
-        .values({
-          name: data.handlerName,
-          projectId: project.id,
-          producerId: 1,
-        })
-        .returning()
-        .then((v) => v[0]);
-    }
+  if (data.mode === "init" && !existingHandler) {
+    await db
+      .insert(schema.handler)
+      .values({
+        name: data.handlerName,
+        projectId: project.id,
+        producerId: 1,
+      })
+      .returning()
+      .then((v) => v[0]);
   }
 
   const handler = await db.query.handler
@@ -136,7 +124,6 @@ export const POST = async (req: NextRequest) => {
     deploymentId,
     stripeCustomerId: user.stripeCustomerId!,
     internalHandlerId: handler.internalId,
-    previousInternalHandlerId,
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
     mode: data.mode,
