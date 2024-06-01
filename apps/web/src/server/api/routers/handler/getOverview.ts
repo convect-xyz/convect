@@ -7,6 +7,7 @@ import { Redis } from "ioredis";
 import postgres from "postgres";
 import { z } from "zod";
 import { protectedProcedure } from "~/server/api/trpc";
+
 const conn = postgres(
   "postgresql://postgres:REDACTED@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres?sslmode=require",
 );
@@ -90,8 +91,8 @@ const getAvgDuration = async (internalId: string) => {
         },
       },
     )
-    .then((r) => r.data)
-    .then(Number);
+    .then((r) => Number(r.data))
+    .then((v) => (Number.isNaN(v) ? 0 : v));
 };
 
 const getSuccessfulTxCount = async (internalId: string) => {
