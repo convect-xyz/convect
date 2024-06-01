@@ -115,7 +115,11 @@ function Content(props: DialogProps) {
               <FormItem className="flex-1">
                 <FormLabel>Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="API Key Name" {...field} />
+                  <Input
+                    readOnly={!!createData}
+                    placeholder="API Key Name"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
