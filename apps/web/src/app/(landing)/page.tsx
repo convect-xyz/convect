@@ -1,10 +1,8 @@
 import { signIn } from "~/auth";
 import { Button } from "~/components/ui/button";
 
-import Link from "next/link";
 import React from "react";
 import { CodeBlock, FrameCodeBlock } from "~/components/code/CodeBlock";
-import FullLogoIcon from "~/components/icons/FullLogoIcon";
 import { BorderBeam } from "~/components/magicui/border-beam/BorderBeam";
 import { getDocsUrl } from "~/lib/shared/validation";
 
@@ -44,168 +42,117 @@ export default ingest({
 export default function Page() {
   return (
     <>
-      <header className="mx-auto flex max-w-screen-lg items-center justify-between px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5">
-        <Link className="flex items-center" href="#">
-          <FullLogoIcon className="h-6" />
-        </Link>
-        <nav className="hidden items-center space-x-4 justify-self-center md:flex">
-          <Link className="text-sm font-medium hover:underline" href="#">
-            Features
-          </Link>
-          <Link className="text-sm font-medium hover:underline" href="/pricing">
-            Pricing
-          </Link>
-          <Link className="text-sm font-medium hover:underline" href="#">
-            Contact
-          </Link>
-
-          <form
-            action={async () => {
-              "use server";
-              await signIn("github", { redirectTo: "/projects" });
-            }}
-          >
-            <Button
-              type="submit"
-              disabled={process.env.NODE_ENV === "production"}
-            >
-              Sign In
-            </Button>
-          </form>
-        </nav>
-      </header>
-      <main>
-        <section className="mx-auto mt-8 min-h-screen max-w-screen-lg bg-background">
-          <div className="z-10">
-            <div className="container mx-auto px-4 md:px-6 lg:px-8">
-              <div className="-mt-16 flex min-h-screen flex-col items-center justify-center gap-8">
-                <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                  Serverless transaction processing for Ethereum Networks
-                </h1>
-                <div className="relative rounded-md">
-                  <CodeBlock code="npx @convect-xyz/cli init" />
-                  <BorderBeam
-                    size={80}
-                    duration={6}
-                    delay={4}
-                    colorFrom="#FFF"
-                    colorTo="#FFF"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <form
-                    action={async () => {
-                      "use server";
-                      await signIn("github", { redirectTo: "/projects" });
-                    }}
-                  >
-                    <Button
-                      type="submit"
-                      disabled={process.env.NODE_ENV === "production"}
-                    >
-                      Join Waitlist
-                    </Button>
-                  </form>
-                  <Button asChild>
-                    <a href={getDocsUrl()} target="_blank">
-                      View Documentation
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className="py-12 md:py-16 lg:py-20">
+      <section className="mx-auto mt-8 min-h-screen max-w-screen-lg bg-background">
+        <div className="z-10">
           <div className="container mx-auto px-4 md:px-6 lg:px-8">
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-3">
-                <BoltIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-xl font-semibold">Low Latency</h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Transactions from new blocks are sent to your handlers almost
-                  instantly.
-                </p>
+            <div className="-mt-16 flex min-h-screen flex-col items-center justify-center gap-8">
+              <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+                Serverless transaction processing for Ethereum Networks
+              </h1>
+              <div className="relative rounded-md">
+                <CodeBlock code="npx @convect-xyz/cli init" />
+                <BorderBeam
+                  size={80}
+                  duration={6}
+                  delay={4}
+                  colorFrom="#FFF"
+                  colorTo="#FFF"
+                />
               </div>
-              <div className="space-y-3">
-                <CogIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-xl font-semibold">High Throughput</h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Your handlers can be sent up to 600 transactions per
-                  invocation.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <BarChartIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-xl font-semibold">Advanced Analytics</h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Gain valuable insights into your application's performance
-                  with our comprehensive analytics tools.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <PuzzleIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-xl font-semibold">Seamless Integration</h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Easily integrate our platform with your existing tools and
-                  workflows for a seamless experience.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <ClipboardIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-xl font-semibold">Intuitive Dashboards</h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Stay on top of your application's performance with our
-                  user-friendly dashboards.
-                </p>
+
+              <div className="flex gap-2">
+                <form
+                  action={async () => {
+                    "use server";
+                    await signIn("github", { redirectTo: "/projects" });
+                  }}
+                >
+                  <Button
+                    type="submit"
+                    disabled={process.env.NODE_ENV === "production"}
+                  >
+                    Join Waitlist
+                  </Button>
+                </form>
+                <Button asChild>
+                  <a href={getDocsUrl()} target="_blank">
+                    View Documentation
+                  </a>
+                </Button>
               </div>
             </div>
-          </div>
-        </section>
-        <section className="mx-auto flex max-w-[1920px] overflow-hidden px-8 py-12 md:py-16 lg:py-20">
-          <div className="flex flex-[2_2_0]  flex-col justify-center gap-4">
-            <div className="text-4xl font-bold">Full flexibility</div>
-            <div className="text-lg text-muted-foreground">
-              Define transaction handlers in code and process them however you
-              like with full typesafety.
-            </div>
-          </div>
-          <div className="flex-[3_3_0] translate-x-[10%]">
-            <FrameCodeBlock fileName="transfer.ts" code={c} />
-          </div>
-        </section>
-        <section className="mx-auto flex max-w-[1920px] flex-row-reverse overflow-hidden px-8 py-12 md:py-16 lg:py-20">
-          <div className="flex flex-[2_2_0] flex-col justify-center gap-4 px-8 text-right">
-            <div className="text-4xl font-bold">Combine handlers</div>
-            <div className="text-lg text-muted-foreground">
-              If you intend to process multiple transactions, just pass in
-              multiple handlers and we'll make sure they get processed in order.
-            </div>
-          </div>
-          <div className="flex-[3_3_0]">
-            <FrameCodeBlock fileName="ingest.ts" code={ingestCode} />
-          </div>
-        </section>
-      </main>
-      <footer className="bg-gray-100 py-6 dark:bg-gray-800">
-        <div className="container mx-auto flex flex-col items-center justify-between px-4 md:flex-row md:px-6 lg:px-8">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            © 2024 convect.xyz. All rights reserved.
-          </p>
-          <div className="mt-4 flex space-x-4 md:mt-0">
-            <Link className="text-sm font-medium hover:underline" href="#">
-              Privacy
-            </Link>
-            <Link className="text-sm font-medium hover:underline" href="#">
-              Terms
-            </Link>
-            <Link className="text-sm font-medium hover:underline" href="#">
-              Contact
-            </Link>
           </div>
         </div>
-      </footer>
+      </section>
+      <section className="py-12 md:py-16 lg:py-20">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-3">
+              <BoltIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-xl font-semibold">Low Latency</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Transactions from new blocks are sent to your handlers almost
+                instantly.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <CogIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-xl font-semibold">High Throughput</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Your handlers can be sent up to 600 transactions per invocation.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <BarChartIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-xl font-semibold">Advanced Analytics</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Gain valuable insights into your application's performance with
+                our comprehensive analytics tools.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <PuzzleIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-xl font-semibold">Seamless Integration</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Easily integrate our platform with your existing tools and
+                workflows for a seamless experience.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <ClipboardIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-xl font-semibold">Intuitive Dashboards</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Stay on top of your application's performance with our
+                user-friendly dashboards.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="mx-auto flex max-w-[1920px] overflow-hidden px-8 py-12 md:py-16 lg:py-20">
+        <div className="flex flex-[2_2_0]  flex-col justify-center gap-4">
+          <div className="text-4xl font-bold">Full flexibility</div>
+          <div className="text-lg text-muted-foreground">
+            Define transaction handlers in code and process them however you
+            like with full typesafety.
+          </div>
+        </div>
+        <div className="flex-[3_3_0] translate-x-[10%]">
+          <FrameCodeBlock fileName="transfer.ts" code={c} />
+        </div>
+      </section>
+      <section className="mx-auto flex max-w-[1920px] flex-row-reverse overflow-hidden px-8 py-12 md:py-16 lg:py-20">
+        <div className="flex flex-[2_2_0] flex-col justify-center gap-4 px-8 text-right">
+          <div className="text-4xl font-bold">Combine handlers</div>
+          <div className="text-lg text-muted-foreground">
+            If you intend to process multiple transactions, just pass in
+            multiple handlers and we'll make sure they get processed in order.
+          </div>
+        </div>
+        <div className="flex-[3_3_0]">
+          <FrameCodeBlock fileName="ingest.ts" code={ingestCode} />
+        </div>
+      </section>
     </>
   );
 }
