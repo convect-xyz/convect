@@ -204,8 +204,9 @@ pub mod syncing {
 
         pub fn increment_transaction_count(&mut self, tx_count: usize) {
             let key = format!(
-                "tx-count-{handler_id}",
-                handler_id = self.inner.handler_id.to_string()
+                "tx-count-{handler_id}-{handler_version}",
+                handler_id = &self.inner.handler_id,
+                handler_version = &self.inner.handler_version
             );
 
             let _: u64 = self.connection.incr(key, tx_count).unwrap();
@@ -213,8 +214,9 @@ pub mod syncing {
 
         pub fn get_transaction_count(&mut self) -> u64 {
             let key = format!(
-                "tx-count-{handler_id}",
-                handler_id = self.inner.handler_id.to_string()
+                "tx-count-{handler_id}-{handler_version}",
+                handler_id = &self.inner.handler_id,
+                handler_version = &self.inner.handler_version
             );
 
             let count: u64 = self.connection.get(key).unwrap();
