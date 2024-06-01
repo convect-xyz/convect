@@ -1,4 +1,4 @@
-name: "deploy migrations"
+name: "Deploy Migrations"
 on: workflow_dispatch
 
 jobs:
