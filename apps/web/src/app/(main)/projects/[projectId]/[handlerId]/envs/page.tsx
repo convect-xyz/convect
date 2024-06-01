@@ -63,23 +63,21 @@ function EnvRow({ env }: { env: RouterOutputs["handlers"]["getEnvs"][0] }) {
 
   return (
     <div className="flex items-center justify-between p-4">
-      <div className="w-20">{env.key}</div>
-      <div className="flex flex-1 items-center justify-center gap-2">
+      <div className="w-28">{env.key}</div>
+      <div className="max-w-20 flex w-full flex-1 items-center justify-center gap-2">
         <Button variant="ghost" onClick={() => setRevealEnv((v) => !v)}>
-          {revealEnv ? <EyeOffIcon /> : <EyeIcon />}
+          {revealEnv ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
         </Button>
         <div className="w-40">
           {revealEnv ? (
-            <div className="w-fit truncate rounded-sm bg-secondary px-1">
-              {env.value}
-            </div>
+            <div className="w-fit truncate rounded-sm px-1">{env.value}</div>
           ) : (
             "•••••••••••••"
           )}
         </div>
       </div>
-      <div className="max-w-40 flex items-center gap-2">
-        <div>
+      <div className="flex flex-1 items-center justify-end gap-2">
+        <div className="text-xs text-zinc-500">
           Last updated{" "}
           {formatDistanceToNow(env.lastUpdatedAt, { addSuffix: true })}
         </div>
