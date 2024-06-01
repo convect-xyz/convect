@@ -8,9 +8,9 @@ export PATH="${PATH}:/root/.pulumi/bin"
 export CURR_DIR=$(pwd)
 export NODE_PATH=$(yarn global dir)/node_modules
 
-if [ -n "${PREVIOUS_HANDLER_ID}" ]; then
+if [ -n "${HANDLER_ID}" ]; then
   echo "Destroying previous handler"
-  pulumi destroy -s kayakthedev/convect-v1/$PREVIOUS_HANDLER_ID -f --remove || true
+  pulumi destroy -s kayakthedev/convect-v1/$HANDLER_ID -f --remove || true
 fi
 
 node /scripts/deploy.js
