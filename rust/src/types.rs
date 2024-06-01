@@ -121,6 +121,8 @@ pub mod syncing {
     pub struct Inner {
         #[serde(rename(serialize = "HandlerId_", deserialize = "HandlerId_"))]
         pub handler_id: String,
+        #[serde(rename(serialize = "HandlerVersion_", deserialize = "HandlerVersion_"))]
+        pub handler_version: String,
         #[serde(rename(serialize = "State_", deserialize = "State_"))]
         pub state: SyncState,
         #[serde(rename(serialize = "LastBlock_", deserialize = "LastBlock_"))]
@@ -151,12 +153,14 @@ pub mod syncing {
             })
         }
 
-        pub fn load(handler_id: String) -> Self {
+        pub fn load(handler_id: String, handler_version: String) -> Self {
             let client = redis::Client::open("rediss://default:REDACTED@stirred-jawfish-46999.upstash.io:6379")
             .unwrap();
 
             let mut con = client.get_connection().unwrap();
-            let result: Option<String> = con.json_get(&handler_id, "$").unwrap();
+            let result: Option<String> = con
+                .json_get(format!("{handler_id}-{handler_version}"), "$")
+                .unwrap();
 
             let inner = match result {
                 Some(result) => {
@@ -166,6 +170,7 @@ pub mod syncing {
                 None => {
                     vec![Inner {
                         handler_id: handler_id.clone(),
+                        handler_version: handler_version.clone(),
                         state: SyncState::IDLE,
                         last_block: None,
                     }]
@@ -183,6 +188,7 @@ pub mod syncing {
                 connection: con,
                 inner: Inner {
                     handler_id: handler_id.clone(),
+                    handler_version: handler_version.clone(),
                     state: SyncState::IDLE,
                     last_block: None,
                 },
@@ -241,8 +247,13 @@ pub mod syncing {
         }
 
         pub fn send(self) -> Result<(), BoxError> {
-            self.connection
-                .json_set(self.inner.handler_id.to_string(), "$", &self.inner)?;
+            let handler_id = &self.inner.handler_id;
+            let handler_version = &self.inner.handler_version;
+            self.connection.json_set(
+                format!("{handler_id}-{handler_version}"),
+                "$",
+                &self.inner,
+            )?;
 
             Ok(())
         }
@@ -258,6 +269,8 @@ pub mod processing {
     pub struct Inner {
         #[serde(rename = "HandlerId_")]
         pub handler_id: String,
+        #[serde(rename = "HandlerVersion_")]
+        pub handler_version: String,
         #[serde(rename = "ErrorTx_")]
         pub error_tx: Option<String>,
         #[serde(rename = "ErrorLabel_")]
@@ -274,13 +287,13 @@ pub mod processing {
             self.inner.handler_id.clone()
         }
 
-        pub async fn load(handler_id: String) -> Self {
+        pub async fn load(handler_id: String, handler_version: String) -> Self {
             let client = redis::Client::open("rediss://default:REDACTED@stirred-jawfish-46999.upstash.io:6379").unwrap();
 
             let mut con = client.get_multiplexed_async_connection().await.unwrap();
 
             let result: Option<String> = con
-                .json_get(format!("process-state-{handler_id}"), "$")
+                .json_get(format!("process-state-{handler_id}-{handler_version}"), "$")
                 .await
                 .unwrap();
 
@@ -292,6 +305,7 @@ pub mod processing {
                 None => {
                     vec![Inner {
                         handler_id: handler_id.clone(),
+                        handler_version: handler_version.clone(),
                         error_tx: None,
                         error_label: None,
                     }]
@@ -309,6 +323,7 @@ pub mod processing {
                 connection: con,
                 inner: Inner {
                     handler_id: handler_id.clone(),
+                    handler_version: handler_version.clone(),
                     error_tx: None,
                     error_label: None,
                 },
@@ -351,8 +366,13 @@ pub mod processing {
 
         pub async fn send(self) -> Result<(), BoxError> {
             let handler_id = self.inner.handler_id.to_string();
+            let handler_version = self.inner.handler_version.to_string();
             self.connection
-                .json_set(format!("process-state-{handler_id}"), "$", &self.inner)
+                .json_set(
+                    format!("process-state-{handler_id}-{handler_version}"),
+                    "$",
+                    &self.inner,
+                )
                 .await?;
 
             self.inner.error_label = self.temp_inner.error_label;

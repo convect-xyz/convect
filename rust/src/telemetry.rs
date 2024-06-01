@@ -1,0 +1,59 @@
+use aws_sdk_s3::error::BoxError;
+
+pub trait ProcessedTransactionTelemetry {
+    async fn record_invocation(
+        &self,
+        invocation_id: String,
+        num_processed: u64,
+    ) -> Result<(), BoxError>;
+}
+
+pub mod stripe {
+    use std::{collections::HashMap, env};
+
+    use aws_sdk_s3::error::BoxError;
+    use serde_json::json;
+
+    use super::ProcessedTransactionTelemetry;
+
+    pub struct StripeProcessedTransactionTelemetry {
+        client: reqwest::Client,
+        customer_id: String,
+    }
+
+    impl StripeProcessedTransactionTelemetry {
+        pub fn from_env() -> Self {
+            Self {
+                client: reqwest::Client::new(),
+                customer_id: env::var("STRIPE_CUSTOMER_ID")
+                    .expect("STRIPE_CUSTOMER_ID should be set"),
+            }
+        }
+    }
+
+    impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
+        async fn record_invocation(
+            &self,
+            invocation_id: String,
+            num_processed: u64,
+        ) -> Result<(), BoxError> {
+            let num_processed_as_string = num_processed.to_string();
+            let mut form_data = HashMap::new();
+            form_data.insert("event_name", "transactions_processed");
+            form_data.insert("payload[transactions]", &num_processed_as_string);
+            form_data.insert("payload[stripe_customer_id]", &self.customer_id);
+            form_data.insert("identifier", &invocation_id);
+
+            let r = self.client
+                .post("https://api.stripe.com/v1/billing/meter_events")
+                .form(&form_data)
+                .basic_auth("REDACTED", None::<String>)
+                .send()
+                .await?;
+
+            println!("{:?}", r.text().await.unwrap());
+
+            Ok(())
+        }
+    }
+}

@@ -1,5 +1,5 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
-use diesel::{prelude::*, sql_types::Timestamptz};
+use chrono::{DateTime, Utc};
+use diesel::prelude::*;
 
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::processed_transactions)]
@@ -10,4 +10,5 @@ pub struct ProcessedTransaction<'a> {
     pub status: String,
     pub timestamp: DateTime<Utc>,
     pub handler_id: &'a str,
+    pub handler_version: &'a str,
 }

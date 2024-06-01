@@ -19,7 +19,8 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-    let state = processing::State::load(handler_id).await;
+    let handler_version = env::var("HANDLER_VERSION").expect("Handler ID env not set");
+    let state = processing::State::load(handler_id, handler_version).await;
     let pipeline = Arc::new(Mutex::new(state));
 
     let app = Router::new()
@@ -56,6 +57,7 @@ mod results {
     use diesel_async::RunQueryDsl;
     use futures::lock::Mutex;
     use ingest::connection::establish_connection;
+    use ingest::telemetry::{self, ProcessedTransactionTelemetry};
     use ingest::types::processing;
     use ingest::{models::ProcessedTransaction, schema::processed_transactions};
     use serde::Deserialize;
@@ -76,6 +78,7 @@ mod results {
 
     #[derive(Deserialize, Debug)]
     pub struct Request {
+        pub invocation_id: String,
         pub message_ids: Vec<String>,
         pub results: Vec<TransactionResult>,
     }
@@ -88,6 +91,7 @@ mod results {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let sqs_client = aws_sdk_sqs::Client::new(&config);
         let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
+        let handler_version = env::var("HANDLER_VERSION").expect("Handler VERSION env not set");
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
@@ -153,6 +157,7 @@ mod results {
                         status: "SUCCESS".to_string(),
                         timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
                         handler_id: &handler_id,
+                        handler_version: &handler_version,
                     })
                 }
 
@@ -163,6 +168,7 @@ mod results {
                         status: "FAILED".to_string(),
                         timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
                         handler_id: &handler_id,
+                        handler_version: &handler_version,
                     })
                 }
 
@@ -174,6 +180,20 @@ mod results {
         println!("Establishing connection");
         let mut conn = establish_connection().await;
         println!("Established connection");
+
+        let tx_telemtry = telemetry::stripe::StripeProcessedTransactionTelemetry::from_env();
+
+        let record = tx_telemtry
+            .record_invocation(
+                payload.invocation_id,
+                payload.results.len().try_into().unwrap(),
+            )
+            .await;
+
+        match record {
+            Err(e) => println!("Error recording tx usage: {:?}", e),
+            _ => println!("Sent telemetry"),
+        }
 
         let r = diesel::insert_into(processed_transactions::table)
             .values(data)

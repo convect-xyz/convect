@@ -1,4 +1,4 @@
-name: "deploy migrations"
+name: "Sync Chains"
 on: workflow_dispatch
 
 jobs:

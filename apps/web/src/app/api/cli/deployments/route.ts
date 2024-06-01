@@ -1,5 +1,5 @@
 import { schema } from "@kayakthedev/lib";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { v4 } from "uuid";
@@ -66,28 +66,27 @@ export const POST = async (req: NextRequest) => {
     },
   });
 
-  const previousInternalHandlerId =
-    data.mode === "init" ? existingHandler?.internalId : undefined;
+  if (data.mode === "init" && !existingHandler) {
+    await db
+      .insert(schema.handler)
+      .values({
+        name: data.handlerName,
+        projectId: project.id,
+        producerId: 1,
+      })
+      .returning()
+      .then((v) => v[0]);
+  }
 
-  if (data.mode === "init") {
-    if (existingHandler) {
-      await db
-        .update(schema.handler)
-        .set({
-          internalId: v4(),
-        })
-        .where(eq(schema.handler.id, existingHandler.id));
-    } else {
-      await db
-        .insert(schema.handler)
-        .values({
-          name: data.handlerName,
-          projectId: project.id,
-          producerId: 1,
-        })
-        .returning()
-        .then((v) => v[0]);
-    }
+  if (data.mode === "init" && existingHandler) {
+    await db
+      .update(schema.handler)
+      .set({
+        version: sql`${schema.handler.version} + 1`,
+      })
+      .where(eq(schema.handler.id, existingHandler.id))
+      .returning()
+      .then((v) => v[0]);
   }
 
   const handler = await db.query.handler
@@ -116,13 +115,18 @@ export const POST = async (req: NextRequest) => {
     }),
   ];
 
+  const manifestPrefix = path.join(
+    "manifests",
+    handler.internalId,
+    handler.version + ".json",
+  );
   if (data.mode === "init") {
     const manifest = data.manifest;
 
     promises.push(
       s3.putObject({
         Bucket: MANIFEST_BUCKET,
-        Key: path.join("manifests", handler.internalId + ".json"),
+        Key: manifestPrefix,
         Body: await manifest.text(),
       }),
     );
@@ -133,9 +137,12 @@ export const POST = async (req: NextRequest) => {
   await createDeployment({
     version: env.VERSION,
     sourcePrefix,
+    manifestBucket: MANIFEST_BUCKET,
+    manifestPrefix,
     deploymentId,
+    stripeCustomerId: user.stripeCustomerId!,
     internalHandlerId: handler.internalId,
-    previousInternalHandlerId,
+    internalHandlerVersion: handler.version,
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
     mode: data.mode,

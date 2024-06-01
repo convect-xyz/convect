@@ -33,7 +33,10 @@ const BATCH_SIZE: u64 = 1500;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
-    let mut pipeline = State::load(syncer_config.handler_id.clone());
+    let mut pipeline = State::load(
+        syncer_config.handler_id.clone(),
+        syncer_config.handler_version.clone(),
+    );
     let config = aws_config::load_from_env().await;
     let api: ApiInstance = Api::new(&config);
 
@@ -244,6 +247,7 @@ use std::env;
 
 pub struct Config {
     pub handler_id: String,
+    pub handler_version: String,
     pub start_block: u64,
     pub end_block: u64,
     pub function_name: String,
@@ -253,6 +257,7 @@ pub struct Config {
 pub fn load_config_from_env() -> Config {
     return Config {
         handler_id: env::var("HANDLER_ID").expect("Handler ID not set"),
+        handler_version: env::var("HANDLER_VERSION").expect("Handler ID not set"),
         start_block: env::var("START_BLOCK")
             .expect("START_BLOCK is not present")
             .parse()
