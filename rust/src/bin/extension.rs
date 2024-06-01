@@ -25,12 +25,14 @@ const TINYBIRD_API_KEY: &'static str = env!("TINYBIRD_API_KEY");
 
 async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     let handler_id = env::var("HANDLER_ID").expect("Handler ID is undefined");
+    let handler_version = env::var("HANDLER_VERSION").expect("Handler VERSION is undefined");
 
     let records: Vec<String> = logs.into_iter().map(|record|{
       let re = Regex::new(r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$").unwrap();
       print!("{:?}", re);
       re.captures(&record).map(|result| serde_json::to_string(&json!({
         "handler_id": handler_id,
+        "handler_version": handler_version,
         "time": result["time"].to_string(),
         "invocation_id": result["uuid"].to_string(),
         "log_level": result["log_level"].to_string(),
