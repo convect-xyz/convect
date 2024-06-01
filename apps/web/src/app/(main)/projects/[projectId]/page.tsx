@@ -7,6 +7,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
 import CreateHandler from "./CreateHandler";
+import { UpgradeDialog } from "./UpgradeDialog";
 import { useParams } from "./hooks/useParams";
 
 export default function Page() {
@@ -17,23 +18,26 @@ export default function Page() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-screen-md">
-      <div className="flex flex-col gap-3">
-        {/* <div className="flex justify-end">
+    <>
+      <div className="mx-auto w-full max-w-screen-md">
+        <div className="flex flex-col gap-3">
+          {/* <div className="flex justify-end">
           <Button onClick={() => setIsOpen(true)}>New Handler</Button>
         </div> */}
-        <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
+          <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
 
-        <div className="flex flex-col gap-2 divide-y rounded-md border bg-muted/20 p-2">
-          {!handlers &&
-            times(20).map((idx) => <HandlerRowSkeleton key={idx} />)}
-          {handlers?.handlers.length === 0 && <NoHandlers />}
-          {handlers?.handlers.map((handler) => (
-            <HandlerRow key={handler.id} handler={handler} />
-          ))}
+          <div className="flex flex-col gap-2 divide-y rounded-md border bg-muted/20 p-2">
+            {!handlers &&
+              times(20).map((idx) => <HandlerRowSkeleton key={idx} />)}
+            {handlers?.handlers.length === 0 && <NoHandlers />}
+            {handlers?.handlers.map((handler) => (
+              <HandlerRow key={handler.id} handler={handler} />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+      <UpgradeDialog />
+    </>
   );
 }
 
