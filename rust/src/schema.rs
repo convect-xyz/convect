@@ -6,6 +6,8 @@ diesel::table! {
         #[max_length = 255]
         handler_id -> Varchar,
         #[max_length = 255]
+        handler_version -> Varchar,
+        #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
         label -> Varchar,
