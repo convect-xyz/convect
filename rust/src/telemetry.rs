@@ -47,7 +47,7 @@ pub mod stripe {
                   },
                   "identifier": invocation_id
                 }))
-                .header("Authorization", format!("Basic REDACTED:", ))
+                .basic_auth("REDACTED", None::<String>)
                 .send()
                 .await?;
 
