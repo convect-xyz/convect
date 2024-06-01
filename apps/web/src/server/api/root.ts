@@ -1,9 +1,4 @@
-import { headers } from "next/headers";
-import {
-  createCallerFactory,
-  createTRPCContext,
-  createTRPCRouter,
-} from "~/server/api/trpc";
+import { createTRPCRouter } from "~/server/api/trpc";
 import { createApiKey } from "./routers/apiKey/createApiKey";
 import { getApiKeys } from "./routers/apiKey/getApiKeys";
 import { switchPlan } from "./routers/billing/switchPlan";
@@ -77,8 +72,3 @@ export const appRouter = createTRPCRouter({
 });
 
 export type AppRouter = typeof appRouter;
-
-const createCaller = createCallerFactory(appRouter);
-export const caller = createCaller(async () => {
-  return createTRPCContext({ headers: headers() });
-});
