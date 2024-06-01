@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { caller } from "~/server/api/root";
+import { caller } from "~/trpc/server";
 
 export default async function Page(props: {
   searchParams: Record<string, any>;

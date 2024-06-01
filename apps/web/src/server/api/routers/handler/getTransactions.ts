@@ -24,6 +24,7 @@ const redisClient = new Redis(
 export const processedTransactions = pgTable("processed_transactions", {
   id: serial("id").primaryKey(),
   handlerId: varchar("handler_id").notNull(),
+  handlerVersion: varchar("handler_version").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
   status: varchar("status", { length: 256 }).notNull(),
   timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
@@ -68,7 +69,10 @@ export const getTransactions = protectedProcedure
 
     const recentTransactions = await db.query.processedTransactions.findMany({
       where(fields, { eq, and, ilike }) {
-        let baseFilter = eq(fields.handlerId, handler.internalId);
+        let baseFilter = and(
+          eq(fields.handlerId, handler.internalId),
+          eq(fields.handlerVersion, handler.version.toString()),
+        );
         if (input.search) {
           baseFilter = and(
             baseFilter,

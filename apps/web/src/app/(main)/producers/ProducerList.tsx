@@ -30,7 +30,14 @@ import {
 import { api } from "~/trpc/react";
 
 export default function ProducerList() {
-  const { data: producers } = api.producers.getProducers.useInfiniteQuery({});
+  const { data: producers } = api.producers.getProducers.useInfiniteQuery(
+    {},
+    {
+      getNextPageParam() {
+        return 0;
+      },
+    },
+  );
 
   return (
     <Card>

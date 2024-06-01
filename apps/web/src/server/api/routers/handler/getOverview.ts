@@ -61,10 +61,10 @@ export const getOverview = protectedProcedure
     }
 
     const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
-      getFetchState(handler.internalId),
-      getTxCount(handler.internalId),
+      getFetchState(handler.internalId, handler.version),
+      getTxCount(handler.internalId, handler.version),
       getAvgDuration(handler.internalId),
-      getSuccessfulTxCount(handler.internalId),
+      getSuccessfulTxCount(handler.internalId, handler.version),
     ]);
 
     return {
@@ -95,22 +95,22 @@ const getAvgDuration = async (internalId: string) => {
     .then((v) => (Number.isNaN(v) ? 0 : v));
 };
 
-const getSuccessfulTxCount = async (internalId: string) => {
+const getSuccessfulTxCount = async (internalId: string, version: number) => {
   return db
     .execute(
-      sql`SELECT COUNT(DISTINCT(transaction_hash)) FROM processed_transactions WHERE handler_id = ${internalId} AND status = 'SUCCESS'`,
+      sql`SELECT COUNT(DISTINCT(transaction_hash)) FROM processed_transactions WHERE handler_id = ${internalId} AND handler_version = ${version} AND status = 'SUCCESS'`,
     )
     .then((r) => Number(r.at(0)!.count));
 };
 
-const getTxCount = async (internalId: string) => {
-  const [txCount] = await redisClient.mget(`tx-count-${internalId}`);
+const getTxCount = async (internalId: string, version: number) => {
+  const [txCount] = await redisClient.mget(`tx-count-${internalId}-${version}`);
   return txCount ? Number(txCount) : 0;
 };
 
-const getFetchState = async (internalId: string) => {
+const getFetchState = async (internalId: string, version: number) => {
   const response = await redisClient
-    .call(`JSON.GET`, internalId)
+    .call(`JSON.GET`, `${internalId}-${version}`)
     .then((v) => JSON.parse(v as string));
 
   return response
