@@ -67,10 +67,11 @@ async fn upload_metrics(metrics: Vec<ReportMetrics<'_>>) -> Result<(), Error> {
         .collect();
 
     let client = Client::new();
-    let res = client.post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_metrics")
-      .header("Authorization", "Bearer REDACTED")
-      .body(records.join("\n"))
-      .send();
+    let res = client
+        .post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_metrics")
+        .header("Authorization", format!("Bearer {TINYBIRD_API_KEY}"))
+        .body(records.join("\n"))
+        .send();
 
     match res {
         Ok(res) => println!("Successfully uploaded: {:?}", res.text()),
