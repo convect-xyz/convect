@@ -41,10 +41,12 @@ export const getOverview = protectedProcedure
   )
   .output(
     z.object({
+      status: z.enum(["failed", "processing", "provisioning"]),
       lastFetchedBlock: z.number(),
       transactionCount: z.number(),
       processedTransactionsCount: z.number(),
       avgDuration: z.number(),
+      version: z.number(),
     }),
   )
   .query(async (opts) => {
@@ -63,26 +65,29 @@ export const getOverview = protectedProcedure
     const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
       getFetchState(handler.internalId, handler.version),
       getTxCount(handler.internalId, handler.version),
-      getAvgDuration(handler.internalId),
+      getAvgDuration(handler.internalId, handler.version),
       getSuccessfulTxCount(handler.internalId, handler.version),
     ]);
 
     return {
-      transactionCount: txCount,
+      status: fetchState ? "processing" : "provisioning",
+      transactionCount: txCount ?? 0,
       processedTransactionsCount: successfulTx,
-      lastFetchedBlock: fetchState.lastBlock,
+      lastFetchedBlock: fetchState?.lastBlock ?? 0,
       avgDuration: avgDuration,
+      version: handler.version,
     };
   });
 
-const getAvgDuration = async (internalId: string) => {
+const getAvgDuration = async (internalId: string, version: number) => {
   return axios
     .post(
       "https://api.eu-central-1.aws.tinybird.co/v0/sql",
       {
         q: `%
-    SELECT AVG(duration_ms) FROM ingest_metrics WHERE handler_id = {{String(handler_id)}}`,
+    SELECT AVG(duration_ms) FROM ingest_metrics WHERE handler_id = {{String(handler_id)}} AND handler_version = {{String(handler_version)}}`,
         handler_id: internalId,
+        handler_version: version.toString(),
       },
       {
         headers: {
@@ -104,8 +109,8 @@ const getSuccessfulTxCount = async (internalId: string, version: number) => {
 };
 
 const getTxCount = async (internalId: string, version: number) => {
-  const [txCount] = await redisClient.mget(`tx-count-${internalId}-${version}`);
-  return txCount ? Number(txCount) : 0;
+  const txCount = await redisClient.get(`tx-count-${internalId}-${version}`);
+  return txCount ? Number(txCount) : null;
 };
 
 const getFetchState = async (internalId: string, version: number) => {
@@ -117,7 +122,5 @@ const getFetchState = async (internalId: string, version: number) => {
     ? {
         lastBlock: Number(response.LastBlock_),
       }
-    : {
-        lastBlock: 0,
-      };
+    : null;
 };
