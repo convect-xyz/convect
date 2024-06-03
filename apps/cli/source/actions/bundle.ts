@@ -32,12 +32,12 @@ export async function bundleFile(options: BundleFileOptions) {
 	const allTxConfigs = Object.values(pipeline);
 	const manifest = {
 		tx_configs: allTxConfigs.flatMap((v: any) => ({
-			startBlock: v._startBlock,
+			start_block: v._startBlock.toString(),
 		})),
 		log_configs: [] as Array<any>,
 	};
 
-	const allLogConfigs = allTxConfigs.flatMap((txConfig: any, txConfigIdx) => [
+	const allLogConfigs = allTxConfigs.map((txConfig: any, txConfigIdx) => [
 		txConfig._logs,
 		txConfigIdx,
 	]);
@@ -46,10 +46,10 @@ export async function bundleFile(options: BundleFileOptions) {
 	for (const [logConfigs, txConfigIdx] of allLogConfigs) {
 		for (const logConfig of logConfigs) {
 			let topics = encodeEventTopics({abi: [logConfig._event]});
-			let event_signature = topics.at(0)!.substring(2);
+			let eventSignature = topics.at(0)!.substring(2);
 			let origin = logConfig._origin;
 
-			let identifier = event_signature + '-' + origin;
+			let identifier = eventSignature + '-' + origin;
 
 			if (seenLogConfigs.has(identifier)) {
 				manifest.log_configs[seenLogConfigs.get(identifier)!].tx_configs.push(
@@ -61,7 +61,7 @@ export async function bundleFile(options: BundleFileOptions) {
 			seenLogConfigs.set(identifier, manifest.log_configs.length);
 			manifest.log_configs.push({
 				address: origin,
-				topics: [event_signature],
+				topics: [eventSignature],
 				tx_configs: [txConfigIdx],
 			});
 		}
