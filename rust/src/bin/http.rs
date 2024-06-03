@@ -5,8 +5,17 @@ use axum::{
     Router,
 };
 use futures::lock::Mutex;
-use ingest::types::processing;
+use ingest::{
+    connection::{establish_connection_pool, DbPool},
+    types::processing,
+};
 use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
+
+#[derive(Clone)]
+struct AppState {
+    pipeline: Arc<Mutex<processing::State>>,
+    pool: DbPool,
+}
 
 async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
     match event.next {
@@ -26,7 +35,11 @@ async fn main() -> Result<(), Error> {
     let app = Router::new()
         .route("/results", post(results::handler))
         .route("/pipeline", get(get_pipeline::handler))
-        .with_state(pipeline);
+        .with_state(AppState {
+            pool: establish_connection_pool().await,
+            pipeline,
+        });
+
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
 
     tokio::spawn(async {
@@ -56,12 +69,14 @@ mod results {
     use chrono::DateTime;
     use diesel_async::RunQueryDsl;
     use futures::lock::Mutex;
-    use ingest::connection::establish_connection;
+    use ingest::connection::DbPool;
     use ingest::telemetry::{self, ProcessedTransactionTelemetry};
     use ingest::types::processing;
     use ingest::{models::ProcessedTransaction, schema::processed_transactions};
     use serde::Deserialize;
     use serde_json::{json, Value};
+
+    use crate::AppState;
 
     #[derive(Deserialize, Debug)]
     pub struct TransactionResultLabel {
@@ -85,7 +100,7 @@ mod results {
 
     #[debug_handler]
     pub async fn handler(
-        State(process_state): State<Arc<Mutex<processing::State>>>,
+        State(app_state): State<AppState>,
         Json(payload): Json<Request>,
     ) -> Json<Value> {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
@@ -95,7 +110,7 @@ mod results {
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
-        let mut state = process_state.lock().await;
+        let mut state = app_state.pipeline.lock().await;
         if let Some(failed_tx) = failed_tx {
             let update_r = state
                 .update()
@@ -178,7 +193,7 @@ mod results {
             .collect();
 
         println!("Establishing connection");
-        let mut conn = establish_connection().await;
+        let mut conn = app_state.pool.get().await.unwrap();
         println!("Established connection");
 
         let tx_telemtry = telemetry::stripe::StripeProcessedTransactionTelemetry::from_env();
@@ -211,14 +226,12 @@ mod results {
 
 mod get_pipeline {
     use axum::extract::{Json, State};
-    use futures::lock::Mutex;
     use ingest::types::processing;
-    use std::sync::Arc;
 
-    pub async fn handler(
-        State(process_state): State<Arc<Mutex<processing::State>>>,
-    ) -> Json<processing::Inner> {
-        let process_state = process_state.lock().await;
+    use crate::AppState;
+
+    pub async fn handler(State(app_state): State<AppState>) -> Json<processing::Inner> {
+        let process_state = app_state.pipeline.lock().await;
         return Json(process_state.inner().clone());
     }
 }

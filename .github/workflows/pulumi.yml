@@ -4,8 +4,7 @@ on:
   workflow_run:
     workflows: ["Build, Test"]
     branches: [infra/**]
-    types:
-      - completed
+    types: [completed]
 
 jobs:
   update:
