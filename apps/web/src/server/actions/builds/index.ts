@@ -107,3 +107,58 @@ export async function createDeployment(options: TriggerBuildOptions) {
     ecsOutput: output,
   };
 }
+
+type DestroyDeploymentOptions = {
+  internalHandlerId: string;
+  internalHandlerVersion: number;
+  version: string;
+};
+export async function destroyDeployment(options: DestroyDeploymentOptions) {
+  const command = new RunTaskCommand({
+    cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
+    taskDefinition: `arn:aws:ecs:eu-west-1:730335604495:task-definition/${options.version
+      .replaceAll(".", "-")
+      .replaceAll("/", "-")}_builder`,
+    networkConfiguration: {
+      awsvpcConfiguration: {
+        subnets: ["subnet-05d39f2476de29dc7"],
+        assignPublicIp: "ENABLED",
+      },
+    },
+    launchType: "FARGATE",
+    overrides: {
+      containerOverrides: [
+        {
+          name: "builder",
+          environment: [
+            { name: "MODE", value: "delete" },
+            {
+              name: "HANDLER_VERSION",
+              value: options.internalHandlerVersion.toString(),
+            },
+            {
+              name: "HANDLER_ID",
+              value: options.internalHandlerId.toString(),
+            },
+          ],
+        },
+      ],
+    },
+  });
+
+  const output = await ecs.send(command);
+
+  const task = output.tasks?.at(0);
+  if (!task || !task.taskArn) {
+    throw new Error("Task did not start");
+  }
+
+  // await db.insert(schema.deployment).values({
+  //   handlerId: options.internalHandlerId,
+  //   ecsTaskId: task.taskArn,
+  // });
+
+  return {
+    ecsOutput: output,
+  };
+}

@@ -1,6 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { env } from "~/env";
+import { destroyDeployment } from "~/server/actions/builds";
 import { protectedProcedure } from "~/server/api/trpc";
 import schema from "~/server/db/schema";
 
@@ -31,7 +33,11 @@ export const deleteHandler = protectedProcedure
       .delete(schema.handler)
       .where(eq(schema.handler.id, handler.id));
 
-    // await cleanup(handler);
+    await destroyDeployment({
+      version: env.VERSION,
+      internalHandlerId: handler.internalId,
+      internalHandlerVersion: handler.version,
+    });
 
     return {};
   });
