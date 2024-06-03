@@ -59,6 +59,7 @@ type TransactionResult = {
 
 type Transaction = {
   transactionHash: string;
+  blockNumber: number;
 };
 
 export async function handler(event: SQSEvent, context: Context) {
@@ -92,12 +93,28 @@ export async function handler(event: SQSEvent, context: Context) {
         continue;
       }
 
+      const getStartIndex = () => {
+        let i = 0;
+        while (
+          i < batch.length &&
+          BigInt(batch[i]!.blockNumber) < txConfig._startBlock
+        ) {
+          i++;
+        }
+        return i;
+      };
+
+      let startIndex = getStartIndex();
       try {
-        await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
-        batch.map((tx) => addSuccessful(tx.transactionHash, label));
+        const processable = batch
+          .slice(startIndex)
+          .map((tx) => decodeTx(tx, txConfig));
+
+        await txConfig._handler(processable);
+        processable.map((tx) => addSuccessful(tx.transactionHash, label));
       } catch (e) {
         err = e;
-        addFailure(batch.at(0)!.transactionHash, label);
+        addFailure(batch.at(startIndex)!.transactionHash, label);
         console.error(e);
         break process_loop;
       }
