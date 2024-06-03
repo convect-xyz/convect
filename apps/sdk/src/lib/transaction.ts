@@ -19,10 +19,16 @@ export class Transaction<const TLogs extends Array<any>, THandler> {
   private _logs: TLogs;
   private _handler: THandler;
   private _logMap: Map<string, any>;
+  private _startBlock: bigint;
 
-  constructor(options: { logs: TLogs; handler: THandler }) {
+  constructor(options: {
+    logs: TLogs;
+    handler: THandler;
+    startBlock?: bigint;
+  }) {
     this._logs = options.logs;
     this._handler = options.handler;
+    this._startBlock = options.startBlock ?? BigInt(0);
     this._logMap = this._logs.reduce((acc, curr) => {
       acc.set(curr._topics.at(0), curr);
       return acc;
@@ -33,6 +39,6 @@ export class Transaction<const TLogs extends Array<any>, THandler> {
 export function transaction<
   const TLogs extends Array<any>,
   THandler = (v: Array<InferTransaction<TLogs>>) => Promise<void>,
->(v: { logs: TLogs; handler: THandler }) {
+>(v: { logs: TLogs; handler: THandler; startBlock?: bigint }) {
   return new Transaction<TLogs, THandler>(v);
 }
