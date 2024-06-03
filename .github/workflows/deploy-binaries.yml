@@ -144,4 +144,4 @@ jobs:
           tags: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ env.VERSION }}"
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          file: ${context}/docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
+          file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
