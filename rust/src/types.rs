@@ -37,6 +37,7 @@ pub mod manifest {
         pub tx_configs: Vec<TransactionConfig>,
     }
 
+    #[serde_as]
     #[derive(Deserialize)]
     pub struct TransactionConfig {
         #[serde_as(as = "DisplayFromStr")]
