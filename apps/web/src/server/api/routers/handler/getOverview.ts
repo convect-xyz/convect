@@ -1,16 +1,23 @@
 import { TRPCError } from "@trpc/server";
 import axios from "axios";
 import { sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { drizzle } from "drizzle-orm/postgres-js";
 import { Redis } from "ioredis";
-import postgres from "postgres";
+import { Pool } from "pg";
 import { z } from "zod";
 import { protectedProcedure } from "~/server/api/trpc";
 
-const conn = postgres(
-  "postgresql://postgres:REDACTED@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres?sslmode=require",
-);
+const conn = new Pool({
+  connectionString:
+    "postgresql://postgres:REDACTED@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres",
+  ssl: {
+    checkServerIdentity: (servername, cert) => {
+      return undefined;
+    },
+    rejectUnauthorized: false,
+  },
+});
 
 const redisClient = new Redis(
   6379,
@@ -105,7 +112,7 @@ const getSuccessfulTxCount = async (internalId: string, version: number) => {
     .execute(
       sql`SELECT COUNT(DISTINCT(transaction_hash)) FROM processed_transactions WHERE handler_id = ${internalId} AND handler_version = ${version} AND status = 'SUCCESS'`,
     )
-    .then((r) => Number(r.at(0)!.count));
+    .then((r) => Number(r.rows.at(0)!.count));
 };
 
 const getTxCount = async (internalId: string, version: number) => {
