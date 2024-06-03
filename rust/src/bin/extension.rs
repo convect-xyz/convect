@@ -11,26 +11,29 @@ use serde_json::json;
 
 /// Report metrics
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct ReportMetrics {
-    handler_id: String,
-    pub duration_ms: f64,
-    pub billed_duration_ms: u64,
-    pub memory_size_mb: u64,
-    pub max_memory_used_mb: u64,
-    pub init_duration_ms: Option<f64>,
-    pub restore_duration_ms: Option<f64>,
+pub struct ReportMetrics<'a> {
+    handler_id: &'a str,
+    handler_version: &'a str,
+    duration_ms: f64,
+    billed_duration_ms: u64,
+    memory_size_mb: u64,
+    max_memory_used_mb: u64,
+    init_duration_ms: Option<f64>,
+    restore_duration_ms: Option<f64>,
 }
 
 const TINYBIRD_API_KEY: &'static str = env!("TINYBIRD_API_KEY");
 
 async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     let handler_id = env::var("HANDLER_ID").expect("Handler ID is undefined");
+    let handler_version = env::var("HANDLER_VERSION").expect("Handler VERSION is undefined");
 
     let records: Vec<String> = logs.into_iter().map(|record|{
       let re = Regex::new(r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$").unwrap();
       print!("{:?}", re);
       re.captures(&record).map(|result| serde_json::to_string(&json!({
         "handler_id": handler_id,
+        "handler_version": handler_version,
         "time": result["time"].to_string(),
         "invocation_id": result["uuid"].to_string(),
         "log_level": result["log_level"].to_string(),
@@ -57,17 +60,18 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     Ok(())
 }
 
-async fn upload_metrics(metrics: Vec<ReportMetrics>) -> Result<(), Error> {
+async fn upload_metrics(metrics: Vec<ReportMetrics<'_>>) -> Result<(), Error> {
     let records: Vec<String> = metrics
         .into_iter()
         .map(|record| serde_json::to_string(&record).unwrap())
         .collect();
 
     let client = Client::new();
-    let res = client.post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_metrics")
-      .header("Authorization", "Bearer REDACTED")
-      .body(records.join("\n"))
-      .send();
+    let res = client
+        .post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_metrics")
+        .header("Authorization", format!("Bearer {TINYBIRD_API_KEY}"))
+        .body(records.join("\n"))
+        .send();
 
     match res {
         Ok(res) => println!("Successfully uploaded: {:?}", res.text()),
@@ -81,6 +85,7 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
     let mut logs = Vec::new();
     let mut all_metrics = Vec::new();
     let handler_id = env::var("HANDLER_ID").expect("Handler ID is undefined");
+    let handler_version = env::var("HANDLER_VERSION").expect("Handler Version is undefined");
 
     for event in events {
         match event.record {
@@ -95,7 +100,8 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
                 spans: _,
                 tracing: _,
             } => all_metrics.push(ReportMetrics {
-                handler_id: handler_id.clone(),
+                handler_id: &handler_id,
+                handler_version: &handler_version,
                 duration_ms: metrics.duration_ms,
                 billed_duration_ms: metrics.billed_duration_ms,
                 memory_size_mb: metrics.memory_size_mb,
