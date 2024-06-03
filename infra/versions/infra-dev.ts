@@ -21,7 +21,7 @@ const http_extension = new aws.lambda.LayerVersion("http_extension", {
   description: "Handler HTTP Extension",
   s3Bucket: "ingest-functions",
   s3Key: `http/${stackName}.zip`,
-  s3ObjectVersion: "xaJq_UEaKaEiaBmzdBLrXc8EiP89TqaN",
+  s3ObjectVersion: "wNVDMG53pZdEtt2r8lBoreLbYnRQtthN",
   skipDestroy: false,
 });
 

@@ -1,25 +1,20 @@
 import { TRPCError } from "@trpc/server";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { Redis } from "ioredis";
-import postgres from "postgres";
+import { Pool } from "pg";
 import { z } from "zod";
 import { protectedProcedure } from "~/server/api/trpc";
-const conn = postgres(
-  "postgresql://postgres:postgres@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres?sslmode=require",
-);
 
-const redisClient = new Redis(
-  6379,
-  "rediss://default:AbeXAAIncDFjNTRiNjgyMmZjNzM0ZGQzOTZmYTQzZTA5ODQ4YjVkM3AxNDY5OTk@stirred-jawfish-46999.upstash.io",
-  {
-    tls: {
-      checkServerIdentity: (servername, cert) => {
-        return undefined;
-      },
+const conn = new Pool({
+  connectionString:
+    "postgresql://postgres:postgres@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres",
+  ssl: {
+    checkServerIdentity: (servername, cert) => {
+      return undefined;
     },
+    rejectUnauthorized: false,
   },
-);
+});
 
 export const processedTransactions = pgTable("processed_transactions", {
   id: serial("id").primaryKey(),
