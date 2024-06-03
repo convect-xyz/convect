@@ -1,10 +1,10 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: ["Build, Test"]
-    branches: [infra/**]
-    types: [completed]
+  # workflow_run:
+  #   workflows: ["Build, Test"]
+  #   branches: [infra/**]
+  #   types: [completed]
 
 jobs:
   update:
