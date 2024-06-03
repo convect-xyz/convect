@@ -29,30 +29,42 @@ export async function bundleFile(options: BundleFileOptions) {
 		default: {default: pipeline},
 	} = await import(path.join(process.cwd(), outfile));
 
+	const allTxConfigs = Object.values(pipeline);
 	const manifest = {
+		tx_configs: allTxConfigs.flatMap((v: any) => ({
+			startBlock: v._startBlock,
+		})),
 		log_configs: [] as Array<any>,
 	};
 
-	const all_log_configs = Object.values(pipeline).flatMap(
-		(txConfig: any) => txConfig._logs,
-	);
+	const allLogConfigs = allTxConfigs.flatMap((txConfig: any, txConfigIdx) => [
+		txConfig._logs,
+		txConfigIdx,
+	]);
 
-	const seen = new Set<string>();
-	for (const log_config of all_log_configs) {
-		let topics = encodeEventTopics({abi: [log_config._event]});
-		let event_signature = topics.at(0)!.substring(2);
-		let origin = log_config._origin;
+	const seenLogConfigs = new Map<string, number>();
+	for (const [logConfigs, txConfigIdx] of allLogConfigs) {
+		for (const logConfig of logConfigs) {
+			let topics = encodeEventTopics({abi: [logConfig._event]});
+			let event_signature = topics.at(0)!.substring(2);
+			let origin = logConfig._origin;
 
-		let identifier = event_signature + '-' + origin;
+			let identifier = event_signature + '-' + origin;
 
-		if (seen.has(identifier)) continue;
+			if (seenLogConfigs.has(identifier)) {
+				manifest.log_configs[seenLogConfigs.get(identifier)!].tx_configs.push(
+					txConfigIdx,
+				);
+				continue;
+			}
 
-		manifest.log_configs.push({
-			address: origin,
-			topics: [event_signature],
-		});
-
-		seen.add(identifier);
+			seenLogConfigs.set(identifier, manifest.log_configs.length);
+			manifest.log_configs.push({
+				address: origin,
+				topics: [event_signature],
+				tx_configs: [txConfigIdx],
+			});
+		}
 	}
 
 	fs.writeFileSync(outmanifest, JSON.stringify(manifest));

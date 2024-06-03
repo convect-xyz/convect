@@ -29,15 +29,15 @@ export const deleteHandler = protectedProcedure
       throw new TRPCError({ code: "NOT_FOUND", message: "Handler not found" });
     }
 
-    await ctx.db
-      .delete(schema.handler)
-      .where(eq(schema.handler.id, handler.id));
-
     await destroyDeployment({
       version: env.VERSION,
       internalHandlerId: handler.internalId,
       internalHandlerVersion: handler.version,
     });
+
+    await ctx.db
+      .delete(schema.handler)
+      .where(eq(schema.handler.id, handler.id));
 
     return {};
   });

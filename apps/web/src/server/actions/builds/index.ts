@@ -131,7 +131,7 @@ export async function destroyDeployment(options: DestroyDeploymentOptions) {
         {
           name: "builder",
           environment: [
-            { name: "MODE", value: "delete" },
+            { name: "MODE", value: "destroy" },
             {
               name: "HANDLER_VERSION",
               value: options.internalHandlerVersion.toString(),

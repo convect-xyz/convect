@@ -6,9 +6,7 @@ import {
 import { Address, Narrow, encodeEventTopics } from "viem";
 
 type Error<T extends string | string[]> = T extends string
-  ? [
-      `Error: ${T}`,
-    ]
+  ? [`Error: ${T}`]
   : {
       [K in keyof T]: T[K] extends infer Message extends string
         ? `Error: ${Message}`
@@ -38,10 +36,7 @@ export class Log<const TAbiEvent extends AbiEvent = AbiEvent> {
   private _event: TAbiEvent;
   private _origin: Address;
 
-  constructor(options: {
-    event: TAbiEvent;
-    origin: Address;
-  }) {
+  constructor(options: { event: TAbiEvent; origin: Address }) {
     this._event = options.event;
     this._origin = options.origin;
     this._topics = encodeEventTopics({
@@ -58,7 +53,9 @@ export function log<
     throw new Error("Only events are supported");
   }
 
-  return new Log<typeof parsedSignature extends AbiEvent ? typeof parsedSignature : any>({
+  return new Log<
+    typeof parsedSignature extends AbiEvent ? typeof parsedSignature : any
+  >({
     event: parsedSignature,
     origin: options.origin,
   });
