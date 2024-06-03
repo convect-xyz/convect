@@ -124,7 +124,7 @@ jobs:
         env:
           VERSION: ${{ github.event.release.tag_name || github.ref_name }}
         run: |
-          VERSION=${VERSION//\//-}
+          export VERSION=${VERSION//\//-}
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
       - name: Configure AWS credentials
