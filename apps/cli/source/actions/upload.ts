@@ -9,6 +9,8 @@ type UploadOutputsOptions =
 			outmanifest: string;
 			project: string;
 			handlerName: string;
+			override: boolean;
+			chain: string;
 	  }
 	| {
 			mode: 'update';
@@ -34,9 +36,9 @@ export async function uploadOutputs(options: UploadOutputsOptions) {
 	bodyFormData.append('handler', fs.readFileSync(outfile));
 	if (options.mode === 'init') {
 		bodyFormData.append('manifest', fs.readFileSync(options.outmanifest));
+		bodyFormData.append('override', options.override.toString());
+		bodyFormData.append('node', options.chain);
 	}
-	bodyFormData.append('override', 'true');
-	bodyFormData.append('node', '81457');
 
 	try {
 		await axios.post(

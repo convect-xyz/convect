@@ -11,6 +11,7 @@ import {Box} from 'ink';
 import React, {useState} from 'react';
 import {z} from 'zod';
 import {bundleFile} from '../actions/bundle.js';
+import {checkHandler} from '../actions/checkHandler.js';
 import {uploadOutputs} from '../actions/upload.js';
 import {getAuthHeaders} from '../lib/utils.js';
 
@@ -24,6 +25,7 @@ const queryClient = new QueryClient();
 
 const bundleKey = ['bundle'];
 const uploadKey = ['upload'];
+const checkHandlerKey = ['check-handler'];
 
 function useProjects() {
 	return useQuery({
@@ -48,6 +50,38 @@ function useProjects() {
 	});
 }
 
+function useChains() {
+	return useQuery({
+		queryKey: ['chains'],
+		queryFn: async () => {
+			try {
+				return await axios
+					.get('http://localhost:3000/api/cli/chains', {
+						headers: getAuthHeaders(),
+					})
+					.then(
+						r =>
+							r.data as {
+								chains: {
+									id: string;
+									name: string;
+								}[];
+							},
+					)
+					.then(d => d.chains);
+			} catch (e) {
+				if (e instanceof AxiosError) {
+					throw new Error(
+						e.response?.data?.message ?? 'An unexpected error occurred',
+					);
+				}
+
+				throw e;
+			}
+		},
+	});
+}
+
 export default function Init(props: Props) {
 	return (
 		<QueryClientProvider client={queryClient}>
@@ -59,7 +93,10 @@ export default function Init(props: Props) {
 function Content(_: Props) {
 	const [project, setProject] = useState<string>();
 	const [handlerName, setHandlerName] = useState<string>();
+	const [chain, setChain] = useState<string>();
 	const [entrypoint, setEntrypoint] = useState<string>();
+	const [exists, setExists] = useState<boolean>();
+	const [override, setOverride] = useState<boolean>();
 
 	const {mutateAsync: triggerUpload} = useMutation({
 		mutationKey: uploadKey,
@@ -74,6 +111,14 @@ function Content(_: Props) {
 		onSuccess(data) {
 			if (!project) throw new Error('Project name is not specified');
 			if (!handlerName) throw new Error('Handler name is not specified');
+			if (!chain) throw new Error('Chain is not specified');
+			const getOverride = () => {
+				if (!exists) return false;
+				if (exists && override === undefined) {
+					throw new Error('Override is not specified');
+				}
+				return override!;
+			};
 
 			triggerUpload({
 				mode: 'init',
@@ -81,6 +126,8 @@ function Content(_: Props) {
 				handlerName,
 				outfile: data.outfile,
 				outmanifest: data.outmanifest,
+				override: getOverride(),
+				chain,
 			}).catch(() => {});
 		},
 	});
@@ -91,18 +138,36 @@ function Content(_: Props) {
 			<SetHandlerName
 				project={project}
 				handlerName={handlerName}
-				onSubmit={setHandlerName}
-			/>
-			<SetEntrypoint
-				handlerName={handlerName}
-				entrypoint={entrypoint}
-				onSubmit={v => {
-					setEntrypoint(v);
-					triggerBundle({
-						entrypoint: v,
-					}).catch(() => {});
+				onSubmit={(handlerName, exists) => {
+					setHandlerName(handlerName);
+					setExists(exists);
 				}}
 			/>
+			{exists && (
+				<SetOverride
+					override={override}
+					project={project}
+					handlerName={handlerName}
+					onSubmit={setOverride}
+				/>
+			)}
+			{project &&
+				handlerName &&
+				(!exists || (exists && override !== undefined)) && (
+					<SelectChain chain={chain} onSelect={setChain} />
+				)}
+			{chain && (
+				<SetEntrypoint
+					handlerName={handlerName}
+					entrypoint={entrypoint}
+					onSubmit={v => {
+						setEntrypoint(v);
+						triggerBundle({
+							entrypoint: v,
+						}).catch(() => {});
+					}}
+				/>
+			)}
 			<BundleState />
 			<UploadState />
 		</>
@@ -143,11 +208,48 @@ function SelectProject(props: {
 	);
 }
 
+function SelectChain(props: {onSelect: (id: string) => void; chain?: string}) {
+	const {data: chains, error, isLoading} = useChains();
+
+	if (isLoading) {
+		return <Spinner label="Fetching your projects" />;
+	}
+
+	if (error) {
+		return <StatusMessage variant="error">{error.message}</StatusMessage>;
+	}
+
+	if (props.chain) {
+		return (
+			<StatusMessage variant="success">
+				Chain ({chains?.find(c => c.id === props.chain)!.name})
+			</StatusMessage>
+		);
+	}
+
+	return (
+		<Box>
+			<Spinner label="Select a chain " />
+
+			<Select
+				options={chains?.map(p => ({label: p.name, value: p.id})) ?? []}
+				onChange={props.onSelect}
+			/>
+		</Box>
+	);
+}
+
 function SetHandlerName(props: {
 	project?: string;
 	handlerName?: string;
-	onSubmit: (name: string) => void;
+	onSubmit: (name: string, exists: boolean) => void;
 }) {
+	const {mutateAsync: check} = useMutation({
+		mutationKey: checkHandlerKey,
+		mutationFn: checkHandler,
+		throwOnError: false,
+	});
+
 	if (!props.project) return <></>;
 
 	if (props.handlerName) {
@@ -162,8 +264,53 @@ function SetHandlerName(props: {
 		<Box>
 			<Spinner label="Handler Name: " />
 			<TextInput
-				onSubmit={props.onSubmit}
+				onSubmit={async v => {
+					const exists = await check({
+						project: props.project!,
+						handlerName: v,
+					});
+					props.onSubmit(v, exists);
+				}}
 				placeholder="Only characters and hyphens allowed"
+			/>
+		</Box>
+	);
+}
+
+function SetOverride(props: {
+	project?: string;
+	handlerName?: string;
+	override?: boolean;
+	onSubmit: (override: boolean) => void;
+}) {
+	if (!props.project || !props.handlerName) return <></>;
+
+	if (props.override) {
+		return (
+			<Box>
+				<StatusMessage variant="success">
+					Handler '{props.handlerName}', already exists in '{props.project}'.
+					Doing this will create a new version of your handler. Would you like
+					to proceed? y
+				</StatusMessage>
+			</Box>
+		);
+	}
+
+	return (
+		<Box>
+			<Spinner
+				label={`Handler '${props.handlerName}', already exists in '${props.project}'. Doing this will create a new version of your handler. Would you like to proceed? `}
+			/>
+			<TextInput
+				onSubmit={v => {
+					if (v.toLowerCase() === 'y') {
+						props.onSubmit(true);
+					} else {
+						process.exit(0);
+					}
+				}}
+				placeholder="y/n"
 			/>
 		</Box>
 	);
