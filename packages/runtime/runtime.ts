@@ -17,6 +17,7 @@ const USER_ENVS = (
 );
 
 const HANDLER_ID = process.env.HANDLER_ID;
+const HANDLER_VERSION = process.env.HANDLER_VERSION;
 
 for (const env of Object.keys(process.env)) {
   delete process.env[env];
@@ -26,6 +27,7 @@ for (const [name, value] of Object.entries(USER_ENVS)) {
   process.env[name] = value;
 }
 process.env["HANDLER_ID"] = HANDLER_ID;
+process.env["HANDLER_VERSION"] = HANDLER_VERSION;
 
 const { default: pipeline } = require("./pipeline");
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
