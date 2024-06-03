@@ -207,7 +207,7 @@ mod results {
 
         match record {
             Err(e) => println!("Error recording tx usage: {:?}", e),
-            _ => println!("Sent telemetry"),
+            _ => println!("Sent telemetry."),
         }
 
         let r = diesel::insert_into(processed_transactions::table)
