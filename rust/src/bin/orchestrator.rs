@@ -66,7 +66,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             .send()
             .expect("Failed to update pipeline");
 
-        return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block).await;
+        return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block, init_block)
+            .await;
     }
 
     println!("State: {:?}", pipeline.state());
@@ -115,6 +116,7 @@ async fn trigger_batch_sync_task(
     ecs_client: &aws_sdk_ecs::Client,
     pipeline: &mut State,
     incoming_block: u64,
+    init_block: Option<u64>,
 ) -> Result<(), Error> {
     let version = env::var("VERSION").expect("Version ENV not defined");
     println!("Triggering batch sync");
@@ -149,7 +151,7 @@ async fn trigger_batch_sync_task(
                                 pipeline
                                     .last_block()
                                     .map(|l| l + 1)
-                                    .or(Some(0))
+                                    .or(init_block)
                                     .unwrap()
                                     .to_string(),
                             ),
