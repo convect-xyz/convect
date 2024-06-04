@@ -105,6 +105,7 @@ export async function handler(event: SQSEvent, context: Context) {
       };
 
       let startIndex = getStartIndex();
+
       try {
         const processable = batch
           .slice(startIndex)
