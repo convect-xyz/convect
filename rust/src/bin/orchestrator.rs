@@ -72,7 +72,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     println!("State: {:?}", pipeline.state());
 
-    let from_block = pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap();
+    let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
 
     // We'll process the blocks here and add them to tx queue
     // We shouldn't need to update status here because max concurrency should be 1
