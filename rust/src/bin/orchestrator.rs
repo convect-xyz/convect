@@ -47,8 +47,18 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     println!("{:?}", pipeline.inner());
 
+    let mut init_block: Option<u64> = Some(0);
+    if pipeline.last_block().is_none() {
+        let manifest = Manifest::from_env().await.unwrap();
+        init_block = manifest
+            .tx_configs
+            .iter()
+            .map(|c| u64::try_from(c.start_block).expect("i64 to u64 failed"))
+            .min();
+    }
+
     // If block diff is too great, trigger fargate to do the work
-    if incoming_block - pipeline.last_block().or(Some(0)).unwrap() > 1999 {
+    if incoming_block - pipeline.last_block().or(init_block).unwrap() > 1999 {
         // It is the responsibility of the ECS task to revert this status
         pipeline
             .update()
