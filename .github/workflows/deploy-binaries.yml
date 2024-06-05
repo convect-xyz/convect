@@ -87,6 +87,7 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-extension
           restore-keys: ${{ runner.os }}-cargo-
+
       - name: Build
         env:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
@@ -138,6 +139,16 @@ jobs:
       - uses: actions/setup-node@v3.5.0
         with:
           node-version-file: package.json
+
+      - name: Set up node cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            node_modules/
+            infra/node_modules
+          key: ${{ runner.os }}-deploy-pulumi-${{ hashFiles('infra/package.json') }}-
+          restore-keys: ${{ runner.os }}-deploy-pulumi-
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
