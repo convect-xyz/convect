@@ -1,6 +1,7 @@
 import * as aws from "@pulumi/aws";
+import { Output } from "@pulumi/pulumi";
 
-const GITHUB_SHA = process.env.GITHUB_SHA;
+const GITHUB_SHA = process.env.GITHUB_SHA!;
 
 const extension = new aws.lambda.LayerVersion("v1_handler_extension", {
   layerName: "v1_handler_extension",
@@ -103,3 +104,4 @@ const syncer = new aws.ecs.TaskDefinition("v1_syncer_task_definition", {
 export const handler_extension_arn = extension.arn;
 export const builder_task_definition = builder.arn;
 export const syncer_task_definition = syncer.arn;
+export const github_sha: Output<string> = Output.create(GITHUB_SHA);
