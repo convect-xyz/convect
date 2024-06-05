@@ -60,7 +60,6 @@ async fn main() -> Result<(), Error> {
 
 mod results {
     use std::env;
-    use std::sync::Arc;
 
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
@@ -68,10 +67,7 @@ mod results {
     use axum::{debug_handler, Json};
     use chrono::DateTime;
     use diesel_async::RunQueryDsl;
-    use futures::lock::Mutex;
-    use ingest::connection::DbPool;
     use ingest::telemetry::{self, ProcessedTransactionTelemetry};
-    use ingest::types::processing;
     use ingest::{models::ProcessedTransaction, schema::processed_transactions};
     use serde::Deserialize;
     use serde_json::{json, Value};
@@ -192,10 +188,7 @@ mod results {
             .flatten()
             .collect();
 
-        println!("Establishing connection");
         let mut conn = app_state.pool.get().await.unwrap();
-        println!("Established connection");
-
         let tx_telemtry = telemetry::stripe::StripeProcessedTransactionTelemetry::from_env();
 
         let record = tx_telemtry

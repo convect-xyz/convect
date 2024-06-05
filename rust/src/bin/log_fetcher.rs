@@ -23,6 +23,7 @@ async fn function_handler(
     let s3_client = aws_sdk_s3::Client::new(&config);
     let manifest = Manifest::from_env().await.unwrap();
     let api: ApiInstance = api::Api::new(&config);
+    let s3_bucket = env::var("S3_BUCKET").expect("S3_BUCKET is not set");
 
     let transactions = match api
         .fetch_transactions()
@@ -55,12 +56,12 @@ async fn function_handler(
     );
 
     s3_client
-        .put_s3_object("ingest-fetch-logs", key.as_str(), body)
+        .put_s3_object(&s3_bucket, key.as_str(), body)
         .await
         .unwrap();
 
     Ok(InvocationResponse {
-        s3_bucket: Some("ingest-fetch-logs".to_string()),
+        s3_bucket: Some(s3_bucket),
         s3_prefix: Some(key),
         size,
     })

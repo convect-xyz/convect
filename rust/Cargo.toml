@@ -10,8 +10,12 @@ path = "src/bin/log_fetcher.rs"
 [[bin]]
 name = "http"
 path = "src/bin/http.rs"
-required-features = ["pg"]
+required-features = ["pg", "handler-telemetry"]
 
+[[bin]]
+name = "producer"
+path = "src/bin/producer.rs"
+required-features = ["supported-networks"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

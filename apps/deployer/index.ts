@@ -17,6 +17,12 @@ const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
 const HANDLER_ENVS = process.env.HANDLER_ENVS!;
 const STRIPE_CUSTOMER_ID = process.env.STRIPE_CUSTOMER_ID!;
 
+const SYNCER_CLUSTER = "arn:aws:ecs:eu-west-1:730335604495:cluster/syncers";
+const SYNCER_SUBNETS = ["subnet-05d39f2476de29dc7"];
+const SYNCER_CONTAINER_NAME = "syncer";
+
+const LOG_FETCHER_S3_BUCKET = "ingest-fetch-logs";
+
 export = async () => {
   const transactionQueue = new aws.sqs.Queue(`tx-queue`, {
     visibilityTimeoutSeconds: 900,
@@ -36,6 +42,7 @@ export = async () => {
         HANDLER_ID,
         HANDLER_VERSION,
         VERSION,
+        S3_BUCKET: LOG_FETCHER_S3_BUCKET,
       },
     },
     timeout: 200,
@@ -62,6 +69,9 @@ export = async () => {
           .getOutputValue("outputs")
           .then(JSON.parse)
           .then((r) => r.syncer_task_definition),
+        SYNCER_CLUSTER,
+        SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
+        SYNCER_CONTAINER_NAME,
       },
     },
     timeout: 200,
