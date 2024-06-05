@@ -113,7 +113,6 @@ const builder = new aws.ecs.TaskDefinition(
         environment: [
           {
             name: "PULUMI_ACCESS_TOKEN",
-            // REDACTED
             value: process.env.PULUMI_ACCESS_TOKEN,
           },
           {
