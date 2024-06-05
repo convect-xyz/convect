@@ -147,7 +147,7 @@ jobs:
           path: |
             node_modules/
             infra/node_modules
-          key: ${{ runner.os }}-deploy-pulumi-${{ hashFiles('infra/package.json') }}-
+          key: ${{ runner.os }}-deploy-pulumi-${{ hashFiles('infra/yarn.lock') }}-
           restore-keys: ${{ runner.os }}-deploy-pulumi-
 
       - name: Configure AWS Credentials
