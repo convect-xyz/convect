@@ -157,8 +157,7 @@ export const handler_extension_arn = extension.arn;
 export const http_extension_arn = http_extension.arn;
 export const builder_task_definition = builder.arn;
 export const syncer_task_definition = syncer.arn;
-
-export * from "./vpc";
-
 export const github_sha: pulumi.Output<string> =
   pulumi.Output.create(GITHUB_SHA);
+
+export * from "./vpc";
