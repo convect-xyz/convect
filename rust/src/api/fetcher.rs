@@ -119,12 +119,12 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
 }
 
 pub trait Web3Client {
-    async fn get_logs_for_config(
+    fn get_logs_for_config(
         &self,
         config: &LogConfig,
         start_block: u64,
         end_block: u64,
-    ) -> Result<Vec<Log>, BoxError>;
+    ) -> impl std::future::Future<Output = Result<Vec<Log>, BoxError>> + Send;
 }
 
 pub struct Web3ClientImpl {
