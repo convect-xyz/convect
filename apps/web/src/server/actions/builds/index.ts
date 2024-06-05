@@ -1,6 +1,7 @@
 import { RunTaskCommand } from "@aws-sdk/client-ecs";
 import { env } from "~/env";
 import { ecs } from "~/lib/server/aws";
+import { getStackOutputs } from "../pulumi/getStackOutputs";
 
 type TriggerBuildOptions = {
   version: string;
@@ -18,11 +19,11 @@ type TriggerBuildOptions = {
 };
 
 export async function createDeployment(options: TriggerBuildOptions) {
+  const outputs = await getStackOutputs();
+
   const command = new RunTaskCommand({
     cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
-    taskDefinition: `arn:aws:ecs:eu-west-1:730335604495:task-definition/${options.version
-      .replaceAll(".", "-")
-      .replaceAll("/", "-")}_builder`,
+    taskDefinition: outputs.builder_task_definition,
     networkConfiguration: {
       awsvpcConfiguration: {
         subnets: ["subnet-05d39f2476de29dc7"],
@@ -104,7 +105,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
   // });
 
   return {
-    ecsOutput: output,
+    ecsOutput: "",
   };
 }
 
@@ -113,12 +114,13 @@ type DestroyDeploymentOptions = {
   internalHandlerVersion: number;
   version: string;
 };
+
 export async function destroyDeployment(options: DestroyDeploymentOptions) {
+  const outputs = await getStackOutputs();
+
   const command = new RunTaskCommand({
     cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
-    taskDefinition: `arn:aws:ecs:eu-west-1:730335604495:task-definition/${options.version
-      .replaceAll(".", "-")
-      .replaceAll("/", "-")}_builder`,
+    taskDefinition: outputs.builder_task_definition,
     networkConfiguration: {
       awsvpcConfiguration: {
         subnets: ["subnet-05d39f2476de29dc7"],
@@ -152,11 +154,6 @@ export async function destroyDeployment(options: DestroyDeploymentOptions) {
   if (!task || !task.taskArn) {
     throw new Error("Task did not start");
   }
-
-  // await db.insert(schema.deployment).values({
-  //   handlerId: options.internalHandlerId,
-  //   ecsTaskId: task.taskArn,
-  // });
 
   return {
     ecsOutput: output,

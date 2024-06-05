@@ -21,7 +21,6 @@ export async function createProducer(params: CreateProducerParams) {
   const producer = await params.db
     .insert(schema.producers)
     .values({
-      altId: params.id,
       wsUrl: params.wsUrl,
       pollingUrl: params.pollingUrl,
       userId: params.session.user.id,
