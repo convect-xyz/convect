@@ -118,16 +118,14 @@ async fn trigger_batch_sync_task(
     incoming_block: u64,
     init_block: Option<u64>,
 ) -> Result<(), Error> {
-    let version = env::var("VERSION").expect("Version ENV not defined");
+    let task_definition_arn =
+        env::var("SYNCER_TASK_DEFINITION_ARN").expect("SYNCER_TASK_DEFINITION_ARN not defined");
     println!("Triggering batch sync");
 
     let result = ecs_client
         .run_task()
         .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
-        .task_definition(format!(
-            "arn:aws:ecs:eu-west-1:730335604495:task-definition/{family_name}_syncer",
-            family_name = version.replace(".", "-")
-        ))
+        .task_definition(task_definition_arn)
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(
             NetworkConfiguration::builder()
@@ -179,7 +177,10 @@ async fn trigger_batch_sync_task(
                                 "HANDLER_VERSION".to_string(),
                                 env::var("HANDLER_VERSION").unwrap(),
                             ),
-                            create_key_value_pair("VERSION".to_string(), version),
+                            create_key_value_pair(
+                                "VERSION".to_string(),
+                                env::var("VERSION").unwrap(),
+                            ),
                         ]))
                         .build(),
                 )

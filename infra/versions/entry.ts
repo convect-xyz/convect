@@ -11,7 +11,7 @@ const extension = new aws.lambda.LayerVersion("handler_extension", {
   description: "Handler Extension",
   s3Bucket: "ingest-functions",
   s3Key: `extension/${GITHUB_SHA}.zip`,
-  skipDestroy: false,
+  skipDestroy: true,
 });
 
 const http_extension = new aws.lambda.LayerVersion("http_extension", {
@@ -21,7 +21,7 @@ const http_extension = new aws.lambda.LayerVersion("http_extension", {
   description: "Handler HTTP Extension",
   s3Bucket: "ingest-functions",
   s3Key: `http/${GITHUB_SHA}.zip`,
-  skipDestroy: false,
+  skipDestroy: true,
 });
 
 const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
@@ -83,6 +83,7 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
   taskRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
   executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
   networkMode: "awsvpc",
+  skipDestroy: true,
 });
 
 const builder = new aws.ecs.TaskDefinition(
@@ -149,6 +150,7 @@ const builder = new aws.ecs.TaskDefinition(
     taskRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
     executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
     networkMode: "awsvpc",
+    skipDestroy: true,
   },
   { dependsOn: [syncer] }
 );
