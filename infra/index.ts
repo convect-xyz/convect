@@ -1,6 +1,3 @@
-import * as pulumi from "@pulumi/pulumi";
-
-const stack = pulumi.getStack();
-const outputs = require(`./versions/${stack}`);
+const outputs = require(`./versions/entry`);
 
 export { outputs };
