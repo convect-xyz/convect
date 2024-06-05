@@ -10,7 +10,7 @@ const extension = new aws.lambda.LayerVersion("handler_extension", {
   compatibleRuntimes: ["provided.al2", "provided.al2023"],
   description: "Handler Extension",
   s3Bucket: "ingest-functions",
-  s3Key: `extension/${stackName}.zip`,
+  s3Key: `extension/${GITHUB_SHA}.zip`,
   s3ObjectVersion: "XfxAKgvICaFOOtppSBXNdC8Pri9hOioS",
   skipDestroy: false,
 });
@@ -21,7 +21,7 @@ const http_extension = new aws.lambda.LayerVersion("http_extension", {
   compatibleRuntimes: ["provided.al2", "provided.al2023"],
   description: "Handler HTTP Extension",
   s3Bucket: "ingest-functions",
-  s3Key: `http/${stackName}.zip`,
+  s3Key: `http/${GITHUB_SHA}.zip`,
   s3ObjectVersion: "wNVDMG53pZdEtt2r8lBoreLbYnRQtthN",
   skipDestroy: false,
 });
@@ -162,3 +162,6 @@ export const builder_task_definition = builder.arn;
 export const syncer_task_definition = syncer.arn;
 
 export * from "./vpc";
+
+export const github_sha: pulumi.Output<string> =
+  pulumi.Output.create(GITHUB_SHA);

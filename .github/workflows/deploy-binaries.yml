@@ -131,7 +131,7 @@ jobs:
 
   deploy_pulumi:
     needs: [build_lambdas, build_extensions, build_images]
-    name: Update
+    name: Deploy Pulumi
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
