@@ -69,7 +69,12 @@ const orchestrator = new aws.lambda.Function(`orchestrator`, {
 const handler = new aws.lambda.Function(`handler`, {
   role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
   s3Bucket: "ingest-build-outputs",
-  s3Key: path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + ".zip"),
+  s3Key: path.join(
+    "outputs",
+    HANDLER_ID,
+    HANDLER_VERSION,
+    DEPLOYMENT_ID + ".zip"
+  ),
   environment: {
     variables: {
       HANDLER_ID,
@@ -87,25 +92,6 @@ const handler = new aws.lambda.Function(`handler`, {
     stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn),
     stackRef.getOutput("outputs").apply((f) => f.http_extension_arn),
   ],
-  timeout: 900,
-  memorySize: 512,
-  handler: "index.handler",
-  packageType: "Zip",
-  runtime: "nodejs20.x",
-});
-
-const events = new aws.lambda.Function(`events`, {
-  role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-  s3Bucket: "ingest-build-outputs",
-  s3Key: path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + "-events.zip"),
-  environment: {
-    variables: {
-      HANDLER_ID,
-      HANDLER_VERSION,
-      USER_ENVS: HANDLER_ENVS,
-    },
-  },
-  layers: [stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn)],
   timeout: 900,
   memorySize: 512,
   handler: "index.handler",

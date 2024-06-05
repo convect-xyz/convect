@@ -126,7 +126,7 @@ export const POST = async (req: NextRequest) => {
     .then((v) => v!);
 
   const bundledHandler = data.handler;
-  const sourcePrefix = `code/${handler.internalId}/${deploymentId}.zip`;
+  const sourcePrefix = `code/${handler.internalId}/${handler.version}/${deploymentId}.zip`;
   const promises: Promise<any>[] = [
     s3.putObject({
       Bucket: "ingest-build-outputs",
