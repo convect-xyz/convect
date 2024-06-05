@@ -37,13 +37,6 @@ jobs:
           platform: linux
           arch: x86_64
       - uses: actions/checkout@master
-
-      - name: Set version
-        env:
-          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
-        run: |
-          ./scripts/set_version.sh
-
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -56,6 +49,7 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-lambdas
+
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
@@ -80,11 +74,7 @@ jobs:
           platform: linux
           arch: x86_64
       - uses: actions/checkout@master
-      - name: Set version
-        env:
-          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
-        run: |
-          ./scripts/set_version.sh
+
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -101,12 +91,13 @@ jobs:
         env:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
           BIN: ${{ matrix.binary }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           sudo apt-get update
           sudo apt-get install -y libpq-dev postgresql
           cd rust
           cargo lambda build --extension --output-format zip --release --bin=$BIN --features="pg"
-          aws s3api put-object --bucket ingest-functions --key $BIN/$VERSION.zip --body "./target/lambda/extensions/$BIN.zip"
+          aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/extensions/$BIN.zip"
 
   build_images:
     runs-on: ubuntu-latest
@@ -119,13 +110,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Set version
-        env:
-          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
-        run: |
-          export VERSION=${VERSION//\//-}
-          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -140,7 +124,39 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ env.VERSION }}"
+          tags: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
           cache-from: type=gha
           cache-to: type=gha,mode=max
           file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
+
+  deploy_pulumi:
+    needs: [build_lambdas, build_extensions, build_images]
+    name: Update
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3.5.0
+        with:
+          node-version-file: package.json
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Set version
+        env:
+          VERSION: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          VERSION=${VERSION//\//-}
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - uses: pulumi/actions@v3
+        with:
+          command: up
+          work-dir: ./infra
+          stack-name: ${{ env.VERSION }}
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}

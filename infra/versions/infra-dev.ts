@@ -2,6 +2,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 
 const stackName = pulumi.getStack();
+const GITHUB_SHA = process.env.GITHUB_SHA!;
 
 const extension = new aws.lambda.LayerVersion("handler_extension", {
   layerName: `${stackName}_handler_extension`,
@@ -30,7 +31,7 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
   containerDefinitions: JSON.stringify([
     {
       name: "syncer",
-      image: `730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:${stackName}`,
+      image: `730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:${GITHUB_SHA}`,
       cpu: 0,
       portMappings: [
         {
@@ -56,6 +57,10 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
         {
           name: "VERSION",
           value: stackName,
+        },
+        {
+          name: "GITHUB_SHA",
+          value: GITHUB_SHA,
         },
       ],
       mountPoints: [],
@@ -89,7 +94,7 @@ const builder = new aws.ecs.TaskDefinition(
     containerDefinitions: JSON.stringify([
       {
         name: "builder",
-        image: `730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:${stackName}`,
+        image: `730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:${GITHUB_SHA}`,
         cpu: 0,
         portMappings: [
           {
@@ -116,6 +121,10 @@ const builder = new aws.ecs.TaskDefinition(
           {
             name: "VERSION",
             value: stackName,
+          },
+          {
+            name: "GITHUB_SHA",
+            value: GITHUB_SHA,
           },
         ],
         environmentFiles: [],
