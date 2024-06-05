@@ -159,3 +159,5 @@ export const builder_task_definition = builder.arn;
 export const syncer_task_definition = syncer.arn;
 export const github_sha: pulumi.Output<string> =
   pulumi.Output.create(GITHUB_SHA);
+
+export * from "./vpc";
