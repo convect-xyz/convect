@@ -1,5 +1,4 @@
 use diesel::prelude::*;
-use diesel_async::pooled_connection::deadpool::PoolError;
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
 use diesel_async::pooled_connection::{ManagerConfig, RecyclingMethod};
 use diesel_async::AsyncPgConnection;

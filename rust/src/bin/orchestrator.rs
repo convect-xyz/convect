@@ -120,18 +120,27 @@ async fn trigger_batch_sync_task(
 ) -> Result<(), Error> {
     let task_definition_arn =
         env::var("SYNCER_TASK_DEFINITION_ARN").expect("SYNCER_TASK_DEFINITION_ARN not defined");
+    let cluster = env::var("SYNCER_CLUSTER").expect("SYNCER_CLUSTER not defined");
+    let subnets: Vec<_> = env::var("SYNCER_SUBNETS")
+        .expect("SYNCER_SUBNETS not defined")
+        .split(",")
+        .map(|s| s.to_string())
+        .collect();
+    let container_name =
+        env::var("SYNCER_CONTAINER_NAME").expect("SYNCER_CONTAINER_NAME not defined");
+
     println!("Triggering batch sync");
 
     let result = ecs_client
         .run_task()
-        .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
+        .cluster(cluster)
         .task_definition(task_definition_arn)
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(
             NetworkConfiguration::builder()
                 .awsvpc_configuration(
                     AwsVpcConfiguration::builder()
-                        .subnets("subnet-05d39f2476de29dc7".to_string())
+                        .set_subnets(Some(subnets))
                         .assign_public_ip(aws_sdk_ecs::types::AssignPublicIp::Enabled)
                         .build()
                         .unwrap(),
@@ -142,7 +151,7 @@ async fn trigger_batch_sync_task(
             TaskOverride::builder()
                 .container_overrides(
                     ContainerOverride::builder()
-                        .name("syncer")
+                        .name(container_name)
                         .set_environment(Some(vec![
                             create_key_value_pair(
                                 "START_BLOCK".to_string(),
