@@ -73,3 +73,5 @@ mockall = "0.12.1"
 
 [features]
 pg = []
+handler-telemetry = []
+supported-networks = []
