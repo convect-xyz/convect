@@ -111,7 +111,12 @@ async function zipLambda() {
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
   const bucket = "ingest-build-outputs";
-  const key = path.join("outputs", env.HANDLER_ID, env.DEPLOYMENT_ID + ".zip");
+  const key = path.join(
+    "outputs",
+    env.HANDLER_ID,
+    env.HANDLER_VERSION,
+    env.DEPLOYMENT_ID + ".zip"
+  );
 
   await s3.putObject({
     Bucket: bucket,
