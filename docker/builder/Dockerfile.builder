@@ -21,14 +21,14 @@ COPY . .
 
 WORKDIR /usr/src/app
 
-RUN yarn esbuild ./apps/bundler/src/deploy.ts --external:'esbuild' --bundle --platform=node --target=node10.4 --outfile=/deploy.js
+RUN yarn esbuild ./apps/bundler/src/deploy.ts --external:'esbuild' --external:'@pulumi/pulumi' --bundle --platform=node --target=node10.4 --outfile=/deploy.js
 RUN yarn esbuild ./packages/runtime/runtime.ts --external:'./pipeline' --bundle --platform=node --target=node10.4 --outfile=/runtime.js
 
 
 
 FROM node:21-alpine
 
-RUN yarn global add esbuild
+RUN yarn global add esbuild @pulumi/pulumi
 RUN apk update
 RUN apk --no-cache add curl
 WORKDIR /scripts
