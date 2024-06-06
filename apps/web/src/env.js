@@ -32,6 +32,8 @@ export const env = createEnv({
     ENCRYPTION_KEY: z.string(),
 
     VERSION: z.string(),
+
+    PULUMI_ACCESS_TOKEN: z.string(),
   },
 
   /**
@@ -59,6 +61,7 @@ export const env = createEnv({
     AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID,
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
     VERSION: process.env.VERSION,
+    PULUMI_ACCESS_TOKEN: process.env.PULUMI_ACCESS_TOKEN,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

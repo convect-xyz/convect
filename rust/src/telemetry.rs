@@ -12,7 +12,6 @@ pub mod stripe {
     use std::{collections::HashMap, env};
 
     use aws_sdk_s3::error::BoxError;
-    use serde_json::json;
 
     use super::ProcessedTransactionTelemetry;
 

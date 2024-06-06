@@ -2,6 +2,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 
 const stackName = pulumi.getStack();
+const GITHUB_SHA = process.env.GITHUB_SHA!;
 
 const extension = new aws.lambda.LayerVersion("handler_extension", {
   layerName: `${stackName}_handler_extension`,
@@ -9,9 +10,8 @@ const extension = new aws.lambda.LayerVersion("handler_extension", {
   compatibleRuntimes: ["provided.al2", "provided.al2023"],
   description: "Handler Extension",
   s3Bucket: "ingest-functions",
-  s3Key: `extension/${stackName}.zip`,
-  s3ObjectVersion: "XfxAKgvICaFOOtppSBXNdC8Pri9hOioS",
-  skipDestroy: false,
+  s3Key: `extension/${GITHUB_SHA}.zip`,
+  skipDestroy: true,
 });
 
 const http_extension = new aws.lambda.LayerVersion("http_extension", {
@@ -20,9 +20,8 @@ const http_extension = new aws.lambda.LayerVersion("http_extension", {
   compatibleRuntimes: ["provided.al2", "provided.al2023"],
   description: "Handler HTTP Extension",
   s3Bucket: "ingest-functions",
-  s3Key: `http/${stackName}.zip`,
-  s3ObjectVersion: "wNVDMG53pZdEtt2r8lBoreLbYnRQtthN",
-  skipDestroy: false,
+  s3Key: `http/${GITHUB_SHA}.zip`,
+  skipDestroy: true,
 });
 
 const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
@@ -30,7 +29,7 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
   containerDefinitions: JSON.stringify([
     {
       name: "syncer",
-      image: `730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:${stackName}`,
+      image: `730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:${GITHUB_SHA}`,
       cpu: 0,
       portMappings: [
         {
@@ -57,6 +56,10 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
           name: "VERSION",
           value: stackName,
         },
+        {
+          name: "GITHUB_SHA",
+          value: GITHUB_SHA,
+        },
       ],
       mountPoints: [],
       volumesFrom: [],
@@ -80,6 +83,7 @@ const syncer = new aws.ecs.TaskDefinition("syncer_task_definition", {
   taskRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
   executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
   networkMode: "awsvpc",
+  skipDestroy: true,
 });
 
 const builder = new aws.ecs.TaskDefinition(
@@ -89,7 +93,7 @@ const builder = new aws.ecs.TaskDefinition(
     containerDefinitions: JSON.stringify([
       {
         name: "builder",
-        image: `730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:${stackName}`,
+        image: `730335604495.dkr.ecr.eu-west-1.amazonaws.com/builder:${GITHUB_SHA}`,
         cpu: 0,
         portMappings: [
           {
@@ -110,12 +114,15 @@ const builder = new aws.ecs.TaskDefinition(
         environment: [
           {
             name: "PULUMI_ACCESS_TOKEN",
-            // REDACTED
             value: process.env.PULUMI_ACCESS_TOKEN,
           },
           {
             name: "VERSION",
             value: stackName,
+          },
+          {
+            name: "GITHUB_SHA",
+            value: GITHUB_SHA,
           },
         ],
         environmentFiles: [],
@@ -143,6 +150,7 @@ const builder = new aws.ecs.TaskDefinition(
     taskRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
     executionRoleArn: "arn:aws:iam::730335604495:role/ecsTaskExecutionRole",
     networkMode: "awsvpc",
+    skipDestroy: true,
   },
   { dependsOn: [syncer] }
 );
@@ -151,5 +159,5 @@ export const handler_extension_arn = extension.arn;
 export const http_extension_arn = http_extension.arn;
 export const builder_task_definition = builder.arn;
 export const syncer_task_definition = syncer.arn;
-
-export * from "./vpc";
+export const github_sha: pulumi.Output<string> =
+  pulumi.Output.create(GITHUB_SHA);

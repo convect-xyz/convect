@@ -49,6 +49,9 @@ export const getOverview = protectedProcedure
   .output(
     z.object({
       status: z.enum(["failed", "processing", "provisioning"]),
+      chain: z.object({
+        name: z.string(),
+      }),
       lastFetchedBlock: z.number(),
       transactionCount: z.number(),
       processedTransactionsCount: z.number(),
@@ -62,6 +65,9 @@ export const getOverview = protectedProcedure
     const handler = await ctx.db.query.handler.findFirst({
       where(fields, { eq }) {
         return eq(fields.id, input.handlerId);
+      },
+      with: {
+        producer: true,
       },
     });
 
@@ -78,6 +84,9 @@ export const getOverview = protectedProcedure
 
     return {
       status: fetchState ? "processing" : "provisioning",
+      chain: {
+        name: handler.producer.name,
+      },
       transactionCount: txCount ?? 0,
       processedTransactionsCount: successfulTx,
       lastFetchedBlock: fetchState?.lastBlock ?? 0,

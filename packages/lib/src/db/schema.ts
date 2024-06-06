@@ -225,7 +225,7 @@ export const producers = createTable(
   "producer",
   {
     id: serial("id").notNull().primaryKey(),
-    altId: varchar("altId", { length: 255 })
+    chainId: varchar("chain_id", { length: 255 })
       .notNull()
       .unique()
       .$defaultFn(() => v4()),
