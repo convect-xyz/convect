@@ -14,6 +14,9 @@ const SYNCER_CONTAINER_NAME = "syncer";
 const LOG_FETCHER_S3_BUCKET = "ingest-fetch-logs";
 
 export default async () => {
+  const infraOuputs = await stackRef.getOutputValue("outputs");
+  const syncerTaskDefinition = JSON.parse(infraOuputs).syncer_task_definition;
+
   const transactionQueue = new aws.sqs.Queue(`tx-queue`, {
     visibilityTimeoutSeconds: 900,
     fifoQueue: true,
@@ -55,10 +58,7 @@ export default async () => {
         HANDLER_ID: env.HANDLER_ID,
         HANDLER_VERSION: env.HANDLER_VERSION,
         VERSION: env.VERSION,
-        SYNCER_TASK_DEFINITION_ARN: await stackRef
-          .getOutputValue("outputs")
-          .then(JSON.parse)
-          .then((r) => r.syncer_task_definition),
+        SYNCER_TASK_DEFINITION_ARN: syncerTaskDefinition,
         SYNCER_CLUSTER,
         SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
         SYNCER_CONTAINER_NAME,
