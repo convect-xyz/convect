@@ -5,8 +5,6 @@ import { env } from "./env";
 
 const org = "kayakthedev";
 
-const stackRef = new pulumi.StackReference(`${org}/infra/${env.VERSION}`);
-
 const SYNCER_CLUSTER = "arn:aws:ecs:eu-west-1:730335604495:cluster/syncers";
 const SYNCER_SUBNETS = ["subnet-05d39f2476de29dc7"];
 const SYNCER_CONTAINER_NAME = "syncer";
@@ -14,8 +12,7 @@ const SYNCER_CONTAINER_NAME = "syncer";
 const LOG_FETCHER_S3_BUCKET = "ingest-fetch-logs";
 
 export default async () => {
-  const infraOuputs = await stackRef.getOutputValue("outputs");
-  const syncerTaskDefinition = JSON.parse(infraOuputs).syncer_task_definition;
+  const stackRef = new pulumi.StackReference(`${org}/infra/${env.VERSION}`);
 
   const transactionQueue = new aws.sqs.Queue(`tx-queue`, {
     visibilityTimeoutSeconds: 900,
@@ -58,7 +55,9 @@ export default async () => {
         HANDLER_ID: env.HANDLER_ID,
         HANDLER_VERSION: env.HANDLER_VERSION,
         VERSION: env.VERSION,
-        SYNCER_TASK_DEFINITION_ARN: syncerTaskDefinition,
+        SYNCER_TASK_DEFINITION_ARN: stackRef
+          .getOutput("outputs")
+          .apply((f) => f.syncer_task_definition),
         SYNCER_CLUSTER,
         SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
         SYNCER_CONTAINER_NAME,
