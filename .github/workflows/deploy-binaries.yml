@@ -172,5 +172,6 @@ jobs:
           command: up
           work-dir: ./infra
           stack-name: ${{ env.VERSION }}
+          upsert: true
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
