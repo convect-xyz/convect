@@ -36,13 +36,13 @@ async function main() {
     env.MODE === "destroy"
   ) {
     console.info("destroying stack...");
-    await stack.destroy();
+    await stack.destroy({ onOutput: console.info });
     console.info("stack destroyed");
   }
 
   if (["init", "update"].includes(env.MODE)) {
     console.info("stack up...");
-    await stack.up();
+    await stack.up({ onOutput: console.info });
     console.info("stack upped.");
   }
 
