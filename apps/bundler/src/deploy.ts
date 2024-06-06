@@ -37,6 +37,7 @@ async function main() {
   ) {
     console.info("destroying stack...");
     await stack.destroy({ onOutput: console.info });
+    await stack.workspace.removeStack(stack.name);
     console.info("stack destroyed");
   }
 
