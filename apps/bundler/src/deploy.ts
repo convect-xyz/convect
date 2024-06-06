@@ -22,20 +22,28 @@ async function main() {
   await prepareBundle();
   await zipLambda();
 
+  console.info("initialising/getting stack...");
   const stack = await getStack();
+  console.info("succesfully intialised stack.");
 
+  console.info("installing aws plugin...");
   await stack.workspace.installPlugin("aws", "v6.37.0");
   await stack.setConfig("aws:region", { value: "eu-west-1" });
+  console.info("aws plugin installed.");
 
   if (
     (env.MODE === "init" && Number(env.HANDLER_VERSION) > 0) ||
     env.MODE === "destroy"
   ) {
+    console.info("destroying stack...");
     await stack.destroy();
+    console.info("stack destroyed");
   }
 
   if (["init", "update"].includes(env.MODE)) {
+    console.info("stack up...");
     await stack.up();
+    console.info("stack upped.");
   }
 
   process.exit(0);

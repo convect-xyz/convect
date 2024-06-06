@@ -11,10 +11,13 @@ RUN cargo chef prepare --bin=syncer
 FROM --platform=linux/amd64 chef AS builder
 # RUN apt-get update && apt-get install -y protobuf-compiler
 COPY ./config ./config
-COPY --from=planner /app/rust/recipe.json ./rust/recipe.json
+
 WORKDIR /app/rust
-RUN cargo chef cook --release --recipe-path recipe.json --bin=syncer 
+
+COPY --from=planner /app/rust/recipe.json ./recipe.json
+RUN cargo chef cook --release --recipe-path ./recipe.json --bin=syncer 
 COPY ./rust ./
+
 RUN cargo build --release --bin=syncer
 RUN mv ./target/release/syncer ./app
 
