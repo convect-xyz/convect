@@ -1,17 +1,13 @@
-import { Lambda } from "@aws-sdk/client-lambda";
 import { S3 } from "@aws-sdk/client-s3";
 import { InlineProgramArgs, LocalWorkspace } from "@pulumi/pulumi/automation";
 import esbuild from "esbuild";
-import { backOff } from "exponential-backoff";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
 import infraFactory from "./infra";
 
-const lambda = new Lambda({ region: "eu-west-1" });
 const s3 = new S3({ region: "eu-west-1" });
 
-const VERSION = process.env.VERSION!;
 const MODE = process.env.MODE as "init" | "update" | "destroy";
 const CURR_DIR = process.env.CURR_DIR!;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
@@ -23,9 +19,7 @@ const HANDLER_SRC_FILE = path.join(CURR_DIR, SOURCE_PREFIX + ".js");
 const BUNDLE_SRC_DIR = path.join(CURR_DIR, "bundle_src");
 const BUNDLE_OUT_DIR = path.join(CURR_DIR, "bundle_out");
 const RUNTIME_SRC_FILE = "/scripts/runtime.js";
-const EVENTS_RUNTIME_SRC_FILE = "/scripts/events-runtime.js";
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
-const EVENTS_OUT_FILE = path.join(BUNDLE_OUT_DIR, "events-index.js");
 
 main();
 
@@ -33,7 +27,6 @@ async function main() {
   await downloadFile();
   await prepareBundle();
   await zipLambda();
-  await zipEventsLambda();
 
   const stack = await getStack();
 
@@ -117,57 +110,4 @@ async function zipLambda() {
     Key: key,
     Body: zipData,
   });
-}
-
-async function zipEventsLambda() {
-  fs.copyFileSync(
-    EVENTS_RUNTIME_SRC_FILE,
-    path.join(BUNDLE_SRC_DIR, "events-index.js")
-  );
-
-  await esbuild.build({
-    entryPoints: [path.join(BUNDLE_SRC_DIR, "events-index.js")],
-    bundle: true,
-    minify: true,
-    outfile: EVENTS_OUT_FILE,
-    nodePaths: [process.env.NODE_PATH!],
-    target: "node10.4",
-    platform: "node",
-  });
-
-  const content = fs.readFileSync(EVENTS_OUT_FILE);
-
-  const zip = new JSZip();
-  zip.file("index.js", content.toString());
-  const zipData = await zip.generateAsync({ type: "uint8array" });
-
-  const bucket = "ingest-build-outputs";
-  const key = path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + "-events.zip");
-
-  await s3.putObject({
-    Bucket: bucket,
-    Key: key,
-    Body: zipData,
-  });
-}
-
-async function initialiseHandler(opts: { eventsLambdaArn: string }) {
-  await backOff(
-    async () => {
-      const { Payload } = await lambda.invoke({
-        FunctionName: opts.eventsLambdaArn,
-        Payload: JSON.stringify({
-          type: "Create",
-        }),
-      });
-
-      if (!Payload) return;
-    },
-    {
-      numOfAttempts: 3,
-      delayFirstAttempt: true,
-      startingDelay: 1000,
-      maxDelay: 3000,
-    }
-  );
 }
