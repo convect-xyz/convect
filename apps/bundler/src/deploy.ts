@@ -24,6 +24,9 @@ async function main() {
 
   const stack = await getStack();
 
+  await stack.workspace.installPlugin("aws", "v6.37.0");
+  await stack.setConfig("aws:region", { value: "eu-west-1" });
+
   if (
     (env.MODE === "init" && Number(env.HANDLER_VERSION) > 0) ||
     env.MODE === "destroy"
