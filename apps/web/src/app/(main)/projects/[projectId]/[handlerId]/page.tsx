@@ -60,7 +60,10 @@ export default function Page() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <VersionStatus />
+        <div className="flex items-center gap-2">
+          <VersionStatus />
+          <Chain />
+        </div>
         <LastUpdatedAt />
       </div>
       <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
@@ -163,7 +166,7 @@ function VersionStatus() {
   });
 
   if (isLoading) {
-    return <Skeleton className="h-6 w-[200px] bg-muted" />;
+    return <Skeleton className="h-6 w-[70px] bg-muted" />;
   }
 
   return (
@@ -199,6 +202,23 @@ function VersionStatus() {
         ></div>
       )}
       <span>V{data!.version}</span>
+    </div>
+  );
+}
+
+function Chain() {
+  const { handlerId } = useParams();
+  const { data, isLoading } = api.handlers.getOverview.useQuery({
+    handlerId,
+  });
+
+  if (isLoading) {
+    return <Skeleton className="h-6 w-[100px] bg-muted" />;
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-md border bg-muted p-1 px-2 text-xs">
+      <span>{data!.chain.name}</span>
     </div>
   );
 }

@@ -47,8 +47,18 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     println!("{:?}", pipeline.inner());
 
+    let mut init_block: Option<u64> = Some(0);
+    if pipeline.last_block().is_none() {
+        let manifest = Manifest::from_env().await.unwrap();
+        init_block = manifest
+            .tx_configs
+            .iter()
+            .map(|c| u64::try_from(c.start_block).expect("i64 to u64 failed"))
+            .min();
+    }
+
     // If block diff is too great, trigger fargate to do the work
-    if incoming_block - pipeline.last_block().or(Some(0)).unwrap() > 1999 {
+    if incoming_block - pipeline.last_block().or(init_block).unwrap() > 1999 {
         // It is the responsibility of the ECS task to revert this status
         pipeline
             .update()
@@ -56,12 +66,13 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             .send()
             .expect("Failed to update pipeline");
 
-        return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block).await;
+        return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block, init_block)
+            .await;
     }
 
     println!("State: {:?}", pipeline.state());
 
-    let from_block = pipeline.last_block().map(|l| l + 1).or(Some(0)).unwrap();
+    let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
 
     // We'll process the blocks here and add them to tx queue
     // We shouldn't need to update status here because max concurrency should be 1
@@ -105,23 +116,31 @@ async fn trigger_batch_sync_task(
     ecs_client: &aws_sdk_ecs::Client,
     pipeline: &mut State,
     incoming_block: u64,
+    init_block: Option<u64>,
 ) -> Result<(), Error> {
-    let version = env::var("VERSION").expect("Version ENV not defined");
+    let task_definition_arn =
+        env::var("SYNCER_TASK_DEFINITION_ARN").expect("SYNCER_TASK_DEFINITION_ARN not defined");
+    let cluster = env::var("SYNCER_CLUSTER").expect("SYNCER_CLUSTER not defined");
+    let subnets: Vec<_> = env::var("SYNCER_SUBNETS")
+        .expect("SYNCER_SUBNETS not defined")
+        .split(",")
+        .map(|s| s.to_string())
+        .collect();
+    let container_name =
+        env::var("SYNCER_CONTAINER_NAME").expect("SYNCER_CONTAINER_NAME not defined");
+
     println!("Triggering batch sync");
 
     let result = ecs_client
         .run_task()
-        .cluster("arn:aws:ecs:eu-west-1:730335604495:cluster/syncers")
-        .task_definition(format!(
-            "arn:aws:ecs:eu-west-1:730335604495:task-definition/{family_name}_syncer",
-            family_name = version.replace(".", "-")
-        ))
+        .cluster(cluster)
+        .task_definition(task_definition_arn)
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(
             NetworkConfiguration::builder()
                 .awsvpc_configuration(
                     AwsVpcConfiguration::builder()
-                        .subnets("subnet-05d39f2476de29dc7".to_string())
+                        .set_subnets(Some(subnets))
                         .assign_public_ip(aws_sdk_ecs::types::AssignPublicIp::Enabled)
                         .build()
                         .unwrap(),
@@ -132,14 +151,14 @@ async fn trigger_batch_sync_task(
             TaskOverride::builder()
                 .container_overrides(
                     ContainerOverride::builder()
-                        .name("syncer")
+                        .name(container_name)
                         .set_environment(Some(vec![
                             create_key_value_pair(
                                 "START_BLOCK".to_string(),
                                 pipeline
                                     .last_block()
                                     .map(|l| l + 1)
-                                    .or(Some(0))
+                                    .or(init_block)
                                     .unwrap()
                                     .to_string(),
                             ),
@@ -167,7 +186,10 @@ async fn trigger_batch_sync_task(
                                 "HANDLER_VERSION".to_string(),
                                 env::var("HANDLER_VERSION").unwrap(),
                             ),
-                            create_key_value_pair("VERSION".to_string(), version),
+                            create_key_value_pair(
+                                "VERSION".to_string(),
+                                env::var("VERSION").unwrap(),
+                            ),
                         ]))
                         .build(),
                 )

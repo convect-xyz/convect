@@ -67,18 +67,38 @@ export const POST = async (req: NextRequest) => {
   });
 
   if (data.mode === "init" && !existingHandler) {
+    const producer = await db.query.producers.findFirst({
+      where(fields, { eq }) {
+        return eq(fields.chainId, data.node);
+      },
+    });
+
+    if (!producer) {
+      return NextResponse.json(
+        { message: "Invalid producer." },
+        { status: 401 },
+      );
+    }
+
     await db
       .insert(schema.handler)
       .values({
         name: data.handlerName,
         projectId: project.id,
-        producerId: 1,
+        producerId: producer.id,
       })
       .returning()
       .then((v) => v[0]);
   }
 
   if (data.mode === "init" && existingHandler) {
+    if (!data.override) {
+      return NextResponse.json(
+        { message: "Override denied." },
+        { status: 401 },
+      );
+    }
+
     await db
       .update(schema.handler)
       .set({
@@ -106,7 +126,7 @@ export const POST = async (req: NextRequest) => {
     .then((v) => v!);
 
   const bundledHandler = data.handler;
-  const sourcePrefix = `code/${handler.internalId}/${deploymentId}.zip`;
+  const sourcePrefix = `code/${handler.internalId}/${handler.version}/${deploymentId}.zip`;
   const promises: Promise<any>[] = [
     s3.putObject({
       Bucket: "ingest-build-outputs",

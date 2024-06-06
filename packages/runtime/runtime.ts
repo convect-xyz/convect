@@ -17,6 +17,7 @@ const USER_ENVS = (
 );
 
 const HANDLER_ID = process.env.HANDLER_ID;
+const HANDLER_VERSION = process.env.HANDLER_VERSION;
 
 for (const env of Object.keys(process.env)) {
   delete process.env[env];
@@ -26,6 +27,7 @@ for (const [name, value] of Object.entries(USER_ENVS)) {
   process.env[name] = value;
 }
 process.env["HANDLER_ID"] = HANDLER_ID;
+process.env["HANDLER_VERSION"] = HANDLER_VERSION;
 
 const { default: pipeline } = require("./pipeline");
 const allTxConfigsWithLabels = [...Object.entries(pipeline)];
@@ -57,6 +59,7 @@ type TransactionResult = {
 
 type Transaction = {
   transactionHash: string;
+  blockNumber: number;
 };
 
 export async function handler(event: SQSEvent, context: Context) {
@@ -90,12 +93,29 @@ export async function handler(event: SQSEvent, context: Context) {
         continue;
       }
 
+      const getStartIndex = () => {
+        let i = 0;
+        while (
+          i < batch.length &&
+          BigInt(batch[i]!.blockNumber) < txConfig._startBlock
+        ) {
+          i++;
+        }
+        return i;
+      };
+
+      let startIndex = getStartIndex();
+
       try {
-        await txConfig._handler(batch.map((tx) => decodeTx(tx, txConfig)));
-        batch.map((tx) => addSuccessful(tx.transactionHash, label));
+        const processable = batch
+          .slice(startIndex)
+          .map((tx) => decodeTx(tx, txConfig));
+
+        await txConfig._handler(processable);
+        processable.map((tx) => addSuccessful(tx.transactionHash, label));
       } catch (e) {
         err = e;
-        addFailure(batch.at(0)!.transactionHash, label);
+        addFailure(batch.at(startIndex)!.transactionHash, label);
         console.error(e);
         break process_loop;
       }

@@ -26,7 +26,7 @@ async function main() {
     .insert(producers)
     .values(
       chains.map((c: any) => ({
-        id: c.id,
+        chainId: c.id,
         pollingUrl: c.polling_url,
         wsUrl: c.ws_url,
         topicArn: c.sns_topic,
@@ -42,13 +42,12 @@ async function main() {
       db
         .update(producers)
         .set({
-          id: p.id,
           pollingUrl: p.polling_url,
           wsUrl: p.ws_url,
           topicArn: p.sns_topic,
           name: p.name,
         })
-        .where(eq(producers.id, p.id))
+        .where(eq(producers.chainId, p.id))
         .returning()
     );
   }
