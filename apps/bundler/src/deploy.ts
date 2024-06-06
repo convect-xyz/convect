@@ -4,20 +4,14 @@ import esbuild from "esbuild";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
+import { env } from "./env";
 import infraFactory from "./infra";
 
 const s3 = new S3({ region: "eu-west-1" });
 
-const MODE = process.env.MODE as "init" | "update" | "destroy";
-const CURR_DIR = process.env.CURR_DIR!;
-const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
-const HANDLER_ID = process.env.HANDLER_ID!;
-const HANDLER_VERSION = process.env.HANDLER_VERSION!;
-const SOURCE_BUCKET = process.env.SOURCE_BUCKET!;
-const SOURCE_PREFIX = process.env.SOURCE_PREFIX!;
-const HANDLER_SRC_FILE = path.join(CURR_DIR, SOURCE_PREFIX + ".js");
-const BUNDLE_SRC_DIR = path.join(CURR_DIR, "bundle_src");
-const BUNDLE_OUT_DIR = path.join(CURR_DIR, "bundle_out");
+const HANDLER_SRC_FILE = path.join(env.CURR_DIR, env.SOURCE_PREFIX + ".js");
+const BUNDLE_SRC_DIR = path.join(env.CURR_DIR, "bundle_src");
+const BUNDLE_OUT_DIR = path.join(env.CURR_DIR, "bundle_out");
 const RUNTIME_SRC_FILE = "/scripts/runtime.js";
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 
@@ -30,11 +24,14 @@ async function main() {
 
   const stack = await getStack();
 
-  if ((MODE === "init" && Number(HANDLER_VERSION) > 0) || MODE === "destroy") {
+  if (
+    (env.MODE === "init" && Number(env.HANDLER_VERSION) > 0) ||
+    env.MODE === "destroy"
+  ) {
     await stack.destroy();
   }
 
-  if (["init", "update"].includes(MODE)) {
+  if (["init", "update"].includes(env.MODE)) {
     await stack.up();
   }
 
@@ -43,20 +40,20 @@ async function main() {
 
 async function getStack() {
   const args: InlineProgramArgs = {
-    stackName: HANDLER_ID,
+    stackName: env.HANDLER_ID,
     projectName: "convect-v1",
     program: infraFactory,
   };
 
-  if (MODE === "init") {
+  if (env.MODE === "init") {
     return LocalWorkspace.createOrSelectStack(args);
   }
 
-  if (MODE === "update") {
+  if (env.MODE === "update") {
     return LocalWorkspace.selectStack(args);
   }
 
-  if (MODE === "destroy") {
+  if (env.MODE === "destroy") {
     return LocalWorkspace.selectStack(args);
   }
 
@@ -65,8 +62,8 @@ async function getStack() {
 
 async function downloadFile() {
   const object = await s3.getObject({
-    Bucket: SOURCE_BUCKET,
-    Key: SOURCE_PREFIX,
+    Bucket: env.SOURCE_BUCKET,
+    Key: env.SOURCE_PREFIX,
   });
 
   fs.mkdirSync(HANDLER_SRC_FILE.split("/").slice(0, -1).join("/"), {
@@ -103,7 +100,7 @@ async function zipLambda() {
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
   const bucket = "ingest-build-outputs";
-  const key = path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + ".zip");
+  const key = path.join("outputs", env.HANDLER_ID, env.DEPLOYMENT_ID + ".zip");
 
   await s3.putObject({
     Bucket: bucket,
