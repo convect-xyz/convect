@@ -53,6 +53,7 @@ jobs:
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
+          GITHUB_SHA: ${{ github.sha }}
         run: sh ./rust/scripts/build.sh
 
   build_reporting:
@@ -84,10 +85,12 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-reporting
       - name: Build
+        env:
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           cd rust
           cargo lambda build --output-format zip --release --bin=reporting --features="pg telemetry"
-          aws s3api put-object --bucket ingest-functions --key reporting/$VERSION.zip --body "./target/lambda/reporting/bootstrap.zip"
+          aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
 
   build_extensions:
     runs-on: ubuntu-latest
