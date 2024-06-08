@@ -55,7 +55,6 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .flatten()
         .collect();
 
-    let mut conn = pool.get().await.unwrap();
     let tx_telemtry = StripeProcessedTransactionTelemetry::from_env();
 
     join_all(data.iter().map(|result| {
@@ -67,7 +66,6 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     .await;
 
     let mut conn = pool.get().await?;
-
     let r = diesel::insert_into(processed_transactions::table)
         .values(items)
         .execute(&mut conn)
