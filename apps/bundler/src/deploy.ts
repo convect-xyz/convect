@@ -31,17 +31,28 @@ async function main() {
   await stack.setConfig("aws:region", { value: "eu-west-1" });
   console.info("aws plugin installed.");
 
-  if (
-    (env.MODE === "init" && Number(env.HANDLER_VERSION) > 0) ||
-    env.MODE === "destroy"
-  ) {
-    console.info("destroying stack...");
-    await stack.destroy({ onOutput: console.info });
-    await stack.workspace.removeStack(stack.name);
-    console.info("stack destroyed");
+  if (env.MODE === "init") {
+    if (Number(env.HANDLER_VERSION) > 0) {
+      console.info("destroying stack...");
+      await stack.destroy({ onOutput: console.info });
+      console.info("stack destroyed");
+    }
+    console.info("stack up...");
+    await stack.up({ onOutput: console.info });
+    console.info("stack upped.");
   }
 
-  if (["init", "update"].includes(env.MODE)) {
+  if (env.MODE === "destroy") {
+    console.info("destroying stack...");
+    await stack.destroy({ onOutput: console.info });
+    console.info("stack destroyed");
+
+    console.info("removing stack...");
+    await stack.workspace.removeStack(stack.name);
+    console.info("removed stack...");
+  }
+
+  if (env.MODE === "update") {
     console.info("stack up...");
     await stack.up({ onOutput: console.info });
     console.info("stack upped.");
