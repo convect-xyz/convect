@@ -4,6 +4,35 @@ import * as pulumi from "@pulumi/pulumi";
 const stackName = pulumi.getStack();
 const GITHUB_SHA = process.env.GITHUB_SHA!;
 
+const reportingQueue = new aws.sqs.Queue(`reporting-queue`, {
+  visibilityTimeoutSeconds: 300,
+});
+
+const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
+  role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+  s3Bucket: "ingest-functions",
+  s3Key: `reporting/${GITHUB_SHA}.zip`,
+  environment: {
+    variables: {
+      DATABASE_URL:
+        "postgresql://postgres:postgres@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres?sslmode=require",
+    },
+  },
+  timeout: 300,
+  memorySize: 512,
+  handler: "bootstrap",
+  packageType: "Zip",
+  runtime: "provided.al2023",
+});
+
+const handlerSourceMapping = new aws.lambda.EventSourceMapping(
+  "reporing-handler-source-mapping",
+  {
+    eventSourceArn: reportingQueue.arn,
+    functionName: reportingHandler.arn,
+  }
+);
+
 const extension = new aws.lambda.LayerVersion("handler_extension", {
   layerName: `${stackName}_handler_extension`,
   compatibleArchitectures: ["x86_64"],
@@ -159,5 +188,7 @@ export const handler_extension_arn = extension.arn;
 export const http_extension_arn = http_extension.arn;
 export const builder_task_definition = builder.arn;
 export const syncer_task_definition = syncer.arn;
+export const reporting_handler_arn = reportingHandler.arn;
+export const reporting_queue_url = reportingQueue.url;
 export const github_sha: pulumi.Output<string> =
   pulumi.Output.create(GITHUB_SHA);

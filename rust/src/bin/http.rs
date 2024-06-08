@@ -6,7 +6,7 @@ use axum::{
 };
 use futures::lock::Mutex;
 use ingest::{
-    connection::{establish_connection_pool, DbPool},
+    reporting_sdk::{ReportingSdk, SQSReportingSdk},
     types::processing,
 };
 use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
@@ -14,7 +14,7 @@ use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
 #[derive(Clone)]
 struct AppState {
     pipeline: Arc<Mutex<processing::State>>,
-    pool: DbPool,
+    reporting: Arc<dyn ReportingSdk + Send + Sync>,
 }
 
 async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
@@ -31,14 +31,16 @@ async fn main() -> Result<(), Error> {
     let handler_version = env::var("HANDLER_VERSION").expect("Handler ID env not set");
     let state = processing::State::load(handler_id, handler_version).await;
     let pipeline = Arc::new(Mutex::new(state));
+    let reporting_sdk = SQSReportingSdk::new();
+    let app_state = AppState {
+        pipeline,
+        reporting: Arc::new(reporting_sdk),
+    };
 
     let app = Router::new()
         .route("/results", post(results::handler))
         .route("/pipeline", get(get_pipeline::handler))
-        .with_state(AppState {
-            pool: establish_connection_pool().await,
-            pipeline,
-        });
+        .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
 
@@ -64,34 +66,19 @@ mod results {
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
-    use axum::{debug_handler, Json};
-    use chrono::DateTime;
-    use diesel_async::RunQueryDsl;
-    use ingest::telemetry::{self, ProcessedTransactionTelemetry};
-    use ingest::{models::ProcessedTransaction, schema::processed_transactions};
+    use axum::{debug_handler, BoxError, Json};
+    use futures::TryFutureExt;
+    use ingest::reporting_sdk::{self, TransactionResult};
     use serde::Deserialize;
     use serde_json::{json, Value};
 
     use crate::AppState;
 
     #[derive(Deserialize, Debug)]
-    pub struct TransactionResultLabel {
-        pub label: String,
-        pub timestamp_ms: i64,
-    }
-
-    #[derive(Deserialize, Debug)]
-    pub struct TransactionResult {
-        pub transaction_hash: String,
-        pub successful_labels: Vec<TransactionResultLabel>,
-        pub failed_label: Option<TransactionResultLabel>,
-    }
-
-    #[derive(Deserialize, Debug)]
     pub struct Request {
         pub invocation_id: String,
         pub message_ids: Vec<String>,
-        pub results: Vec<TransactionResult>,
+        pub results: Vec<reporting_sdk::TransactionResult>,
     }
 
     #[debug_handler]
@@ -101,119 +88,87 @@ mod results {
     ) -> Json<Value> {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let sqs_client = aws_sdk_sqs::Client::new(&config);
-        let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-        let handler_version = env::var("HANDLER_VERSION").expect("Handler VERSION env not set");
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
-        let mut state = app_state.pipeline.lock().await;
         if let Some(failed_tx) = failed_tx {
-            let update_r = state
-                .update()
-                .set_error_label(failed_tx.failed_label.as_ref().unwrap().label.to_string())
-                .set_error_tx(failed_tx.transaction_hash.to_string())
-                .send()
-                .await;
+            fail_process_state(&app_state, failed_tx).await.unwrap();
 
-            match update_r {
-                Ok(_) => println!("Updated pipeline"),
-                Err(e) => println!("Error: {:?}", e),
-            }
-
-            let result = sqs_client
-                .change_message_visibility_batch()
-                .set_queue_url(Some(
-                    env::var("TRANSACTION_QUEUE_URL").expect("TX Queue not defined"),
-                ))
-                .set_entries(Some(
-                    payload
-                        .message_ids
-                        .into_iter()
-                        .map(|v| {
-                            ChangeMessageVisibilityBatchRequestEntry::builder()
-                                .set_id(Some(uuid::Uuid::new_v4().to_string()))
-                                .set_receipt_handle(Some(v))
-                                .set_visibility_timeout(Some(180))
-                                .build()
-                                .unwrap()
-                        })
-                        .collect(),
-                ))
-                .send()
-                .await;
-
-            match result {
+            match make_messages_reprocessable(&sqs_client, &payload.message_ids).await {
                 Ok(_) => println!("Changed message visibility"),
                 Err(e) => println!("Error: {:?}", e),
             };
         } else {
-            let _ = state
-                .update()
-                .set_error_label("".to_string())
-                .set_error_tx("".to_string())
-                .send()
-                .await;
+            unfail_process_state(&app_state).await.unwrap();
         }
 
-        let data: Vec<_> = payload
-            .results
-            .iter()
-            .map(|r| {
-                let mut rows = Vec::new();
-
-                for label in r.successful_labels.iter() {
-                    rows.push(ProcessedTransaction {
-                        transaction_hash: r.transaction_hash.clone(),
-                        label: label.label.clone(),
-                        status: "SUCCESS".to_string(),
-                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        handler_id: &handler_id,
-                        handler_version: &handler_version,
-                    })
-                }
-
-                if let Some(label) = r.failed_label.as_ref() {
-                    rows.push(ProcessedTransaction {
-                        transaction_hash: r.transaction_hash.clone(),
-                        label: label.label.clone(),
-                        status: "FAILED".to_string(),
-                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        handler_id: &handler_id,
-                        handler_version: &handler_version,
-                    })
-                }
-
-                rows
+        app_state
+            .reporting
+            .handle(&reporting_sdk::Request {
+                handler_id: env::var("HANDLER_ID").expect("HANDLER_ID is not defined"),
+                handler_version: env::var("HANDLER_VERSION")
+                    .expect("HANDLER_VERSION is not defined"),
+                stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
+                    .expect("STRIPE_CUSTOMER_ID is not defined"),
+                invocation_id: payload.invocation_id,
+                results: payload.results,
             })
-            .flatten()
-            .collect();
-
-        let mut conn = app_state.pool.get().await.unwrap();
-        let tx_telemtry = telemetry::stripe::StripeProcessedTransactionTelemetry::from_env();
-
-        let record = tx_telemtry
-            .record_invocation(
-                payload.invocation_id,
-                payload.results.len().try_into().unwrap(),
-            )
-            .await;
-
-        match record {
-            Err(e) => println!("Error recording tx usage: {:?}", e),
-            _ => println!("Sent telemetry."),
-        }
-
-        let r = diesel::insert_into(processed_transactions::table)
-            .values(data)
-            .execute(&mut conn)
-            .await;
-
-        match r {
-            Ok(_) => println!("Inserted"),
-            Err(e) => println!("Error {:?}", e),
-        }
+            .await
+            .unwrap();
 
         return Json(json!({"ok": true}));
+    }
+
+    async fn make_messages_reprocessable(
+        sqs_client: &aws_sdk_sqs::Client,
+        message_ids: &Vec<String>,
+    ) -> Result<(), BoxError> {
+        Ok(sqs_client
+            .change_message_visibility_batch()
+            .set_queue_url(Some(
+                env::var("TRANSACTION_QUEUE_URL").expect("TX Queue not defined"),
+            ))
+            .set_entries(Some(
+                message_ids
+                    .into_iter()
+                    .map(|v| {
+                        ChangeMessageVisibilityBatchRequestEntry::builder()
+                            .set_id(Some(uuid::Uuid::new_v4().to_string()))
+                            .set_receipt_handle(Some(v.to_string()))
+                            .set_visibility_timeout(Some(180))
+                            .build()
+                            .unwrap()
+                    })
+                    .collect(),
+            ))
+            .send()
+            .map_ok(|_| ())
+            .await?)
+    }
+
+    async fn fail_process_state(
+        app_state: &AppState,
+        failed_tx: &TransactionResult,
+    ) -> Result<(), BoxError> {
+        let mut state = app_state.pipeline.lock().await;
+
+        Ok(state
+            .update()
+            .set_error_label(failed_tx.failed_label.as_ref().unwrap().label.to_string())
+            .set_error_tx(failed_tx.transaction_hash.to_string())
+            .send()
+            .await?)
+    }
+
+    async fn unfail_process_state(app_state: &AppState) -> Result<(), BoxError> {
+        let mut state = app_state.pipeline.lock().await;
+
+        Ok(state
+            .update()
+            .set_error_label("".to_string())
+            .set_error_tx("".to_string())
+            .send()
+            .await?)
     }
 }
 
