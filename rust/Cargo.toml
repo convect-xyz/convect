@@ -12,6 +12,11 @@ name = "http"
 path = "src/bin/http.rs"
 
 [[bin]]
+name = "syncer"
+path = "src/bin/syncer.rs"
+required-features = ["log-fetcher-sdk"]
+
+[[bin]]
 name = "producer"
 path = "src/bin/producer.rs"
 required-features = ["supported-networks"]
@@ -19,7 +24,7 @@ required-features = ["supported-networks"]
 [[bin]]
 name = "reporting"
 path = "src/bin/reporting.rs"
-required-features = ["pg", "telemetry"]
+required-features = ["pg", "telemetry", "reporting-sdk"]
 
 [dependencies]
 ethers = { version = "2.0", features = ["ws"] }
@@ -79,3 +84,5 @@ mockall = "0.12.1"
 pg = []
 telemetry = []
 supported-networks = []
+reporting-sdk = []
+log-fetcher-sdk = []
