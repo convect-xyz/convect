@@ -4,7 +4,7 @@ WORKDIR /app
 FROM --platform=linux/amd64 chef AS planner
 COPY ./config ./config
 COPY ./rust/Cargo.toml ./rust/Cargo.lock ./rust/
-COPY ./rust/src ./rust/src
+COPY ./rust ./rust
 WORKDIR /app/rust
 RUN cargo chef prepare --bin=syncer
 
