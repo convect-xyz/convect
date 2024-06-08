@@ -6,19 +6,18 @@ COPY ./config ./config
 COPY ./rust/Cargo.toml ./rust/Cargo.lock ./rust/
 COPY ./rust ./rust
 WORKDIR /app/rust
-RUN cargo chef prepare --bin=syncer
+RUN cargo chef prepare -p syncer --recipe-path recipe.json
 
 FROM --platform=linux/amd64 chef AS builder
-# RUN apt-get update && apt-get install -y protobuf-compiler
-COPY ./config ./config
-
 WORKDIR /app/rust
-
 COPY --from=planner /app/rust/recipe.json ./recipe.json
 RUN cargo chef cook --release --recipe-path ./recipe.json -p syncer
-COPY ./rust ./
 
-RUN cargo build --release --bin=syncer
+WORKDIR /app
+COPY ./config ./config
+WORKDIR /app/rust
+COPY ./rust ./
+RUN cargo build --release -p syncer
 RUN mv ./target/release/syncer ./app
 
 FROM --platform=linux/amd64 debian:stable-slim AS runtime
