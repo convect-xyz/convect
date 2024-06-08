@@ -43,8 +43,8 @@ const extension = new aws.lambda.LayerVersion("handler_extension", {
   skipDestroy: true,
 });
 
-const http_extension = new aws.lambda.LayerVersion("http_extension", {
-  layerName: `${stackName}_http_extension`,
+const handler_server = new aws.lambda.LayerVersion("handler_server", {
+  layerName: `${stackName}_handler_server`,
   compatibleArchitectures: ["x86_64"],
   compatibleRuntimes: ["provided.al2", "provided.al2023"],
   description: "Handler HTTP Extension",
@@ -185,7 +185,7 @@ const builder = new aws.ecs.TaskDefinition(
 );
 
 export const handler_extension_arn = extension.arn;
-export const http_extension_arn = http_extension.arn;
+export const handler_server_arn = handler_server.arn;
 export const builder_task_definition = builder.arn;
 export const syncer_task_definition = syncer.arn;
 export const reporting_handler_arn = reportingHandler.arn;

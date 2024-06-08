@@ -2239,6 +2239,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "handler-server"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "aws-config",
+ "aws-sdk-sqs",
+ "aws-smithy-types",
+ "axum",
+ "axum-macros",
+ "dotenvy",
+ "futures",
+ "lambda-extension",
+ "lambda_http",
+ "openssl",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "shared",
+ "tokio",
+ "uuid 1.8.0",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2321,29 +2344,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3d1354bf6b7235cb4a0576c2619fd4ed18183f689b12b006a0ee7329eeff9a5"
 dependencies = [
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "http"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "aws-config",
- "aws-sdk-sqs",
- "aws-smithy-types",
- "axum",
- "axum-macros",
- "dotenvy",
- "futures",
- "lambda-extension",
- "lambda_http",
- "openssl",
- "serde",
- "serde_json",
- "serde_with",
- "shared",
- "tokio",
- "uuid 1.8.0",
 ]
 
 [[package]]
@@ -3697,6 +3697,7 @@ name = "producer"
 version = "0.1.0"
 dependencies = [
  "aws-config",
+ "aws-sdk-sns",
  "ethers",
  "futures",
  "serde",

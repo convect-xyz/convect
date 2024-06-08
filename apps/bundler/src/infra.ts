@@ -95,7 +95,7 @@ export default async () => {
     },
     layers: [
       stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn),
-      stackRef.getOutput("outputs").apply((f) => f.http_extension_arn),
+      stackRef.getOutput("outputs").apply((f) => f.handler_server_arn),
     ],
     timeout: 900,
     memorySize: 512,
