@@ -1,5 +1,6 @@
 use std::env;
 
+use async_trait::async_trait;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::error::BoxError;
 use futures::Future;
@@ -27,8 +28,9 @@ pub struct Request {
     pub results: Vec<TransactionResult>,
 }
 
+#[async_trait]
 pub trait ReportingSdk {
-    fn handle(&self, request: &Request) -> impl Future<Output = Result<(), BoxError>>;
+    async fn handle(&self, request: &Request) -> Result<(), BoxError>;
 }
 
 #[derive(Clone)]
@@ -44,6 +46,7 @@ impl SQSReportingSdk {
     }
 }
 
+#[async_trait]
 impl ReportingSdk for SQSReportingSdk {
     async fn handle(&self, request: &Request) -> Result<(), BoxError> {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
