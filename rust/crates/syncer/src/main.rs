@@ -1,7 +1,8 @@
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::error::BoxError;
 use futures::{future::join_all, TryFutureExt};
-use ingest::{
+use serde::Serialize;
+use shared::{
     api::{
         enqueuer::TransactionEnqueuerImpl,
         fetcher::{TransactionFetcherImpl, Web3ClientImpl},
@@ -10,7 +11,6 @@ use ingest::{
     log_fetcher_sdk::{self, InvocationRequest, InvocationResponse, LogFetcherSdk},
     types::{self, syncing::State, transactions::IngestTransaction},
 };
-use serde::Serialize;
 use std::env;
 use std::error::Error;
 
