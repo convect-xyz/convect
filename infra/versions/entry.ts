@@ -20,9 +20,9 @@ const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
   },
   timeout: 300,
   memorySize: 512,
-  handler: "index.handler",
+  handler: "bootstrap",
   packageType: "Zip",
-  runtime: "nodejs20.x",
+  runtime: "provided.al2023",
 });
 
 const handlerSourceMapping = new aws.lambda.EventSourceMapping(
