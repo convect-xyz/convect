@@ -86,9 +86,8 @@ jobs:
       - name: Build
         run: |
           cd rust
-
           cargo lambda build --output-format zip --release --bin=reporting --features="pg telemetry"
-          aws s3api put-object --bucket ingest-functions --key reporting/$VERSION.zip --body "./target/lambda/extension/bootstrap.zip"
+          aws s3api put-object --bucket ingest-functions --key reporting/$VERSION.zip --body "./target/lambda/reporting/bootstrap.zip"
 
   build_extensions:
     runs-on: ubuntu-latest
