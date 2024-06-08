@@ -3,7 +3,7 @@ pub mod log_fetcher;
 #[cfg(feature = "supported-networks")]
 pub mod networks;
 pub mod s3;
-#[cfg(feature = "handler-telemetry")]
+#[cfg(feature = "telemetry")]
 pub mod telemetry;
 
 pub mod types;

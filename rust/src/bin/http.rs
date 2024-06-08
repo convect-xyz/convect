@@ -5,18 +5,13 @@ use axum::{
     Router,
 };
 use futures::lock::Mutex;
-use ingest::{
-    connection::{establish_connection_pool, DbPool},
-    reporting_sdk::{ReportingSdk, SQSReportingSdk},
-    types::processing,
-};
+use ingest::{reporting_sdk::SQSReportingSdk, types::processing};
 use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
 
 #[derive(Clone)]
 struct AppState {
     pipeline: Arc<Mutex<processing::State>>,
-    pool: DbPool,
-    reporting: Box<dyn ReportingSdk>,
+    reporting: SQSReportingSdk,
 }
 
 async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
@@ -35,7 +30,6 @@ async fn main() -> Result<(), Error> {
     let pipeline = Arc::new(Mutex::new(state));
     let reporting_sdk = SQSReportingSdk::new();
     let app_state = AppState {
-        pool: establish_connection_pool().await,
         pipeline,
         reporting: reporting_sdk,
     };
@@ -70,10 +64,7 @@ mod results {
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
     use axum::{debug_handler, Json};
-    use chrono::DateTime;
     use ingest::reporting_sdk::{self, ReportingSdk};
-    use ingest::telemetry::{self, ProcessedTransactionTelemetry};
-    use ingest::{models::ProcessedTransaction, schema::processed_transactions};
     use serde::Deserialize;
     use serde_json::{json, Value};
 
@@ -93,8 +84,6 @@ mod results {
     ) -> Json<Value> {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let sqs_client = aws_sdk_sqs::Client::new(&config);
-        let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-        let handler_version = env::var("HANDLER_VERSION").expect("Handler VERSION env not set");
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
@@ -158,9 +147,9 @@ mod results {
                 invocation_id: payload.invocation_id,
                 results: payload.results,
             })
-            .await;
+            .await
+            .unwrap();
 
-        // app_state
         return Json(json!({"ok": true}));
     }
 }
