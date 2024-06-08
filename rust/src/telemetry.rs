@@ -2,11 +2,11 @@ use aws_sdk_s3::error::BoxError;
 use std::{collections::HashMap, env};
 
 pub trait ProcessedTransactionTelemetry {
-    async fn record_invocation(
+    fn record_invocation(
         &self,
         invocation_id: String,
         num_processed: u64,
-    ) -> Result<(), BoxError>;
+    ) -> impl Future<Output = Result<(), BoxError>>;
 }
 
 pub struct StripeProcessedTransactionTelemetry {
