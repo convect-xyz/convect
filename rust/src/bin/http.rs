@@ -5,13 +5,16 @@ use axum::{
     Router,
 };
 use futures::lock::Mutex;
-use ingest::{reporting_sdk::SQSReportingSdk, types::processing};
+use ingest::{
+    reporting_sdk::{ReportingSdk, SQSReportingSdk},
+    types::processing,
+};
 use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
 
 #[derive(Clone)]
 struct AppState {
     pipeline: Arc<Mutex<processing::State>>,
-    reporting: SQSReportingSdk,
+    reporting: Arc<dyn ReportingSdk + Send + Sync>,
 }
 
 async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
@@ -31,7 +34,7 @@ async fn main() -> Result<(), Error> {
     let reporting_sdk = SQSReportingSdk::new();
     let app_state = AppState {
         pipeline,
-        reporting: reporting_sdk,
+        reporting: Arc::new(reporting_sdk),
     };
 
     let app = Router::new()
@@ -63,8 +66,9 @@ mod results {
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
-    use axum::{debug_handler, Json};
-    use ingest::reporting_sdk::{self, ReportingSdk};
+    use axum::{debug_handler, BoxError, Json};
+    use futures::TryFutureExt;
+    use ingest::reporting_sdk::{self, TransactionResult};
     use serde::Deserialize;
     use serde_json::{json, Value};
 
@@ -87,53 +91,15 @@ mod results {
 
         let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
 
-        let mut state = app_state.pipeline.lock().await;
         if let Some(failed_tx) = failed_tx {
-            let update_r = state
-                .update()
-                .set_error_label(failed_tx.failed_label.as_ref().unwrap().label.to_string())
-                .set_error_tx(failed_tx.transaction_hash.to_string())
-                .send()
-                .await;
+            fail_process_state(&app_state, failed_tx).await.unwrap();
 
-            match update_r {
-                Ok(_) => println!("Updated pipeline"),
-                Err(e) => println!("Error: {:?}", e),
-            }
-
-            let result = sqs_client
-                .change_message_visibility_batch()
-                .set_queue_url(Some(
-                    env::var("TRANSACTION_QUEUE_URL").expect("TX Queue not defined"),
-                ))
-                .set_entries(Some(
-                    payload
-                        .message_ids
-                        .into_iter()
-                        .map(|v| {
-                            ChangeMessageVisibilityBatchRequestEntry::builder()
-                                .set_id(Some(uuid::Uuid::new_v4().to_string()))
-                                .set_receipt_handle(Some(v))
-                                .set_visibility_timeout(Some(180))
-                                .build()
-                                .unwrap()
-                        })
-                        .collect(),
-                ))
-                .send()
-                .await;
-
-            match result {
+            match make_messages_reprocessable(&sqs_client, &payload.message_ids).await {
                 Ok(_) => println!("Changed message visibility"),
                 Err(e) => println!("Error: {:?}", e),
             };
         } else {
-            let _ = state
-                .update()
-                .set_error_label("".to_string())
-                .set_error_tx("".to_string())
-                .send()
-                .await;
+            unfail_process_state(&app_state).await.unwrap();
         }
 
         app_state
@@ -151,6 +117,58 @@ mod results {
             .unwrap();
 
         return Json(json!({"ok": true}));
+    }
+
+    async fn make_messages_reprocessable(
+        sqs_client: &aws_sdk_sqs::Client,
+        message_ids: &Vec<String>,
+    ) -> Result<(), BoxError> {
+        Ok(sqs_client
+            .change_message_visibility_batch()
+            .set_queue_url(Some(
+                env::var("TRANSACTION_QUEUE_URL").expect("TX Queue not defined"),
+            ))
+            .set_entries(Some(
+                message_ids
+                    .into_iter()
+                    .map(|v| {
+                        ChangeMessageVisibilityBatchRequestEntry::builder()
+                            .set_id(Some(uuid::Uuid::new_v4().to_string()))
+                            .set_receipt_handle(Some(v.to_string()))
+                            .set_visibility_timeout(Some(180))
+                            .build()
+                            .unwrap()
+                    })
+                    .collect(),
+            ))
+            .send()
+            .map_ok(|_| ())
+            .await?)
+    }
+
+    async fn fail_process_state(
+        app_state: &AppState,
+        failed_tx: &TransactionResult,
+    ) -> Result<(), BoxError> {
+        let mut state = app_state.pipeline.lock().await;
+
+        Ok(state
+            .update()
+            .set_error_label(failed_tx.failed_label.as_ref().unwrap().label.to_string())
+            .set_error_tx(failed_tx.transaction_hash.to_string())
+            .send()
+            .await?)
+    }
+
+    async fn unfail_process_state(app_state: &AppState) -> Result<(), BoxError> {
+        let mut state = app_state.pipeline.lock().await;
+
+        Ok(state
+            .update()
+            .set_error_label("".to_string())
+            .set_error_tx("".to_string())
+            .send()
+            .await?)
     }
 }
 

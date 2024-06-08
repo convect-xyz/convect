@@ -14,14 +14,14 @@ use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     let pool = establish_connection_pool().await;
 
-    let data: Vec<reporting_sdk::Request> = event
+    let requests: Vec<reporting_sdk::Request> = event
         .payload
         .records
         .into_iter()
         .map(|r| serde_json::from_str(r.body.unwrap().as_str()).unwrap())
         .collect();
 
-    let items: Vec<_> = data
+    let transactions: Vec<_> = requests
         .iter()
         .map(|r| {
             let mut rows = Vec::new();
@@ -56,7 +56,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .collect();
 
     let tx_telemtry = StripeProcessedTransactionTelemetry::new();
-    join_all(data.iter().map(|result| {
+    join_all(requests.iter().map(|result| {
         tx_telemtry.record_invocation(
             result.stripe_customer_id.clone(),
             result.invocation_id.clone(),
@@ -67,7 +67,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
 
     let mut conn = pool.get().await?;
     let r = diesel::insert_into(processed_transactions::table)
-        .values(items)
+        .values(transactions)
         .execute(&mut conn)
         .await;
 
