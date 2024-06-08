@@ -14,3 +14,5 @@ pub mod connection;
 pub mod models;
 #[cfg(feature = "pg")]
 pub mod schema;
+
+pub mod reporting_sdk;

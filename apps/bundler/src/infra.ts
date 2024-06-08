@@ -87,9 +87,10 @@ export default async () => {
           "p.eyJ1IjogIjJlYjlhNzU2LWFjMDMtNDJmOC1iNGY2LWI2M2RhN2JiMjkyNiIsICJpZCI6ICJjZTE2YmI1Yi04NDBiLTQwNGMtYjk4Yi0zMjJiNDc4ZDMyYWEiLCAiaG9zdCI6ICJhd3MtZXUtY2VudHJhbC0xIn0.1Bvj9OA-NZQ0cU62T1sweLScNLMPsv8FIGaP8nkHoRw",
         USER_ENVS: env.HANDLER_ENVS,
         TRANSACTION_QUEUE_URL: transactionQueue.url,
-        DATABASE_URL:
-          "postgresql://postgres:postgres@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres?sslmode=require",
         STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
+        REPORTING_QUEUE_URL: stackRef
+          .getOutput("outputs")
+          .apply((f) => f.reporting_queue_url),
       },
     },
     layers: [

@@ -16,6 +16,11 @@ required-features = ["pg", "handler-telemetry"]
 name = "producer"
 path = "src/bin/producer.rs"
 required-features = ["supported-networks"]
+
+[[bin]]
+name = "reporting"
+path = "src/bin/reporting.rs"
+required-features = ["pg", "handler-telemetry"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -26,6 +31,7 @@ aws-sdk-ecs = "1.20.0"
 aws-sdk-sqs = "1.14.0"
 aws_lambda_events = { version = "0.15.0", default-features = false, features = [
   "sns",
+  "sqs",
 ] }
 tokio = { version = "1", features = ["full"] }
 serde_json = "1.0.114"
