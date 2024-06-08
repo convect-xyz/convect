@@ -71,7 +71,6 @@ mod results {
     use axum::extract::State;
     use axum::{debug_handler, Json};
     use chrono::DateTime;
-    use diesel_async::RunQueryDsl;
     use ingest::reporting_sdk::{self, ReportingSdk};
     use ingest::telemetry::{self, ProcessedTransactionTelemetry};
     use ingest::{models::ProcessedTransaction, schema::processed_transactions};

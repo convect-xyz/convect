@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["log-fetcher", "orchestrator", "reporting"]
+        binary: ["log-fetcher", "orchestrator"]
     steps:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -54,6 +54,41 @@ jobs:
         env:
           BIN: ${{ matrix.binary }}
         run: sh ./rust/scripts/build.sh
+
+  build_reporting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Zig toolchain
+        uses: korandoru/setup-zig@v1
+        with:
+          zig-version: 0.10.0
+      - name: Install Cargo Lambda
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        with:
+          repo: cargo-lambda/cargo-lambda
+          platform: linux
+          arch: x86_64
+      - uses: actions/checkout@master
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-reporting
+      - name: Build
+        run: |
+          cd rust
+
+          cargo lambda build --output-format zip --release --bin=reporting --features="pg telemetry"
+          aws s3api put-object --bucket ingest-functions --key reporting/$VERSION.zip --body "./target/lambda/extension/bootstrap.zip"
 
   build_extensions:
     runs-on: ubuntu-latest
@@ -97,7 +132,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpq-dev postgresql
           cd rust
-          cargo lambda build --extension --output-format zip --release --bin=$BIN --features="pg handler-telemetry"
+          cargo lambda build --extension --output-format zip --release --bin=$BIN
           aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/extensions/$BIN.zip"
 
   build_images:
