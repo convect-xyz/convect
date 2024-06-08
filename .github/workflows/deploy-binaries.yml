@@ -178,7 +178,7 @@ jobs:
         continue-on-error: false
         with:
           path: |
-            node_modules/
+            node_modules
             infra/node_modules
           key: ${{ runner.os }}-deploy-pulumi-${{ hashFiles('infra/yarn.lock') }}-
           restore-keys: ${{ runner.os }}-deploy-pulumi-
@@ -195,7 +195,7 @@ jobs:
           VERSION=${VERSION//\//-}
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
       - name: Installing dependencies 📦️
-        run: cd infra && yarn install
+        run: cd infra && yarn
       - uses: pulumi/actions@v3
         with:
           command: up
