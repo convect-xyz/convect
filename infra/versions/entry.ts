@@ -6,7 +6,6 @@ const GITHUB_SHA = process.env.GITHUB_SHA!;
 
 const reportingQueue = new aws.sqs.Queue(`reporting-queue`, {
   visibilityTimeoutSeconds: 300,
-  fifoQueue: true,
 });
 
 const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
@@ -27,7 +26,7 @@ const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
 });
 
 const handlerSourceMapping = new aws.lambda.EventSourceMapping(
-  "reporing-handler--source-mapping",
+  "reporing-handler-source-mapping",
   {
     eventSourceArn: reportingQueue.arn,
     functionName: reportingHandler.arn,

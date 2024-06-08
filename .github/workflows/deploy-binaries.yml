@@ -139,7 +139,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["builder"]
+        binary: ["builder", "syncer"]
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
