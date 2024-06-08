@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-shared = { path = "../shared" }
+shared = { path = "../shared", features = ["reporting-sdk"] }
 
 aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
 aws-sdk-sqs = "1.14.0"
