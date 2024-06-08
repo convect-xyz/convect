@@ -1,5 +1,5 @@
-import axios from 'axios';
 import FormData from 'form-data';
+import {apiAxios} from '../lib/axios.js';
 
 type UploadOutputsOptions = {
 	project: string;
@@ -14,8 +14,8 @@ export async function checkHandler(options: UploadOutputsOptions) {
 	bodyFormData.append('handlerName', options.handlerName);
 
 	try {
-		return await axios
-			.post('http://localhost:3000/api/cli/check-handler', bodyFormData, {
+		return await apiAxios
+			.post('/api/cli/check-handler', bodyFormData, {
 				headers: {
 					'Content-Type': 'multipart/form-data',
 					Authorization: `Bearer ${apiKey}`,
