@@ -15,7 +15,7 @@ COPY ./config ./config
 WORKDIR /app/rust
 
 COPY --from=planner /app/rust/recipe.json ./recipe.json
-RUN cargo chef cook --release --recipe-path ./recipe.json --bin=syncer --features="log-fetcher-sdk"
+RUN cargo chef cook --release --recipe-path ./recipe.json -p syncer
 COPY ./rust ./
 
 RUN cargo build --release --bin=syncer

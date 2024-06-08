@@ -53,7 +53,10 @@ jobs:
         env:
           BIN: ${{ matrix.binary }}
           GITHUB_SHA: ${{ github.sha }}
-        run: sh ./rust/scripts/build.sh
+        run: |
+          cd rust
+          cargo lambda build --output-format zip --release -p $BIN
+          aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/$BIN/bootstrap.zip"
 
   build_reporting:
     runs-on: ubuntu-latest
@@ -82,13 +85,13 @@ jobs:
             ~/.cargo/git/db/
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-reporting
+          restore-keys: ${{ runner.os }}-workspace
       - name: Build
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: |
           cd rust
-          cargo lambda build --output-format zip --release --bin=reporting --features="pg telemetry reporting-sdk"
+          cargo lambda build --output-format zip --release -p reporting
           aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
 
   build_extensions:
@@ -120,8 +123,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-extension
-          restore-keys: ${{ runner.os }}-cargo-
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-workspace
 
       - name: Build
         env:
@@ -132,7 +135,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpq-dev postgresql
           cd rust
-          cargo lambda build --extension --output-format zip --release --bin=$BIN
+          cargo lambda build --extension --output-format zip --release -p $BIN
           aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/extensions/$BIN.zip"
 
   build_images:

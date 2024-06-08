@@ -1,6 +1,7 @@
 use std::env;
 
-use ingest::{
+use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
+use shared::{
     api::{
         self,
         enqueuer::TransactionEnqueuerImpl,
@@ -11,7 +12,6 @@ use ingest::{
     s3::S3,
     types::manifest::Manifest,
 };
-use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 
 type ApiInstance =
     Api<TransactionFetcherImpl<Web3ClientImpl>, TransactionEnqueuerImpl<aws_sdk_s3::Client>>;
