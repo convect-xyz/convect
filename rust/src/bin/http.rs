@@ -7,6 +7,7 @@ use axum::{
 use futures::lock::Mutex;
 use ingest::{
     connection::{establish_connection_pool, DbPool},
+    reporting_sdk::{ReportingSdk, SQSReportingSdk},
     types::processing,
 };
 use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
@@ -15,6 +16,7 @@ use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
 struct AppState {
     pipeline: Arc<Mutex<processing::State>>,
     pool: DbPool,
+    reporting: Box<dyn ReportingSdk>,
 }
 
 async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
@@ -31,14 +33,17 @@ async fn main() -> Result<(), Error> {
     let handler_version = env::var("HANDLER_VERSION").expect("Handler ID env not set");
     let state = processing::State::load(handler_id, handler_version).await;
     let pipeline = Arc::new(Mutex::new(state));
+    let reporting_sdk = SQSReportingSdk::new();
+    let app_state = AppState {
+        pool: establish_connection_pool().await,
+        pipeline,
+        reporting: reporting_sdk,
+    };
 
     let app = Router::new()
         .route("/results", post(results::handler))
         .route("/pipeline", get(get_pipeline::handler))
-        .with_state(AppState {
-            pool: establish_connection_pool().await,
-            pipeline,
-        });
+        .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
 
@@ -67,6 +72,7 @@ mod results {
     use axum::{debug_handler, Json};
     use chrono::DateTime;
     use diesel_async::RunQueryDsl;
+    use ingest::reporting_sdk::{self, ReportingSdk};
     use ingest::telemetry::{self, ProcessedTransactionTelemetry};
     use ingest::{models::ProcessedTransaction, schema::processed_transactions};
     use serde::Deserialize;
@@ -75,23 +81,10 @@ mod results {
     use crate::AppState;
 
     #[derive(Deserialize, Debug)]
-    pub struct TransactionResultLabel {
-        pub label: String,
-        pub timestamp_ms: i64,
-    }
-
-    #[derive(Deserialize, Debug)]
-    pub struct TransactionResult {
-        pub transaction_hash: String,
-        pub successful_labels: Vec<TransactionResultLabel>,
-        pub failed_label: Option<TransactionResultLabel>,
-    }
-
-    #[derive(Deserialize, Debug)]
     pub struct Request {
         pub invocation_id: String,
         pub message_ids: Vec<String>,
-        pub results: Vec<TransactionResult>,
+        pub results: Vec<reporting_sdk::TransactionResult>,
     }
 
     #[debug_handler]
@@ -155,64 +148,20 @@ mod results {
                 .await;
         }
 
-        let data: Vec<_> = payload
-            .results
-            .iter()
-            .map(|r| {
-                let mut rows = Vec::new();
-
-                for label in r.successful_labels.iter() {
-                    rows.push(ProcessedTransaction {
-                        transaction_hash: r.transaction_hash.clone(),
-                        label: label.label.clone(),
-                        status: "SUCCESS".to_string(),
-                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        handler_id: &handler_id,
-                        handler_version: &handler_version,
-                    })
-                }
-
-                if let Some(label) = r.failed_label.as_ref() {
-                    rows.push(ProcessedTransaction {
-                        transaction_hash: r.transaction_hash.clone(),
-                        label: label.label.clone(),
-                        status: "FAILED".to_string(),
-                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        handler_id: &handler_id,
-                        handler_version: &handler_version,
-                    })
-                }
-
-                rows
+        app_state
+            .reporting
+            .handle(&reporting_sdk::Request {
+                handler_id: env::var("HANDLER_ID").expect("HANDLER_ID is not defined"),
+                handler_version: env::var("HANDLER_VERSION")
+                    .expect("HANDLER_VERSION is not defined"),
+                stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
+                    .expect("STRIPE_CUSTOMER_ID is not defined"),
+                invocation_id: payload.invocation_id,
+                results: payload.results,
             })
-            .flatten()
-            .collect();
-
-        let mut conn = app_state.pool.get().await.unwrap();
-        let tx_telemtry = telemetry::stripe::StripeProcessedTransactionTelemetry::from_env();
-
-        let record = tx_telemtry
-            .record_invocation(
-                payload.invocation_id,
-                payload.results.len().try_into().unwrap(),
-            )
             .await;
 
-        match record {
-            Err(e) => println!("Error recording tx usage: {:?}", e),
-            _ => println!("Sent telemetry."),
-        }
-
-        let r = diesel::insert_into(processed_transactions::table)
-            .values(data)
-            .execute(&mut conn)
-            .await;
-
-        match r {
-            Ok(_) => println!("Inserted"),
-            Err(e) => println!("Error {:?}", e),
-        }
-
+        // app_state
         return Json(json!({"ok": true}));
     }
 }

@@ -87,9 +87,10 @@ export default async () => {
           "REDACTED",
         USER_ENVS: env.HANDLER_ENVS,
         TRANSACTION_QUEUE_URL: transactionQueue.url,
-        DATABASE_URL:
-          "postgresql://postgres:REDACTED@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres?sslmode=require",
         STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
+        REPORTING_QUEUE_URL: stackRef
+          .getOutput("outputs")
+          .apply((f) => f.reporting_queue_url),
       },
     },
     layers: [

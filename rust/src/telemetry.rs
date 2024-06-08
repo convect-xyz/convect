@@ -15,12 +15,12 @@ pub mod stripe {
 
     use super::ProcessedTransactionTelemetry;
 
-    pub struct StripeProcessedTransactionTelemetry {
+    pub struct ProcessedTransactionTelemetry {
         client: reqwest::Client,
         customer_id: String,
     }
 
-    impl StripeProcessedTransactionTelemetry {
+    impl ProcessedTransactionTelemetry {
         pub fn from_env() -> Self {
             Self {
                 client: reqwest::Client::new(),
@@ -30,7 +30,7 @@ pub mod stripe {
         }
     }
 
-    impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
+    impl super::ProcessedTransactionTelemetry for ProcessedTransactionTelemetry {
         async fn record_invocation(
             &self,
             invocation_id: String,
