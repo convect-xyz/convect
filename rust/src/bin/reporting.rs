@@ -55,10 +55,10 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .flatten()
         .collect();
 
-    let tx_telemtry = StripeProcessedTransactionTelemetry::from_env();
-
+    let tx_telemtry = StripeProcessedTransactionTelemetry::new();
     join_all(data.iter().map(|result| {
         tx_telemtry.record_invocation(
+            result.stripe_customer_id.clone(),
             result.invocation_id.clone(),
             result.results.len().try_into().unwrap(),
         )

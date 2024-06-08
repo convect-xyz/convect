@@ -5,6 +5,7 @@ use std::{collections::HashMap, env};
 pub trait ProcessedTransactionTelemetry {
     fn record_invocation(
         &self,
+        customer_id: String,
         invocation_id: String,
         num_processed: u64,
     ) -> impl Future<Output = Result<(), BoxError>>;
@@ -12,14 +13,12 @@ pub trait ProcessedTransactionTelemetry {
 
 pub struct StripeProcessedTransactionTelemetry {
     client: reqwest::Client,
-    customer_id: String,
 }
 
 impl StripeProcessedTransactionTelemetry {
-    pub fn from_env() -> Self {
+    pub fn new() -> Self {
         Self {
             client: reqwest::Client::new(),
-            customer_id: env::var("STRIPE_CUSTOMER_ID").expect("STRIPE_CUSTOMER_ID should be set"),
         }
     }
 }
@@ -27,6 +26,7 @@ impl StripeProcessedTransactionTelemetry {
 impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
     async fn record_invocation(
         &self,
+        customer_id: String,
         invocation_id: String,
         num_processed: u64,
     ) -> Result<(), BoxError> {
@@ -34,7 +34,7 @@ impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
         let mut form_data = HashMap::new();
         form_data.insert("event_name", "transactions_processed");
         form_data.insert("payload[transactions]", &num_processed_as_string);
-        form_data.insert("payload[stripe_customer_id]", &self.customer_id);
+        form_data.insert("payload[stripe_customer_id]", &customer_id);
         form_data.insert("identifier", &invocation_id);
 
         let r = self.client
