@@ -10,7 +10,6 @@ path = "src/bin/log_fetcher.rs"
 [[bin]]
 name = "http"
 path = "src/bin/http.rs"
-required-features = ["pg", "telemetry"]
 
 [[bin]]
 name = "producer"
