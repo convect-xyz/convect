@@ -49,7 +49,7 @@ const handler_server = new aws.lambda.LayerVersion("handler_server", {
   compatibleRuntimes: ["provided.al2", "provided.al2023"],
   description: "Handler HTTP Extension",
   s3Bucket: "ingest-functions",
-  s3Key: `http/${GITHUB_SHA}.zip`,
+  s3Key: `handler-server/${GITHUB_SHA}.zip`,
   skipDestroy: true,
 });
 
