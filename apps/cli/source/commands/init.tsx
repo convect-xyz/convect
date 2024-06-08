@@ -4,16 +4,16 @@ import {
 	QueryClientProvider,
 	useMutation,
 	useMutationState,
-	useQuery,
 } from '@tanstack/react-query';
-import axios, {AxiosError} from 'axios';
 import {Box} from 'ink';
-import React, {useState} from 'react';
+import React from 'react';
 import {z} from 'zod';
+import {create} from 'zustand';
 import {bundleFile} from '../actions/bundle.js';
 import {checkHandler} from '../actions/checkHandler.js';
 import {uploadOutputs} from '../actions/upload.js';
-import {getAuthHeaders} from '../lib/utils.js';
+import {useChains} from '../hooks/useChains.js';
+import {useProjects} from '../hooks/useProjects.js';
 
 export const args = z.tuple([]);
 
@@ -27,60 +27,21 @@ const bundleKey = ['bundle'];
 const uploadKey = ['upload'];
 const checkHandlerKey = ['check-handler'];
 
-function useProjects() {
-	return useQuery({
-		queryKey: ['projects'],
-		queryFn: async () => {
-			try {
-				return await axios
-					.get('http://localhost:3000/api/cli/projects', {
-						headers: getAuthHeaders(),
-					})
-					.then(r => r.data as {projects: string[]});
-			} catch (e) {
-				if (e instanceof AxiosError) {
-					throw new Error(
-						e.response?.data?.message ?? 'An unexpected error occurred',
-					);
-				}
+type InitState = {
+	currentState?: 'project' | 'handler' | 'chain' | 'entrypoint' | 'override';
+	project?: string;
+	handler?: {
+		name: string;
+		exists: boolean;
+	};
+	chain?: string;
+	entrypoint?: string;
+	override?: boolean;
+};
 
-				throw e;
-			}
-		},
-	});
-}
-
-function useChains() {
-	return useQuery({
-		queryKey: ['chains'],
-		queryFn: async () => {
-			try {
-				return await axios
-					.get('http://localhost:3000/api/cli/chains', {
-						headers: getAuthHeaders(),
-					})
-					.then(
-						r =>
-							r.data as {
-								chains: {
-									id: string;
-									name: string;
-								}[];
-							},
-					)
-					.then(d => d.chains);
-			} catch (e) {
-				if (e instanceof AxiosError) {
-					throw new Error(
-						e.response?.data?.message ?? 'An unexpected error occurred',
-					);
-				}
-
-				throw e;
-			}
-		},
-	});
-}
+const useInitState = create<InitState>(() => ({
+	currentState: 'project',
+}));
 
 export default function Init(props: Props) {
 	return (
@@ -91,13 +52,97 @@ export default function Init(props: Props) {
 }
 
 function Content(_: Props) {
-	const [project, setProject] = useState<string>();
-	const [handlerName, setHandlerName] = useState<string>();
-	const [chain, setChain] = useState<string>();
-	const [entrypoint, setEntrypoint] = useState<string>();
-	const [exists, setExists] = useState<boolean>();
-	const [override, setOverride] = useState<boolean>();
+	return (
+		<>
+			<DisplayProject />
+			<DisplayHandlerName />
+			<DisplayOverride />
+			<DisplayChain />
+			<DisplayEntrypoint />
 
+			<CurrentInput />
+
+			<BundleState />
+			<UploadState />
+		</>
+	);
+}
+
+function DisplayProject() {
+	const state = useInitState();
+
+	if (state.project) {
+		return (
+			<StatusMessage variant="success">
+				Project Name ({state.project})
+			</StatusMessage>
+		);
+	}
+
+	return <></>;
+}
+
+function DisplayHandlerName() {
+	const state = useInitState();
+
+	if (state.handler) {
+		return (
+			<StatusMessage variant="success">
+				Handler Name: {state.handler.name}
+			</StatusMessage>
+		);
+	}
+
+	return <></>;
+}
+
+function DisplayOverride() {
+	const state = useInitState();
+
+	if (state.project && state.handler && state.override !== undefined) {
+		return (
+			<StatusMessage variant="success">
+				Handler '{state.handler.name}', already exists in '{state.project}'.
+				Doing this will create a new version of your handler. Would you like to
+				proceed? y
+			</StatusMessage>
+		);
+	}
+
+	return <></>;
+}
+
+function DisplayChain() {
+	const state = useInitState();
+	const {data: chains} = useChains();
+
+	if (state.chain) {
+		return (
+			<StatusMessage variant="success">
+				Chain ({chains?.find(c => c.id === state.chain)!.name})
+			</StatusMessage>
+		);
+	}
+
+	return <></>;
+}
+
+function DisplayEntrypoint() {
+	const state = useInitState();
+
+	if (state.entrypoint) {
+		return (
+			<StatusMessage variant="success">
+				Entrypoint: {state.entrypoint}
+			</StatusMessage>
+		);
+	}
+
+	return <></>;
+}
+
+function CurrentInput() {
+	const state = useInitState();
 	const {mutateAsync: triggerUpload} = useMutation({
 		mutationKey: uploadKey,
 		mutationFn: uploadOutputs,
@@ -109,9 +154,13 @@ function Content(_: Props) {
 		mutationFn: bundleFile,
 		throwOnError: false,
 		onSuccess(data) {
+			const {project, handler, chain, override} = state;
 			if (!project) throw new Error('Project name is not specified');
-			if (!handlerName) throw new Error('Handler name is not specified');
+			if (!handler) throw new Error('Handler name is not specified');
 			if (!chain) throw new Error('Chain is not specified');
+
+			const {exists, name} = handler;
+
 			const getOverride = () => {
 				if (!exists) return false;
 				if (exists && override === undefined) {
@@ -123,7 +172,7 @@ function Content(_: Props) {
 			triggerUpload({
 				mode: 'init',
 				project,
-				handlerName,
+				handlerName: name,
 				outfile: data.outfile,
 				outmanifest: data.outmanifest,
 				override: getOverride(),
@@ -132,52 +181,66 @@ function Content(_: Props) {
 		},
 	});
 
-	return (
-		<>
-			<SelectProject project={project} onSelect={setProject} />
+	if (state.currentState === 'project') {
+		return (
+			<SelectProject
+				onSelect={project =>
+					useInitState.setState({currentState: 'handler', project})
+				}
+			/>
+		);
+	}
+
+	if (state.currentState === 'handler') {
+		return (
 			<SetHandlerName
-				project={project}
-				handlerName={handlerName}
-				onSubmit={(handlerName, exists) => {
-					setHandlerName(handlerName);
-					setExists(exists);
+				onSubmit={(name, exists) =>
+					useInitState.setState({
+						currentState: exists ? 'override' : 'chain',
+						handler: {name, exists},
+					})
+				}
+			/>
+		);
+	}
+
+	if (state.currentState === 'override') {
+		return (
+			<SetOverride
+				onSubmit={override =>
+					useInitState.setState({currentState: 'chain', override})
+				}
+			/>
+		);
+	}
+
+	if (state.currentState === 'chain') {
+		return (
+			<SelectChain
+				onSelect={chain =>
+					useInitState.setState({currentState: 'entrypoint', chain})
+				}
+			/>
+		);
+	}
+
+	if (state.currentState === 'entrypoint') {
+		return (
+			<SetEntrypoint
+				onSubmit={entrypoint => {
+					useInitState.setState({currentState: undefined, entrypoint});
+					triggerBundle({
+						entrypoint,
+					});
 				}}
 			/>
-			{exists && (
-				<SetOverride
-					override={override}
-					project={project}
-					handlerName={handlerName}
-					onSubmit={setOverride}
-				/>
-			)}
-			{project &&
-				handlerName &&
-				(!exists || (exists && override !== undefined)) && (
-					<SelectChain chain={chain} onSelect={setChain} />
-				)}
-			{chain && (
-				<SetEntrypoint
-					handlerName={handlerName}
-					entrypoint={entrypoint}
-					onSubmit={v => {
-						setEntrypoint(v);
-						triggerBundle({
-							entrypoint: v,
-						}).catch(() => {});
-					}}
-				/>
-			)}
-			<BundleState />
-			<UploadState />
-		</>
-	);
+		);
+	}
+
+	return <></>;
 }
 
-function SelectProject(props: {
-	onSelect: (id: string) => void;
-	project?: string;
-}) {
+function SelectProject(props: {onSelect: (id: string) => void}) {
 	const {data: projects, error, isLoading} = useProjects();
 
 	if (isLoading) {
@@ -186,14 +249,6 @@ function SelectProject(props: {
 
 	if (error) {
 		return <StatusMessage variant="error">{error.message}</StatusMessage>;
-	}
-
-	if (props.project) {
-		return (
-			<StatusMessage variant="success">
-				Project Name ({props.project})
-			</StatusMessage>
-		);
 	}
 
 	return (
@@ -208,23 +263,15 @@ function SelectProject(props: {
 	);
 }
 
-function SelectChain(props: {onSelect: (id: string) => void; chain?: string}) {
+function SelectChain(props: {onSelect: (id: string) => void}) {
 	const {data: chains, error, isLoading} = useChains();
 
 	if (isLoading) {
-		return <Spinner label="Fetching your projects" />;
+		return <Spinner label="Fetching supported chains" />;
 	}
 
 	if (error) {
 		return <StatusMessage variant="error">{error.message}</StatusMessage>;
-	}
-
-	if (props.chain) {
-		return (
-			<StatusMessage variant="success">
-				Chain ({chains?.find(c => c.id === props.chain)!.name})
-			</StatusMessage>
-		);
 	}
 
 	return (
@@ -240,25 +287,14 @@ function SelectChain(props: {onSelect: (id: string) => void; chain?: string}) {
 }
 
 function SetHandlerName(props: {
-	project?: string;
-	handlerName?: string;
 	onSubmit: (name: string, exists: boolean) => void;
 }) {
+	const state = useInitState();
 	const {mutateAsync: check} = useMutation({
 		mutationKey: checkHandlerKey,
 		mutationFn: checkHandler,
 		throwOnError: false,
 	});
-
-	if (!props.project) return <></>;
-
-	if (props.handlerName) {
-		return (
-			<StatusMessage variant="success">
-				Handler Name: {props.handlerName}
-			</StatusMessage>
-		);
-	}
 
 	return (
 		<Box>
@@ -266,7 +302,7 @@ function SetHandlerName(props: {
 			<TextInput
 				onSubmit={async v => {
 					const exists = await check({
-						project: props.project!,
+						project: state.project!,
 						handlerName: v,
 					});
 					props.onSubmit(v, exists);
@@ -277,30 +313,15 @@ function SetHandlerName(props: {
 	);
 }
 
-function SetOverride(props: {
-	project?: string;
-	handlerName?: string;
-	override?: boolean;
-	onSubmit: (override: boolean) => void;
-}) {
-	if (!props.project || !props.handlerName) return <></>;
-
-	if (props.override) {
-		return (
-			<Box>
-				<StatusMessage variant="success">
-					Handler '{props.handlerName}', already exists in '{props.project}'.
-					Doing this will create a new version of your handler. Would you like
-					to proceed? y
-				</StatusMessage>
-			</Box>
-		);
-	}
+function SetOverride(props: {onSubmit: (override: boolean) => void}) {
+	const state = useInitState();
 
 	return (
 		<Box>
 			<Spinner
-				label={`Handler '${props.handlerName}', already exists in '${props.project}'. Doing this will create a new version of your handler. Would you like to proceed? `}
+				label={`Handler '${
+					state.handler!.name
+				}', already exists in '${state.project!}'. Doing this will create a new version of your handler. Would you like to proceed? `}
 			/>
 			<TextInput
 				onSubmit={v => {
@@ -316,21 +337,7 @@ function SetOverride(props: {
 	);
 }
 
-function SetEntrypoint(props: {
-	entrypoint?: string;
-	handlerName?: string;
-	onSubmit: (entrypoint: string) => void;
-}) {
-	if (!props.handlerName) return null;
-
-	if (props.entrypoint) {
-		return (
-			<StatusMessage variant="success">
-				Entrypoint: {props.entrypoint}
-			</StatusMessage>
-		);
-	}
-
+function SetEntrypoint(props: {onSubmit: (entrypoint: string) => void}) {
 	return (
 		<Box>
 			<Spinner label="Handler path: " />

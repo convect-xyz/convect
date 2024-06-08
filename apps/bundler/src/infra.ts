@@ -1,21 +1,9 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import path = require("path");
+import path from "path";
+import { env } from "./env";
 
-const VERSION = process.env.VERSION!;
 const org = "kayakthedev";
-
-const stackRef = new pulumi.StackReference(`${org}/infra/${VERSION}`);
-
-const HANDLER_ID = process.env.HANDLER_ID!;
-const HANDLER_VERSION = process.env.HANDLER_VERSION!;
-const MANIFEST_BUCKET = process.env.MANIFEST_BUCKET!;
-const MANIFEST_PREFIX = process.env.MANIFEST_PREFIX!;
-const POLLING_URL = process.env.POLLING_URL!;
-const CHAIN_SNS = process.env.CHAIN_SNS!;
-const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
-const HANDLER_ENVS = process.env.HANDLER_ENVS!;
-const STRIPE_CUSTOMER_ID = process.env.STRIPE_CUSTOMER_ID!;
 
 const SYNCER_CLUSTER = "arn:aws:ecs:eu-west-1:730335604495:cluster/syncers";
 const SYNCER_SUBNETS = ["subnet-05d39f2476de29dc7"];
@@ -23,7 +11,9 @@ const SYNCER_CONTAINER_NAME = "syncer";
 
 const LOG_FETCHER_S3_BUCKET = "ingest-fetch-logs";
 
-export = async () => {
+export default async () => {
+  const stackRef = new pulumi.StackReference(`${org}/infra/${env.VERSION}`);
+
   const transactionQueue = new aws.sqs.Queue(`tx-queue`, {
     visibilityTimeoutSeconds: 900,
     fifoQueue: true,
@@ -32,16 +22,16 @@ export = async () => {
   const logFetcher = new aws.lambda.Function(`log-fetcher`, {
     role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     s3Bucket: "ingest-functions",
-    s3Key: `log-fetcher/${VERSION}.zip`,
+    s3Key: `log-fetcher/${env.VERSION}.zip`,
     environment: {
       variables: {
         TRANSACTION_QUEUE_URL: transactionQueue.url,
-        MANIFEST_BUCKET,
-        MANIFEST_PREFIX,
-        NODE_ENDPOINT: POLLING_URL,
-        HANDLER_ID,
-        HANDLER_VERSION,
-        VERSION,
+        MANIFEST_BUCKET: env.MANIFEST_BUCKET,
+        MANIFEST_PREFIX: env.MANIFEST_PREFIX,
+        NODE_ENDPOINT: env.POLLING_URL,
+        HANDLER_ID: env.HANDLER_ID,
+        HANDLER_VERSION: env.HANDLER_VERSION,
+        VERSION: env.VERSION,
         S3_BUCKET: LOG_FETCHER_S3_BUCKET,
       },
     },
@@ -54,21 +44,20 @@ export = async () => {
   const orchestrator = new aws.lambda.Function(`orchestrator`, {
     role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     s3Bucket: "ingest-functions",
-    s3Key: `orchestrator/${VERSION}.zip`,
+    s3Key: `orchestrator/${env.VERSION}.zip`,
     environment: {
       variables: {
         TRANSACTION_QUEUE_URL: transactionQueue.url,
         LOG_FETCHER_LAMBDA_ARN: logFetcher.arn,
-        MANIFEST_BUCKET,
-        MANIFEST_PREFIX,
-        NODE_ENDPOINT: POLLING_URL,
-        HANDLER_ID,
-        HANDLER_VERSION,
-        VERSION,
-        SYNCER_TASK_DEFINITION_ARN: await stackRef
-          .getOutputValue("outputs")
-          .then(JSON.parse)
-          .then((r) => r.syncer_task_definition),
+        MANIFEST_BUCKET: env.MANIFEST_BUCKET,
+        MANIFEST_PREFIX: env.MANIFEST_PREFIX,
+        NODE_ENDPOINT: env.POLLING_URL,
+        HANDLER_ID: env.HANDLER_ID,
+        HANDLER_VERSION: env.HANDLER_VERSION,
+        VERSION: env.VERSION,
+        SYNCER_TASK_DEFINITION_ARN: stackRef
+          .getOutput("outputs")
+          .apply((f) => f.syncer_task_definition),
         SYNCER_CLUSTER,
         SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
         SYNCER_CONTAINER_NAME,
@@ -86,21 +75,22 @@ export = async () => {
     s3Bucket: "ingest-build-outputs",
     s3Key: path.join(
       "outputs",
-      HANDLER_ID,
-      HANDLER_VERSION,
-      DEPLOYMENT_ID + ".zip"
+      env.HANDLER_ID,
+      env.HANDLER_VERSION,
+      env.DEPLOYMENT_ID + ".zip"
     ),
     environment: {
       variables: {
-        HANDLER_ID,
-        HANDLER_VERSION,
+        HANDLER_ID: env.HANDLER_ID,
+        HANDLER_VERSION: env.HANDLER_VERSION,
         MUST_REMOVE_CONVECT_TBK:
           "REDACTED",
-        USER_ENVS: HANDLER_ENVS,
+        USER_ENVS: env.HANDLER_ENVS,
         TRANSACTION_QUEUE_URL: transactionQueue.url,
-        DATABASE_URL:
-          "postgresql://postgres:REDACTED@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres?sslmode=require",
-        STRIPE_CUSTOMER_ID,
+        STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
+        REPORTING_QUEUE_URL: stackRef
+          .getOutput("outputs")
+          .apply((f) => f.reporting_queue_url),
       },
     },
     layers: [
@@ -115,7 +105,7 @@ export = async () => {
   });
 
   const handlerSourceMapping = new aws.lambda.EventSourceMapping(
-    HANDLER_ID + "-source-mapping",
+    env.HANDLER_ID + "-source-mapping",
     {
       eventSourceArn: transactionQueue.arn,
       functionName: handler.arn,
@@ -125,16 +115,16 @@ export = async () => {
   const snsOrchestratorPermission = new aws.lambda.Permission(
     `allow_sns_invoke_orchestrator`,
     {
-      statementId: `${HANDLER_ID}`,
+      statementId: `${env.HANDLER_ID}`,
       action: "lambda:InvokeFunction",
       principal: "sns.amazonaws.com",
-      sourceArn: CHAIN_SNS,
+      sourceArn: env.CHAIN_SNS,
       function: orchestrator.arn,
     }
   );
 
   const snsSub = new aws.sns.TopicSubscription(`orchestrator_sns_sub`, {
-    topic: CHAIN_SNS,
+    topic: env.CHAIN_SNS,
     protocol: "lambda",
     endpoint: orchestrator.arn,
   });

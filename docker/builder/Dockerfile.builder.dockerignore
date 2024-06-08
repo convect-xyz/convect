@@ -1,3 +1,5 @@
 /**/node_modules/**
-/rust/**
-/infra/**
+/rust
+/infra
+/apps
+!/apps/bundler

@@ -1,5 +1,5 @@
-/apps/**
+/apps
 /node_modules/**
-/packages/**
-/**/target/**/
-/infra/**
+/packages
+/rust/target
+/infra

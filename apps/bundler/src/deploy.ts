@@ -1,29 +1,19 @@
-import { Lambda } from "@aws-sdk/client-lambda";
 import { S3 } from "@aws-sdk/client-s3";
+import { InlineProgramArgs, LocalWorkspace } from "@pulumi/pulumi/automation";
 import esbuild from "esbuild";
-import { backOff } from "exponential-backoff";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
+import { env } from "./env";
+import infraFactory from "./infra";
 
-const lambda = new Lambda({ region: "eu-west-1" });
 const s3 = new S3({ region: "eu-west-1" });
 
-
-const VERSION = process.env.VERSION!;
-const MODE = process.env.MODE as "init" | "update";
-const CURR_DIR = process.env.CURR_DIR!;
-const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID!;
-const HANDLER_ID = process.env.HANDLER_ID!;
-const SOURCE_BUCKET = process.env.SOURCE_BUCKET!;
-const SOURCE_PREFIX = process.env.SOURCE_PREFIX!;
-const HANDLER_SRC_FILE = path.join(CURR_DIR, SOURCE_PREFIX + ".js");
-const BUNDLE_SRC_DIR = path.join(CURR_DIR, "bundle_src");
-const BUNDLE_OUT_DIR = path.join(CURR_DIR, "bundle_out");
+const HANDLER_SRC_FILE = path.join(env.CURR_DIR, env.SOURCE_PREFIX + ".js");
+const BUNDLE_SRC_DIR = path.join(env.CURR_DIR, "bundle_src");
+const BUNDLE_OUT_DIR = path.join(env.CURR_DIR, "bundle_out");
 const RUNTIME_SRC_FILE = "/scripts/runtime.js";
-const EVENTS_RUNTIME_SRC_FILE = "/scripts/events-runtime.js";
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
-const EVENTS_OUT_FILE = path.join(BUNDLE_OUT_DIR, "events-index.js");
 
 main();
 
@@ -31,23 +21,72 @@ async function main() {
   await downloadFile();
   await prepareBundle();
   await zipLambda();
-  await zipEventsLambda();
 
-  if (MODE === "init") {
-    // const { eventsLambdaArn } = await allocateResources();
-    // await initialiseHandler({
-    //   eventsLambdaArn,
-    // });
+  console.info("initialising/getting stack...");
+  const stack = await getStack();
+  console.info("succesfully intialised stack.");
+
+  console.info("installing aws plugin...");
+  await stack.workspace.installPlugin("aws", "v6.37.0");
+  await stack.setConfig("aws:region", { value: "eu-west-1" });
+  console.info("aws plugin installed.");
+
+  if (env.MODE === "init") {
+    if (Number(env.HANDLER_VERSION) > 0) {
+      console.info("destroying stack...");
+      await stack.destroy({ onOutput: console.info });
+      console.info("stack destroyed");
+    }
+    console.info("stack up...");
+    await stack.up({ onOutput: console.info });
+    console.info("stack upped.");
   }
 
+  if (env.MODE === "destroy") {
+    console.info("destroying stack...");
+    await stack.destroy({ onOutput: console.info });
+    console.info("stack destroyed");
+
+    console.info("removing stack...");
+    await stack.workspace.removeStack(stack.name);
+    console.info("removed stack...");
+  }
+
+  if (env.MODE === "update") {
+    console.info("stack up...");
+    await stack.up({ onOutput: console.info });
+    console.info("stack upped.");
+  }
 
   process.exit(0);
 }
 
+async function getStack() {
+  const args: InlineProgramArgs = {
+    stackName: env.HANDLER_ID,
+    projectName: "convect-v1",
+    program: infraFactory,
+  };
+
+  if (env.MODE === "init") {
+    return LocalWorkspace.createOrSelectStack(args);
+  }
+
+  if (env.MODE === "update") {
+    return LocalWorkspace.selectStack(args);
+  }
+
+  if (env.MODE === "destroy") {
+    return LocalWorkspace.selectStack(args);
+  }
+
+  throw new Error("Unknown mode");
+}
+
 async function downloadFile() {
   const object = await s3.getObject({
-    Bucket: SOURCE_BUCKET,
-    Key: SOURCE_PREFIX,
+    Bucket: env.SOURCE_BUCKET,
+    Key: env.SOURCE_PREFIX,
   });
 
   fs.mkdirSync(HANDLER_SRC_FILE.split("/").slice(0, -1).join("/"), {
@@ -84,64 +123,16 @@ async function zipLambda() {
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
   const bucket = "ingest-build-outputs";
-  const key = path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + ".zip");
+  const key = path.join(
+    "outputs",
+    env.HANDLER_ID,
+    env.HANDLER_VERSION,
+    env.DEPLOYMENT_ID + ".zip"
+  );
 
   await s3.putObject({
     Bucket: bucket,
     Key: key,
     Body: zipData,
   });
-}
-
-async function zipEventsLambda() {
-  fs.copyFileSync(
-    EVENTS_RUNTIME_SRC_FILE,
-    path.join(BUNDLE_SRC_DIR, "events-index.js")
-  );
-
-  await esbuild.build({
-    entryPoints: [path.join(BUNDLE_SRC_DIR, "events-index.js")],
-    bundle: true,
-    minify: true,
-    outfile: EVENTS_OUT_FILE,
-    nodePaths: [process.env.NODE_PATH!],
-    target: "node10.4",
-    platform: "node",
-  });
-
-  const content = fs.readFileSync(EVENTS_OUT_FILE);
-
-  const zip = new JSZip();
-  zip.file("index.js", content.toString());
-  const zipData = await zip.generateAsync({ type: "uint8array" });
-
-  const bucket = "ingest-build-outputs";
-  const key = path.join("outputs", HANDLER_ID, DEPLOYMENT_ID + "-events.zip");
-
-  await s3.putObject({
-    Bucket: bucket,
-    Key: key,
-    Body: zipData,
-  });
-}
-
-async function initialiseHandler(opts: { eventsLambdaArn: string }) {
-  await backOff(
-    async () => {
-      const { Payload } = await lambda.invoke({
-        FunctionName: opts.eventsLambdaArn,
-        Payload: JSON.stringify({
-          type: "Create",
-        }),
-      });
-
-      if (!Payload) return;
-    },
-    {
-      numOfAttempts: 3,
-      delayFirstAttempt: true,
-      startingDelay: 1000,
-      maxDelay: 3000,
-    }
-  );
 }

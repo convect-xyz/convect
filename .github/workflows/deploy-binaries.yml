@@ -49,11 +49,47 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-lambdas
-
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
+          GITHUB_SHA: ${{ github.sha }}
         run: sh ./rust/scripts/build.sh
+
+  build_reporting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Zig toolchain
+        uses: korandoru/setup-zig@v1
+        with:
+          zig-version: 0.10.0
+      - name: Install Cargo Lambda
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        with:
+          repo: cargo-lambda/cargo-lambda
+          platform: linux
+          arch: x86_64
+      - uses: actions/checkout@master
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-reporting
+      - name: Build
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          cd rust
+          cargo lambda build --output-format zip --release --bin=reporting --features="pg telemetry"
+          aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
 
   build_extensions:
     runs-on: ubuntu-latest
@@ -74,7 +110,6 @@ jobs:
           platform: linux
           arch: x86_64
       - uses: actions/checkout@master
-
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -97,30 +132,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpq-dev postgresql
           cd rust
-          cargo lambda build --extension --output-format zip --release --bin=$BIN --features="pg handler-telemetry"
+          cargo lambda build --extension --output-format zip --release --bin=$BIN
           aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/extensions/$BIN.zip"
 
   build_images:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["syncer", "builder"]
+        binary: ["builder", "syncer"]
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: eu-west-1
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
       - name: Build, tag, and push docker image to Amazon ECR
         uses: docker/build-push-action@v5
         with:
@@ -139,7 +170,6 @@ jobs:
       - uses: actions/setup-node@v3.5.0
         with:
           node-version-file: package.json
-
       - name: Set up node cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -149,28 +179,25 @@ jobs:
             infra/node_modules
           key: ${{ runner.os }}-deploy-pulumi-${{ hashFiles('infra/yarn.lock') }}-
           restore-keys: ${{ runner.os }}-deploy-pulumi-
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-region: ${{ secrets.AWS_REGION }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
       - name: Set version
         env:
           VERSION: ${{ github.event.release.tag_name || github.ref_name }}
         run: |
           VERSION=${VERSION//\//-}
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
-
       - name: Installing dependencies 📦️
         run: cd infra && yarn install
-
       - uses: pulumi/actions@v3
         with:
           command: up
           work-dir: ./infra
           stack-name: ${{ env.VERSION }}
+          upsert: true
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
