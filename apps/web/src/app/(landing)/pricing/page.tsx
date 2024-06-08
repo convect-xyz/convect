@@ -57,7 +57,7 @@ export default function Page() {
                 "use server";
 
                 await signIn("github", {
-                  redirectTo: "/projects?plan_upgrade=BASIC",
+                  redirectTo: "/projects?plan_upgrade=STARTUP",
                 });
               }}
             >

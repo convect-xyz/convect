@@ -86,71 +86,7 @@ export default function Page() {
       </section>
       <section className="py-12 md:py-16 lg:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-3">
-              <BoltIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-              <h3 className="text-xl font-semibold">Low Latency</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Transactions from new blocks are sent to your handlers almost
-                instantly.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <CogIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-              <h3 className="text-xl font-semibold">High Throughput</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Your handlers can be sent up to 600 transactions per invocation.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <BarChartIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-              <h3 className="text-xl font-semibold">Advanced Analytics</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Gain valuable insights into your application's performance with
-                our comprehensive analytics tools.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <PuzzleIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-              <h3 className="text-xl font-semibold">Seamless Integration</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Easily integrate our platform with your existing tools and
-                workflows for a seamless experience.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <ClipboardIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-              <h3 className="text-xl font-semibold">Intuitive Dashboards</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Stay on top of your application's performance with our
-                user-friendly dashboards.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-      <section className="mx-auto flex max-w-[1920px] overflow-hidden px-8 py-12 md:py-16 lg:py-20">
-        <div className="flex flex-[2_2_0]  flex-col justify-center gap-4">
-          <div className="text-4xl font-bold">Full flexibility</div>
-          <div className="text-lg text-muted-foreground">
-            Define transaction handlers in code and process them however you
-            like with full typesafety.
-          </div>
-        </div>
-        <div className="flex-[3_3_0] translate-x-[10%]">
           <FrameCodeBlock fileName="transfer.ts" code={c} />
-        </div>
-      </section>
-      <section className="mx-auto flex max-w-[1920px] flex-row-reverse overflow-hidden px-8 py-12 md:py-16 lg:py-20">
-        <div className="flex flex-[2_2_0] flex-col justify-center gap-4 px-8 text-right">
-          <div className="text-4xl font-bold">Combine handlers</div>
-          <div className="text-lg text-muted-foreground">
-            If you intend to process multiple transactions, just pass in
-            multiple handlers and we'll make sure they get processed in order.
-          </div>
-        </div>
-        <div className="flex-[3_3_0]">
-          <FrameCodeBlock fileName="ingest.ts" code={ingestCode} />
         </div>
       </section>
     </>
