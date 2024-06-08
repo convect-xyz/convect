@@ -49,7 +49,6 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-lambdas
-
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
