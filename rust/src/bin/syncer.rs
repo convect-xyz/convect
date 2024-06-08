@@ -1,10 +1,5 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_lambda::{
-    error::SdkError,
-    operation::invoke::{InvokeError, InvokeOutput},
-    types::InvocationType,
-};
-use aws_sdk_s3::primitives::Blob;
+use aws_sdk_s3::error::BoxError;
 use futures::{future::join_all, TryFutureExt};
 use ingest::{
     api::{
@@ -12,10 +7,11 @@ use ingest::{
         fetcher::{TransactionFetcherImpl, Web3ClientImpl},
         Api,
     },
-    log_fetcher::invocation::{InvocationRequest, InvocationResponse},
+    log_fetcher_sdk::{self, InvocationRequest, InvocationResponse, LogFetcherSdk},
     types::{self, syncing::State, transactions::IngestTransaction},
 };
 use serde::Serialize;
+use std::env;
 use std::error::Error;
 
 type ApiInstance =
@@ -54,9 +50,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .send(),
     };
 
-    match update_result {
-        Ok(_) => (),
-        Err(err) => panic!("Failed to update pipeline configs: {:?}", err),
+    if let Err(err) = update_result {
+        panic!("Failed to update pipeline configs: {:?}", err)
     }
 
     Ok(())
@@ -77,7 +72,6 @@ async fn run(api: &ApiInstance, pipeline: &mut State) -> Result<(), Box<dyn Erro
         let s3_results: Vec<IngestTransaction> = get_s3_results(&invocations)
             .await
             .into_iter()
-            .map(|r| r.0)
             .flatten()
             .collect();
 
@@ -104,114 +98,95 @@ async fn run(api: &ApiInstance, pipeline: &mut State) -> Result<(), Box<dyn Erro
     Ok(())
 }
 
-async fn invoke_lambdas(
-    configs: &[BlockConfig],
-) -> Vec<Result<InvokeOutput, SdkError<InvokeError>>> {
+async fn invoke_lambdas(configs: &[BlockConfig]) -> Vec<Result<InvocationResponse, BoxError>> {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    let lambda_client = aws_sdk_lambda::Client::new(&config);
     let syncer_config = load_config_from_env();
+    let sdk =
+        log_fetcher_sdk::LambdaLogFetcherSdk::new_from_config(syncer_config.function_name, &config);
 
-    let mut lambda_invocation_futures = Vec::new();
-
-    for config in configs {
-        lambda_invocation_futures.push(
-            lambda_client
-                .invoke()
-                .invocation_type(InvocationType::RequestResponse)
-                .function_name(&syncer_config.function_name)
-                .payload(Blob::new(
-                    serde_json::to_vec(&InvocationRequest {
-                        id: config.id.clone(),
-                        start_block: config.start_block,
-                        end_block: config.end_block,
-                    })
-                    .unwrap(),
-                ))
-                .send(),
-        );
-    }
+    let lambda_invocation_futures: Vec<_> = configs
+        .iter()
+        .map(|config| {
+            sdk.handle(InvocationRequest {
+                id: config.id.clone(),
+                start_block: config.start_block,
+                end_block: config.end_block,
+            })
+        })
+        .collect();
 
     return join_all(lambda_invocation_futures).await;
 }
 
-#[derive(Debug)]
-pub struct S3Result(Vec<IngestTransaction>, usize);
-
 async fn get_s3_results(
-    invocations: &Vec<Result<InvokeOutput, SdkError<InvokeError>>>,
-) -> Vec<S3Result> {
+    invocations: &Vec<Result<InvocationResponse, BoxError>>,
+) -> Vec<Vec<IngestTransaction>> {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let s3_client = aws_sdk_s3::Client::new(&config);
 
     let mut s3_result_futures = Vec::new();
     for invocation in invocations {
-        let output = match invocation {
-            Ok(v) => v.to_owned(),
+        let response = match invocation {
+            Ok(v) => v,
             Err(e) => panic!("Invocation Error: {e}"),
         };
 
-        let payload = match output.payload {
-            Some(v) => v.into_inner(),
-            None => panic!("Blob is empty"),
-        };
+        if let InvocationResponse::Transactions {
+            s3_bucket,
+            s3_prefix,
+            size: _,
+        } = response
+        {
+            s3_result_futures.push(
+                s3_client
+                    .get_object()
+                    .bucket(s3_bucket.to_string())
+                    .key(s3_prefix.to_string())
+                    .send()
+                    .and_then(move |r| async move {
+                        let data = r.body.collect().await.unwrap();
+                        let content =
+                            String::from_utf8(data.into_bytes().to_vec()).expect("Invalid UTF-8");
 
-        let response: InvocationResponse = serde_json::from_slice(&payload).unwrap();
-        if response.s3_bucket.is_none() || response.s3_prefix.is_none() {
-            continue;
+                        let data: Vec<IngestTransaction> = serde_json::from_str(&content).unwrap();
+                        Ok(data)
+                    }),
+            );
         }
-
-        s3_result_futures.push(
-            s3_client
-                .get_object()
-                .bucket(&response.s3_bucket.unwrap())
-                .key(&response.s3_prefix.unwrap())
-                .send()
-                .and_then(move |r| async move {
-                    let data = r.body.collect().await.unwrap();
-                    let content =
-                        String::from_utf8(data.into_bytes().to_vec()).expect("Invalid UTF-8");
-
-                    let data: Vec<IngestTransaction> = serde_json::from_str(&content).unwrap();
-                    Ok(S3Result(data, response.size))
-                }),
-        );
     }
 
     join_all(s3_result_futures)
         .await
         .into_iter()
         .map(|f| f.unwrap())
-        .collect::<Vec<S3Result>>()
+        .collect::<Vec<Vec<IngestTransaction>>>()
 }
 
-async fn delete_s3_results(invocations: &Vec<Result<InvokeOutput, SdkError<InvokeError>>>) {
+async fn delete_s3_results(invocations: &Vec<Result<InvocationResponse, BoxError>>) {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let s3_client = aws_sdk_s3::Client::new(&config);
 
     let mut s3_deletion_futures = Vec::new();
     for invocation in invocations {
-        let output = match invocation {
+        let response = match invocation {
             Ok(v) => v.to_owned(),
             Err(e) => panic!("Invocation Error: {e}"),
         };
 
-        let payload = match output.payload {
-            Some(v) => v.into_inner(),
-            None => panic!("Blob is empty"),
-        };
-
-        let response: InvocationResponse = serde_json::from_slice(&payload).unwrap();
-        if response.s3_bucket.is_none() || response.s3_prefix.is_none() {
-            continue;
+        if let InvocationResponse::Transactions {
+            s3_bucket,
+            s3_prefix,
+            size: _,
+        } = response
+        {
+            s3_deletion_futures.push(
+                s3_client
+                    .delete_object()
+                    .bucket(s3_bucket)
+                    .key(s3_prefix)
+                    .send(),
+            );
         }
-
-        s3_deletion_futures.push(
-            s3_client
-                .delete_object()
-                .bucket(&response.s3_bucket.unwrap())
-                .key(&response.s3_prefix.unwrap())
-                .send(),
-        );
     }
 
     join_all(s3_deletion_futures).await;
@@ -242,8 +217,6 @@ fn get_block_configs(mut start_block: u64, end_block: u64, batch_size: u64) -> V
 
     return result;
 }
-
-use std::env;
 
 pub struct Config {
     pub handler_id: String,

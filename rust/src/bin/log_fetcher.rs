@@ -7,7 +7,7 @@ use ingest::{
         fetcher::{TransactionFetcherImpl, Web3ClientImpl},
         Api,
     },
-    log_fetcher::invocation::{InvocationRequest, InvocationResponse},
+    log_fetcher_sdk::{InvocationRequest, InvocationResponse},
     s3::S3,
     types::manifest::Manifest,
 };
@@ -38,11 +38,7 @@ async fn function_handler(
     };
 
     if transactions.is_empty() {
-        return Ok(InvocationResponse {
-            s3_bucket: None,
-            s3_prefix: None,
-            size: 0,
-        });
+        return Ok(InvocationResponse::NoTransactions);
     }
 
     let body = serde_json::to_string(&transactions).unwrap();
@@ -60,9 +56,9 @@ async fn function_handler(
         .await
         .unwrap();
 
-    Ok(InvocationResponse {
-        s3_bucket: Some(s3_bucket),
-        s3_prefix: Some(key),
+    Ok(InvocationResponse::Transactions {
+        s3_bucket,
+        s3_prefix: key,
         size,
     })
 }
