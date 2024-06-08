@@ -195,7 +195,7 @@ jobs:
           VERSION=${VERSION//\//-}
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
       - name: Installing dependencies 📦️
-        run: cd infra && yarn
+        run: cd infra && yarn --ignore-workspaces
       - uses: pulumi/actions@v3
         with:
           command: up
