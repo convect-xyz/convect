@@ -47,8 +47,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-lambdas
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-${{ matrix.binary }}
+          restore-keys: ${{ runner.os }}-cargo
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
@@ -84,8 +84,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-workspace
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-reporting
+          restore-keys: ${{ runner.os }}-cargo
       - name: Build
         env:
           GITHUB_SHA: ${{ github.sha }}
@@ -123,8 +123,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-workspace
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-${{ matrix.binary }}
+          restore-keys: ${{ runner.os }}-cargo
 
       - name: Build
         env:
