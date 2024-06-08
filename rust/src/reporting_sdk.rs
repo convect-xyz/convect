@@ -31,6 +31,7 @@ pub trait ReportingSdk {
     fn handle(&self, request: &Request) -> impl Future<Output = Result<(), BoxError>>;
 }
 
+#[derive(Clone)]
 pub struct SQSReportingSdk {
     queue_url: String,
 }

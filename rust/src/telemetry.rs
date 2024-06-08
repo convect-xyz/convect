@@ -1,4 +1,5 @@
 use aws_sdk_s3::error::BoxError;
+use futures::Future;
 use std::{collections::HashMap, env};
 
 pub trait ProcessedTransactionTelemetry {
