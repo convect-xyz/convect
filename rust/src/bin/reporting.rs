@@ -1,7 +1,14 @@
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::DateTime;
+use diesel_async::RunQueryDsl;
 use futures::future::join_all;
-use ingest::{connection::establish_connection_pool, models::ProcessedTransaction, reporting_sdk};
+use ingest::{
+    connection::establish_connection_pool,
+    models::ProcessedTransaction,
+    reporting_sdk,
+    schema::processed_transactions,
+    telemetry::{ProcessedTransactionTelemetry, StripeProcessedTransactionTelemetry},
+};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
@@ -49,23 +56,20 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .collect();
 
     let mut conn = pool.get().await.unwrap();
-    let tx_telemtry = telemetry::stripe::ProcessedTransactionTelemetry::from_env();
+    let tx_telemtry = StripeProcessedTransactionTelemetry::from_env();
 
     join_all(data.iter().map(|result| {
         tx_telemtry.record_invocation(
-            result.invocation_id,
+            result.invocation_id.clone(),
             result.results.len().try_into().unwrap(),
         )
     }))
     .await;
 
-    match record {
-        Err(e) => println!("Error recording tx usage: {:?}", e),
-        _ => println!("Sent telemetry."),
-    }
+    let mut conn = pool.get().await?;
 
     let r = diesel::insert_into(processed_transactions::table)
-        .values(data)
+        .values(items)
         .execute(&mut conn)
         .await;
 
