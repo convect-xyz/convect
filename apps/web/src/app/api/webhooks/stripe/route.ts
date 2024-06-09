@@ -1,4 +1,4 @@
-import { schema } from "@kayakthedev/lib";
+import { schema } from "@convect-xyz/lib";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { Stripe } from "stripe";
