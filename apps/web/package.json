@@ -62,7 +62,7 @@
     "superjson": "2.2.1",
     "tailwind-merge": "2.2.1",
     "tailwindcss-animate": "1.0.7",
-    "zod": "3.22.4"
+    "zod": "3.23.8"
   },
   "devDependencies": {
     "@hookform/resolvers": "3.3.4",
