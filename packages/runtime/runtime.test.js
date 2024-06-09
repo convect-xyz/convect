@@ -1,4 +1,4 @@
-import { log, transaction } from "@kayakthedev/sdk";
+import { log, transaction } from "@convect-xyz/sdk";
 import { describe, expect, test, vi } from "vitest";
 import {
   decodeTx,
