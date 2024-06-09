@@ -21,7 +21,10 @@ export default function ContactDialog() {
           <DialogTitle>Contact Us</DialogTitle>
           <DialogDescription>
             You can contact us at{" "}
-            <a href="#" className="font-medium underline underline-offset-2">
+            <a
+              href="mailto:support@convect.xyz"
+              className="font-medium underline underline-offset-2"
+            >
               support@convect.xyz
             </a>{" "}
             for any inquiries.
