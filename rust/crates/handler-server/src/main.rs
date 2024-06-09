@@ -5,11 +5,11 @@ use axum::{
     Router,
 };
 use futures::lock::Mutex;
-use ingest::{
+use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
+use shared::{
     reporting_sdk::{ReportingSdk, SQSReportingSdk},
     types::processing,
 };
-use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
 
 #[derive(Clone)]
 struct AppState {
@@ -68,9 +68,9 @@ mod results {
     use axum::extract::State;
     use axum::{debug_handler, BoxError, Json};
     use futures::TryFutureExt;
-    use ingest::reporting_sdk::{self, TransactionResult};
     use serde::Deserialize;
     use serde_json::{json, Value};
+    use shared::reporting_sdk::{self, TransactionResult};
 
     use crate::AppState;
 
@@ -174,7 +174,7 @@ mod results {
 
 mod get_pipeline {
     use axum::extract::{Json, State};
-    use ingest::types::processing;
+    use shared::types::processing;
 
     use crate::AppState;
 

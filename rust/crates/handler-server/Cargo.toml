@@ -1,0 +1,24 @@
+[package]
+name = "handler-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shared = { path = "../shared", features = ["reporting-sdk"] }
+
+aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
+aws-sdk-sqs = "1.14.0"
+tokio = { version = "1", features = ["full"] }
+serde_json = "1.0.114"
+serde = { version = "1.0.136", features = ["derive"] }
+serde_with = "3.8.1"
+futures = "0.3.30"
+openssl = { version = "0.10.35", features = ["vendored"] }
+aws-smithy-types = "1.1.8"
+async-trait = "0.1.80"
+lambda_http = "0.11.1"
+axum = { version = "0.7.5", features = ["macros"] }
+dotenvy = "0.15"
+axum-macros = "0.4.1"
+lambda-extension = "0.10.0"
+uuid = { version = "1.8.0", features = ["v4", "v7", "js"] }

@@ -47,13 +47,16 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-lambdas
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-${{ matrix.binary }}
+          restore-keys: ${{ runner.os }}-cargo
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
           GITHUB_SHA: ${{ github.sha }}
-        run: sh ./rust/scripts/build.sh
+        run: |
+          cd rust
+          cargo lambda build --output-format zip --release -p $BIN
+          aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/$BIN/bootstrap.zip"
 
   build_reporting:
     runs-on: ubuntu-latest
@@ -81,21 +84,21 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-reporting
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-reporting
+          restore-keys: ${{ runner.os }}-cargo
       - name: Build
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: |
           cd rust
-          cargo lambda build --output-format zip --release --bin=reporting --features="pg telemetry"
+          cargo lambda build --output-format zip --release -p reporting
           aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
 
   build_extensions:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["extension", "http"]
+        binary: ["extension", "handler-server"]
     steps:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -120,9 +123,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-extension
-          restore-keys: ${{ runner.os }}-cargo-
-
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-${{ matrix.binary }}
+          restore-keys: ${{ runner.os }}-cargo
       - name: Build
         env:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
@@ -132,7 +134,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpq-dev postgresql
           cd rust
-          cargo lambda build --extension --output-format zip --release --bin=$BIN
+          cargo lambda build --extension --output-format zip --release -p $BIN
           aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/extensions/$BIN.zip"
 
   build_images:
@@ -157,8 +159,8 @@ jobs:
         with:
           push: true
           tags: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.binary }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
           file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
 
   deploy_pulumi:
@@ -175,7 +177,7 @@ jobs:
         continue-on-error: false
         with:
           path: |
-            node_modules/
+            node_modules
             infra/node_modules
           key: ${{ runner.os }}-deploy-pulumi-${{ hashFiles('infra/yarn.lock') }}-
           restore-keys: ${{ runner.os }}-deploy-pulumi-
@@ -192,7 +194,7 @@ jobs:
           VERSION=${VERSION//\//-}
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
       - name: Installing dependencies 📦️
-        run: cd infra && yarn install
+        run: cd infra && yarn
       - uses: pulumi/actions@v3
         with:
           command: up

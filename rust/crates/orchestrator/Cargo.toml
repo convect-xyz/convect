@@ -1,0 +1,41 @@
+[package]
+name = "orchestrator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shared = { path = "../shared" }
+
+ethers = { version = "2.0", features = ["ws"] }
+aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
+aws-sdk-ecs = "1.20.0"
+aws_lambda_events = { version = "0.15.0", default-features = false, features = [
+  "sns",
+] }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1.0.114"
+serde = { version = "1.0.136", features = ["derive"] }
+serde_with = "3.8.1"
+aws-sdk-lambda = "1.19.0"
+futures = "0.3.30"
+web3 = "0.19.0"
+lambda_runtime = "0.11.1"
+openssl = { version = "0.10.35", features = ["vendored"] }
+uuid = { version = "1.8.0", features = ["v4", "v7", "js"] }
+aws-sdk-sns = "1.18.0"
+reqwest = { version = "0.11", features = ["json", "blocking"] }
+aws-smithy-types = "1.1.8"
+lambda-extension = "0.10.0"
+tracing-subscriber = "0.3.18"
+regex = "1.10.4"
+async-trait = "0.1.80"
+redis = { version = "0.25.3", features = [
+  "json",
+  "cluster",
+  "tls",
+  "aio",
+  "tokio-comp",
+  "tokio-native-tls-comp",
+] }
+lambda_http = "0.11.1"
+dotenvy = "0.15"
