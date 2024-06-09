@@ -1,11 +1,11 @@
 import "~/styles/globals.css";
 
-import { Inter } from "next/font/google";
+import { Manrope } from "next/font/google";
 
 import { ThemeProvider } from "~/components/theme/ThemeProvider";
 import { TRPCReactProvider } from "~/trpc/react";
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ["latin"],
   variable: "--font-sans",
 });
@@ -23,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full">
-      <body className={`font-sans ${inter.variable} h-full`}>
+      <body className={`${manrope.className} h-full`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

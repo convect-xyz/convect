@@ -18,7 +18,7 @@ export default xZod;
 
 export const getDocsUrl = () => {
   if (process.env.NODE_ENV === "production") {
-    return "https://docs.convect.xyz/docs";
+    return "https://docs.convect.xyz/";
   }
-  return "http://localhost:3001/docs";
+  return "http://localhost:3001/";
 };
