@@ -6,6 +6,7 @@ import Auth from "./Auth";
 
 import Link from "next/link";
 import FullLogoIcon from "~/components/icons/FullLogoIcon";
+import ContactDialog from "./ContactDialog";
 
 export default function Layout(props: PropsWithChildren) {
   return (
@@ -15,16 +16,10 @@ export default function Layout(props: PropsWithChildren) {
           <FullLogoIcon className="h-6" />
         </Link>
         <nav className="hidden items-center space-x-4 justify-self-center md:flex">
-          <Link className="text-sm font-medium hover:underline" href="#">
-            Features
-          </Link>
           <Link className="text-sm font-medium hover:underline" href="/pricing">
             Pricing
           </Link>
-          <Link className="text-sm font-medium hover:underline" href="#">
-            Contact
-          </Link>
-
+          <ContactDialog />
           <form
             action={async () => {
               "use server";
