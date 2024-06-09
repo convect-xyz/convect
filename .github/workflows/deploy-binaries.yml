@@ -4,6 +4,11 @@ on:
   release:
     types: [created]
   push:
+    paths:
+      - "rust/**"
+      - "packages/**"
+      - "apps/deployer/**"
+      - "apps/bundler/**"
     branches:
       - "infra/**"
 

@@ -1,4 +1,4 @@
-import { schema } from "@kayakthedev/lib";
+import { schema } from "@convect-xyz/lib";
 import { InferSelectModel, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { Stripe } from "stripe";
