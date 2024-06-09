@@ -28,7 +28,7 @@ export const GET = async (
 
   const producer = await db.query.producers.findFirst({
     where(fields, { eq }) {
-      return eq(fields.altId, params.id);
+      return eq(fields.chainId, params.id);
     },
   });
 
