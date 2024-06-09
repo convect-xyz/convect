@@ -1,3 +1,3 @@
-import { schema } from "@kayakthedev/lib";
+import { schema } from "@convect-xyz/lib";
 
 export default schema;
