@@ -12,7 +12,7 @@ import {
 
 export default function ContactDialog() {
   return (
-    <Dialog defaultOpen>
+    <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline">Contact Us</Button>
       </DialogTrigger>
