@@ -13,6 +13,7 @@ const LOG_FETCHER_S3_BUCKET = "ingest-fetch-logs";
 
 export default async () => {
   const stackRef = new pulumi.StackReference(`${org}/infra/${env.VERSION}`);
+  const githubSha = stackRef.getOutput("outputs").apply((f) => f.github_sha);
 
   const transactionQueue = new aws.sqs.Queue(`tx-queue`, {
     visibilityTimeoutSeconds: 900,
@@ -22,7 +23,7 @@ export default async () => {
   const logFetcher = new aws.lambda.Function(`log-fetcher`, {
     role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     s3Bucket: "ingest-functions",
-    s3Key: `log-fetcher/${env.VERSION}.zip`,
+    s3Key: pulumi.interpolate`log-fetcher/${githubSha}.zip`,
     environment: {
       variables: {
         TRANSACTION_QUEUE_URL: transactionQueue.url,
@@ -33,6 +34,7 @@ export default async () => {
         HANDLER_VERSION: env.HANDLER_VERSION,
         VERSION: env.VERSION,
         S3_BUCKET: LOG_FETCHER_S3_BUCKET,
+        GITHUB_SHA: githubSha,
       },
     },
     timeout: 200,
@@ -44,7 +46,7 @@ export default async () => {
   const orchestrator = new aws.lambda.Function(`orchestrator`, {
     role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     s3Bucket: "ingest-functions",
-    s3Key: `orchestrator/${env.VERSION}.zip`,
+    s3Key: pulumi.interpolate`orchestrator/${githubSha}.zip`,
     environment: {
       variables: {
         TRANSACTION_QUEUE_URL: transactionQueue.url,
@@ -61,6 +63,7 @@ export default async () => {
         SYNCER_CLUSTER,
         SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
         SYNCER_CONTAINER_NAME,
+        GITHUB_SHA: githubSha,
       },
     },
     timeout: 200,
@@ -95,7 +98,7 @@ export default async () => {
     },
     layers: [
       stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn),
-      stackRef.getOutput("outputs").apply((f) => f.http_extension_arn),
+      stackRef.getOutput("outputs").apply((f) => f.handler_server_arn),
     ],
     timeout: 900,
     memorySize: 512,

@@ -5,11 +5,11 @@ use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
 use futures::TryFutureExt;
-use ingest::{
+use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
+use shared::{
     api::{self},
     types::{manifest::Manifest, syncing::State},
 };
-use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -40,7 +40,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     // TODO: this should be added to a DLQ
     if pipeline
         .state()
-        .eq(&ingest::types::syncing::SyncState::SYNCING)
+        .eq(&shared::types::syncing::SyncState::SYNCING)
     {
         return Ok(());
     }
@@ -62,7 +62,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         // It is the responsibility of the ECS task to revert this status
         pipeline
             .update()
-            .set_state(ingest::types::syncing::SyncState::SYNCING)
+            .set_state(shared::types::syncing::SyncState::SYNCING)
             .send()
             .expect("Failed to update pipeline");
 
@@ -88,7 +88,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             println!("{:?}", e);
             let _ = pipeline
                 .update()
-                .set_state(ingest::types::syncing::SyncState::FAILED)
+                .set_state(shared::types::syncing::SyncState::FAILED)
                 .send();
         })
         .await?;
@@ -107,7 +107,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         Ok(_) => pipeline.update().set_last_block(incoming_block).send(),
         Err(_) => pipeline
             .update()
-            .set_state(ingest::types::syncing::SyncState::FAILED)
+            .set_state(shared::types::syncing::SyncState::FAILED)
             .send(),
     }
 }
@@ -204,7 +204,7 @@ async fn trigger_batch_sync_task(
             println!("{:?}", e);
             pipeline
                 .update()
-                .set_state(ingest::types::syncing::SyncState::IDLE)
+                .set_state(shared::types::syncing::SyncState::IDLE)
                 .send()
                 .unwrap()
         }

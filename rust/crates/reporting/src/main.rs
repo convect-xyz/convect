@@ -2,14 +2,14 @@ use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::DateTime;
 use diesel_async::RunQueryDsl;
 use futures::future::join_all;
-use ingest::{
+use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
+use shared::{
     connection::establish_connection_pool,
     models::ProcessedTransaction,
     reporting_sdk,
     schema::processed_transactions,
     telemetry::{ProcessedTransactionTelemetry, StripeProcessedTransactionTelemetry},
 };
-use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     let pool = establish_connection_pool().await;

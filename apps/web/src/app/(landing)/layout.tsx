@@ -44,7 +44,7 @@ export default function Layout(props: PropsWithChildren) {
       <footer className="bg-muted py-6">
         <div className="container mx-auto flex flex-col items-center justify-between px-4 md:flex-row md:px-6 lg:px-8">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            © 2024 convect.xyz. All rights reserved.
+            © 2024 Convect Technologies Limited. All rights reserved.
           </p>
           <div className="mt-4 flex space-x-4 md:mt-0">
             <Link className="text-sm font-medium hover:underline" href="#">

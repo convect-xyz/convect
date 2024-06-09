@@ -3,7 +3,6 @@ use std::env;
 use async_trait::async_trait;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::error::BoxError;
-use futures::Future;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
