@@ -18,13 +18,11 @@ export function CodeBlock(props: CodeBlockProps) {
   const highlighted = hljs.highlight(props.code, { language: "typescript" });
 
   return (
-    <div className="rounded-lg bg-muted">
-      <div className="px-4 py-5">
-        <code
-          className={cn("whitespace-pre-wrap text-xs", roboto_mono.className)}
-          dangerouslySetInnerHTML={{ __html: highlighted.value }}
-        ></code>
-      </div>
+    <div className="rounded-lg bg-muted p-4">
+      <code
+        className={cn("m-0 whitespace-pre-wrap text-xs", roboto_mono.className)}
+        dangerouslySetInnerHTML={{ __html: highlighted.value }}
+      ></code>
     </div>
   );
 }
