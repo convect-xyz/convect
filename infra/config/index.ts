@@ -6,6 +6,7 @@ const schema = z.object({
   reportingDbUrl: z.string(),
   pulumiAccessToken: z.string(),
   stripeApiKey: z.string(),
+  tinybirdApiKey: z.string()
 });
 
 export const getConfigForStack = async () => {
