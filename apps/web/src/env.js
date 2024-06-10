@@ -27,6 +27,8 @@ export const env = createEnv({
 
     AWS_REGION: z.string(),
     AWS_ACCOUNT_ID: z.string(),
+    AWS_ACCESS_KEY_ID: z.string(),
+    AWS_SECRET_ACCESS_KEY: z.string(),
 
     ENCRYPTION_KEY: z.string(),
 
@@ -56,6 +58,8 @@ export const env = createEnv({
     PULUMI_ACCESS_TOKEN: process.env.PULUMI_ACCESS_TOKEN,
     STRIPE_API_KEY: process.env.STRIPE_API_KEY,
     REPORTING_DATABASE_URL: process.env.REPORTING_DATABASE_URL,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

@@ -1,4 +1,4 @@
-import {useQuery} from '@tanstack/react-query';
+import {UseQueryResult, useQuery} from '@tanstack/react-query';
 import {AxiosError} from 'axios';
 import {apiAxios} from '../lib/axios.js';
 
@@ -6,7 +6,7 @@ type GetProjectsResponse = {
 	projects: Array<string>;
 };
 
-export function useProjects() {
+export function useProjects(): UseQueryResult<GetProjectsResponse> {
 	return useQuery({
 		queryKey: ['projects'],
 		queryFn: async () => {
