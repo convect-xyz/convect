@@ -38,15 +38,7 @@ export const env = createEnv({
 
     REPORTING_DATABASE_URL: z.string(),
   },
-
-  /**
-   * Specify your client-side environment variables schema here. This way you can ensure the app
-   * isn't built with invalid env vars. To expose them to the client, prefix them with
-   * `NEXT_PUBLIC_`.
-   */
-  client: {
-    NEXT_PUBLIC_APP_NAME: z.string(),
-  },
+  client: {},
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
@@ -57,7 +49,6 @@ export const env = createEnv({
     GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
     GITHUB_PRIVATE_KEY: process.env.GITHUB_PRIVATE_KEY,
-    NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     AWS_REGION: process.env.AWS_REGION,
     AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID,
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
