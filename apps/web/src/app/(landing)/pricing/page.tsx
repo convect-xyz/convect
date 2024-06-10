@@ -24,13 +24,13 @@ export default function Page() {
               <PricingTitle title="Free" />
               <PricingDescription description="Get started with our free plan." />
             </PricingHeader>
-            <PricingPrice price="Free" />
+            <PricingPrice price={{ value: "$0", schedule: "MONTHLY" }} />
             <PricingFeatures>
-              <PricingFeature feature="Processing analytics" />
-              <PricingFeature feature="Processing analytics" />
-              <PricingFeature feature="Processing analytics" />
+              <PricingFeature feature="100k transactions per month" />
+              <PricingFeature feature="Function analytics" />
             </PricingFeatures>
             <form
+              className="mt-auto pt-5"
               action={async () => {
                 "use server";
 
@@ -48,11 +48,11 @@ export default function Page() {
             </PricingHeader>
             <PricingPrice price={{ value: "$20", schedule: "MONTHLY" }} />
             <PricingFeatures>
-              <PricingFeature feature="Processing analytics" />
-              <PricingFeature feature="Processing analytics" />
-              <PricingFeature feature="Processing analytics" />
+              <PricingFeature feature="2m free transactions per month" />
+              <PricingFeature feature="Function analytics" />
             </PricingFeatures>
             <form
+              className="mt-auto pt-5"
               action={async () => {
                 "use server";
 
@@ -72,11 +72,12 @@ export default function Page() {
             </PricingHeader>
             <PricingPrice price="Contact Us" />
             <PricingFeatures>
-              <PricingFeature feature="Processing analytics" />
-              <PricingFeature feature="Processing analytics" />
-              <PricingFeature feature="Processing analytics" />
+              <PricingFeature feature="Custom transaction processing" />
+              <PricingFeature feature="Function analytics" />
+              <PricingFeature feature="Engineering Support" />
             </PricingFeatures>
             <form
+              className="mt-auto pt-5"
               action={async () => {
                 "use server";
                 await signIn("github", {
