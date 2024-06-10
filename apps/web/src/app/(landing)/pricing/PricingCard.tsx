@@ -1,9 +1,17 @@
 import { ComponentProps, PropsWithChildren } from "react";
+import { cn } from "~/lib/utils";
 
-export function PricingCard(props: PropsWithChildren) {
+export function PricingCard(props: PropsWithChildren<ComponentProps<"div">>) {
+  const { className, ...rest } = props;
   return (
-    <div className="rounded-lg bg-muted p-6 shadow-sm">
-      <div className="space-y-4">{props.children}</div>
+    <div
+      {...rest}
+      className={cn(
+        "flex flex-col gap-3 rounded-lg bg-muted p-6 shadow-sm",
+        className,
+      )}
+    >
+      {props.children}
     </div>
   );
 }
@@ -12,12 +20,12 @@ export function PricingHeader(props: PropsWithChildren) {
   return <div className="space-y-2">{props.children}</div>;
 }
 export function PricingTitle(props: { title: string }) {
-  return <h3 className="text-2xl font-bold">{props.title}</h3>;
+  return <h3 className="text-xl font-bold">{props.title}</h3>;
 }
 
 export function PricingDescription(props: { description: string }) {
   return (
-    <p className="h-[50px] text-gray-500 dark:text-gray-400">
+    <p className="h-[35px] text-sm text-gray-500 dark:text-gray-400">
       {props.description}
     </p>
   );
@@ -34,8 +42,8 @@ export function PricingPrice(
   }>,
 ) {
   return (
-    <div className="space-y-1">
-      <span className="text-4xl font-bold">
+    <div>
+      <span className="text-3xl font-bold">
         {typeof props.price === "string" ? props.price : props.price.value}
       </span>
       {typeof props.price !== "string" && (
