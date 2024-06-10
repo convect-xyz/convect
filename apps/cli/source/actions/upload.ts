@@ -1,6 +1,6 @@
-import axios from 'axios';
 import FormData from 'form-data';
 import fs from 'fs';
+import {apiAxios} from '../lib/axios.js';
 
 type UploadOutputsOptions =
 	| {
@@ -33,24 +33,15 @@ export async function uploadOutputs(options: UploadOutputsOptions) {
 	bodyFormData.append('mode', options.mode);
 	bodyFormData.append('project', project);
 	bodyFormData.append('handlerName', handlerName);
-	bodyFormData.append('handler', fs.readFileSync(outfile));
+	bodyFormData.append('handler', fs.createReadStream(outfile));
 	if (options.mode === 'init') {
-		bodyFormData.append('manifest', fs.readFileSync(options.outmanifest));
+		bodyFormData.append('manifest', fs.createReadStream(options.outmanifest));
 		bodyFormData.append('override', options.override.toString());
 		bodyFormData.append('node', options.chain);
 	}
 
 	try {
-		await axios.post(
-			'http://localhost:3000/api/cli/deployments',
-			bodyFormData,
-			{
-				headers: {
-					'Content-Type': 'multipart/form-data',
-					Authorization: `Bearer ${apiKey}`,
-				},
-			},
-		);
+		await apiAxios.post('/api/cli/deployments', bodyFormData);
 	} catch (e: any) {
 		throw new Error(e.response?.data.message ?? 'An unexpected error occurred');
 	}
