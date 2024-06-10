@@ -6,11 +6,11 @@ import { pulumiAxios } from "./axios";
 const schema = z.object({
   outputs: z.object({
     outputs: z.object({
-      github_sha: z.string(),
-      handler_server_arn: z.string(),
-      handler_extension_arn: z.string(),
-      builder_task_definition: z.string(),
-      syncer_task_definition: z.string(),
+      githubSha: z.string(),
+      handlerServerArn: z.string(),
+      handlerExtensionArn: z.string(),
+      builderTaskDefinition: z.string(),
+      syncerTaskDefinition: z.string(),
     }),
   }),
 });
