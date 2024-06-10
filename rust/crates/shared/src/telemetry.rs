@@ -37,12 +37,13 @@ impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
         form_data.insert("payload[stripe_customer_id]", &customer_id);
         form_data.insert("identifier", &invocation_id);
 
-        let r = self.client
-                .post("https://api.stripe.com/v1/billing/meter_events")
-                .form(&form_data)
-                .basic_auth("REDACTED", None::<String>)
-                .send()
-                .await?;
+        let r = self
+            .client
+            .post("https://api.stripe.com/v1/billing/meter_events")
+            .form(&form_data)
+            .basic_auth(env!("STRIPE_API_KEY"), None::<String>)
+            .send()
+            .await?;
 
         println!("{:?}", r.text().await.unwrap());
 

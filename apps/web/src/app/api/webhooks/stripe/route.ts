@@ -2,11 +2,10 @@ import { schema } from "@convect-xyz/lib";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { Stripe } from "stripe";
+import { env } from "~/env";
 import { db } from "~/server/db";
 
-const stripe = new Stripe(
-  "REDACTED",
-);
+const stripe = new Stripe(env.STRIPE_API_KEY);
 const WEBHOOK_SECRET =
   "REDACTED";
 
