@@ -6,11 +6,11 @@ import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { Redis } from "ioredis";
 import { Pool } from "pg";
 import { z } from "zod";
+import { env } from "~/env";
 import { protectedProcedure } from "~/server/api/trpc";
 
 const conn = new Pool({
-  connectionString:
-    "postgresql://postgres:REDACTED@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres",
+  connectionString: env.REPORTING_DATABASE_URL,
   ssl: {
     checkServerIdentity: (servername, cert) => {
       return undefined;

@@ -35,6 +35,8 @@ export const env = createEnv({
     PULUMI_ACCESS_TOKEN: z.string(),
 
     STRIPE_API_KEY: z.string(),
+
+    REPORTING_DATABASE_URL: z.string(),
   },
 
   /**
@@ -64,6 +66,7 @@ export const env = createEnv({
     VERSION: process.env.VERSION,
     PULUMI_ACCESS_TOKEN: process.env.PULUMI_ACCESS_TOKEN,
     STRIPE_API_KEY: process.env.STRIPE_API_KEY,
+    REPORTING_DATABASE_URL: process.env.REPORTING_DATABASE_URL,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
