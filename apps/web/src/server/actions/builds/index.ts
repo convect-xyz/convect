@@ -23,7 +23,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
 
   const command = new RunTaskCommand({
     cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
-    taskDefinition: outputs.builder_task_definition,
+    taskDefinition: outputs.builderTaskDefinition,
     networkConfiguration: {
       awsvpcConfiguration: {
         subnets: ["subnet-05d39f2476de29dc7"],
@@ -120,7 +120,7 @@ export async function destroyDeployment(options: DestroyDeploymentOptions) {
 
   const command = new RunTaskCommand({
     cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
-    taskDefinition: outputs.builder_task_definition,
+    taskDefinition: outputs.builderTaskDefinition,
     networkConfiguration: {
       awsvpcConfiguration: {
         subnets: ["subnet-05d39f2476de29dc7"],
