@@ -1,4 +1,4 @@
-import {useQuery} from '@tanstack/react-query';
+import {UseQueryResult, useQuery} from '@tanstack/react-query';
 import {AxiosError} from 'axios';
 import {apiAxios} from '../lib/axios.js';
 
@@ -9,7 +9,7 @@ type GetChainsResponse = {
 	}>;
 };
 
-export function useChains() {
+export function useChains(): UseQueryResult<GetChainsResponse['chains']> {
 	return useQuery({
 		queryKey: ['chains'],
 		queryFn: async () => {
