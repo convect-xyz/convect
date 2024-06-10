@@ -24,7 +24,6 @@ export const env = createEnv({
     GITHUB_CLIENT_ID: z.string(),
     GITHUB_CLIENT_SECRET: z.string(),
     GITHUB_PRIVATE_KEY: z.string(),
-    REPOSITORY_WEBHOOK_RECEIVER_URL: z.string(),
 
     AWS_REGION: z.string(),
     AWS_ACCOUNT_ID: z.string(),
