@@ -74,7 +74,7 @@ export const switchPlan = protectedProcedure
     };
   });
 
-const getStripeCustomerId = async (
+export const getStripeCustomerId = async (
   user: InferSelectModel<typeof schema.users>,
 ) => {
   if (user.stripeCustomerId) {
