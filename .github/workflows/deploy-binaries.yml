@@ -150,7 +150,7 @@ jobs:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         with:
           command: output
-          stack-name: ${{ env.VERSION }}
+          stack-name: kayakthedev/infra/${{ env.VERSION }}
       - name: Build
         env:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
