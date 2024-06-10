@@ -8,6 +8,7 @@ on:
       - "rust/**"
       - "packages/**"
       - "apps/bundler/**"
+      - "infra/**"
     branches:
       - "infra/**"
 
