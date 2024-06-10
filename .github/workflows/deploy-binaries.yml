@@ -138,25 +138,11 @@ jobs:
             rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-${{ matrix.binary }}
           restore-keys: ${{ runner.os }}-cargo
-      - name: Set version
-        env:
-          VERSION: ${{ github.event.inputs.version || github.event.release.tag_name || github.ref_name }}
-        run: |
-          VERSION=${VERSION//\//-}
-          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
-      - uses: pulumi/actions@v5
-        id: pulumi
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-        with:
-          command: output
-          stack-name: kayakthedev/infra/${{ env.VERSION }}
       - name: Build
         env:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
           BIN: ${{ matrix.binary }}
           GITHUB_SHA: ${{ github.sha }}
-          STRIPE_API_KEY: ${{ steps.pulumi.outputs.config.stripeApiKey }}
         run: |
           sudo apt-get update
           sudo apt-get install -y libpq-dev postgresql

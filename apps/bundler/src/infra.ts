@@ -84,9 +84,6 @@ export default async () => {
       variables: {
         HANDLER_ID: env.HANDLER_ID,
         HANDLER_VERSION: env.HANDLER_VERSION,
-        MUST_REMOVE_CONVECT_TBK: stackRef
-          .getOutput("config")
-          .apply((v) => v.pulumiAccessToken),
         USER_ENVS: env.HANDLER_ENVS,
         TRANSACTION_QUEUE_URL: transactionQueue.url,
         STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
