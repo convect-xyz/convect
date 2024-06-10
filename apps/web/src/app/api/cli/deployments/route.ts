@@ -8,6 +8,7 @@ import { env } from "~/env";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
 import { createDeployment } from "~/server/actions/builds";
+import { getStripeCustomerId } from "~/server/api/routers/billing/switchPlan";
 import { db } from "~/server/db";
 import { getData, getUserContext } from "../utils";
 
@@ -160,7 +161,7 @@ export const POST = async (req: NextRequest) => {
     manifestBucket: MANIFEST_BUCKET,
     manifestPrefix,
     deploymentId,
-    stripeCustomerId: user.stripeCustomerId!,
+    stripeCustomerId: await getStripeCustomerId(user),
     internalHandlerId: handler.internalId,
     internalHandlerVersion: handler.version,
     pollingUrl: handler.producer.pollingUrl,
