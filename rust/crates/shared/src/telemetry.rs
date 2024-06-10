@@ -1,6 +1,6 @@
 use aws_sdk_s3::error::BoxError;
 use futures::Future;
-use std::collections::HashMap;
+use std::{collections::HashMap, env};
 
 pub trait ProcessedTransactionTelemetry {
     fn record_invocation(
@@ -41,7 +41,10 @@ impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
             .client
             .post("https://api.stripe.com/v1/billing/meter_events")
             .form(&form_data)
-            .basic_auth(env!("STRIPE_API_KEY"), None::<String>)
+            .basic_auth(
+                env::var("STRIPE_API_KEY").expect("STRIPE_API_KEY not set"),
+                None::<String>,
+            )
             .send()
             .await?;
 

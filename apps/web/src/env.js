@@ -63,6 +63,7 @@ export const env = createEnv({
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
     VERSION: process.env.VERSION,
     PULUMI_ACCESS_TOKEN: process.env.PULUMI_ACCESS_TOKEN,
+    STRIPE_API_KEY: process.env.STRIPE_API_KEY,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

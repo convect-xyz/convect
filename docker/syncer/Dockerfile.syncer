@@ -17,7 +17,7 @@ WORKDIR /app
 COPY ./config ./config
 WORKDIR /app/rust
 COPY ./rust ./
-RUN cargo build --release --bin=syncer
+RUN cargo build --release -p syncer
 RUN mv ./target/release/syncer ./app
 
 FROM --platform=linux/amd64 debian:stable-slim AS runtime
