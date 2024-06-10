@@ -3,7 +3,7 @@ name: "Build, Test"
 on:
   workflow_dispatch:
     inputs:
-      logLevel:
+      version:
         description: "Infra Version"
         required: true
         default: "warning"
@@ -202,7 +202,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Set version
         env:
-          VERSION: ${{ github.event.inputs.name || github.event.release.tag_name || github.ref_name }}
+          VERSION: ${{ github.event.inputs.version || github.event.release.tag_name || github.ref_name }}
         run: |
           VERSION=${VERSION//\//-}
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
