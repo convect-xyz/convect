@@ -13,7 +13,7 @@ const LOG_FETCHER_S3_BUCKET = "ingest-fetch-logs";
 
 export default async () => {
   const stackRef = new pulumi.StackReference(`${org}/infra/${env.VERSION}`);
-  const githubSha = stackRef.getOutput("github_sha");
+  const githubSha = stackRef.getOutput("githubSha");
 
   const transactionQueue = new aws.sqs.Queue(`tx-queue`, {
     visibilityTimeoutSeconds: 900,
@@ -57,9 +57,7 @@ export default async () => {
         HANDLER_ID: env.HANDLER_ID,
         HANDLER_VERSION: env.HANDLER_VERSION,
         VERSION: env.VERSION,
-        SYNCER_TASK_DEFINITION_ARN: stackRef.getOutput(
-          "syncer_task_definition"
-        ),
+        SYNCER_TASK_DEFINITION_ARN: stackRef.getOutput("syncerTaskDefinition"),
         SYNCER_CLUSTER,
         SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
         SYNCER_CONTAINER_NAME,
@@ -86,17 +84,18 @@ export default async () => {
       variables: {
         HANDLER_ID: env.HANDLER_ID,
         HANDLER_VERSION: env.HANDLER_VERSION,
-        MUST_REMOVE_CONVECT_TBK:
-          "p.eyJ1IjogIjJlYjlhNzU2LWFjMDMtNDJmOC1iNGY2LWI2M2RhN2JiMjkyNiIsICJpZCI6ICJjZTE2YmI1Yi04NDBiLTQwNGMtYjk4Yi0zMjJiNDc4ZDMyYWEiLCAiaG9zdCI6ICJhd3MtZXUtY2VudHJhbC0xIn0.1Bvj9OA-NZQ0cU62T1sweLScNLMPsv8FIGaP8nkHoRw",
+        MUST_REMOVE_CONVECT_TBK: stackRef
+          .getOutput("config")
+          .apply((v) => v.pulumiAccessToken),
         USER_ENVS: env.HANDLER_ENVS,
         TRANSACTION_QUEUE_URL: transactionQueue.url,
         STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
-        REPORTING_QUEUE_URL: stackRef.getOutput("reporting_queue_url"),
+        REPORTING_QUEUE_URL: stackRef.getOutput("reportingQueueUrl"),
       },
     },
     layers: [
-      stackRef.getOutput("handler_extension_arn"),
-      stackRef.getOutput("handler_server_arn"),
+      stackRef.getOutput("handlerExtensionArn"),
+      stackRef.getOutput("handlerServerArn"),
     ],
     timeout: 900,
     memorySize: 512,

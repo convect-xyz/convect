@@ -9,6 +9,8 @@ export = async () => {
   const config = await getConfigForStack();
   const reportingQueue = new aws.sqs.Queue(`reporting-queue`, {
     visibilityTimeoutSeconds: 300,
+  }, {
+    deleteBeforeReplace: false
   });
 
   const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
@@ -187,13 +189,13 @@ export = async () => {
   );
 
   return {
-    handler_extension_arn: extension.arn,
-    handler_server_arn: handler_server.arn,
-    builder_task_definition: builder.arn,
-    syncer_task_definition: syncer.arn,
-    reporting_handler_arn: reportingHandler.arn,
-    reporting_queue_url: reportingQueue.url,
-    github_sha: pulumi.output(GITHUB_SHA),
+    handlerExtensionArn: extension.arn,
+    handlerServerArn: handler_server.arn,
+    builderTaskDefinition: builder.arn,
+    syncerTaskDefinition: syncer.arn,
+    reportingHandlerArn: reportingHandler.arn,
+    reportingQueueUrl: reportingQueue.url,
+    githubSha: pulumi.output(GITHUB_SHA),
     config: pulumi.secret(config),
   };
 };
