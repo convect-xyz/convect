@@ -13,7 +13,7 @@ const LOG_FETCHER_S3_BUCKET = "ingest-fetch-logs";
 
 export default async () => {
   const stackRef = new pulumi.StackReference(`${org}/infra/${env.VERSION}`);
-  const githubSha = stackRef.getOutput("outputs").apply((f) => f.github_sha);
+  const githubSha = stackRef.getOutput("github_sha");
 
   const transactionQueue = new aws.sqs.Queue(`tx-queue`, {
     visibilityTimeoutSeconds: 900,
@@ -57,9 +57,9 @@ export default async () => {
         HANDLER_ID: env.HANDLER_ID,
         HANDLER_VERSION: env.HANDLER_VERSION,
         VERSION: env.VERSION,
-        SYNCER_TASK_DEFINITION_ARN: stackRef
-          .getOutput("outputs")
-          .apply((f) => f.syncer_task_definition),
+        SYNCER_TASK_DEFINITION_ARN: stackRef.getOutput(
+          "syncer_task_definition"
+        ),
         SYNCER_CLUSTER,
         SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
         SYNCER_CONTAINER_NAME,
@@ -91,14 +91,12 @@ export default async () => {
         USER_ENVS: env.HANDLER_ENVS,
         TRANSACTION_QUEUE_URL: transactionQueue.url,
         STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
-        REPORTING_QUEUE_URL: stackRef
-          .getOutput("outputs")
-          .apply((f) => f.reporting_queue_url),
+        REPORTING_QUEUE_URL: stackRef.getOutput("reporting_queue_url"),
       },
     },
     layers: [
-      stackRef.getOutput("outputs").apply((f) => f.handler_extension_arn),
-      stackRef.getOutput("outputs").apply((f) => f.handler_server_arn),
+      stackRef.getOutput("handler_extension_arn"),
+      stackRef.getOutput("handler_server_arn"),
     ],
     timeout: 900,
     memorySize: 512,

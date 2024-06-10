@@ -48,9 +48,13 @@ export default function Layout(props: PropsWithChildren) {
             <Link className="text-sm font-medium hover:underline" href="#">
               Terms
             </Link>
-            <Link className="text-sm font-medium hover:underline" href="#">
-              Contact
-            </Link>
+            <ContactDialog
+              trigger={
+                <button className="text-sm font-medium hover:underline">
+                  Contact
+                </button>
+              }
+            />
           </div>
         </div>
       </footer>
