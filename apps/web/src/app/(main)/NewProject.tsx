@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DialogProps } from "@radix-ui/react-dialog";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -22,7 +23,7 @@ export function NewProjectDialog(props: DialogProps) {
     <Dialog {...props}>
       <DialogOverlay />
       <DialogContent className="max-w-lg px-8">
-        <Content />
+        <Content {...props} />
       </DialogContent>
     </Dialog>
   );
@@ -34,22 +35,26 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-function Content() {
+function Content(props: DialogProps) {
   const form = useForm<Values>({
     resolver: zodResolver(schema),
   });
+  const router = useRouter();
 
   const utils = api.useUtils();
-  const { mutateAsync: createProject } = api.project.create.useMutation({
-    onSuccess() {
-      utils.project.getProjects.invalidate();
-    },
-  });
+  const { mutateAsync: createProject, isPending: isCreatingProject } =
+    api.project.create.useMutation({
+      onSuccess() {
+        utils.project.getProjects.invalidate();
+      },
+    });
 
   const onSubmit = async (values: Values) => {
-    createProject({
+    const project = await createProject({
       name: values.name,
     });
+    router.push(`/projects/${project.id}`);
+    props.onOpenChange?.(false);
   };
 
   return (
@@ -72,7 +77,9 @@ function Content() {
               </FormItem>
             )}
           />
-          <Button type="submit">Create</Button>
+          <Button type="submit" isLoading={isCreatingProject}>
+            Create
+          </Button>
         </div>
       </form>
     </Form>
