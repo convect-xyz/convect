@@ -20,6 +20,7 @@ export = async () => {
     environment: {
       variables: {
         DATABASE_URL: config.reportingDbUrl,
+        STRIPE_API_KEY: config.stripeApiKey
       },
     },
     timeout: 300,

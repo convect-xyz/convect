@@ -5,13 +5,11 @@ import { pulumiAxios } from "./axios";
 
 const schema = z.object({
   outputs: z.object({
-    outputs: z.object({
-      githubSha: z.string(),
-      handlerServerArn: z.string(),
-      handlerExtensionArn: z.string(),
-      builderTaskDefinition: z.string(),
-      syncerTaskDefinition: z.string(),
-    }),
+    githubSha: z.string(),
+    handlerServerArn: z.string(),
+    handlerExtensionArn: z.string(),
+    builderTaskDefinition: z.string(),
+    syncerTaskDefinition: z.string(),
   }),
 });
 
@@ -24,5 +22,5 @@ export async function getStackOutputs() {
       );
     })
     .then(schema.parse)
-    .then((d) => d.outputs.outputs);
+    .then((d) => d.outputs);
 }
