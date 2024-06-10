@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { signIn } from "~/auth";
 import { Button } from "~/components/ui/button";
 import {
@@ -32,12 +30,6 @@ export default function Login() {
                 Login with GitHub
               </Button>
             </form>
-          </div>
-          <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{" "}
-            <Link href="#" className="underline">
-              Sign up
-            </Link>
           </div>
         </CardContent>
       </Card>
