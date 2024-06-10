@@ -17,8 +17,7 @@ export default async () => {
     s3Key: `reporting/${GITHUB_SHA}.zip`,
     environment: {
       variables: {
-        DATABASE_URL:
-          "postgresql://postgres:postgres@example.cxy2caa825w6.eu-west-1.rds.amazonaws.com:5432/postgres?sslmode=require",
+        DATABASE_URL: config.reportingDbUrl,
       },
     },
     timeout: 300,
@@ -146,7 +145,7 @@ export default async () => {
           environment: [
             {
               name: "PULUMI_ACCESS_TOKEN",
-              value: process.env.PULUMI_ACCESS_TOKEN,
+              value: config.pulumiAccessToken,
             },
             {
               name: "VERSION",
@@ -194,7 +193,7 @@ export default async () => {
     syncer_task_definition: syncer.arn,
     reporting_handler_arn: reportingHandler.arn,
     reporting_queue_url: reportingQueue.url,
-    github_sha: pulumi.Output.create(GITHUB_SHA),
+    github_sha: pulumi.output(GITHUB_SHA),
     config: pulumi.secret(config),
   };
 };

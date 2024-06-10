@@ -3,10 +3,11 @@ import * as z from "zod";
 
 const stackName = pulumi.getStack();
 const schema = z.object({
+  reportingDbUrl: z.string(),
   pulumiAccessToken: z.string(),
   stripeApiKey: z.string(),
 });
 
 export const getConfigForStack = async () => {
-  return import(`./${stackName}`).then(schema.parse);
+  return import(`./${stackName}`).then((v) => schema.parse(v.default));
 };
