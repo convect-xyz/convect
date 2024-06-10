@@ -10,5 +10,5 @@ const schema = z.object({
 });
 
 export const getConfigForStack = async () => {
-  return import(`./${stackName}`).then(schema.parse);
+  return import(`./${stackName}`).then((v) => schema.parse(v.default));
 };
