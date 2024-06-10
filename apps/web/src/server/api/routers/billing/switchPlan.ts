@@ -3,12 +3,11 @@ import { InferSelectModel, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { Stripe } from "stripe";
 import { z } from "zod";
+import { env } from "~/env";
 import { protectedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 
-const stripe = new Stripe(
-  "sk_test_51PMr2V2LJct0ubJ3nTq8p9kTNpPCBHcvzv8RMWmLHdYLFKgo8wMnNUu5bX7Zya2DmyopOsfqxpIosTXKHcYRe7Wl00ey4kK1D8",
-);
+const stripe = new Stripe(env.STRIPE_API_KEY);
 
 function getLineItems(plan: "FREE" | "STARTUP" | "PROFESSIONAL") {
   switch (plan) {

@@ -33,6 +33,8 @@ export const env = createEnv({
     VERSION: z.string(),
 
     PULUMI_ACCESS_TOKEN: z.string(),
+
+    STRIPE_API_KEY: z.string(),
   },
 
   /**
