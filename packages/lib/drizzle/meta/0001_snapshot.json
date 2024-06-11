@@ -1,10 +1,8 @@
 {
-  "id": "22148a95-09bc-48ed-a75b-c4502e7e95f3",
-  "prevId": "b06a7086-6330-4d38-84f1-9e13679e28ba",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "web_account": {
+    "public.web_account": {
       "name": "web_account",
       "schema": "",
       "columns": {
@@ -83,26 +81,34 @@
       },
       "indexes": {
         "account_userId_idx": {
-          "name": "account_userId_idx",
           "columns": [
-            "userId"
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "account_userId_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "web_account_userId_web_user_id_fk": {
           "name": "web_account_userId_web_user_id_fk",
           "tableFrom": "web_account",
-          "tableTo": "web_user",
           "columnsFrom": [
             "userId"
           ],
+          "tableTo": "web_user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -116,7 +122,7 @@
       },
       "uniqueConstraints": {}
     },
-    "web_deployment": {
+    "public.web_deployment": {
       "name": "web_deployment",
       "schema": "",
       "columns": {
@@ -141,32 +147,40 @@
       },
       "indexes": {
         "deployment_handlerId_idx": {
-          "name": "deployment_handlerId_idx",
           "columns": [
-            "handlerId"
+            {
+              "expression": "handlerId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "deployment_handlerId_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "web_deployment_handlerId_web_handler_id_fk": {
           "name": "web_deployment_handlerId_web_handler_id_fk",
           "tableFrom": "web_deployment",
-          "tableTo": "web_handler",
           "columnsFrom": [
             "handlerId"
           ],
+          "tableTo": "web_handler",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "web_handler": {
+    "public.web_handler": {
       "name": "web_handler",
       "schema": "",
       "columns": {
@@ -200,43 +214,43 @@
         "web_handler_projectId_web_project_id_fk": {
           "name": "web_handler_projectId_web_project_id_fk",
           "tableFrom": "web_handler",
-          "tableTo": "web_project",
           "columnsFrom": [
             "projectId"
           ],
+          "tableTo": "web_project",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "web_handler_producerId_web_producer_id_fk": {
           "name": "web_handler_producerId_web_producer_id_fk",
           "tableFrom": "web_handler",
-          "tableTo": "web_producer",
           "columnsFrom": [
             "producerId"
           ],
+          "tableTo": "web_producer",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "web_handler_name_projectId_unique": {
           "name": "web_handler_name_projectId_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "name",
             "projectId"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       }
     },
-    "web_handler_env": {
+    "public.web_handler_env": {
       "name": "web_handler_env",
       "schema": "",
       "columns": {
@@ -283,30 +297,30 @@
         "web_handler_env_handler_id_web_handler_id_fk": {
           "name": "web_handler_env_handler_id_web_handler_id_fk",
           "tableFrom": "web_handler_env",
-          "tableTo": "web_handler",
           "columnsFrom": [
             "handler_id"
           ],
+          "tableTo": "web_handler",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "web_handler_env_handler_id_key_unique": {
           "name": "web_handler_env_handler_id_key_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "handler_id",
             "key"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       }
     },
-    "web_producer": {
+    "public.web_producer": {
       "name": "web_producer",
       "schema": "",
       "columns": {
@@ -361,48 +375,56 @@
       },
       "indexes": {
         "producers_userId_idx": {
-          "name": "producers_userId_idx",
           "columns": [
-            "userId"
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "producers_userId_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "web_producer_userId_web_user_id_fk": {
           "name": "web_producer_userId_web_user_id_fk",
           "tableFrom": "web_producer",
-          "tableTo": "web_user",
           "columnsFrom": [
             "userId"
           ],
+          "tableTo": "web_user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "web_producer_altId_unique": {
           "name": "web_producer_altId_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "altId"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "web_producer_userId_name_unique": {
           "name": "web_producer_userId_name_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "userId",
             "name"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       }
     },
-    "web_project": {
+    "public.web_project": {
       "name": "web_project",
       "schema": "",
       "columns": {
@@ -427,41 +449,49 @@
       },
       "indexes": {
         "project_userId_idx": {
-          "name": "project_userId_idx",
           "columns": [
-            "userId"
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "project_userId_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "web_project_userId_web_user_id_fk": {
           "name": "web_project_userId_web_user_id_fk",
           "tableFrom": "web_project",
-          "tableTo": "web_user",
           "columnsFrom": [
             "userId"
           ],
+          "tableTo": "web_user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "web_project_name_userId_unique": {
           "name": "web_project_name_userId_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "name",
             "userId"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       }
     },
-    "web_session": {
+    "public.web_session": {
       "name": "web_session",
       "schema": "",
       "columns": {
@@ -486,32 +516,40 @@
       },
       "indexes": {
         "session_userId_idx": {
-          "name": "session_userId_idx",
           "columns": [
-            "userId"
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "session_userId_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "web_session_userId_web_user_id_fk": {
           "name": "web_session_userId_web_user_id_fk",
           "tableFrom": "web_session",
-          "tableTo": "web_user",
           "columnsFrom": [
             "userId"
           ],
+          "tableTo": "web_user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "web_user": {
+    "public.web_user": {
       "name": "web_user",
       "schema": "",
       "columns": {
@@ -552,7 +590,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "web_verificationToken": {
+    "public.web_verificationToken": {
       "name": "web_verificationToken",
       "schema": "",
       "columns": {
@@ -592,8 +630,10 @@
   "enums": {},
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "22148a95-09bc-48ed-a75b-c4502e7e95f3",
+  "prevId": "b06a7086-6330-4d38-84f1-9e13679e28ba"
 }
