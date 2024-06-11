@@ -7,6 +7,7 @@ type TriggerBuildOptions = {
   version: string;
   deploymentId: string;
   stripeCustomerId: string;
+  userId: string;
   internalHandlerId: string;
   internalHandlerVersion: number;
   manifestBucket: string;
@@ -81,6 +82,10 @@ export async function createDeployment(options: TriggerBuildOptions) {
             {
               name: "STRIPE_CUSTOMER_ID",
               value: options.stripeCustomerId,
+            },
+            {
+              name: "USER_ID",
+              value: options.userId,
             },
             {
               name: "HANDLER_ENVS",

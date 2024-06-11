@@ -110,6 +110,7 @@ mod results {
                     .expect("HANDLER_VERSION is not defined"),
                 stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
                     .expect("STRIPE_CUSTOMER_ID is not defined"),
+                user_id: Some(env::var("USER_ID").expect("USER_ID is not defined")),
                 invocation_id: payload.invocation_id,
                 results: payload.results,
             })

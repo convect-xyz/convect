@@ -12,3 +12,13 @@ pub struct ProcessedTransaction<'a> {
     pub handler_id: &'a str,
     pub handler_version: &'a str,
 }
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::invocation)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Invocation<'a> {
+    pub user_id: &'a str,
+    pub invocation_id: &'a str,
+    pub timestamp: DateTime<Utc>,
+    pub num_processed: i32,
+}
