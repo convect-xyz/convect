@@ -1,6 +1,6 @@
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
-use diesel_async::RunQueryDsl;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use futures::try_join;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
@@ -41,20 +41,25 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .map(Option::unwrap)
         .collect();
 
-    let mut conn = pool.get().await?;
-    let r = try_join!(
-        diesel::insert_into(invocation::table)
-            .values(invocations)
-            .execute(&mut conn),
-        diesel::insert_into(processed_transactions::table)
-            .values(transactions)
-            .execute(&mut conn)
-    );
+    pool.get()
+        .await?
+        .transaction::<_, Error, _>(|conn| {
+            async move {
+                try_join!(
+                    diesel::insert_into(invocation::table)
+                        .values(invocations)
+                        .execute(conn),
+                    diesel::insert_into(processed_transactions::table)
+                        .values(transactions)
+                        .execute(conn)
+                )?;
 
-    match r {
-        Ok(_) => println!("Inserted"),
-        Err(e) => panic!("Error {:?}", e),
-    }
+                Ok(())
+            }
+            .scope_boxed()
+        })
+        .await
+        .unwrap();
 
     Ok(())
 }
