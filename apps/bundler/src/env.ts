@@ -12,6 +12,7 @@ export const env = createEnv({
     SOURCE_BUCKET: z.string(),
     SOURCE_PREFIX: z.string(),
     STRIPE_CUSTOMER_ID: z.string(),
+    USER_ID: z.string(),
     HANDLER_ENVS: z.string(),
     CHAIN_SNS: z.string(),
     POLLING_URL: z.string(),
