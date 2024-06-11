@@ -32,12 +32,7 @@ export default function Page() {
                   await signIn("github", { redirectTo: "/projects" });
                 }}
               >
-                <Button
-                  type="submit"
-                  disabled={process.env.NODE_ENV === "production"}
-                >
-                  Join Waitlist
-                </Button>
+                <Button type="submit">Join Waitlist</Button>
               </form>
               <Button asChild>
                 <a href={getDocsUrl()} target="_blank">
