@@ -37,9 +37,7 @@ export default function Page() {
                 await signIn("github", { redirectTo: "/projects" });
               }}
             >
-              <Button className="w-full" disabled>
-                Get Started
-              </Button>
+              <Button className="w-full">Get Started</Button>
             </form>
           </PricingCard>
 
@@ -63,9 +61,7 @@ export default function Page() {
                 });
               }}
             >
-              <Button className="w-full" disabled>
-                Get Started
-              </Button>
+              <Button className="w-full">Get Started</Button>
             </form>
           </PricingCard>
 
@@ -89,9 +85,7 @@ export default function Page() {
                 });
               }}
             >
-              <Button className="w-full" disabled>
-                Get Started
-              </Button>
+              <Button className="w-full">Get Started</Button>
             </form>
           </PricingCard>
         </div>
