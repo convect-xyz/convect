@@ -87,6 +87,7 @@ export const POST = async (req: NextRequest) => {
         name: data.handlerName,
         projectId: project.id,
         producerId: producer.id,
+        infraVersion: env.VERSION,
       })
       .returning()
       .then((v) => v[0]);
@@ -156,7 +157,7 @@ export const POST = async (req: NextRequest) => {
   await Promise.all(promises);
 
   await createDeployment({
-    version: env.VERSION,
+    version: handler.infraVersion,
     sourcePrefix,
     manifestBucket: MANIFEST_BUCKET,
     manifestPrefix,

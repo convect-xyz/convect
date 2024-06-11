@@ -1,10 +1,10 @@
 {
-  "id": "614dbdf5-c0de-41e7-acc6-006140878a4f",
+  "id": "931f33de-92cf-4e81-bf26-7be7b8e8a049",
   "prevId": "30c000d9-8bbf-43a7-b19c-5755d33c462b",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "web_account": {
+    "public.web_account": {
       "name": "web_account",
       "schema": "",
       "columns": {
@@ -85,9 +85,17 @@
         "account_userId_idx": {
           "name": "account_userId_idx",
           "columns": [
-            "userId"
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -116,7 +124,7 @@
       },
       "uniqueConstraints": {}
     },
-    "web_api_key": {
+    "public.web_api_key": {
       "name": "web_api_key",
       "schema": "",
       "columns": {
@@ -149,9 +157,17 @@
         "apiKey_userId_idx": {
           "name": "apiKey_userId_idx",
           "columns": [
-            "userId"
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -188,7 +204,7 @@
         }
       }
     },
-    "web_deployment": {
+    "public.web_deployment": {
       "name": "web_deployment",
       "schema": "",
       "columns": {
@@ -215,9 +231,17 @@
         "deployment_handlerId_idx": {
           "name": "deployment_handlerId_idx",
           "columns": [
-            "handlerId"
+            {
+              "expression": "handlerId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -238,7 +262,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "web_handler": {
+    "public.web_handler": {
       "name": "web_handler",
       "schema": "",
       "columns": {
@@ -279,6 +303,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "infra_version": {
+          "name": "infra_version",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'infra-dev'"
         }
       },
       "indexes": {},
@@ -329,7 +360,7 @@
         }
       }
     },
-    "web_handler_env": {
+    "public.web_handler_env": {
       "name": "web_handler_env",
       "schema": "",
       "columns": {
@@ -399,7 +430,7 @@
         }
       }
     },
-    "web_producer": {
+    "public.web_producer": {
       "name": "web_producer",
       "schema": "",
       "columns": {
@@ -456,9 +487,17 @@
         "producers_userId_idx": {
           "name": "producers_userId_idx",
           "columns": [
-            "userId"
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -495,7 +534,7 @@
         }
       }
     },
-    "web_project": {
+    "public.web_project": {
       "name": "web_project",
       "schema": "",
       "columns": {
@@ -522,9 +561,17 @@
         "project_userId_idx": {
           "name": "project_userId_idx",
           "columns": [
-            "userId"
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -554,7 +601,7 @@
         }
       }
     },
-    "web_session": {
+    "public.web_session": {
       "name": "web_session",
       "schema": "",
       "columns": {
@@ -581,9 +628,17 @@
         "session_userId_idx": {
           "name": "session_userId_idx",
           "columns": [
-            "userId"
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -604,7 +659,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "web_user": {
+    "public.web_user": {
       "name": "web_user",
       "schema": "",
       "columns": {
@@ -648,6 +703,7 @@
         "plan_type": {
           "name": "plan_type",
           "type": "plan_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
           "default": "'FREE'"
@@ -658,7 +714,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "web_verificationToken": {
+    "public.web_verificationToken": {
       "name": "web_verificationToken",
       "schema": "",
       "columns": {
@@ -696,13 +752,14 @@
     }
   },
   "enums": {
-    "plan_type": {
+    "public.plan_type": {
       "name": "plan_type",
-      "values": {
-        "FREE": "FREE",
-        "STARTUP": "STARTUP",
-        "PROFESSIONAL": "PROFESSIONAL"
-      }
+      "schema": "public",
+      "values": [
+        "FREE",
+        "STARTUP",
+        "PROFESSIONAL"
+      ]
     }
   },
   "schemas": {},
