@@ -26,12 +26,7 @@ export default function Layout(props: PropsWithChildren) {
               await signIn("github", { redirectTo: "/projects" });
             }}
           >
-            <Button
-              type="submit"
-              disabled={process.env.NODE_ENV === "production"}
-            >
-              Sign In
-            </Button>
+            <Button type="submit">Sign In</Button>
           </form>
         </nav>
       </header>
