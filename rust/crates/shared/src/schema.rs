@@ -1,6 +1,18 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    invocation (id) {
+        id -> Int4,
+        #[max_length = 255]
+        user_id -> Varchar,
+        #[max_length = 255]
+        invocation_id -> Varchar,
+        timestamp -> Timestamptz,
+        num_processed -> Int4,
+    }
+}
+
+diesel::table! {
     processed_transactions (id) {
         id -> Int4,
         #[max_length = 255]
@@ -16,3 +28,8 @@ diesel::table! {
         timestamp -> Timestamptz,
     }
 }
+
+diesel::allow_tables_to_appear_in_same_query!(
+    invocation,
+    processed_transactions,
+);

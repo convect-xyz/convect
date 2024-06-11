@@ -87,6 +87,7 @@ export default async () => {
         USER_ENVS: env.HANDLER_ENVS,
         TRANSACTION_QUEUE_URL: transactionQueue.url,
         STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
+        USER_ID: env.USER_ID,
         REPORTING_QUEUE_URL: stackRef.getOutput("reportingQueueUrl"),
       },
     },

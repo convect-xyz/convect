@@ -23,6 +23,7 @@ pub struct Request {
     pub handler_id: String,
     pub handler_version: String,
     pub stripe_customer_id: String,
+    pub user_id: Option<String>,
     pub invocation_id: String,
     pub results: Vec<TransactionResult>,
 }
