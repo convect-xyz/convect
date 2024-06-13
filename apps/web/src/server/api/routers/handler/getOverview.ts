@@ -119,7 +119,11 @@ const getAvgDuration = async (internalId: string, version: number) => {
 const getSuccessfulTxCount = async (internalId: string, version: number) => {
   return db
     .execute(
-      sql`SELECT COUNT(DISTINCT(transaction_hash)) FROM processed_transactions WHERE handler_id = ${internalId} AND handler_version = ${version} AND status = 'SUCCESS'`,
+      sql`SELECT COUNT(*) FROM
+        (SELECT DISTINCT transaction_hash FROM processed_transactions) WHERE handler_id = ${internalId} 
+          AND handler_version = ${version}
+          AND status = 'SUCCESS') as processed_txs
+      `,
     )
     .then((r) => Number(r.rows.at(0)!.count));
 };
