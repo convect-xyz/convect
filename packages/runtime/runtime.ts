@@ -76,8 +76,13 @@ export async function handler(event: SQSEvent, context: Context) {
   const s3Results = await getS3Results(parsedRecords);
   const parsedTxs = parseTransactions(parsedRecords, s3Results);
 
-  const { results, addFailure, addSuccessful, getFailureCount } =
-    createStateManager();
+  const {
+    results,
+    addFailure,
+    addSuccessful,
+    getFailureCount,
+    getSuccessCount,
+  } = createStateManager();
 
   var { iterator, startProcessor } = await getTransactionIterator({
     parsedTxs,
