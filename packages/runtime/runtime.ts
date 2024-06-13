@@ -68,75 +68,38 @@ export async function handler(event: SQSEvent, context: Context) {
     data: JSON.parse(record.body),
   }));
 
-  // const isRetry = event.Records.some(
-  //   (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
-  // );
+  const isRetry = event.Records.some(
+    (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
+  );
 
-  const s3Results = await getS3Results(parsedRecords);
-  const parsedTxs = parseTransactions(parsedRecords, s3Results);
+  const parsedTxs = parseTransactions(
+    parsedRecords,
+    await getS3Results(parsedRecords)
+  );
 
-  const {
-    results,
-    addFailure,
-    addSuccessful,
-    getFailureCount,
-    getSuccessCount,
-  } = createStateManager();
+  const { results, addFailure, addSuccessful, getFailureCount } =
+    createStateManager();
 
-  // var { iterator, startProcessor } = await getTransactionIterator({
-  //   parsedTxs,
-  //   isRetry,
-  // });
-
-  // let err: any;
+  let err: any;
 
   const groupedTxs = groupTransactions(parsedTxs, pipeline.handlers);
-  for (let i = 0; i < groupedTxs.length; i++) {
+  for (
+    let i = isRetry ? await getFailureIdx() : 0;
+    i < groupedTxs.length;
+    i++
+  ) {
     let txConfig = pipeline.handlers[i];
-
     const batch = groupedTxs[i]!.map((tx) => decodeTx(tx, txConfig));
-    await txConfig._handler(batch);
-    batch.map((tx) => addSuccessful(tx.transactionHash, i.toString()));
+
+    try {
+      await txConfig._handler(batch);
+      batch.map((tx) => addSuccessful(tx.transactionHash, i.toString()));
+    } catch (e) {
+      addFailure(batch.at(0), i.toString());
+      err = e;
+      break;
+    }
   }
-
-  // process_loop: while (iterator.hasNext()) {
-  //   const { batch, processors } = getNextTransactionBatch(iterator);
-
-  //   for (const { label, config: txConfig } of processors) {
-  //     if (startProcessor && label !== startProcessor) {
-  //       continue;
-  //     }
-
-  //     const getStartIndex = () => {
-  //       let i = 0;
-  //       while (
-  //         i < batch.length &&
-  //         BigInt(batch[i]!.blockNumber) < txConfig._startBlock
-  //       ) {
-  //         i++;
-  //       }
-  //       return i;
-  //     };
-
-  //     let startIndex = getStartIndex();
-
-  //     try {
-  //       const processable = batch
-  //         .slice(startIndex)
-  //         .map((tx) => decodeTx(tx, txConfig));
-
-  //       await txConfig._handler(processable);
-  //       processable.map((tx) => addSuccessful(tx.transactionHash, label));
-  //     } catch (e) {
-  //       err = e;
-  //       addFailure(batch.at(startIndex)!.transactionHash, label);
-  //       console.error(e);
-  //       break process_loop;
-  //     }
-
-  //     startProcessor = undefined;
-  //   }
-  // }
 
   await uploadResults(
     context.awsRequestId,
@@ -144,9 +107,9 @@ export async function handler(event: SQSEvent, context: Context) {
     event.Records.map((r) => r.receiptHandle)
   );
 
-  // if (getFailureCount() > 0) {
-  //   throw err;
-  // }
+  if (getFailureCount() > 0) {
+    throw err;
+  }
 
   return {};
 }
@@ -167,6 +130,14 @@ export function parseTransactions(
     transactions.push(...txs);
   }
   return transactions;
+}
+
+export async function getFailureIdx() {
+  const pipeline = await axios
+    .get("http://localhost:4121/pipeline")
+    .then((r) => r.data);
+
+  return Number(pipeline.ErrorLabel_);
 }
 
 type GetInitialisationOptions = {
