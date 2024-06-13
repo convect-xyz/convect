@@ -21,7 +21,6 @@ export default function Page() {
     <>
       <div className="mx-auto w-full max-w-screen-md">
         <div className="flex flex-col gap-3">
-          <h2 className="text-xl">Convect Functions</h2>
           <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
 
           <div className="flex flex-col gap-2 divide-y rounded-md border bg-muted/20 p-2">

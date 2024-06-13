@@ -13,15 +13,19 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import Auth from "./Auth";
+import { Navbar } from "./Navbar";
 import { NavbarLeading } from "./NavbarLeading";
 
 export default function Layout(props: PropsWithChildren) {
   return (
     <Auth>
       <div className="flex min-h-screen w-full flex-col">
-        <header className="sticky top-0 flex items-center justify-between gap-4 border-b bg-background px-4 py-2 md:px-6">
-          <NavbarLeading />
-          <Profile />
+        <header className="sticky top-0 flex flex-col gap-4 border-b bg-background px-4 py-2 md:px-6">
+          <div className="flex items-center justify-between gap-4 ">
+            <NavbarLeading />
+            <Profile />
+          </div>
+          <Navbar />
         </header>
         <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-background p-4 md:gap-8 md:p-10">
           {props.children}
@@ -33,6 +37,7 @@ export default function Layout(props: PropsWithChildren) {
 
 async function Profile() {
   const session = await auth();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -56,12 +61,15 @@ async function Profile() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <form
-              action={async (formData) => {
+              action={async () => {
                 "use server";
                 await signOut({ redirectTo: "/" });
               }}
+              className="w-full"
             >
-              <button type="submit">Sign out</button>
+              <button type="submit" className="w-full text-left">
+                Sign out
+              </button>
             </form>
           </DropdownMenuItem>
         </DropdownMenuGroup>
