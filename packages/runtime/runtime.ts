@@ -91,6 +91,8 @@ export async function handler(event: SQSEvent, context: Context) {
     let txConfig = pipeline.handlers[i];
     const batch = groupedTxs[i]!.map((tx) => decodeTx(tx, txConfig));
 
+    if (batch.length === 0) continue;
+
     try {
       await txConfig._handler(batch);
       batch.map((tx) => addSuccessful(tx.transactionHash, i.toString()));
