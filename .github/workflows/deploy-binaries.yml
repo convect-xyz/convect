@@ -49,16 +49,17 @@ jobs:
           repo: cargo-lambda/cargo-lambda
           platform: linux
           arch: x86_64
+      - uses: actions/checkout@master
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.binary }}
-          workspaces: "./rust -> target"
+          workspaces: "rust"
       - name: Build
+        working-directory: rust
         env:
           BIN: ${{ matrix.binary }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          cd rust
           cargo lambda build --output-format zip --release -p $BIN
           aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/$BIN/bootstrap.zip"
 
