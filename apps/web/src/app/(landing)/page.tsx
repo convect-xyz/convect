@@ -15,7 +15,7 @@ export default function Page() {
               Serverless transaction processing for Ethereum Networks
             </h1>
             <div className="relative rounded-md">
-              <CodeBlock code="npx @convect-xyz/cli init" />
+              <CodeBlock code="npx convect-xyz init" />
               <BorderBeam
                 size={80}
                 duration={6}
