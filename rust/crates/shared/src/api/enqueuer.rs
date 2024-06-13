@@ -158,7 +158,7 @@ impl<T: S3> TransactionEnqueuerImpl<T> {
                     .unwrap(),
                 )
                 .message_group_id("main")
-                .message_deduplication_id(download_url)
+                .message_deduplication_id(key)
                 .send()
                 .await;
 
