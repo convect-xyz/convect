@@ -83,7 +83,7 @@ export function ProjectsDropdown() {
             className="gap-2"
             onClick={() => setIsNewProjectOpen(true)}
           >
-            <PlusCircle />
+            <PlusCircle size={14} />
             New Project
           </DropdownMenuItem>
         </DropdownMenuContent>
