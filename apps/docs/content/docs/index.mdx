@@ -11,7 +11,7 @@ import { Step, Steps } from 'fumadocs-ui/components/steps';
     ### Write your handler
 
     ```ts title="src/convect/transfer.ts"
-    import { log, transaction } from "@convect-xyz/sdk";
+    import { log, transaction } from "convect-xyz";
 
     export const transfer = transaction({
       logs: [
@@ -41,7 +41,7 @@ import { Step, Steps } from 'fumadocs-ui/components/steps';
 
     ```ts title="src/convect/ingest.ts"
     import { transfer } from "./transfer";
-    import { convect } from "@convect-xyz/sdk";
+    import { convect } from "convect-xyz";
 
     export default convect({
       transfer
