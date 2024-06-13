@@ -56,12 +56,15 @@ async function Profile() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <form
-              action={async (formData) => {
+              action={async () => {
                 "use server";
                 await signOut({ redirectTo: "/" });
               }}
+              className="w-full"
             >
-              <button type="submit">Sign out</button>
+              <button type="submit" className="w-full text-left">
+                Sign out
+              </button>
             </form>
           </DropdownMenuItem>
         </DropdownMenuGroup>
