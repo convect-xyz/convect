@@ -123,13 +123,11 @@ export function parseTransactions(
   const transactions: Array<Transaction> = [];
   for (const record of parsedRecords) {
     const payload = record.data;
-    var txs = [];
     if (payload.type === "non-batch") {
-      txs = payload.data;
+      transactions.push(...payload.data);
     } else {
-      txs = s3Results.get(record.id);
+      transactions.push(...s3Results.get(record.id));
     }
-    transactions.push(...txs);
   }
   return transactions;
 }

@@ -5,13 +5,13 @@ use aws_config::BehaviorVersion;
 use aws_sdk_s3::error::BoxError;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TransactionResultLabel {
     pub label: String,
     pub timestamp_ms: i64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TransactionResult {
     pub transaction_hash: String,
     pub successful_labels: Vec<TransactionResultLabel>,

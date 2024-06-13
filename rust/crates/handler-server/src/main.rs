@@ -90,18 +90,11 @@ mod results {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let sqs_client = aws_sdk_sqs::Client::new(&config);
 
-        let failed_tx = payload.results.iter().find(|v| v.failed_label.is_some());
-
-        if let Some(failed_tx) = failed_tx {
-            fail_process_state(&app_state, failed_tx).await.unwrap();
-
-            match make_messages_reprocessable(&sqs_client, &payload.message_ids).await {
-                Ok(_) => println!("Changed message visibility"),
-                Err(e) => println!("Error: {:?}", e),
-            };
-        } else {
-            unfail_process_state(&app_state).await.unwrap();
-        }
+        let failed_tx = payload
+            .results
+            .iter()
+            .find(|v| v.failed_label.is_some())
+            .map(|v| v.clone());
 
         app_state
             .reporting
@@ -117,6 +110,17 @@ mod results {
             })
             .await
             .unwrap();
+
+        if let Some(failed_tx) = failed_tx {
+            fail_process_state(&app_state, &failed_tx).await.unwrap();
+
+            match make_messages_reprocessable(&sqs_client, &payload.message_ids).await {
+                Ok(_) => println!("Changed message visibility"),
+                Err(e) => println!("Error: {:?}", e),
+            };
+        } else {
+            unfail_process_state(&app_state).await.unwrap();
+        }
 
         return Json(json!({"ok": true}));
     }
