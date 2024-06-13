@@ -49,19 +49,10 @@ jobs:
           repo: cargo-lambda/cargo-lambda
           platform: linux
           arch: x86_64
-      - uses: actions/checkout@master
-      - name: Set up cargo cache
-        uses: actions/cache@v3
-        continue-on-error: false
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}-${{ matrix.binary }}
-          restore-keys: ${{ runner.os }}-cargo
+          key: ${{ matrix.binary }}
+          workspaces: "./rust -> target"
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
