@@ -18,10 +18,6 @@ const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 main();
 
 async function main() {
-  await downloadFile();
-  await prepareBundle();
-  await zipLambda();
-
   console.info("initialising/getting stack...");
   const stack = await getStack();
   console.info("succesfully intialised stack.");
@@ -30,6 +26,21 @@ async function main() {
   await stack.workspace.installPlugin("aws", "v6.37.0");
   await stack.setConfig("aws:region", { value: "eu-west-1" });
   console.info("aws plugin installed.");
+
+  if (env.MODE === "destroy") {
+    console.info("destroying stack...");
+    await stack.destroy({ onOutput: console.info });
+    console.info("stack destroyed");
+
+    console.info("removing stack...");
+    await stack.workspace.removeStack(stack.name);
+    console.info("removed stack...");
+    return;
+  }
+
+  await downloadFile();
+  await prepareBundle();
+  await zipLambda();
 
   if (env.MODE === "init") {
     if (Number(env.HANDLER_VERSION) > 0) {
@@ -40,16 +51,6 @@ async function main() {
     console.info("stack up...");
     await stack.up({ onOutput: console.info });
     console.info("stack upped.");
-  }
-
-  if (env.MODE === "destroy") {
-    console.info("destroying stack...");
-    await stack.destroy({ onOutput: console.info });
-    console.info("stack destroyed");
-
-    console.info("removing stack...");
-    await stack.workspace.removeStack(stack.name);
-    console.info("removed stack...");
   }
 
   if (env.MODE === "update") {
