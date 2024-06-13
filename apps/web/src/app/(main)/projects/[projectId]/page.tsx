@@ -19,11 +19,14 @@ export default function Page() {
 
   return (
     <>
-      <div className="mx-auto w-full max-w-screen-md">
+      <div className="mx-auto w-full max-w-screen-2xl">
         <div className="flex flex-col gap-3">
           <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
 
-          <div className="flex flex-col gap-2 divide-y rounded-md border bg-muted/20 p-2">
+          <div className="px-2">
+            <h3 className="text-sm text-muted-foreground">Functions</h3>
+          </div>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2">
             {!handlers &&
               times(20).map((idx) => <HandlerRowSkeleton key={idx} />)}
             {handlers?.handlers.length === 0 && <NoHandlers />}
@@ -45,7 +48,7 @@ function HandlerRow(props: {
   const { projectId } = useParams();
   return (
     <div
-      className="h-20 p-4"
+      className="h-20 cursor-pointer rounded-sm border bg-muted p-4 transition-all hover:border-muted-foreground/25"
       onClick={() =>
         router.push(`/projects/${projectId}/${props.handler.id.toString()}`)
       }

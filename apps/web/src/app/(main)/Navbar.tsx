@@ -29,7 +29,7 @@ export function Navbar() {
   };
 
   return (
-    <NavigationMenu>
+    <NavigationMenu className="mx-auto w-full max-w-screen-2xl justify-start">
       <NavigationMenuList>
         <NavigationMenuItem>
           <Link href={`/projects/${projectId}`} legacyBehavior passHref>
@@ -37,7 +37,7 @@ export function Navbar() {
               className={navigationMenuTriggerStyle()}
               {...getLinkProps(`/projects/${projectId}`)}
             >
-              Functions
+              Overview
             </NavigationMenuLink>
           </Link>
         </NavigationMenuItem>
