@@ -30,7 +30,6 @@ process.env["HANDLER_ID"] = HANDLER_ID;
 process.env["HANDLER_VERSION"] = HANDLER_VERSION;
 
 const { default: pipeline } = require("./pipeline");
-const allTxConfigsWithLabels = [...Object.entries(pipeline)];
 
 type ParsedRecord = {
   id: string;
@@ -69,9 +68,9 @@ export async function handler(event: SQSEvent, context: Context) {
     data: JSON.parse(record.body),
   }));
 
-  const isRetry = event.Records.some(
-    (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
-  );
+  // const isRetry = event.Records.some(
+  //   (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
+  // );
 
   const s3Results = await getS3Results(parsedRecords);
   const parsedTxs = parseTransactions(parsedRecords, s3Results);
@@ -84,50 +83,58 @@ export async function handler(event: SQSEvent, context: Context) {
     getSuccessCount,
   } = createStateManager();
 
-  var { iterator, startProcessor } = await getTransactionIterator({
-    parsedTxs,
-    isRetry,
-  });
+  // var { iterator, startProcessor } = await getTransactionIterator({
+  //   parsedTxs,
+  //   isRetry,
+  // });
 
-  let err: any;
-  process_loop: while (iterator.hasNext()) {
-    const { batch, processors } = getNextTransactionBatch(iterator);
+  // let err: any;
 
-    for (const { label, config: txConfig } of processors) {
-      if (startProcessor && label !== startProcessor) {
-        continue;
-      }
-
-      const getStartIndex = () => {
-        let i = 0;
-        while (
-          i < batch.length &&
-          BigInt(batch[i]!.blockNumber) < txConfig._startBlock
-        ) {
-          i++;
-        }
-        return i;
-      };
-
-      let startIndex = getStartIndex();
-
-      try {
-        const processable = batch
-          .slice(startIndex)
-          .map((tx) => decodeTx(tx, txConfig));
-
-        await txConfig._handler(processable);
-        processable.map((tx) => addSuccessful(tx.transactionHash, label));
-      } catch (e) {
-        err = e;
-        addFailure(batch.at(startIndex)!.transactionHash, label);
-        console.error(e);
-        break process_loop;
-      }
-
-      startProcessor = undefined;
-    }
+  const groupedTxs = groupTransactions(parsedTxs, pipeline.handlers);
+  for (let i = 0; i < groupedTxs.length; i++) {
+    let txConfig = pipeline.handlers[i];
+    await txConfig._handler(groupedTxs[i]!);
+    groupedTxs[i]!.map((tx) => addSuccessful(tx.transactionHash, i.toString()));
   }
+
+  // process_loop: while (iterator.hasNext()) {
+  //   const { batch, processors } = getNextTransactionBatch(iterator);
+
+  //   for (const { label, config: txConfig } of processors) {
+  //     if (startProcessor && label !== startProcessor) {
+  //       continue;
+  //     }
+
+  //     const getStartIndex = () => {
+  //       let i = 0;
+  //       while (
+  //         i < batch.length &&
+  //         BigInt(batch[i]!.blockNumber) < txConfig._startBlock
+  //       ) {
+  //         i++;
+  //       }
+  //       return i;
+  //     };
+
+  //     let startIndex = getStartIndex();
+
+  //     try {
+  //       const processable = batch
+  //         .slice(startIndex)
+  //         .map((tx) => decodeTx(tx, txConfig));
+
+  //       await txConfig._handler(processable);
+  //       processable.map((tx) => addSuccessful(tx.transactionHash, label));
+  //     } catch (e) {
+  //       err = e;
+  //       addFailure(batch.at(startIndex)!.transactionHash, label);
+  //       console.error(e);
+  //       break process_loop;
+  //     }
+
+  //     startProcessor = undefined;
+  //   }
+  // }
 
   await uploadResults(
     context.awsRequestId,
@@ -135,9 +142,9 @@ export async function handler(event: SQSEvent, context: Context) {
     event.Records.map((r) => r.receiptHandle)
   );
 
-  if (getFailureCount() > 0) {
-    throw err;
-  }
+  // if (getFailureCount() > 0) {
+  //   throw err;
+  // }
 
   return {};
 }
@@ -212,14 +219,14 @@ export function getNextTransactionBatch(iterator: TransactionIterator) {
 
   // tx at the front of parsedTxs
   const frontTx = iterator.peek();
-  const processors = getEligibleTxConfigs(frontTx, allTxConfigsWithLabels);
+  const processors = getEligibleTxConfigs(frontTx, pipeline.handlers);
 
   // batch transactions that can be processed by the exact same processors
   while (
     iterator.hasNext() &&
     sameEligibleProcessors(
       processors,
-      getEligibleTxConfigs(iterator.peek(), allTxConfigsWithLabels)
+      getEligibleTxConfigs(iterator.peek(), pipeline.handlers)
     )
   ) {
     const tx = iterator.next()!;
@@ -295,6 +302,33 @@ function createStateManager() {
     getFailureCount: () => failureCount,
     getSuccessCount: () => successCount,
   };
+}
+
+export function groupTransactions(
+  transactions: Transaction[],
+  allTxConfigs: Array<any>
+) {
+  const groupedTxs: Array<Array<Transaction>> = [
+    ...allTxConfigs.map((_) => []),
+  ];
+
+  for (let txIdx = 0; txIdx < transactions.length; txIdx++) {
+    const transaction = transactions[txIdx]!;
+    const txLogIdentifiers = getUniqueLogIdentifiers(transaction);
+
+    for (var txCfgIdx = 0; txCfgIdx < allTxConfigs.length; txCfgIdx++) {
+      const txConfig = allTxConfigs[txCfgIdx];
+      const canProcessTx = txConfig._logs.every((logConfig: any) =>
+        txLogIdentifiers.some((log) => logConfigMatches(logConfig, log))
+      );
+
+      if (canProcessTx) {
+        groupedTxs[txCfgIdx]!.push(transaction);
+      }
+    }
+  }
+
+  return groupedTxs;
 }
 
 // Eligible Tx configs are configs that match the given transaction
