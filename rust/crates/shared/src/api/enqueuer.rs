@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::s3::S3;
 use crate::types::syncing::State;
 use crate::types::transactions::IngestTransaction;
@@ -116,7 +118,12 @@ impl<T: S3> TransactionEnqueuerImpl<T> {
             let id = uuid::Uuid::new_v4();
 
             let bucket = "ingest-fetch-logs";
-            let key = format!("syncs/batch-{}", id);
+            let key = format!(
+                "syncs/{handler}/{version}/{id}",
+                handler = env::var("HANDLER_ID").expect("Handler ID not defined"),
+                version = env::var("HANDLER_VERSION").expect("Handler Version not defined"),
+                id = id
+            );
 
             let response = self
                 .s3_client
