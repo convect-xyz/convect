@@ -97,7 +97,7 @@ export async function handler(event: SQSEvent, context: Context) {
       await txConfig._handler(batch);
       batch.map((tx) => addSuccessful(tx.transactionHash, i.toString()));
     } catch (e) {
-      addFailure(batch.at(0), i.toString());
+      addFailure(batch.at(0).transactionHash, i.toString());
       err = e;
       break;
     }
