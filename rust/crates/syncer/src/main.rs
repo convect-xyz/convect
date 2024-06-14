@@ -3,19 +3,12 @@ use aws_sdk_s3::error::BoxError;
 use futures::{future::join_all, TryFutureExt};
 use serde::Serialize;
 use shared::{
-    api::{
-        enqueuer::TransactionEnqueuerImpl,
-        fetcher::{TransactionFetcherImpl, Web3ClientImpl},
-        Api,
-    },
+    enqueuer::{TransactionEnqueuer, SQSTransactionEnqueuer},
     log_fetcher_sdk::{self, InvocationRequest, InvocationResponse, LogFetcherSdk},
     types::{self, syncing::State, transactions::IngestTransaction},
 };
 use std::env;
 use std::error::Error;
-
-type ApiInstance =
-    Api<TransactionFetcherImpl<Web3ClientImpl>, TransactionEnqueuerImpl<aws_sdk_s3::Client>>;
 
 #[derive(Serialize, Debug)]
 struct BlockConfig {
@@ -34,9 +27,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         syncer_config.handler_version.clone(),
     );
     let config = aws_config::load_from_env().await;
-    let api: ApiInstance = Api::new(&config);
+    let s3_client = aws_sdk_s3::Client::new(&config);
+    let sqs_client = aws_sdk_sqs::Client::new(&config);
+    let enqueuer = SQSTransactionEnqueuer::new(s3_client, syncer_config.tx_queue_url, sqs_client);
 
-    let result = run(&api, &mut pipeline).await;
+    let result = run(enqueuer, &mut pipeline).await;
 
     let update_result = match result {
         Ok(_) => pipeline
@@ -57,7 +52,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn run(api: &ApiInstance, pipeline: &mut State) -> Result<(), Box<dyn Error>> {
+async fn run(
+    enqueuer: impl TransactionEnqueuer,
+    pipeline: &mut State,
+) -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
     let configs = get_block_configs(
         syncer_config.start_block,
@@ -75,12 +73,7 @@ async fn run(api: &ApiInstance, pipeline: &mut State) -> Result<(), Box<dyn Erro
             .flatten()
             .collect();
 
-        api.enqueue_transactions()
-            .set_pipeline(pipeline)
-            .set_queue_url(syncer_config.tx_queue_url.clone())
-            .set_transactions(&s3_results)
-            .send()
-            .await?;
+        enqueuer.enqueue_transactions(pipeline, &s3_results).await?;
 
         pipeline
             .update()

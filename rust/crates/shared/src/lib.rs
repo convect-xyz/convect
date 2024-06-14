@@ -1,6 +1,7 @@
-pub mod api;
 #[cfg(feature = "pg")]
 pub mod connection;
+pub mod enqueuer;
+pub mod fetcher;
 #[cfg(feature = "log-fetcher-sdk")]
 pub mod log_fetcher_sdk;
 #[cfg(feature = "pg")]
@@ -15,3 +16,4 @@ pub mod schema;
 #[cfg(feature = "telemetry")]
 pub mod telemetry;
 pub mod types;
+pub mod web3_client;
