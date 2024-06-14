@@ -4,7 +4,7 @@ import { db } from "~/server/db";
 import { getUserContext } from "../utils";
 
 export const GET = async (req: NextRequest) => {
-  const { user, error: userError } = await getUserContext(req);
+  const { error: userError } = await getUserContext(req);
   if (userError) {
     return NextResponse.json({ message: userError.message }, { status: 401 });
   }
@@ -17,8 +17,9 @@ export const GET = async (req: NextRequest) => {
 
   return NextResponse.json({
     chains: chains.map((chain) => ({
-      id: chain.chainId,
+      id: chain.id,
       name: chain.name,
+      chainId: chain.chainId,
     })),
   });
 };
