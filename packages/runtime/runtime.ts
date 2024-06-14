@@ -18,6 +18,7 @@ const USER_ENVS = (
 
 const HANDLER_ID = process.env.HANDLER_ID;
 const HANDLER_VERSION = process.env.HANDLER_VERSION;
+const CHAIN_ID = process.env.CHAIN_ID;
 
 for (const env of Object.keys(process.env)) {
   delete process.env[env];
@@ -94,7 +95,7 @@ export async function handler(event: SQSEvent, context: Context) {
     if (batch.length === 0) continue;
 
     try {
-      await txConfig._handler(batch);
+      await txConfig._handler(batch, getContext());
       batch.map((tx) => addSuccessful(tx.transactionHash, i.toString()));
     } catch (e) {
       addFailure(batch.at(0).transactionHash, i.toString());
@@ -114,6 +115,12 @@ export async function handler(event: SQSEvent, context: Context) {
   }
 
   return {};
+}
+
+function getContext() {
+  return {
+    chainId: Number(CHAIN_ID),
+  };
 }
 
 export function parseTransactions(

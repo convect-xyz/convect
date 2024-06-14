@@ -8,6 +8,7 @@ type TriggerBuildOptions = {
   deploymentId: string;
   stripeCustomerId: string;
   userId: string;
+  chainId: number;
   internalHandlerId: string;
   internalHandlerVersion: number;
   manifestBucket: string;
@@ -70,6 +71,10 @@ export async function createDeployment(options: TriggerBuildOptions) {
             {
               name: "CHAIN_SNS",
               value: options.chainSns,
+            },
+            {
+              name: "CHAIN_ID",
+              value: options.chainId.toString(),
             },
             {
               name: "DATABASE_URL",

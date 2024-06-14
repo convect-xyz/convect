@@ -26,7 +26,7 @@ async function main() {
     .insert(producers)
     .values(
       chains.map((c: any) => ({
-        chainId: c.id,
+        chainId: Number(c.id),
         pollingUrl: c.polling_url,
         wsUrl: c.ws_url,
         topicArn: c.sns_topic,
