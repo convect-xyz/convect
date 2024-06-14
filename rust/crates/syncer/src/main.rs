@@ -3,7 +3,7 @@ use aws_sdk_s3::error::BoxError;
 use futures::{future::join_all, TryFutureExt};
 use serde::Serialize;
 use shared::{
-    enqueuer::{TransactionEnqueuer, SQSTransactionEnqueuer},
+    enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     log_fetcher_sdk::{self, InvocationRequest, InvocationResponse, LogFetcherSdk},
     types::{self, syncing::State, transactions::IngestTransaction},
 };
