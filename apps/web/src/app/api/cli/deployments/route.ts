@@ -70,7 +70,7 @@ export const POST = async (req: NextRequest) => {
   if (data.mode === "init" && !existingHandler) {
     const producer = await db.query.producers.findFirst({
       where(fields, { eq }) {
-        return eq(fields.chainId, data.node);
+        return eq(fields.id, data.node);
       },
     });
 
@@ -168,6 +168,7 @@ export const POST = async (req: NextRequest) => {
     internalHandlerVersion: handler.version,
     pollingUrl: handler.producer.pollingUrl,
     chainSns: handler.producer.topicArn!,
+    chainId: handler.producer.chainId,
     mode: data.mode,
     envs: handler.envs.map((env) => ({
       ...env,

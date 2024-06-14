@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "db:push": "drizzle-kit push:pg",
-    "db:migrate": "drizzle-kit generate:pg",
+    "db:migrate": "drizzle-kit generate --dialect=postgresql",
     "db:deploy": "npx tsx ./src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "scripts:sync-chains": "npx tsx ./src/scripts/chains.ts",

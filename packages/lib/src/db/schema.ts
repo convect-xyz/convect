@@ -12,7 +12,6 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
-import { v4 } from "uuid";
 
 export const createTable = pgTableCreator((name) => `web_${name}`);
 
@@ -226,10 +225,7 @@ export const producers = createTable(
   "producer",
   {
     id: serial("id").notNull().primaryKey(),
-    chainId: varchar("chain_id", { length: 255 })
-      .notNull()
-      .unique()
-      .$defaultFn(() => v4()),
+    chainId: integer("chain_id").notNull().unique(),
     pollingUrl: varchar("pollingUrl", { length: 255 }).notNull(),
     wsUrl: varchar("wsUrl", { length: 255 }).notNull(),
     userId: varchar("userId").references(() => users.id),
