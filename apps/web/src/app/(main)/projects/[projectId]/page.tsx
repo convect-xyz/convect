@@ -76,7 +76,7 @@ function NoHandlers() {
     <div className="flex flex-col items-center justify-center gap-2">
       <Alert className="mt-4">
         <Terminal className="h-4 w-4" />
-        <AlertTitle>Create a new handler to get started.</AlertTitle>
+        <AlertTitle>Create a new convect function to get started.</AlertTitle>
         <AlertDescription className="mt-4">
           <CodeBlock
             code={"export CONVECT_API_KEY=<your api key>\nnpx convect-xyz init"}
