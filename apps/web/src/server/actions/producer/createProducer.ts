@@ -22,6 +22,7 @@ export async function createProducer(params: CreateProducerParams) {
     .insert(schema.producers)
     .values({
       wsUrl: params.wsUrl,
+      chainId: 0,
       pollingUrl: params.pollingUrl,
       userId: params.session.user.id,
       name: "",
