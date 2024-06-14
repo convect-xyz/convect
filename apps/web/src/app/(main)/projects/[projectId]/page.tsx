@@ -68,12 +68,12 @@ function HandlerRow(props: {
 }
 
 function HandlerRowSkeleton() {
-  return <Skeleton className="h-20 w-full" />;
+  return <Skeleton className="h-40 w-full" />;
 }
 
 function NoHandlers() {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 p-8">
+    <div className="flex flex-col items-center justify-center gap-2">
       <Alert className="mt-4">
         <Terminal className="h-4 w-4" />
         <AlertTitle>Create a new handler to get started.</AlertTitle>
