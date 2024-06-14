@@ -7,7 +7,8 @@ use aws_sdk_ecs::types::{
 use futures::TryFutureExt;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
-    api::{self},
+    enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
+    fetcher::{TransactionFetcher, TransactionFetcherImpl},
     types::{manifest::Manifest, syncing::State},
 };
 
@@ -19,12 +20,15 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
-    let config = aws_config::load_from_env().await;
-    let ecs_client = aws_sdk_ecs::Client::new(&config);
-    let api = api::Api::new(&config);
-    let handler_id = env::var("HANDLER_ID").expect("Handler ID not set");
-    let handler_version = env::var("HANDLER_VERSION").expect("Handler ID not set");
-    let mut pipeline = State::load(handler_id, handler_version);
+    let config = Config::new();
+    let sdk_config = aws_config::load_from_env().await;
+    let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
+    let s3_client = aws_sdk_s3::Client::new(&sdk_config);
+    let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
+    let fetcher = TransactionFetcherImpl::new();
+    let enqueuer =
+        SQSTransactionEnqueuer::new(s3_client, config.transation_queue_url.clone(), sqs_client);
+    let mut pipeline = State::load(config.handler_id.clone(), config.handler_version.clone());
 
     let incoming_block: u64 = event
         .payload
@@ -36,8 +40,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .parse()
         .expect("Invalid SNS Message");
 
-    // Will not sync while sync task already in progress
-    // TODO: this should be added to a DLQ
     if pipeline
         .state()
         .eq(&shared::types::syncing::SyncState::SYNCING)
@@ -45,10 +47,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         return Ok(());
     }
 
-    println!("{:?}", pipeline.inner());
-
-    // Optimisation so we only fetch manifest to compute init block
-    // if and only if the pipeline has not fetched any blocks
     let init_block: Option<u64> = match pipeline.last_block() {
         Some(_) => None,
         None => {
@@ -61,50 +59,41 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         }
     };
 
-    // If block diff is too great, trigger fargate to do the work
     if incoming_block - pipeline.last_block().or(init_block).unwrap() > 1999 {
-        // It is the responsibility of the ECS task to revert this status
         pipeline
             .update()
             .set_state(shared::types::syncing::SyncState::SYNCING)
             .send()
             .expect("Failed to update pipeline");
 
-        return trigger_batch_sync_task(&ecs_client, &mut pipeline, incoming_block, init_block)
-            .await;
+        return batch_sync(
+            &ecs_client,
+            &mut pipeline,
+            incoming_block,
+            init_block,
+            &config,
+        )
+        .await;
     }
-
-    println!("State: {:?}", pipeline.state());
 
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
 
-    // We'll process the blocks here and add them to tx queue
-    // We shouldn't need to update status here because max concurrency should be 1
     let manifest = Manifest::from_env().await.unwrap();
 
-    let transactions = api
-        .fetch_transactions()
-        .set_manifest(&manifest)
-        .set_start_block(from_block)
-        .set_end_block(incoming_block)
-        .send()
+    let transactions = fetcher
+        .get_transactions(&manifest, from_block, incoming_block)
         .inspect_err(|e| {
             println!("{:?}", e);
-            let _ = pipeline
+            pipeline
                 .update()
                 .set_state(shared::types::syncing::SyncState::FAILED)
-                .send();
+                .send()
+                .unwrap();
         })
         .await?;
 
-    println!("transactions: {:?}", transactions);
-
-    let result = api
-        .enqueue_transactions()
-        .set_pipeline(&mut pipeline)
-        .set_queue_url(env::var("TRANSACTION_QUEUE_URL").expect("Tx Queue URL not set"))
-        .set_transactions(&transactions)
-        .send()
+    let result = enqueuer
+        .enqueue_transactions(&mut pipeline, &transactions)
         .await;
 
     match result {
@@ -116,111 +105,108 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     }
 }
 
-async fn trigger_batch_sync_task(
+struct Config {
+    transation_queue_url: String,
+    handler_id: String,
+    handler_version: String,
+    syncer_task_definition_arn: String,
+    syncer_cluster: String,
+    syncer_subnets: Vec<String>,
+    log_fetcher_lambda_arn: String,
+    version: String,
+    syncer_container_name: String,
+    node_endpoint: String,
+}
+
+impl Config {
+    fn new() -> Self {
+        Self {
+            transation_queue_url: env::var("TRANSACTION_QUEUE_URL")
+                .expect("TRANSACTION_QUEUE_URL not set"),
+            handler_id: env::var("HANDLER_ID").expect("HANDLER_ID not set"),
+            handler_version: env::var("HANDLER_VERSION").expect("HANDLER_VERSION not set"),
+            syncer_task_definition_arn: env::var("SYNCER_TASK_DEFINITION_ARN")
+                .expect("SYNCER_TASK_DEFINITION_ARN not set"),
+            syncer_cluster: env::var("SYNCER_CLUSTER").expect("SYNCER_CLUSTER not set"),
+            syncer_subnets: env::var("SYNCER_SUBNETS")
+                .expect("SYNCER_SUBNETS not set")
+                .split(",")
+                .map(|s| s.to_string())
+                .collect(),
+            log_fetcher_lambda_arn: env::var("LOG_FETCHER_LAMBDA_ARN")
+                .expect("LOG_FETCHER_LAMBDA_ARN not set"),
+            version: env::var("VERSION").expect("VERSION not set"),
+            syncer_container_name: env::var("SYNCER_CONTAINER_NAME")
+                .expect("SYNCER_CONTAINER_NAME not set"),
+            node_endpoint: env::var("NODE_ENDPOINT").expect("NODE_ENDPOINT not set"),
+        }
+    }
+}
+
+async fn batch_sync(
     ecs_client: &aws_sdk_ecs::Client,
     pipeline: &mut State,
     incoming_block: u64,
     init_block: Option<u64>,
+    config: &Config,
 ) -> Result<(), Error> {
-    let task_definition_arn =
-        env::var("SYNCER_TASK_DEFINITION_ARN").expect("SYNCER_TASK_DEFINITION_ARN not defined");
-    let cluster = env::var("SYNCER_CLUSTER").expect("SYNCER_CLUSTER not defined");
-    let subnets: Vec<_> = env::var("SYNCER_SUBNETS")
-        .expect("SYNCER_SUBNETS not defined")
-        .split(",")
-        .map(|s| s.to_string())
-        .collect();
-    let container_name =
-        env::var("SYNCER_CONTAINER_NAME").expect("SYNCER_CONTAINER_NAME not defined");
-
-    println!("Triggering batch sync");
-
-    let result = ecs_client
+    ecs_client
         .run_task()
-        .cluster(cluster)
-        .task_definition(task_definition_arn)
+        .cluster(&config.syncer_cluster)
+        .task_definition(&config.syncer_task_definition_arn)
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
-        .network_configuration(
-            NetworkConfiguration::builder()
-                .awsvpc_configuration(
-                    AwsVpcConfiguration::builder()
-                        .set_subnets(Some(subnets))
-                        .assign_public_ip(aws_sdk_ecs::types::AssignPublicIp::Enabled)
-                        .build()
-                        .unwrap(),
-                )
-                .build(),
-        )
-        .overrides(
-            TaskOverride::builder()
-                .container_overrides(
-                    ContainerOverride::builder()
-                        .name(container_name)
-                        .set_environment(Some(vec![
-                            create_key_value_pair(
-                                "START_BLOCK".to_string(),
-                                pipeline
-                                    .last_block()
-                                    .map(|l| l + 1)
-                                    .or(init_block)
-                                    .unwrap()
-                                    .to_string(),
-                            ),
-                            create_key_value_pair(
-                                "END_BLOCK".to_string(),
-                                incoming_block.to_string(),
-                            ),
-                            create_key_value_pair(
-                                "LOG_FETCHER_LAMBDA_ARN".to_string(),
-                                env::var("LOG_FETCHER_LAMBDA_ARN").unwrap(),
-                            ),
-                            create_key_value_pair(
-                                "TRANSACTION_QUEUE_URL".to_string(),
-                                env::var("TRANSACTION_QUEUE_URL").unwrap(),
-                            ),
-                            create_key_value_pair(
-                                "NODE_ENDPOINT".to_string(),
-                                env::var("NODE_ENDPOINT").unwrap(),
-                            ),
-                            create_key_value_pair(
-                                "HANDLER_ID".to_string(),
-                                env::var("HANDLER_ID").unwrap(),
-                            ),
-                            create_key_value_pair(
-                                "HANDLER_VERSION".to_string(),
-                                env::var("HANDLER_VERSION").unwrap(),
-                            ),
-                            create_key_value_pair(
-                                "VERSION".to_string(),
-                                env::var("VERSION").unwrap(),
-                            ),
-                        ]))
-                        .build(),
-                )
-                .build(),
-        )
+        .network_configuration(get_network_configuration(config.syncer_subnets.clone()))
+        .overrides(get_task_override(
+            &config,
+            pipeline.last_block().map(|l| l + 1).or(init_block).unwrap(),
+            incoming_block,
+        ))
         .send()
-        .await;
-    println!("done");
-
-    match result {
-        Err(e) => {
+        .await
+        .inspect_err(|e| {
             println!("{:?}", e);
+
             pipeline
                 .update()
                 .set_state(shared::types::syncing::SyncState::IDLE)
                 .send()
-                .unwrap()
-        }
-        _ => {}
-    }
+                .unwrap();
+        })?;
 
     Ok(())
 }
 
-fn create_key_value_pair(name: String, value: String) -> KeyValuePair {
-    KeyValuePair::builder()
-        .set_name(Some(name))
-        .set_value(Some(value))
+fn get_network_configuration(subnets: Vec<String>) -> NetworkConfiguration {
+    NetworkConfiguration::builder()
+        .awsvpc_configuration(
+            AwsVpcConfiguration::builder()
+                .set_subnets(Some(subnets))
+                .assign_public_ip(aws_sdk_ecs::types::AssignPublicIp::Enabled)
+                .build()
+                .unwrap(),
+        )
         .build()
+}
+fn get_task_override(config: &Config, start_block: u64, end_block: u64) -> TaskOverride {
+    TaskOverride::builder()
+        .container_overrides(
+            ContainerOverride::builder()
+                .name(&config.syncer_container_name)
+                .set_environment(Some(vec![
+                    create_key_value_pair("START_BLOCK", &start_block.to_string()),
+                    create_key_value_pair("END_BLOCK", &end_block.to_string()),
+                    create_key_value_pair("LOG_FETCHER_LAMBDA_ARN", &config.log_fetcher_lambda_arn),
+                    create_key_value_pair("TRANSACTION_QUEUE_URL", &config.transation_queue_url),
+                    create_key_value_pair("NODE_ENDPOINT", &config.node_endpoint),
+                    create_key_value_pair("HANDLER_ID", &config.handler_id),
+                    create_key_value_pair("HANDLER_VERSION", &config.handler_version),
+                    create_key_value_pair("VERSION", &config.version),
+                ]))
+                .build(),
+        )
+        .build()
+}
+
+fn create_key_value_pair(name: &str, value: &String) -> KeyValuePair {
+    KeyValuePair::builder().name(name).value(value).build()
 }
