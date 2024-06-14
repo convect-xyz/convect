@@ -362,8 +362,16 @@ export function decodeTx(tx: any, txConfig: any) {
 
 export function logConfigMatches(logConfig: any, logIdentifier: LogIdentifier) {
   return (
-    (isAddressEqual(logConfig._origin, logIdentifier.address) &&
+    (isAddressEqual(getOrigin(logConfig), logIdentifier.address) &&
       logConfig._topics.at(0) === logIdentifier.signature) ||
     (!logConfig.address && logConfig._topics.at(0) === logIdentifier.signature)
   );
+}
+
+export function getOrigin(logConfig: any) {
+  if (typeof logConfig._origin === "string") {
+    return logConfig._origin;
+  }
+
+  return logConfig._origin[getContext().chainId];
 }
