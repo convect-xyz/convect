@@ -8,6 +8,7 @@ shared = { path = "../shared", features = ["log-fetcher-sdk"] }
 
 aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
 aws-sdk-s3 = "1.22.0"
+aws-sdk-sqs = "1.14.0"
 tokio = { version = "1", features = ["full"] }
 serde_json = "1.0.114"
 serde = { version = "1.0.136", features = ["derive"] }

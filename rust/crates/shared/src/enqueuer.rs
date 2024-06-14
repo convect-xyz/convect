@@ -3,6 +3,7 @@ use std::env;
 use crate::s3::S3;
 use crate::types::syncing::State;
 use crate::types::transactions::IngestTransaction;
+use futures::Future;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -21,23 +22,24 @@ struct BatchPayload {
 }
 
 pub trait TransactionEnqueuer {
-    async fn enqueue_transactions(
+    fn enqueue_transactions(
         &self,
         pipeline: &mut State,
-        queue_url: String,
         txs: &Vec<IngestTransaction>,
-    ) -> Result<(), web3::Error>;
+    ) -> impl Future<Output = Result<(), web3::Error>>;
 }
 
-pub struct TransactionEnqueuerImpl<T: S3> {
+pub struct SQSTransactionEnqueuer<T: S3> {
     sqs_client: aws_sdk_sqs::Client,
+    queue_url: String,
     s3_client: T,
 }
 
-impl<T: S3> TransactionEnqueuerImpl<T> {
-    pub fn new(s3_client: T, sqs_client: aws_sdk_sqs::Client) -> Self {
+impl<T: S3> SQSTransactionEnqueuer<T> {
+    pub fn new(s3_client: T, queue_url: String, sqs_client: aws_sdk_sqs::Client) -> Self {
         Self {
             s3_client,
+            queue_url,
             sqs_client,
         }
     }
@@ -172,19 +174,20 @@ impl<T: S3> TransactionEnqueuerImpl<T> {
     }
 }
 
-impl<T: S3> TransactionEnqueuer for TransactionEnqueuerImpl<T> {
+impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
     async fn enqueue_transactions(
         &self,
         pipeline: &mut State,
-        queue_url: String,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), web3::Error> {
         let serialised_txs = serde_json::to_string(&txs).unwrap();
 
         if serialised_txs.len() < 1024 * 1024 * 2 {
-            return Ok(self.upload_raw(pipeline, queue_url, txs).await);
+            return Ok(self.upload_raw(pipeline, self.queue_url.clone(), txs).await);
         }
 
-        return Ok(self.upload_batch(pipeline, queue_url, txs).await);
+        return Ok(self
+            .upload_batch(pipeline, self.queue_url.clone(), txs)
+            .await);
     }
 }

@@ -1,19 +1,20 @@
 use aws_sdk_s3 as s3;
 
+use futures::Future;
 use s3::primitives::{ByteStream, SdkBody};
 
 pub trait S3 {
-    async fn get_s3_object(
+    fn get_s3_object(
         &self,
         bucket: &str,
         prefix: &str,
-    ) -> Result<String, errors::GetS3ObjectError>;
-    async fn put_s3_object(
+    ) -> impl Future<Output = Result<String, errors::GetS3ObjectError>>;
+    fn put_s3_object(
         &self,
         bucket: &str,
         prefix: &str,
         content: String,
-    ) -> Result<(), errors::PutS3ObjectError>;
+    ) -> impl Future<Output = Result<(), errors::PutS3ObjectError>>;
 }
 
 impl S3 for aws_sdk_s3::Client {
