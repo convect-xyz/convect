@@ -140,32 +140,6 @@ export async function getFailureIdx() {
   return Number(pipeline.ErrorLabel_);
 }
 
-type GetInitialisationOptions = {
-  parsedTxs: Array<Transaction>;
-  isRetry: boolean;
-};
-
-export async function getTransactionIterator(
-  options: GetInitialisationOptions
-) {
-  if (!options.isRetry) {
-    return {
-      iterator: new TransactionIterator(options.parsedTxs, 0),
-      startProcessor: undefined,
-    };
-  }
-
-  const pipeline = await axios
-    .get("http://localhost:4121/pipeline")
-    .then((r) => r.data);
-  const txIdx = findErrorTxIdx(options.parsedTxs, pipeline);
-
-  return {
-    iterator: new TransactionIterator(options.parsedTxs, txIdx),
-    startProcessor: pipeline.ErrorLabel_,
-  };
-}
-
 export function findErrorTxIdx(parsedTxs: Array<Transaction>, pipeline: any) {
   const index = parsedTxs.findIndex(
     (v) => pipeline.ErrorTx_ === v.transactionHash
@@ -185,31 +159,6 @@ export async function uploadResults(
     results,
     message_ids,
   });
-}
-
-export function getNextTransactionBatch(iterator: TransactionIterator) {
-  const batch: Array<Transaction> = [];
-
-  // tx at the front of parsedTxs
-  const frontTx = iterator.peek();
-  const processors = getEligibleTxConfigs(frontTx, pipeline.handlers);
-
-  // batch transactions that can be processed by the exact same processors
-  while (
-    iterator.hasNext() &&
-    sameEligibleProcessors(
-      processors,
-      getEligibleTxConfigs(iterator.peek(), pipeline.handlers)
-    )
-  ) {
-    const tx = iterator.next()!;
-    batch.push(tx);
-  }
-
-  return {
-    batch,
-    processors,
-  };
 }
 
 export async function getS3Results(batchRecords: Array<ParsedRecord>) {
@@ -353,27 +302,6 @@ export function txConfigComparison(tx: any) {
   };
 }
 
-export function sameEligibleProcessors(
-  processorsA: Array<any>,
-  processorsB: Array<any>
-) {
-  let seen = new Set();
-
-  if (processorsA.length != processorsB.length) return false;
-
-  for (const p of processorsA) {
-    seen.add(p.label);
-  }
-
-  for (const p of processorsB) {
-    if (!seen.has(p.label)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 export function getUniqueLogIdentifiers(tx: any): Array<LogIdentifier> {
   const seen = new Set();
   const unique = [];
@@ -431,26 +359,4 @@ export function logConfigMatches(logConfig: any, logIdentifier: LogIdentifier) {
       logConfig._topics.at(0) === logIdentifier.signature) ||
     (!logConfig.address && logConfig._topics.at(0) === logIdentifier.signature)
   );
-}
-
-class TransactionIterator {
-  #transactions: Array<Transaction>;
-  #index: number;
-
-  constructor(transactions: Array<Transaction>, startIndex: number) {
-    this.#transactions = transactions;
-    this.#index = startIndex;
-  }
-
-  hasNext() {
-    return this.#index < this.#transactions.length;
-  }
-
-  next() {
-    return this.#transactions[this.#index++];
-  }
-
-  peek() {
-    return this.#transactions[this.#index];
-  }
 }

@@ -50,12 +50,6 @@ async fn main() -> Result<(), Error> {
         println!("Started server");
     });
 
-    // tracing_subscriber::fmt()
-    //     .with_max_level(tracing::Level::INFO)
-    //     .with_target(false)
-    //     .without_time()
-    //     .init();
-
     let func = service_fn(my_extension);
 
     lambda_extension::run(func).await
@@ -68,7 +62,7 @@ mod results {
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
     use axum::{debug_handler, BoxError, Json};
-    use futures::TryFutureExt;
+    use futures::{join, TryFutureExt};
     use serde::Deserialize;
     use serde_json::{json, Value};
     use shared::reporting_sdk::{self, TransactionResult};
@@ -96,36 +90,48 @@ mod results {
             .find(|v| v.failed_label.is_some())
             .map(|v| v.clone());
 
-        app_state
-            .reporting
-            .handle(&reporting_sdk::Request {
-                handler_id: env::var("HANDLER_ID").expect("HANDLER_ID is not defined"),
-                handler_version: env::var("HANDLER_VERSION")
-                    .expect("HANDLER_VERSION is not defined"),
-                stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
-                    .expect("STRIPE_CUSTOMER_ID is not defined"),
-                user_id: Some(env::var("USER_ID").expect("USER_ID is not defined")),
-                invocation_id: payload.invocation_id,
-                results: payload.results,
-            })
-            .await
-            .unwrap();
+        let reporting_request = reporting_sdk::Request {
+            handler_id: env::var("HANDLER_ID").expect("HANDLER_ID is not defined"),
+            handler_version: env::var("HANDLER_VERSION").expect("HANDLER_VERSION is not defined"),
+            stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
+                .expect("STRIPE_CUSTOMER_ID is not defined"),
+            user_id: Some(env::var("USER_ID").expect("USER_ID is not defined")),
+            invocation_id: payload.invocation_id.clone(),
+            results: payload.results.clone(),
+        };
 
-        if let Some(failed_tx) = failed_tx {
-            fail_process_state(&app_state, &failed_tx).await.unwrap();
-
-            match make_messages_reprocessable(&sqs_client, &payload.message_ids).await {
-                Ok(_) => println!("Changed message visibility"),
-                Err(e) => println!("Error: {:?}", e),
-            };
-        } else {
-            unfail_process_state(&app_state).await.unwrap();
-        }
+        let _ = join!(
+            app_state.reporting.handle(&reporting_request),
+            maybe_update_process_state(&app_state, &failed_tx),
+            maybe_update_message_visibility(&sqs_client, &payload, &failed_tx)
+        );
 
         return Json(json!({"ok": true}));
     }
 
-    async fn make_messages_reprocessable(
+    async fn maybe_update_process_state(
+        app_state: &AppState,
+        failed_tx: &Option<TransactionResult>,
+    ) -> Result<(), BoxError> {
+        match failed_tx {
+            Some(failed_tx) => fail_process_state(app_state, &failed_tx).await,
+            None => unfail_process_state(app_state).await,
+        }
+    }
+
+    async fn maybe_update_message_visibility(
+        sqs_client: &aws_sdk_sqs::Client,
+        request: &Request,
+        failed_tx: &Option<TransactionResult>,
+    ) -> Result<(), BoxError> {
+        if let Some(_) = failed_tx {
+            return update_message_visibility(&sqs_client, &request.message_ids).await;
+        }
+
+        Ok(())
+    }
+
+    async fn update_message_visibility(
         sqs_client: &aws_sdk_sqs::Client,
         message_ids: &Vec<String>,
     ) -> Result<(), BoxError> {
@@ -160,8 +166,10 @@ mod results {
 
         Ok(state
             .update()
-            .set_error_label(failed_tx.failed_label.as_ref().unwrap().label.to_string())
-            .set_error_tx(failed_tx.transaction_hash.to_string())
+            .set_error_label(Some(
+                failed_tx.failed_label.as_ref().unwrap().label.to_string(),
+            ))
+            .set_error_tx(Some(failed_tx.transaction_hash.to_string()))
             .send()
             .await?)
     }
@@ -171,8 +179,8 @@ mod results {
 
         Ok(state
             .update()
-            .set_error_label("".to_string())
-            .set_error_tx("".to_string())
+            .set_error_label(None)
+            .set_error_tx(None)
             .send()
             .await?)
     }

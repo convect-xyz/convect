@@ -365,13 +365,13 @@ pub mod processing {
     }
 
     impl<'a> UpdateStateFluentBuilder<'a> {
-        pub fn set_error_tx(mut self, error_tx: String) -> Self {
-            self.temp_inner.error_tx = Some(error_tx);
+        pub fn set_error_tx(mut self, error_tx: Option<String>) -> Self {
+            self.temp_inner.error_tx = error_tx;
             self
         }
 
-        pub fn set_error_label(mut self, error_label: String) -> Self {
-            self.temp_inner.error_label = Some(error_label);
+        pub fn set_error_label(mut self, error_label: Option<String>) -> Self {
+            self.temp_inner.error_label = error_label;
             self
         }
 
