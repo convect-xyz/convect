@@ -49,9 +49,8 @@ export const env = createEnv({
       .string()
       .optional()
       .refine(modeRequired(["init", "update"])),
-    CHAIN_ID: z
-      .string()
-      .pipe(z.number())
+    CHAIN_ID: z.coerce
+      .number()
       .optional()
       .refine(modeRequired(["init", "update"])),
     POLLING_URL: z
