@@ -40,7 +40,9 @@ async fn main() -> Result<(), Error> {
         reporting: Arc::new(reporting_sdk),
     };
 
-    tracing_subscriber::fmt().init();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
 
     let app = Router::new()
         .route("/results", post(results::handler))
