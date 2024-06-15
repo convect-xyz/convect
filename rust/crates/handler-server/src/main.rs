@@ -11,6 +11,8 @@ use shared::{
     types::processing,
 };
 
+mod errors;
+
 #[derive(Clone)]
 struct AppState {
     pipeline: Arc<Mutex<processing::State>>,
@@ -47,7 +49,6 @@ async fn main() -> Result<(), Error> {
     tokio::spawn(async {
         println!("Starting server");
         axum::serve(listener, app).await.unwrap();
-        println!("Started server");
     });
 
     let func = service_fn(my_extension);
@@ -56,8 +57,8 @@ async fn main() -> Result<(), Error> {
 }
 
 mod results {
-    use std::env;
-
+    use super::errors::ServerError;
+    use crate::AppState;
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
@@ -66,8 +67,7 @@ mod results {
     use serde::Deserialize;
     use serde_json::{json, Value};
     use shared::reporting_sdk::{self, TransactionResult};
-
-    use crate::AppState;
+    use std::env;
 
     #[derive(Deserialize, Debug)]
     pub struct Request {
@@ -80,7 +80,7 @@ mod results {
     pub async fn handler(
         State(app_state): State<AppState>,
         Json(payload): Json<Request>,
-    ) -> Json<Value> {
+    ) -> Result<Json<Value>, ServerError> {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let sqs_client = aws_sdk_sqs::Client::new(&config);
 
@@ -100,23 +100,28 @@ mod results {
             results: payload.results.clone(),
         };
 
-        let _ = join!(
+        let (reporting_result, process_result, visibility_result) = join!(
             app_state.reporting.handle(&reporting_request),
             maybe_update_process_state(&app_state, &failed_tx),
             maybe_update_message_visibility(&sqs_client, &payload, &failed_tx)
         );
 
-        return Json(json!({"ok": true}));
+        reporting_result?;
+        process_result?;
+        visibility_result?;
+
+        Ok(Json(json!({"ok": true})))
     }
 
     async fn maybe_update_process_state(
         app_state: &AppState,
         failed_tx: &Option<TransactionResult>,
     ) -> Result<(), BoxError> {
-        match failed_tx {
-            Some(failed_tx) => fail_process_state(app_state, &failed_tx).await,
-            None => unfail_process_state(app_state).await,
+        if let Some(failed_tx) = failed_tx {
+            return fail_process_state(app_state, &failed_tx).await;
         }
+
+        return unfail_process_state(app_state).await;
     }
 
     async fn maybe_update_message_visibility(
