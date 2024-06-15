@@ -54,6 +54,7 @@ async fn main() -> Result<(), Error> {
 
     tokio::spawn(async {
         println!("Starting server");
+
         axum::serve(listener, app).await.unwrap();
     });
 
