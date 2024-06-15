@@ -5,13 +5,12 @@ use axum::{
     Router,
 };
 use futures::lock::Mutex;
-use lambda_extension::{service_fn, Error, LambdaEvent, NextEvent};
+use lambda_extension::{service_fn, tracing, Error, LambdaEvent, NextEvent};
 use shared::{
     reporting_sdk::{ReportingSdk, SQSReportingSdk},
     types::processing,
 };
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod errors;
 
@@ -41,14 +40,7 @@ async fn main() -> Result<(), Error> {
         reporting: Arc::new(reporting_sdk),
     };
 
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                "example_tracing_aka_logging=debug,tower_http=debug,axum::rejection=trace".into()
-            }),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    tracing::init_default_subscriber();
 
     let app = Router::new()
         .route("/results", post(results::handler))
