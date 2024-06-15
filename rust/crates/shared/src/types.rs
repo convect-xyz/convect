@@ -115,8 +115,9 @@ pub mod manifest {
 }
 
 pub mod syncing {
+    use backoff::{exponential::ExponentialBackoff, SystemClock};
     use lambda_runtime::tower::BoxError;
-    use redis::{Commands, JsonCommands};
+    use redis::{Commands, JsonCommands, RedisError};
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -260,10 +261,18 @@ pub mod syncing {
         pub fn send(self) -> Result<(), BoxError> {
             let handler_id = &self.inner.handler_id;
             let handler_version = &self.inner.handler_version;
-            self.connection.json_set(
-                format!("{handler_id}-{handler_version}"),
-                "$",
-                &self.inner,
+
+            backoff::retry::<_, ExponentialBackoff<SystemClock>, (), RedisError>(
+                ExponentialBackoff::default(),
+                || {
+                    self.connection.json_set(
+                        format!("{handler_id}-{handler_version}"),
+                        "$",
+                        &self.inner,
+                    )?;
+
+                    Ok(())
+                },
             )?;
 
             Ok(())
@@ -272,8 +281,10 @@ pub mod syncing {
 }
 
 pub mod processing {
+    use backoff::{exponential::ExponentialBackoff, SystemClock};
+    use futures::lock::Mutex;
     use lambda_runtime::tower::BoxError;
-    use redis::JsonAsyncCommands;
+    use redis::{JsonAsyncCommands, RedisError};
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -378,13 +389,25 @@ pub mod processing {
         pub async fn send(self) -> Result<(), BoxError> {
             let handler_id = self.inner.handler_id.to_string();
             let handler_version = self.inner.handler_version.to_string();
-            self.connection
-                .json_set(
-                    format!("process-state-{handler_id}-{handler_version}"),
-                    "$",
-                    &self.inner,
-                )
-                .await?;
+            let connection = Mutex::new(self.connection);
+
+            backoff::future::retry::<(), RedisError, _, _, ExponentialBackoff<SystemClock>>(
+                ExponentialBackoff::default(),
+                || async {
+                    connection
+                        .lock()
+                        .await
+                        .json_set(
+                            format!("process-state-{handler_id}-{handler_version}"),
+                            "$",
+                            &self.inner,
+                        )
+                        .await?;
+
+                    Ok(())
+                },
+            )
+            .await?;
 
             self.inner.error_label = self.temp_inner.error_label;
             self.inner.error_label = self.temp_inner.error_tx;

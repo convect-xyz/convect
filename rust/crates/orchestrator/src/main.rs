@@ -101,6 +101,9 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             .set_state(shared::types::syncing::SyncState::FAILED)
             .send(),
     }
+    .unwrap();
+
+    Ok(())
 }
 
 struct Config {
