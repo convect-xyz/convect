@@ -11,6 +11,7 @@ use shared::{
     types::processing,
 };
 use tower_http::trace::TraceLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod errors;
 
@@ -40,8 +41,13 @@ async fn main() -> Result<(), Error> {
         reporting: Arc::new(reporting_sdk),
     };
 
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                "example_tracing_aka_logging=debug,tower_http=debug,axum::rejection=trace".into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
         .init();
 
     let app = Router::new()
@@ -54,6 +60,7 @@ async fn main() -> Result<(), Error> {
 
     tokio::spawn(async {
         println!("Starting server");
+
         axum::serve(listener, app).await.unwrap();
     });
 
