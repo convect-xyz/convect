@@ -92,6 +92,9 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
             LambdaTelemetryRecord::Function(record) => {
                 logs.push(record);
             }
+            LambdaTelemetryRecord::Extension(record) => {
+                println!("{record}");
+            }
             LambdaTelemetryRecord::PlatformReport {
                 metrics,
                 request_id: _,
