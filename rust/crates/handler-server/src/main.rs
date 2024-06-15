@@ -10,6 +10,7 @@ use shared::{
     reporting_sdk::{ReportingSdk, SQSReportingSdk},
     types::processing,
 };
+use tower_http::trace::TraceLayer;
 
 mod errors;
 
@@ -39,10 +40,13 @@ async fn main() -> Result<(), Error> {
         reporting: Arc::new(reporting_sdk),
     };
 
+    tracing_subscriber::fmt().init();
+
     let app = Router::new()
         .route("/results", post(results::handler))
         .route("/pipeline", get(get_pipeline::handler))
-        .with_state(app_state);
+        .with_state(app_state)
+        .layer(TraceLayer::new_for_http());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
 

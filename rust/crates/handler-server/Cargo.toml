@@ -18,7 +18,10 @@ aws-smithy-types = "1.1.8"
 async-trait = "0.1.80"
 lambda_http = "0.11.1"
 axum = { version = "0.7.5", features = ["macros"] }
+tower-http = { version = "0.5.2", features = ["trace"] }
 dotenvy = "0.15"
 axum-macros = "0.4.1"
 lambda-extension = "0.10.0"
 uuid = { version = "1.8.0", features = ["v4", "v7", "js"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
