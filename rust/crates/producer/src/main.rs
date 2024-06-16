@@ -75,6 +75,8 @@ async fn run(
             .message(block_number.unwrap().to_string())
             .send()
             .await?;
+
+        println!("Published to {p}", p = network.name);
     }
 
     Err(EmptyBlockNumber.into())
