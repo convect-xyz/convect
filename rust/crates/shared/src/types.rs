@@ -254,9 +254,9 @@ pub mod syncing {
             );
 
             redis::transaction(&mut self.connection, &[key.as_str()], |con, pipe| {
-                let old_val: String = con.get(key.as_str())?;
+                let old_val: Option<String> = con.get(key.as_str())?;
 
-                if old_val.eq("LOCKED") {
+                if old_val.is_some_and(|old_val| old_val.eq("LOCKED")) {
                     return Err(RedisError::from((
                         redis::ErrorKind::ClientError,
                         "",
