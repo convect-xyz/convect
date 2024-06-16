@@ -256,18 +256,15 @@ pub mod syncing {
             redis::transaction(&mut self.connection, &[key.as_str()], |con, pipe| {
                 let old_val: Option<String> = con.get(key.as_str())?;
 
-                if old_val.is_some_and(|old_val| old_val.eq("LOCKED")) {
+                if old_val.as_ref().is_some_and(|old_val| old_val.eq("LOCKED")) {
                     return Err(RedisError::from((
                         redis::ErrorKind::ClientError,
-                        "",
-                        format!(""),
+                        "Locked",
+                        format!("Lock status is {:?}", old_val.clone()),
                     )));
                 }
 
-                pipe.set(key.as_str(), "LOCKED")
-                    .ignore()
-                    .get(key.as_str())
-                    .query(con)
+                pipe.set(key.as_str(), "LOCKED").ignore().query(con)
             })?;
 
             Ok(())
@@ -286,8 +283,8 @@ pub mod syncing {
                 if old_val.ne("LOCKED") {
                     return Err(RedisError::from((
                         redis::ErrorKind::ClientError,
-                        "",
-                        format!(""),
+                        "not locked",
+                        format!("not locked"),
                     )));
                 }
 
