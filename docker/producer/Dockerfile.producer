@@ -5,7 +5,7 @@ FROM --platform=linux/amd64 chef AS planner
 COPY ./proto ./proto
 COPY ./config ./config
 COPY ./rust/Cargo.toml ./rust/Cargo.lock ./rust/
-COPY ./rust/src ./rust/src
+COPY ./rust ./rust
 WORKDIR /app/rust
 RUN cargo chef prepare --bin=producer
 
@@ -17,7 +17,7 @@ COPY --from=planner /app/rust/recipe.json ./rust/recipe.json
 WORKDIR /app/rust
 RUN cargo chef cook --release --bin=producer
 COPY ./rust ./
-RUN cargo build --release --bin=producer
+RUN cargo build --release -p producer
 RUN mv ./target/release/producer ./app
 
 FROM --platform=linux/amd64 debian:stable-slim AS runtime
