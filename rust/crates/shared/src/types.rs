@@ -115,6 +115,8 @@ pub mod manifest {
 }
 
 pub mod syncing {
+    use std::{error::Error, fmt};
+
     use backoff::{exponential::ExponentialBackoff, SystemClock};
     use lambda_runtime::tower::BoxError;
     use redis::{Commands, JsonCommands, RedisError};
@@ -126,6 +128,17 @@ pub mod syncing {
         SYNCING,
         FAILED,
     }
+
+    #[derive(Debug)]
+    pub struct LockError;
+
+    impl fmt::Display for LockError {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "empty block number")
+        }
+    }
+
+    impl Error for LockError {}
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct Inner {
@@ -231,6 +244,57 @@ pub mod syncing {
 
             let count: u64 = self.connection.get(key).unwrap();
             count
+        }
+
+        pub fn acquire_lock(&mut self) -> Result<(), BoxError> {
+            let key = format!(
+                "lock-{handler_id}-{handler_version}",
+                handler_id = &self.inner.handler_id,
+                handler_version = &self.inner.handler_version
+            );
+
+            redis::transaction(&mut self.connection, &[key.as_str()], |con, pipe| {
+                let old_val: String = con.get(key.as_str())?;
+
+                if old_val.eq("LOCKED") {
+                    return Err(RedisError::from((
+                        redis::ErrorKind::ClientError,
+                        "",
+                        format!(""),
+                    )));
+                }
+
+                pipe.set(key.as_str(), "LOCKED")
+                    .ignore()
+                    .get(key.as_str())
+                    .query(con)
+            })?;
+
+            Ok(())
+        }
+
+        pub fn release_lock(&mut self) -> Result<(), BoxError> {
+            let key = format!(
+                "lock-{handler_id}-{handler_version}",
+                handler_id = &self.inner.handler_id,
+                handler_version = &self.inner.handler_version
+            );
+
+            redis::transaction(&mut self.connection, &[key.as_str()], |con, pipe| {
+                let old_val: String = con.get(key.as_str())?;
+
+                if old_val.ne("LOCKED") {
+                    return Err(RedisError::from((
+                        redis::ErrorKind::ClientError,
+                        "",
+                        format!(""),
+                    )));
+                }
+
+                pipe.del(key.as_str()).ignore().query(con)
+            })?;
+
+            Ok(())
         }
 
         pub fn inner(&self) -> &Inner {
