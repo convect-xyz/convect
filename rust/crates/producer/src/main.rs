@@ -1,4 +1,10 @@
+use std::error::{self};
+use std::fmt;
+
 use aws_config::BehaviorVersion;
+use aws_sdk_sns::error::BoxError;
+use backoff::exponential::ExponentialBackoff;
+use backoff::SystemClock;
 use ethers::prelude::*;
 use ethers::providers::{Middleware, Provider, Ws};
 use futures::future::join_all;
@@ -23,7 +29,17 @@ async fn main() {
         let provider_result = providers.get(i).expect("Provider not present");
 
         match provider_result {
-            Ok(p) => handlers.push(run(network, p, &client)),
+            Ok(p) => handlers.push(backoff::future::retry::<
+                (),
+                BoxError,
+                _,
+                _,
+                ExponentialBackoff<SystemClock>,
+            >(ExponentialBackoff::default(), || async {
+                run(network, p, &client).await?;
+
+                Ok(())
+            })),
             Err(e) => panic!("Failed to connect to handler: {:?}", e),
         }
     }
@@ -31,27 +47,37 @@ async fn main() {
     join_all(handlers).await;
 }
 
-async fn run(network: &SupportedNetwork, provider: &Provider<Ws>, sns: &aws_sdk_sns::Client) {
+#[derive(Debug, Clone)]
+struct EmptyBlockNumber;
+impl fmt::Display for EmptyBlockNumber {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "empty block number")
+    }
+}
+impl error::Error for EmptyBlockNumber {}
+
+async fn run(
+    network: &SupportedNetwork,
+    provider: &Provider<Ws>,
+    sns: &aws_sdk_sns::Client,
+) -> Result<(), BoxError> {
     let mut stream = provider.subscribe_blocks().await.unwrap();
 
     while let Some(block) = stream.next().await {
-        if let Some(number) = block.number {
-            match sns
-                .publish()
-                .topic_arn(network.sns_topic.clone())
-                .message(number.to_string())
-                .send()
-                .await
-            {
-                Ok(_) => {
-                    println!("Uploaded to {:?}", network.name)
-                }
-                Err(e) => panic!("Error on {:?}: {:?}", network.name, e),
-            }
+        let block_number = block.number;
+
+        if block_number.is_none() {
+            return Err(EmptyBlockNumber.into());
         }
+
+        sns.publish()
+            .topic_arn(network.sns_topic.clone())
+            .message(block_number.unwrap().to_string())
+            .send()
+            .await?;
     }
 
-    return;
+    Err(EmptyBlockNumber.into())
 }
 
 #[cfg(test)]
