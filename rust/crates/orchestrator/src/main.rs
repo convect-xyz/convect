@@ -31,8 +31,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         SQSTransactionEnqueuer::new(s3_client, config.transation_queue_url.clone(), sqs_client);
     let mut pipeline = State::load(config.handler_id.clone(), config.handler_version.clone());
 
-    pipeline.acquire_lock().unwrap();
-
     let incoming_block: u64 = event
         .payload
         .records
@@ -79,6 +77,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .await;
     }
 
+    pipeline.acquire_lock().unwrap();
+
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
     let manifest = Manifest::from_env().await.unwrap();
     let transactions = fetcher
@@ -107,6 +107,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     .unwrap();
 
     pipeline.release_lock().unwrap();
+
     Ok(())
 }
 
