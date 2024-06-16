@@ -36,7 +36,9 @@ async fn main() {
                 _,
                 ExponentialBackoff<SystemClock>,
             >(ExponentialBackoff::default(), || async {
-                run(network, p, &client).await?;
+                run(network, p, &client)
+                    .await
+                    .inspect_err(|e| println!("{:?}", e))?;
 
                 Ok(())
             })),
@@ -69,6 +71,8 @@ async fn run(
         if block_number.is_none() {
             return Err(EmptyBlockNumber.into());
         }
+
+        println!("Publishing to {p}", p = network.name);
 
         sns.publish()
             .topic_arn(network.sns_topic.clone())
