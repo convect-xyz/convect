@@ -19,6 +19,7 @@ async fn main() -> Result<(), Error> {
     run(service_fn(function_handler)).await
 }
 
+// Make sure we received higher block number only
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let config = Config::new();
     let sdk_config = aws_config::load_from_env().await;
@@ -29,6 +30,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, config.transation_queue_url.clone(), sqs_client);
     let mut pipeline = State::load(config.handler_id.clone(), config.handler_version.clone());
+
+    pipeline.acquire_lock().unwrap();
 
     let incoming_block: u64 = event
         .payload
@@ -103,6 +106,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     }
     .unwrap();
 
+    pipeline.release_lock().unwrap();
     Ok(())
 }
 
