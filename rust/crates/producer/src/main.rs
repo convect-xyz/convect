@@ -63,7 +63,7 @@ async fn run(
     provider: &Provider<Ws>,
     sns: &aws_sdk_sns::Client,
 ) -> Result<(), BoxError> {
-    let mut stream = provider.subscribe_blocks().await.unwrap();
+    let mut stream = provider.subscribe_blocks().await?;
 
     while let Some(block) = stream.next().await {
         let block_number = block.number;
