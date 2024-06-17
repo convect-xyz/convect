@@ -254,8 +254,8 @@ pub mod syncing {
             );
 
             let v: Option<String> = redis::cmd("SET")
-                .arg("LOCKED")
                 .arg(key)
+                .arg("LOCKED")
                 .arg("NX")
                 .query(&mut self.connection)?;
 
