@@ -290,7 +290,7 @@ pub mod syncing {
                     )));
                 }
 
-                pipe.del(key.as_str()).ignore().query(con)
+                pipe.set(key.as_str(), "RELEASED").ignore().query(con)
             })?;
 
             Ok(())
