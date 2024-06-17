@@ -41,6 +41,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .parse()
         .expect("Invalid SNS Message");
 
+    println!("{:?}", incoming_block);
     if pipeline
         .state()
         .eq(&shared::types::syncing::SyncState::SYNCING)
