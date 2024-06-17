@@ -256,6 +256,7 @@ pub mod syncing {
             redis::transaction(&mut self.connection, &[key.as_str()], |con, pipe| {
                 let old_val: Option<String> = con.get(key.as_str())?;
 
+                println!("Old val is: {:?}", old_val);
                 if old_val.as_ref().is_some_and(|old_val| old_val.eq("LOCKED")) {
                     return Err(RedisError::from((
                         redis::ErrorKind::ClientError,
@@ -279,6 +280,7 @@ pub mod syncing {
 
             redis::transaction(&mut self.connection, &[key.as_str()], |con, pipe| {
                 let old_val: String = con.get(key.as_str())?;
+                println!("Old val is: {:?}", old_val);
 
                 if old_val.ne("LOCKED") {
                     return Err(RedisError::from((
