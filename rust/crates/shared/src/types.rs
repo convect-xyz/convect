@@ -253,20 +253,15 @@ pub mod syncing {
                 handler_version = &self.inner.handler_version
             );
 
-            redis::transaction(&mut self.connection, &[key.as_str()], |con, pipe| {
-                let old_val: Option<String> = con.get(key.as_str())?;
+            let v: Option<String> = redis::cmd("SET")
+                .arg("LOCKED")
+                .arg(key)
+                .arg("NX")
+                .query(&mut self.connection)?;
 
-                println!("Old val is: {:?}", old_val);
-                if old_val.as_ref().is_some_and(|old_val| old_val.eq("LOCKED")) {
-                    return Err(RedisError::from((
-                        redis::ErrorKind::ClientError,
-                        "Locked",
-                        format!("Lock status is {:?}", old_val.clone()),
-                    )));
-                }
-
-                pipe.set(key.as_str(), "LOCKED").ignore().query(con)
-            })?;
+            if v.is_none() {
+                return Err(LockError.into());
+            }
 
             Ok(())
         }
@@ -278,20 +273,7 @@ pub mod syncing {
                 handler_version = &self.inner.handler_version
             );
 
-            redis::transaction(&mut self.connection, &[key.as_str()], |con, pipe| {
-                let old_val: String = con.get(key.as_str())?;
-                println!("Old val is: {:?}", old_val);
-
-                if old_val.ne("LOCKED") {
-                    return Err(RedisError::from((
-                        redis::ErrorKind::ClientError,
-                        "not locked",
-                        format!("not locked"),
-                    )));
-                }
-
-                pipe.set(key.as_str(), "RELEASED").ignore().query(con)
-            })?;
+            let _: u64 = self.connection.del(key)?;
 
             Ok(())
         }
