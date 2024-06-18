@@ -14,6 +14,7 @@ pub struct TransactionResultLabel {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TransactionResult {
     pub transaction_hash: String,
+    pub batch_id: String,
     pub successful_labels: Vec<TransactionResultLabel>,
     pub failed_label: Option<TransactionResultLabel>,
 }

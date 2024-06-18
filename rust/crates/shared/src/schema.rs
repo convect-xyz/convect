@@ -26,6 +26,8 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         timestamp -> Timestamptz,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 

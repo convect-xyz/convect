@@ -12,6 +12,8 @@ pub mod transactions {
         pub transaction_index: u64,
         #[serde(rename = "transactionHash")]
         pub transaction_hash: String,
+        #[serde(rename = "batchId")]
+        pub batch_id: String,
         pub logs: Vec<IngestLog>,
     }
 

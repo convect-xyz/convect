@@ -73,6 +73,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         let mut tx_indexes: HashMap<H256, usize> = HashMap::new();
         let mut txs: Vec<IngestTransaction> = Vec::new();
 
+        let id = uuid::Uuid::new_v4();
         for log in all_logs?.into_iter().flatten() {
             let tx_hash = log.transaction_hash.unwrap();
 
@@ -83,6 +84,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
                     block_number: log.block_number.unwrap().as_u64(),
                     block_hash: format!("{:#x}", log.block_hash.unwrap()),
                     transaction_index: log.transaction_index.unwrap().as_u64(),
+                    batch_id: id.to_string(),
                     transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
                     logs: Vec::new(),
                 });
