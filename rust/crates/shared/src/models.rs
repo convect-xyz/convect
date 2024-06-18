@@ -11,6 +11,7 @@ pub struct ProcessedTransaction<'a> {
     pub timestamp: DateTime<Utc>,
     pub handler_id: &'a str,
     pub handler_version: &'a str,
+    pub batch_id: &'a str,
 }
 
 #[derive(Insertable)]
