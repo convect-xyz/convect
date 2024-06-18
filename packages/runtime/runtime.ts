@@ -53,6 +53,7 @@ type TransactionResultLabel = {
 };
 type TransactionResult = {
   transaction_hash: string;
+  batch_id: string;
   successful_labels: Array<TransactionResultLabel>;
   failed_label: TransactionResultLabel | undefined;
 };
@@ -96,9 +97,15 @@ export async function handler(event: SQSEvent, context: Context) {
 
     try {
       await txConfig._handler(batch, getContext());
-      batch.map((tx) => addSuccessful(tx.transactionHash, i.toString()));
+      batch.map((tx) =>
+        addSuccessful(tx.transactionHash, tx.batchId, i.toString())
+      );
     } catch (e) {
-      addFailure(batch.at(0).transactionHash, i.toString());
+      addFailure(
+        batch.at(0).transactionHash,
+        batch.at(0).batchId,
+        i.toString()
+      );
       err = e;
       break;
     }
@@ -190,12 +197,13 @@ function createStateManager() {
   let failureCount = 0;
   let successCount = 0;
 
-  function addSuccessful(txHash: string, handler: string) {
+  function addSuccessful(txHash: string, batchId: string, handler: string) {
     if (!txHashIdx.has(txHash)) {
       txHashIdx.set(txHash, results.length);
       results.push({
         transaction_hash: txHash,
         successful_labels: [],
+        batch_id: batchId,
         failed_label: undefined,
       });
     }
@@ -207,12 +215,13 @@ function createStateManager() {
     successCount++;
   }
 
-  function addFailure(txHash: string, handler: string) {
+  function addFailure(txHash: string, batchId: string, handler: string) {
     if (!txHashIdx.has(txHash)) {
       txHashIdx.set(txHash, results.length);
       results.push({
         transaction_hash: txHash,
         successful_labels: [],
+        batch_id: batchId,
         failed_label: undefined,
       });
     }

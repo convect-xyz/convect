@@ -76,6 +76,7 @@ fn extract_transactions(r: &reporting_sdk::Request) -> Vec<ProcessedTransaction>
                 timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
                 handler_id: &r.handler_id,
                 handler_version: &r.handler_version,
+                batch_id: &result.batch_id,
             })
         }
 
@@ -87,6 +88,7 @@ fn extract_transactions(r: &reporting_sdk::Request) -> Vec<ProcessedTransaction>
                 timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
                 handler_id: &r.handler_id,
                 handler_version: &r.handler_version,
+                batch_id: &result.batch_id,
             })
         }
     }
