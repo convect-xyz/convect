@@ -94,6 +94,16 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         })
         .await?;
 
+    println!("{:?}", from_block);
+    println!("{:?}", incoming_block);
+    println!(
+        "{:?}",
+        transactions
+            .iter()
+            .map(|tx| &tx.batch_id)
+            .collect::<Vec<_>>()
+    );
+
     let result = enqueuer
         .enqueue_transactions(&mut pipeline, &transactions)
         .await;
