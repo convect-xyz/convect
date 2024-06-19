@@ -41,6 +41,10 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .parse()
         .expect("Invalid SNS Message");
 
+    if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
+        return Ok(());
+    }
+
     println!("{:?}", incoming_block);
     if pipeline
         .state()
