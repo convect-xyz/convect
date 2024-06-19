@@ -71,6 +71,11 @@ export default async () => {
     reservedConcurrentExecutions: 1,
   });
 
+  new aws.lambda.FunctionEventInvokeConfig("orchestrator_config", {
+    functionName: orchestrator.arn,
+    maximumRetryAttempts: 0,
+  });
+
   const handler = new aws.lambda.Function(`handler`, {
     role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     s3Bucket: "ingest-build-outputs",
