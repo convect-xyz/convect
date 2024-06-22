@@ -2,7 +2,7 @@ import { and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "~/server/db";
-import { getData, getUserContext } from "../utils";
+import { getFormData, getUserContext } from "../utils";
 
 const requestSchema = z
   .object({
@@ -21,7 +21,7 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ message: userError.message }, { status: 401 });
   }
 
-  const { data, error: dataError } = await getData(req, requestSchema);
+  const { data, error: dataError } = await getFormData(req, requestSchema);
   if (dataError) {
     return NextResponse.json({ message: dataError.message }, { status: 401 });
   }
