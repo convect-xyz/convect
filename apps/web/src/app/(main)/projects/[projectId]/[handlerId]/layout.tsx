@@ -10,7 +10,7 @@ import { useParams } from "./hooks/useParams";
 
 export default function Layout(props: PropsWithChildren) {
   const { handlerId, projectId } = useParams();
-  const { data: handler } = api.handlers.getHandler.useQuery({
+  const { data: handler } = api.functions.get.useQuery({
     handlerId: Number(handlerId),
     projectId: Number(projectId),
   });
@@ -33,7 +33,7 @@ export default function Layout(props: PropsWithChildren) {
 function Main(props: PropsWithChildren) {
   const pathname = usePathname();
   const { handlerId, projectId } = useParams();
-  const { data: handler } = api.handlers.getHandler.useQuery({
+  const { data: handler } = api.functions.get.useQuery({
     handlerId: Number(handlerId),
     projectId: Number(projectId),
   });
