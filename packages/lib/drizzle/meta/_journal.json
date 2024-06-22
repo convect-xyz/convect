@@ -71,6 +71,13 @@
       "when": 1718397032906,
       "tag": "0009_nasty_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1719079867139,
+      "tag": "0010_dear_corsair",
+      "breakpoints": true
     }
   ]
 }
