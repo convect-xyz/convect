@@ -15,8 +15,8 @@ import { api } from "~/trpc/react";
 import { useParams } from "../hooks/useParams";
 
 const schema = z.object({
-  key: z.string(),
-  value: z.string(),
+  key: z.string().min(1),
+  value: z.string().min(1),
 });
 
 type Values = z.infer<typeof schema>;
@@ -24,7 +24,7 @@ export function AddEnvSection() {
   const { handlerId } = useParams();
 
   const utils = api.useUtils();
-  const { mutateAsync: addEnv } = api.handlers.addEnv.useMutation();
+  const { mutateAsync: addEnv } = api.functions.addEnv.useMutation();
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -41,7 +41,7 @@ export function AddEnvSection() {
       handlerId,
     });
 
-    await utils.handlers.getEnvs.refetch({ handlerId });
+    await utils.functions.getEnvs.refetch({ handlerId });
 
     form.reset();
   };
@@ -87,7 +87,11 @@ export function AddEnvSection() {
             />
           </div>
           <div className="mt-4 flex justify-end">
-            <Button type="submit" isLoading={form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              disabled={!form.formState.isValid}
+              isLoading={form.formState.isSubmitting}
+            >
               Save
             </Button>
           </div>

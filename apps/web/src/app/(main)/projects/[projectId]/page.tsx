@@ -15,7 +15,7 @@ import { useParams } from "./hooks/useParams";
 export default function Page() {
   const { projectId } = useParams();
   const [isOpen, setIsOpen] = useState(false);
-  const { data: handlers, isLoading } = api.handlers.getHandlers.useQuery({
+  const { data: handlers } = api.project.getFunctions.useQuery({
     projectId: Number(projectId),
   });
 
@@ -53,7 +53,7 @@ export default function Page() {
 }
 
 function HandlerRow(props: {
-  handler: RouterOutputs["handlers"]["getHandlers"]["handlers"][number];
+  handler: RouterOutputs["project"]["getFunctions"]["handlers"][number];
 }) {
   const router = useRouter();
   const { projectId } = useParams();

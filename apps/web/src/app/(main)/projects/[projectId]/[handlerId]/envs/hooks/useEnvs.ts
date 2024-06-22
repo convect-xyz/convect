@@ -3,7 +3,7 @@ import { useParams } from "../../hooks/useParams";
 
 export function useEnvs() {
   const { handlerId } = useParams();
-  return api.handlers.getEnvs.useQuery({
+  return api.functions.getEnvs.useQuery({
     handlerId: Number(handlerId),
   });
 }

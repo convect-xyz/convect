@@ -5,7 +5,7 @@ import { useFilters } from "../filters";
 export function useLogs() {
   const { handlerId } = useParams();
   const { logLevel } = useFilters();
-  return api.handlers.getLogs.useQuery(
+  return api.functions.getLogs.useQuery(
     {
       handlerId: Number(handlerId),
       logLevel,
