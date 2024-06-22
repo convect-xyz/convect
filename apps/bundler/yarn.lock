@@ -705,7 +705,7 @@ buffer@4.9.2:
     isarray "^1.0.0"
 
 bullmq@^5.1.8:
-  version "5.5.0"
+  version "5.5.2"
   resolved "https://registry.yarnpkg.com/bullmq/-/bullmq-5.5.0.tgz#77a314139a548518a8a1ecdf26e0ea023f074a94"
   integrity sha512-pmWnAFTJpw0NgOzEPwpwvUPnVk691bbzXt4QZGS9bM61DnaoxrQi8zzaP/nRH3PYmsUfNUdHwbxJVxa0kDZrIg==
   dependencies:

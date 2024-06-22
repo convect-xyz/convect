@@ -3,6 +3,7 @@ import "~/styles/globals.css";
 import { Manrope } from "next/font/google";
 
 import { ThemeProvider } from "~/components/theme/ThemeProvider";
+import { Toaster } from "~/components/ui/sonner";
 import { TRPCReactProvider } from "~/trpc/react";
 
 const manrope = Manrope({
@@ -29,6 +30,7 @@ export default function RootLayout({
           defaultTheme="dark"
           disableTransitionOnChange
         >
+          <Toaster />
           <TRPCReactProvider>{children}</TRPCReactProvider>
         </ThemeProvider>
       </body>

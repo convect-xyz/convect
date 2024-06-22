@@ -1,11 +1,10 @@
 "use client";
 
 import { times } from "lodash";
-import { Terminal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CodeBlock } from "~/components/code/CodeBlock";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import ChainIcon from "~/components/icons/ChainIcon";
+import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
@@ -23,28 +22,29 @@ export default function Page() {
   return (
     <>
       <div className="mx-auto w-full max-w-screen-2xl">
-        <div className="mx-auto flex w-full max-w-screen-lg flex-col gap-3">
-          <div className="ml-auto">
+        <div className="mx-auto flex w-full max-w-screen-lg flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="px-2">
+              <h3 className="text-sm text-muted-foreground">
+                Convect Functions
+              </h3>
+            </div>
+
+            {handlers && handlers.handlers.length > 0 && (
+              <Button onClick={() => setIsOpen(true)}>New</Button>
+            )}
             <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
           </div>
 
           {handlers?.handlers.length === 0 && <NoHandlers />}
-          {(isLoading || (handlers && handlers.handlers.length > 0)) && (
-            <>
-              <div className="px-2">
-                <h3 className="text-sm text-muted-foreground">
-                  Convect Functions
-                </h3>
-              </div>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2">
-                {!handlers &&
-                  times(20).map((idx) => <HandlerRowSkeleton key={idx} />)}
-                {handlers?.handlers.map((handler) => (
-                  <HandlerRow key={handler.id} handler={handler} />
-                ))}
-              </div>
-            </>
-          )}
+
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2">
+            {!handlers &&
+              times(20).map((idx) => <HandlerRowSkeleton key={idx} />)}
+            {handlers?.handlers.map((handler) => (
+              <HandlerRow key={handler.id} handler={handler} />
+            ))}
+          </div>
         </div>
       </div>
       <UpgradeDialog />
@@ -59,12 +59,17 @@ function HandlerRow(props: {
   const { projectId } = useParams();
   return (
     <div
-      className="h-32 cursor-pointer rounded-sm border bg-muted p-4 transition-all hover:border-muted-foreground/25"
+      className="flex h-32 cursor-pointer flex-col rounded-sm border bg-muted p-3 transition-all hover:border-muted-foreground/25"
       onClick={() =>
         router.push(`/projects/${projectId}/${props.handler.id.toString()}`)
       }
     >
-      {props.handler.name}
+      <div className="flex-1">{props.handler.name}</div>
+
+      <span className="ml-auto flex w-min items-center gap-2 whitespace-nowrap rounded-full bg-background px-2 py-1 text-xs">
+        <ChainIcon chainId={props.handler.producer.chainId} />
+        <span>{props.handler.producer.name}</span>
+      </span>
     </div>
   );
 }
@@ -74,17 +79,13 @@ function HandlerRowSkeleton() {
 }
 
 function NoHandlers() {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <div className="flex flex-col items-center justify-center gap-2">
-      <Alert className="mt-4">
-        <Terminal className="h-4 w-4" />
-        <AlertTitle>Create a new convect function to get started.</AlertTitle>
-        <AlertDescription className="mt-4">
-          <CodeBlock
-            code={"export CONVECT_API_KEY=<your api key>\nnpx convect-xyz init"}
-          />
-        </AlertDescription>
-      </Alert>
+    <div className="flex flex-col items-center justify-center gap-2 py-20">
+      <span>You have no Convect Functions</span>
+      <Button onClick={() => setIsOpen(true)}>Create Function</Button>
+      <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
     </div>
   );
 }

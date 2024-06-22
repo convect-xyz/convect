@@ -51,6 +51,7 @@ export const getOverview = protectedProcedure
       status: z.enum(["failed", "processing", "provisioning"]),
       chain: z.object({
         name: z.string(),
+        chainId: z.number(),
       }),
       lastFetchedBlock: z.number(),
       transactionCount: z.number(),
@@ -87,6 +88,7 @@ export const getOverview = protectedProcedure
       status: fetchState ? "processing" : "provisioning",
       chain: {
         name: handler.producer.name,
+        chainId: handler.producer.chainId,
       },
       transactionCount: txCount ?? 0,
       processedTransactionsCount: successfulTx,
