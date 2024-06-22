@@ -33,7 +33,7 @@ import { useParams } from "../hooks/useParams";
 
 export default function Page() {
   const { handlerId } = useParams();
-  const { isLoading: isLoadingSettings } = api.handlers.getSettings.useQuery({
+  const { isLoading: isLoadingSettings } = api.functions.getSettings.useQuery({
     handlerId,
   });
 
@@ -50,7 +50,7 @@ export default function Page() {
 
 function FunctionName() {
   const { handlerId } = useParams();
-  const { data: settings } = api.handlers.getSettings.useQuery({ handlerId });
+  const { data: settings } = api.functions.getSettings.useQuery({ handlerId });
 
   const utils = api.useUtils();
   const form = useForm({
@@ -64,11 +64,11 @@ function FunctionName() {
     },
   });
   const { mutateAsync: changeName, isPending: isSaving } =
-    api.handlers.updateName.useMutation({
+    api.functions.updateName.useMutation({
       onSuccess() {
         toast("Updated function name.");
-        utils.handlers.getHandler.refetch();
-        utils.handlers.getSettings.refetch();
+        utils.functions.get.refetch();
+        utils.functions.getSettings.refetch();
       },
     });
 
@@ -115,7 +115,7 @@ function FunctionName() {
 
 function FunctionDescription() {
   const { handlerId } = useParams();
-  const { data: settings } = api.handlers.getSettings.useQuery({
+  const { data: settings } = api.functions.getSettings.useQuery({
     handlerId,
   });
   const utils = api.useUtils();
@@ -132,11 +132,11 @@ function FunctionDescription() {
   });
 
   const { mutateAsync: changeDescription, isPending: isSaving } =
-    api.handlers.updateDescription.useMutation({
+    api.functions.updateDescription.useMutation({
       onSuccess() {
         toast("Updated function description.");
-        utils.handlers.getSettings.refetch();
-        utils.handlers.getHandler.refetch();
+        utils.functions.getSettings.refetch();
+        utils.functions.get.refetch();
       },
     });
 
@@ -187,7 +187,7 @@ function DeleteHandler() {
   const { handlerId, projectId } = useParams();
   const router = useRouter();
   const { mutateAsync: deleteHandler, isPending: isDeleting } =
-    api.handlers.deleteHandler.useMutation({
+    api.functions.delete.useMutation({
       onSuccess() {
         router.push(`/projects/${projectId}`);
       },

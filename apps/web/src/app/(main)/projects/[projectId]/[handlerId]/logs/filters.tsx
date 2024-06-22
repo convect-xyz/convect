@@ -1,7 +1,7 @@
 import { PropsWithChildren, createContext, useContext, useState } from "react";
 import { RouterInputs } from "~/trpc/shared";
 
-type AllowedLevels = RouterInputs["handlers"]["getLogs"]["logLevel"];
+type AllowedLevels = RouterInputs["functions"]["getLogs"]["logLevel"];
 type LogFilters = {
   logLevel: AllowedLevels;
   setLogLevel: (v: AllowedLevels) => void;
