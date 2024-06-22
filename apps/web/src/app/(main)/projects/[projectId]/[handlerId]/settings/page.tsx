@@ -135,7 +135,7 @@ function FunctionDescription() {
     api.handlers.updateDescription.useMutation({
       onSuccess() {
         toast("Updated function description.");
-        utils.handlers.getOverview.refetch();
+        utils.handlers.getSettings.refetch();
         utils.handlers.getHandler.refetch();
       },
     });
