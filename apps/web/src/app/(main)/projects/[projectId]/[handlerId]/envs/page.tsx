@@ -58,7 +58,7 @@ function NoEnvs() {
   );
 }
 
-function EnvRow({ env }: { env: RouterOutputs["handlers"]["getEnvs"][0] }) {
+function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
   const [revealEnv, setRevealEnv] = useState(false);
 
   return (
@@ -103,7 +103,7 @@ function DeleteConfirmation(props: { envId: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const { handlerId } = useParams();
   const utils = api.useUtils();
-  const { mutateAsync: deleteEnv } = api.handlers.deleteEnv.useMutation();
+  const { mutateAsync: deleteEnv } = api.functions.deleteEnv.useMutation();
 
   const form = useForm({
     resolver: zodResolver(z.object({})),
@@ -114,7 +114,7 @@ function DeleteConfirmation(props: { envId: number }) {
       handlerId,
       id: props.envId,
     });
-    await utils.handlers.getEnvs.refetch({ handlerId });
+    await utils.functions.getEnvs.refetch({ handlerId });
     setIsOpen(false);
   };
 

@@ -5,9 +5,10 @@ type ChainIconProps = ComponentProps<"svg"> & {
 };
 
 export default function ChainIcon(props: ChainIconProps) {
-  switch (props.chainId) {
+  const { chainId, ...rest } = props;
+  switch (chainId) {
     case 81457:
-      return <BlastIcon {...props} />;
+      return <BlastIcon {...rest} />;
     default:
       return (
         <svg
@@ -16,7 +17,7 @@ export default function ChainIcon(props: ChainIconProps) {
           height={16}
           viewBox="0 0 215 215"
           fill="none"
-          {...props}
+          {...rest}
         ></svg>
       );
   }

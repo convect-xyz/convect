@@ -6,7 +6,7 @@ import { destroyDeployment } from "~/server/actions/builds";
 import { protectedProcedure } from "~/server/api/trpc";
 import schema from "~/server/db/schema";
 
-export const deleteHandler = protectedProcedure
+export const deleteFunction = protectedProcedure
   .input(
     z.object({
       handlerId: z.number(),

@@ -55,7 +55,7 @@ export default ingest({
 
 export default function Page() {
   const { handlerId } = useParams();
-  const { data: overview } = api.handlers.getOverview.useQuery(
+  const { data: overview } = api.functions.getOverview.useQuery(
     {
       handlerId,
     },
@@ -98,7 +98,7 @@ export default function Page() {
 
       <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
         {!overview &&
-          times(3).map((v) => <Skeleton className="h-20 bg-muted" />)}
+          times(3).map((v) => <Skeleton key={v} className="h-20 bg-muted" />)}
 
         {overview && overview.isInitialised && (
           <>
@@ -172,7 +172,7 @@ const stringToColour = (str: string) => {
 
 function LastUpdatedAt() {
   const { handlerId } = useParams();
-  const { dataUpdatedAt, isLoading } = api.handlers.getOverview.useQuery({
+  const { dataUpdatedAt, isLoading } = api.functions.getOverview.useQuery({
     handlerId,
   });
 
@@ -195,7 +195,7 @@ function LastUpdatedAt() {
 
 function VersionStatus() {
   const { handlerId } = useParams();
-  const { data, isLoading } = api.handlers.getOverview.useQuery({
+  const { data, isLoading } = api.functions.getOverview.useQuery({
     handlerId,
   });
 
@@ -244,7 +244,7 @@ function VersionStatus() {
 
 function Chain() {
   const { handlerId } = useParams();
-  const { data, isLoading } = api.handlers.getOverview.useQuery({
+  const { data, isLoading } = api.functions.getOverview.useQuery({
     handlerId,
   });
 
@@ -264,7 +264,7 @@ function RecentTransactions() {
   const filters = useTransactionFilters();
   const { handlerId } = useParams();
 
-  const { data: maybeTransactions } = api.handlers.getTransactions.useQuery(
+  const { data: maybeTransactions } = api.functions.getTransactions.useQuery(
     {
       handlerId,
       search: filters.debouncedSearch,

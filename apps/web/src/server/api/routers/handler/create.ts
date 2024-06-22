@@ -10,7 +10,7 @@ const createId = init({
   length: 8,
 });
 
-export const createHandler = protectedProcedure
+export const createFunction = protectedProcedure
   .input(
     z.object({
       projectId: z.coerce.number(),

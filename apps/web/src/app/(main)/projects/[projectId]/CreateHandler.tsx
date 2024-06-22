@@ -54,16 +54,14 @@ function Content(props: Props) {
 
   const { projectId } = useParams();
   const utils = api.useUtils();
-  const { mutateAsync: createHandler } = api.handlers.createHandler.useMutation(
-    {
-      onSuccess() {
-        utils.handlers.getHandlers.invalidate({
-          projectId: Number(projectId),
-        });
-        props.onOpenChange?.(false);
-      },
+  const { mutateAsync: createHandler } = api.functions.create.useMutation({
+    onSuccess() {
+      utils.functions.get.invalidate({
+        projectId: Number(projectId),
+      });
+      props.onOpenChange?.(false);
     },
-  );
+  });
 
   const onSubmit = async (values: Values) =>
     createHandler({
@@ -81,7 +79,7 @@ function Content(props: Props) {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Handler Name</FormLabel>
+                <FormLabel>Function Name</FormLabel>
                 <FormControl>
                   <Input placeholder="my-new-handler" {...field} />
                 </FormControl>
@@ -98,7 +96,7 @@ function Content(props: Props) {
             disabled={form.formState.isSubmitting || !form.formState.isValid}
             className="mt-4"
           >
-            Create Handler
+            Create Function
           </Button>
         </div>
       </form>

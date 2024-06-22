@@ -6,12 +6,11 @@ import { getBranches } from "./routers/github/getBranches";
 import { getInstallations } from "./routers/github/getInstallations";
 import { getRepositories } from "./routers/github/getRepositories";
 import { addEnv } from "./routers/handler/addEnv";
-import { createHandler } from "./routers/handler/create";
-import { deleteHandler } from "./routers/handler/delete";
+import { createFunction } from "./routers/handler/create";
+import { deleteFunction } from "./routers/handler/delete";
 import { deleteEnv } from "./routers/handler/deleteEnv";
 import { getEnvs } from "./routers/handler/getEnvs";
-import { getHandler } from "./routers/handler/getHandler";
-import { getHandlers } from "./routers/handler/getHandlers";
+import { getFunction } from "./routers/handler/getFunction";
 import { getLogs } from "./routers/handler/getLogs";
 import { getOverview } from "./routers/handler/getOverview";
 import { getSettings } from "./routers/handler/getSettings";
@@ -22,6 +21,7 @@ import { updateName } from "./routers/handler/updateName";
 import { createProducer } from "./routers/producers/create";
 import { getProducers } from "./routers/producers/getProducers";
 import { createProject } from "./routers/project/create";
+import { getFunctions } from "./routers/project/getFunctions";
 import { getProjectById } from "./routers/project/getProjectById";
 import { getProjects } from "./routers/project/getProjects";
 
@@ -40,11 +40,10 @@ export const githubRouter = createTRPCRouter({
   getRepositories: getRepositories,
 });
 
-export const handlerRouter = createTRPCRouter({
-  createHandler,
-  getHandlers,
-  deleteHandler,
-  getHandler,
+export const functionRouter = createTRPCRouter({
+  create: createFunction,
+  get: getFunction,
+  delete: deleteFunction,
   getLogs,
   getEnvs,
   addEnv,
@@ -66,13 +65,14 @@ export const projectRouter = createTRPCRouter({
   create: createProject,
   getProjects: getProjects,
   getProjectById,
+  getFunctions,
 });
 
 export const appRouter = createTRPCRouter({
   project: projectRouter,
   producers: producersRouter,
   github: githubRouter,
-  handlers: handlerRouter,
+  functions: functionRouter,
   apiKeys: apiKeysRouter,
   billing: billingRouter,
 });
