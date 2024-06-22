@@ -24,7 +24,7 @@ export default function Page() {
       <div className="mx-auto w-full max-w-screen-2xl">
         <div className="mx-auto flex w-full max-w-screen-lg flex-col gap-2">
           <div className="flex items-center justify-between">
-            <div className="px-2">
+            <div>
               <h3 className="text-sm text-muted-foreground">
                 Convect Functions
               </h3>
@@ -71,9 +71,9 @@ function HandlerRow(props: {
         </div>
       </div>
 
-      <span className="ml-auto flex w-min items-center gap-2 whitespace-nowrap rounded-full bg-background px-2 py-1 text-xs">
+      <span className="ml-auto flex w-min items-center gap-2 whitespace-nowrap rounded-full bg-background px-2 py-1">
         <ChainIcon chainId={props.handler.producer.chainId} />
-        <span>{props.handler.producer.name}</span>
+        <span className="text-[11px]">{props.handler.producer.name}</span>
       </span>
     </div>
   );
