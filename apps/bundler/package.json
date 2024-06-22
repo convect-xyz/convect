@@ -37,7 +37,7 @@
     "octokit": "3.1.2",
     "postgres": "3.4.3",
     "redis": "4.6.13",
-    "typescript": "5.4.5",
+    "typescript": "5.5.2",
     "viem": "2.9.16",
     "zod": "3.23.8"
   },
@@ -47,6 +47,6 @@
     "esbuild": "0.19.11"
   },
   "peerDependencies": {
-    "typescript": "5.0.0"
+    "typescript": "5.5.2"
   }
 }

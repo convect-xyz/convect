@@ -9,6 +9,7 @@ import {
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
 import { CodeBlock } from "~/components/code/CodeBlock";
+import ChainIcon from "~/components/icons/ChainIcon";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
 import {
@@ -253,6 +254,7 @@ function Chain() {
 
   return (
     <div className="flex items-center gap-2 rounded-md border bg-muted p-1 px-2 text-xs">
+      <ChainIcon chainId={data!.chain.chainId} />
       <span>{data!.chain.name}</span>
     </div>
   );

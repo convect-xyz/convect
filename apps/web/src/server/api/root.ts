@@ -14,8 +14,11 @@ import { getHandler } from "./routers/handler/getHandler";
 import { getHandlers } from "./routers/handler/getHandlers";
 import { getLogs } from "./routers/handler/getLogs";
 import { getOverview } from "./routers/handler/getOverview";
+import { getSettings } from "./routers/handler/getSettings";
 import { getTransactions } from "./routers/handler/getTransactions";
+import { updateDescription } from "./routers/handler/updateDescription";
 import { updateEnv } from "./routers/handler/updateEnv";
+import { updateName } from "./routers/handler/updateName";
 import { createProducer } from "./routers/producers/create";
 import { getProducers } from "./routers/producers/getProducers";
 import { createProject } from "./routers/project/create";
@@ -49,6 +52,9 @@ export const handlerRouter = createTRPCRouter({
   updateEnv,
   getOverview,
   getTransactions,
+  updateName,
+  updateDescription,
+  getSettings,
 });
 
 export const producersRouter = createTRPCRouter({

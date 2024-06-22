@@ -15,6 +15,10 @@ export const getHandlers = protectedProcedure
         z.object({
           id: z.number(),
           name: z.string(),
+          producer: z.object({
+            name: z.string(),
+            chainId: z.number(),
+          }),
         }),
       ),
     }),
@@ -29,13 +33,22 @@ export const getHandlers = protectedProcedure
         schema.projects,
         eq(schema.projects.id, schema.handler.projectId),
       )
+      .innerJoin(
+        schema.producers,
+        eq(schema.producers.id, schema.handler.producerId),
+      )
       .where(
         and(
           eq(schema.projects.userId, ctx.session.user.id),
           eq(schema.projects.id, input.projectId),
         ),
       )
-      .then((handlers) => handlers.map(({ handler }) => handler));
+      .then((handlers) =>
+        handlers.map(({ handler, producer }) => ({
+          ...handler,
+          producer: producer,
+        })),
+      );
 
     return {
       handlers,

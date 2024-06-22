@@ -5,12 +5,7 @@ import { DialogProps } from "@radix-ui/react-dialog";
 import { useForm, useFormContext } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogOverlay,
-  DialogTrigger,
-} from "~/components/ui/dialog";
+import { Dialog, DialogContent, DialogOverlay } from "~/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -37,9 +32,6 @@ type Props = DialogProps;
 export default function CreateHandler(props: Props) {
   return (
     <Dialog {...props}>
-      <DialogTrigger asChild>
-        <Button>New</Button>
-      </DialogTrigger>
       <DialogOverlay />
       <DialogContent className="max-w-lg px-8">
         <Content {...props} />
