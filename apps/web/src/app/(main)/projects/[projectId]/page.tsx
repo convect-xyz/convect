@@ -64,7 +64,12 @@ function HandlerRow(props: {
         router.push(`/projects/${projectId}/${props.handler.id.toString()}`)
       }
     >
-      <div className="flex-1">{props.handler.name}</div>
+      <div className="flex-1">
+        <div>{props.handler.name}</div>
+        <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+          {props.handler.description}
+        </div>
+      </div>
 
       <span className="ml-auto flex w-min items-center gap-2 whitespace-nowrap rounded-full bg-background px-2 py-1 text-xs">
         <ChainIcon chainId={props.handler.producer.chainId} />
