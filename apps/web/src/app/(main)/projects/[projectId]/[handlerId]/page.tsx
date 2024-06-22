@@ -8,6 +8,7 @@ import {
 } from "date-fns";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
+import { CodeBlock } from "~/components/code/CodeBlock";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
 import {
@@ -31,6 +32,26 @@ import { useParams } from "./hooks/useParams";
 
 const DASHBOARD_REFETCH_INTERVAL = 30000;
 
+const code = (id: string) => `import { log, transaction } from "convect-xyz";
+
+export const handleTransfers = transaction({
+  startBlock: BigInt(198160),
+  logs: [
+    log({
+      origin: "0x10fe37bac405b209f83ff523fb8d00c0c3f508a8",
+      signature: "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+    }),
+  ],
+  handler: async (txs) => {
+    // Implement your handler
+  },
+});
+
+export default ingest({
+  id: "${id}",
+  handlers: [handleTransfers],
+});`;
+
 export default function Page() {
   const { handlerId } = useParams();
   const { data: overview } = api.handlers.getOverview.useQuery(
@@ -46,12 +67,14 @@ export default function Page() {
         const secs = millisecondsToSeconds(
           data.avgDuration - minutesToMilliseconds(mins),
         );
+
         return {
           ...data,
           avgDurationParsed: {
             mins,
             secs,
           },
+          isInitialised: data.version >= 0,
         };
       },
     },
@@ -66,18 +89,25 @@ export default function Page() {
         </div>
         <LastUpdatedAt />
       </div>
+      {overview && !overview.isInitialised && (
+        <div className="mt-2 w-full">
+          <CodeBlock code={code(overview.internalId)} />
+        </div>
+      )}
+
       <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
         {!overview &&
           times(3).map((v) => <Skeleton className="h-20 bg-muted" />)}
-        {overview && (
+
+        {overview && overview.isInitialised && (
           <>
             <div className="rounded-md border border-[#191B1F] bg-muted p-4">
               <div className="text-sm uppercase text-muted-foreground">
                 Processed Transactions
               </div>
               <div className="text-xl">
-                {overview?.processedTransactionsCount} /{" "}
-                {overview?.transactionCount}
+                {overview.processedTransactionsCount} /{" "}
+                {overview.transactionCount}
               </div>
             </div>
             <div className="rounded-md border border-[#191B1F] bg-muted p-4">
@@ -109,16 +139,19 @@ export default function Page() {
               <div className="text-sm uppercase text-muted-foreground">
                 Last Fetched Block
               </div>
-              <div className="text-xl">{overview?.lastFetchedBlock}</div>
+              <div className="text-xl">{overview.lastFetchedBlock}</div>
             </div>
           </>
         )}
       </div>
-      <div className="mt-2">
-        <TransactionFilters>
-          <RecentTransactions />
-        </TransactionFilters>
-      </div>
+
+      {overview && overview.isInitialised && (
+        <div className="mt-2">
+          <TransactionFilters>
+            <RecentTransactions />
+          </TransactionFilters>
+        </div>
+      )}
     </div>
   );
 }
@@ -165,9 +198,11 @@ function VersionStatus() {
     handlerId,
   });
 
-  if (isLoading) {
+  if (isLoading || !data) {
     return <Skeleton className="h-6 w-[70px] bg-muted" />;
   }
+
+  if (data.version < 0) return null;
 
   return (
     <div className="flex items-center gap-2 rounded-md border bg-muted p-1 px-2 text-xs">

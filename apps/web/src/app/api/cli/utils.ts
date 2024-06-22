@@ -2,11 +2,29 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "~/server/db";
 
-export async function getData(req: NextRequest, schema: z.Schema) {
+export function getUrlParams(req: NextRequest, schema: z.Schema) {
+  const data = Object.fromEntries(req.nextUrl.searchParams.entries());
+
+  try {
+    return {
+      data: schema.parse(data),
+      error: undefined,
+    };
+  } catch (e: any) {
+    return { data: undefined, error: e as Error };
+  }
+}
+
+export async function getFormData<T extends z.Schema>(
+  req: NextRequest,
+  schema: T,
+) {
   const data = await req.formData();
   try {
     return {
-      data: schema.parse(Object.fromEntries(data.entries())),
+      data: schema.parse(Object.fromEntries(data.entries())) as z.infer<
+        typeof schema
+      >,
       error: undefined,
     };
   } catch (e: any) {

@@ -1,8 +1,14 @@
+import { init } from "@paralleldrive/cuid2";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import xZod from "~/lib/shared/validation";
 import { protectedProcedure } from "~/server/api/trpc";
 import schema from "~/server/db/schema";
+
+const createId = init({
+  random: Math.random,
+  length: 8,
+});
 
 export const createHandler = protectedProcedure
   .input(
@@ -32,6 +38,8 @@ export const createHandler = protectedProcedure
         producerId: input.producerId,
         projectId: project.id,
         name: input.name,
+        version: -1,
+        internalId: createId(),
       })
       .returning()
       .then((d) => d.at(0)!);
