@@ -24,7 +24,9 @@ export default function Page() {
     <>
       <div className="mx-auto w-full max-w-screen-2xl">
         <div className="mx-auto flex w-full max-w-screen-lg flex-col gap-3">
-          <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
+          <div className="ml-auto">
+            <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
+          </div>
 
           {handlers?.handlers.length === 0 && <NoHandlers />}
           {(isLoading || (handlers && handlers.handlers.length > 0)) && (
