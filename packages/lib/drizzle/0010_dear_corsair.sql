@@ -1,0 +1,1 @@
+ALTER TABLE "web_handler" ADD COLUMN "description" varchar DEFAULT '' NOT NULL;

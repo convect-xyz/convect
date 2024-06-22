@@ -154,6 +154,7 @@ export const handler = createTable(
       .notNull(),
     version: integer("version").notNull().default(0),
     name: varchar("name").notNull(),
+    description: varchar("description").notNull().default(""),
     producerId: integer("producerId")
       .notNull()
       .references(() => producers.id),
