@@ -15,6 +15,7 @@ export const getHandlers = protectedProcedure
         z.object({
           id: z.number(),
           name: z.string(),
+          description: z.string(),
           producer: z.object({
             name: z.string(),
             chainId: z.number(),
