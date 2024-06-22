@@ -81,7 +81,7 @@ function Content(props: Props) {
               <FormItem>
                 <FormLabel>Function Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="my-new-handler" {...field} />
+                  <Input placeholder="my-new-function" {...field} />
                 </FormControl>
                 <FormDescription>
                   Only letters, numbers, and hyphens are allowed.
