@@ -3,20 +3,21 @@ title: Quickstart
 description: Quickstart
 ---
 
-import { Step, Steps } from 'fumadocs-ui/components/steps';
-import { Callout } from 'fumadocs-ui/components/callout';
-import Link from 'fumadocs-core/link';
-import { env } from '../../app/env.mjs';
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Callout } from "fumadocs-ui/components/callout";
+import Link from "fumadocs-core/link";
+import { env } from "../../app/env.mjs";
 
 <Steps>
   <Step>
     ### Create a Convect Function
 
     In your preferred project, <Link href={`${env.NEXT_PUBLIC_APP_URL}/projects`}>create a new Convect Function</Link>.
+
   </Step>
   <Step>
     ### Write your handler
-
+    This example uses <Link href="https://wagmi.sh/cli/getting-started">Wagmi CLI</Link> to generate the ABI and token address. Using Wagmi and ABIs is entirely optional. Alternatively, you can specify the event signature in string format by replacing `eventName` and `abi` with the `signature` property.
     
     ```ts title="src/convect/transfer.ts"
     import { tokenABI, tokenAddress } from './abis/token'
@@ -44,6 +45,7 @@ import { env } from '../../app/env.mjs';
     ```
 
     <Callout title="Convention">For better readability, define related handlers in a separate file as shown above.</Callout>
+
   </Step>
   <Step>
     ### Export a convect function
@@ -59,6 +61,7 @@ import { env } from '../../app/env.mjs';
     ```
 
     <Callout title="Good to know">When your Convect Function receives batches of transactions, it will call all matching transaction handlers in the order they are specified in the `handlers` array.</Callout>
+
   </Step>
   <Step>
     ### Upload a new deployment
@@ -68,5 +71,6 @@ import { env } from '../../app/env.mjs';
     export CONVECT_API_KEY="<Your API Key>"
     npx convect-xyz init
     ```
+
   </Step>
 </Steps>
