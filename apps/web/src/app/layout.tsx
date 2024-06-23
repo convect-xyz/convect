@@ -30,7 +30,7 @@ export default function RootLayout({
           defaultTheme="dark"
           disableTransitionOnChange
         >
-          <Toaster />
+          <Toaster toastOptions={{ className: manrope.className }} />
           <TRPCReactProvider>{children}</TRPCReactProvider>
         </ThemeProvider>
       </body>
