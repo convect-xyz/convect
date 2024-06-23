@@ -5,13 +5,14 @@ description: Quickstart
 
 import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Callout } from 'fumadocs-ui/components/callout';
-
+import Link from 'fumadocs-core/link';
+import { env } from '../../app/env.mjs';
 
 <Steps>
   <Step>
     ### Create a Convect Function
 
-    In your preferred project, create a new Convect Function and copy the ID.
+    In your preferred project, <Link href={`${env.NEXT_PUBLIC_APP_URL}/projects`}>create a new Convect Function</Link>.
   </Step>
   <Step>
     ### Write your handler
@@ -41,11 +42,11 @@ import { Callout } from 'fumadocs-ui/components/callout';
       }
     });
     ```
+
+    <Callout title="Convention">For better readability, define related handlers in a separate file as shown above.</Callout>
   </Step>
   <Step>
     ### Export a convect function
-
-   
 
     ```ts title="src/convect/example.convect.ts"
     import { transfer } from "./transfer";
@@ -62,7 +63,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
   <Step>
     ### Upload a new deployment
 
-    Obtain an API Key from the Convect App and run the following command from your project root directory.
+    <Link href={`${env.NEXT_PUBLIC_APP_URL}/account/api-keys`}>Obtain an API Key</Link> from the Convect App and run the following command from your project root directory. The Convect CLI will look for all files in subdirectories ending with a `.convect.ts` extension. Select the file you just created.
     ```bash title="terminal"
     export CONVECT_API_KEY="<Your API Key>"
     npx convect-xyz init
