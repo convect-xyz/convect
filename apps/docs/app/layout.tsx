@@ -1,6 +1,7 @@
 import { FullLogoIcon } from "@convect-xyz/components";
 import { DocsLayout } from "fumadocs-ui/layout";
 import { RootProvider } from "fumadocs-ui/provider";
+import "fumadocs-ui/twoslash.css";
 import { Manrope } from "next/font/google";
 import type { ReactNode } from "react";
 import "./global.css";
