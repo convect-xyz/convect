@@ -198,9 +198,9 @@ function DeleteHandler() {
       <Section>
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-xl font-bold">Delete Handler</h2>
+            <h2 className="text-xl font-bold">Delete Function</h2>
             <p className="text-sm text-secondary-foreground">
-              Permanently delete this handler.
+              Permanently delete this Convect Function.
             </p>
           </div>
           <div>
