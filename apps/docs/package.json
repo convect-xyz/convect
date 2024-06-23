@@ -8,21 +8,23 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "14.0.4",
-    "fumadocs-ui": "11.1.2",
     "fumadocs-core": "11.1.2",
+    "fumadocs-mdx": "8.2.20",
+    "fumadocs-twoslash": "^1.1.0",
+    "fumadocs-ui": "11.1.2",
+    "next": "14.0.4",
     "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "fumadocs-mdx": "8.2.20"
+    "react-dom": "18.2.0"
   },
   "devDependencies": {
+    "@convect-xyz/components": "*",
+    "convect-xyz": "*",
+    "@types/mdx": "2.0.13",
     "@types/react": "18.2.25",
     "@types/react-dom": "18.2.0",
-    "typescript": "5.5.2",
-    "@types/mdx": "2.0.13",
     "autoprefixer": "10.4.19",
     "postcss": "8.4.38",
-    "@convect-xyz/components": "*",
-    "tailwindcss": "3.4.3"
+    "tailwindcss": "3.4.3",
+    "typescript": "5.5.2"
   }
 }
