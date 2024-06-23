@@ -1,59 +1,15 @@
 ---
-title: Quickstart
-description: Quickstart
+title: Overview
+description: Overview
 ---
 
-import { Step, Steps } from 'fumadocs-ui/components/steps';
+import Link from 'fumadocs-core/link';
+import { Callout } from 'fumadocs-ui/components/callout';
 
+Processing on-chain data reliably, efficiently, and at scale is challenging.
 
-<Steps>
-  <Step>
-    ### Write your handler
+Tasks such as indexing and querying historical blockchain data or reacting to smart contract events in real time require both fault tolerance and scalability.
 
-    ```ts title="src/convect/transfer.ts"
-    import { log, transaction } from "convect-xyz";
+Convect aims to provide all these features while ensuring a better developer experience.
 
-    export const transfer = transaction({
-      logs: [
-        log({
-          origin: "0x10fe37bac405b209f83ff523fb8d00c0c3f508a8",
-          signature: "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
-        })
-      ],
-      handler: async (transactions) => {
-        // Implement your transaction handler here. eg.
-
-        // await prisma.activity.createMany({
-        //   data: transactions.flatMap(tx => tx.logs).map((log) => ({
-        //     from: log.args.from,
-        //     to: log.args.to,
-        //     tokenId: log.args.tokenId
-        //   }))
-        // })
-      }
-    });
-    ```
-  </Step>
-  <Step>
-    ### Export a convect function
-
-    All transaction handlers included in a `convect` function will be processed in order.
-
-    ```ts title="src/convect/ingest.ts"
-    import { transfer } from "./transfer";
-    import { convect } from "convect-xyz";
-
-    export default convect({
-      transfer
-    });
-    ```
-  </Step>
-  <Step>
-    ### Upload a new deployment
-
-    ```bash title="terminal"
-    export CONVECT_API_KEY="<Your API Key>"
-    npx convect-xyz init
-    ```
-  </Step>
-</Steps>
+<Callout>For comparisons with existing solutions, see our <Link href="/comparisons">Comparisons</Link> page</Callout>

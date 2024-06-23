@@ -1,0 +1,72 @@
+---
+title: Quickstart
+description: Quickstart
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { Callout } from 'fumadocs-ui/components/callout';
+import Link from 'fumadocs-core/link';
+import { env } from '../../app/env.mjs';
+
+<Steps>
+  <Step>
+    ### Create a Convect Function
+
+    In your preferred project, <Link href={`${env.NEXT_PUBLIC_APP_URL}/projects`}>create a new Convect Function</Link>.
+  </Step>
+  <Step>
+    ### Write your handler
+
+    
+    ```ts title="src/convect/transfer.ts"
+    import { tokenABI, tokenAddress } from './abis/token'
+    import { log, transaction } from "convect-xyz";
+    
+    export const transfer = transaction({
+      logs: [
+        log({
+          origin: tokenAddress,
+          abi: tokenABI,
+          eventName: "Transfer"
+        })
+      ],
+      handler: async (transactions) => {
+        // Implement your transaction handler here. eg.
+        await prisma.activity.createMany({
+          data: transactions.flatMap(tx => tx.logs).map((log) => ({
+            from: log.args.from // Inferred as `0x${string}`,
+            to: log.args.to // Inferred as `0x${string}`,
+            tokenId: log.args.tokenId // Inferred as bigint
+          }))
+        })
+      }
+    });
+    ```
+
+    <Callout title="Convention">For better readability, define related handlers in a separate file as shown above.</Callout>
+  </Step>
+  <Step>
+    ### Export a convect function
+
+    ```ts title="src/convect/example.convect.ts"
+    import { transfer } from "./transfer";
+    import { convect } from "convect-xyz";
+
+    export default convect({
+      id: "<id you copied in step 1>",
+      handlers: [transfer]
+    });
+    ```
+
+    <Callout title="Good to know">When your Convect Function receives batches of transactions, it will call all matching transaction handlers in the order they are specified in the `handlers` array.</Callout>
+  </Step>
+  <Step>
+    ### Upload a new deployment
+
+    <Link href={`${env.NEXT_PUBLIC_APP_URL}/account/api-keys`}>Obtain an API Key</Link> from the Convect App and run the following command from your project root directory. The Convect CLI will look for all files in subdirectories ending with a `.convect.ts` extension. Select the file you just created.
+    ```bash title="terminal"
+    export CONVECT_API_KEY="<Your API Key>"
+    npx convect-xyz init
+    ```
+  </Step>
+</Steps>

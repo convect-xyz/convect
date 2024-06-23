@@ -1,6 +1,17 @@
-import createMDX from 'fumadocs-mdx/config';
-
-const withMDX = createMDX();
+import { rehypeCodeDefaultOptions } from "fumadocs-core/mdx-plugins";
+import createMDX from "fumadocs-mdx/config";
+import { transformerTwoslash } from "fumadocs-twoslash";
+import "./app/env.mjs";
+const withMDX = createMDX({
+  mdxOptions: {
+    rehypeCodeOptions: {
+      transformers: [
+        ...rehypeCodeDefaultOptions.transformers,
+        transformerTwoslash(),
+      ],
+    },
+  },
+});
 
 /** @type {import('next').NextConfig} */
 const config = {
