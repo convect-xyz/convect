@@ -23,18 +23,18 @@ export default function Page() {
     <>
       <div className="mx-auto w-full max-w-screen-2xl">
         <div className="mx-auto flex w-full max-w-screen-lg flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm text-muted-foreground">
-                Convect Functions
-              </h3>
-            </div>
+          {handlers && handlers.handlers.length > 0 && (
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm text-muted-foreground">
+                  Convect Functions
+                </h3>
+              </div>
 
-            {handlers && handlers.handlers.length > 0 && (
               <Button onClick={() => setIsOpen(true)}>New</Button>
-            )}
-            <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
-          </div>
+              <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
+            </div>
+          )}
 
           {handlers?.handlers.length === 0 && <NoHandlers />}
 
