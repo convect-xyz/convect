@@ -56,7 +56,7 @@ function Content(props: Props) {
   const utils = api.useUtils();
   const { mutateAsync: createHandler } = api.functions.create.useMutation({
     onSuccess() {
-      utils.functions.get.invalidate({
+      utils.project.getFunctions.invalidate({
         projectId: Number(projectId),
       });
       props.onOpenChange?.(false);
