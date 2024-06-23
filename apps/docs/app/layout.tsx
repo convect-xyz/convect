@@ -20,7 +20,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           <DocsLayout
             tree={pageTree}
             nav={{
-              title: <FullLogoIcon className="text-white h-[20px]" />,
+              title: (
+                <FullLogoIcon className="text-black dark:text-white h-[20px]" />
+              ),
               githubUrl: "https://github.com/convect-xyz/convect-xyz",
               url: env.NEXT_PUBLIC_APP_URL,
             }}
