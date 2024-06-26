@@ -158,7 +158,7 @@ export const handler = createTable(
     producerId: integer("producerId")
       .notNull()
       .references(() => producers.id),
-    infraVersion: varchar("infra_version").notNull().default("infra-dev"),
+    infraVersion: varchar("infra_version").notNull(),
   },
   (handler) => ({
     projectIdName: unique().on(handler.name, handler.projectId),

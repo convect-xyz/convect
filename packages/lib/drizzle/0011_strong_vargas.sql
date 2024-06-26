@@ -1,0 +1,1 @@
+ALTER TABLE "web_handler" ALTER COLUMN "infra_version" DROP DEFAULT;
