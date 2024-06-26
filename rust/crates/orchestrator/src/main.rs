@@ -82,8 +82,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .await;
     }
 
-    pipeline.acquire_lock().unwrap();
-
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
     let manifest = Manifest::from_env().await.unwrap();
     let transactions = fetcher
@@ -120,8 +118,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             .send(),
     }
     .unwrap();
-
-    pipeline.release_lock().unwrap();
 
     Ok(())
 }
