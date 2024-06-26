@@ -31,14 +31,15 @@ async fn main() {
         match provider_result {
             Ok(p) => handlers.push(backoff::future::retry::<
                 (),
-                BoxError,
+                backoff::Error<BoxError>,
                 _,
                 _,
                 ExponentialBackoff<SystemClock>,
             >(ExponentialBackoff::default(), || async {
                 run(network, p, &client)
                     .await
-                    .inspect_err(|e| println!("{:?}", e))?;
+                    .inspect_err(|e| println!("{:?}", e))
+                    .map_err(backoff::Error::transient)?;
 
                 Ok(())
             })),
