@@ -63,7 +63,7 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
 
   return (
     <div className="flex items-center justify-between p-4">
-      <div className="w-28">{env.key}</div>
+      <div className="basis-[350px] truncate">{env.key}</div>
       <div className="max-w-20 flex w-full flex-1 items-center justify-center gap-2">
         <Button variant="ghost" onClick={() => setRevealEnv((v) => !v)}>
           {revealEnv ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
