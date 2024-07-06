@@ -30,6 +30,11 @@ export const POST = async (req: NextRequest) => {
             filter,
             and(eq(fields.chainId, 81457), isNull(fields.userId)),
           );
+        } else if (id === "eth-sepolia") {
+          filter = and(
+            filter,
+            and(eq(fields.chainId, 11155111), isNull(fields.userId)),
+          );
         } else if (id === "eth-mainnet") {
         } else {
           filter = and(filter, eq(fields.id, parseInt(id)));
