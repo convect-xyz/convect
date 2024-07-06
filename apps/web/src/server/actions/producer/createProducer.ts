@@ -3,8 +3,8 @@ import { CreateTopicCommand } from "@aws-sdk/client-sns";
 import { eq } from "drizzle-orm";
 import { Session } from "next-auth";
 import { ecs, sns } from "~/lib/server/aws";
-import { Context } from "~/server/api/trpc";
 import schema from "~/server/db/schema";
+import { Context } from "~/trpc/trpc";
 
 type CreateProducerParams = Context & {
   id: string;
