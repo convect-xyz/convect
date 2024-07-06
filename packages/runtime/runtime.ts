@@ -358,6 +358,8 @@ export function decodeTx(tx: any, txConfig: any) {
 
     log.eventName = decodedEvent.eventName;
     log.args = decodedEvent.args;
+    log.transactionHash = tx.transactionHash;
+    log.transactionIndex = tx.transactionIndex;
 
     newTx.logs.push({
       ...log,
