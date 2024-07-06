@@ -85,6 +85,34 @@
       "when": 1719428552716,
       "tag": "0011_strong_vargas",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1719953605302,
+      "tag": "0012_sweet_cerise",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1719961647102,
+      "tag": "0013_slim_fabian_cortez",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1720136082677,
+      "tag": "0014_lame_loki",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1720252248320,
+      "tag": "0015_first_power_man",
+      "breakpoints": true
     }
   ]
 }

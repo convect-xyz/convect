@@ -1,10 +1,10 @@
 import { custom } from "zod";
 
-const moniker = custom<string>((v) => {
+export const monikerRegex = /^[a-zA-Z0-9-]+$/;
+export const moniker = custom<string>((v) => {
   if (!(typeof v === "string")) return false;
 
-  const regex = /^[a-zA-Z0-9-]+$/;
-  return regex.test(v);
+  return monikerRegex.test(v);
 });
 const project = moniker;
 const handler = moniker;

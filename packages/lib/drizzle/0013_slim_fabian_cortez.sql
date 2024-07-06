@@ -1,0 +1,1 @@
+ALTER TABLE "web_handler" ALTER COLUMN "function_id" SET NOT NULL;

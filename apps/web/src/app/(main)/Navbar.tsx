@@ -12,12 +12,12 @@ import {
 } from "~/components/ui/navigation-menu";
 
 export function Navbar() {
-  const { projectId, handlerId } = useParams<{
+  const { projectId, functionId } = useParams<{
     projectId?: string;
-    handlerId?: string;
+    functionId?: string;
   }>();
   const pathname = usePathname();
-  if (handlerId) return;
+  if (functionId) return;
   if (!projectId) return;
 
   const getLinkProps = (route: string) => {

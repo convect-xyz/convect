@@ -15,7 +15,7 @@ import { useParams } from "./hooks/useParams";
 export default function Page() {
   const { projectId } = useParams();
   const [isOpen, setIsOpen] = useState(false);
-  const { data: handlers } = api.project.getFunctions.useQuery({
+  const { data: functions } = api.project.getFunctions.useQuery({
     projectId: Number(projectId),
   });
 
@@ -23,7 +23,7 @@ export default function Page() {
     <>
       <div className="mx-auto w-full max-w-screen-2xl">
         <div className="mx-auto flex w-full max-w-screen-lg flex-col gap-2">
-          {handlers && handlers.handlers.length > 0 && (
+          {functions && functions.functions.length > 0 && (
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm text-muted-foreground">
@@ -36,13 +36,12 @@ export default function Page() {
             </div>
           )}
 
-          {handlers?.handlers.length === 0 && <NoHandlers />}
+          {functions?.functions.length === 0 && <NoFns />}
 
           <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2">
-            {!handlers &&
-              times(20).map((idx) => <HandlerRowSkeleton key={idx} />)}
-            {handlers?.handlers.map((handler) => (
-              <HandlerRow key={handler.id} handler={handler} />
+            {!functions && times(20).map((idx) => <FnRowSkeleton key={idx} />)}
+            {functions?.functions.map((handler) => (
+              <FnRow key={handler.id} fn={handler} />
             ))}
           </div>
         </div>
@@ -52,8 +51,8 @@ export default function Page() {
   );
 }
 
-function HandlerRow(props: {
-  handler: RouterOutputs["project"]["getFunctions"]["handlers"][number];
+function FnRow(props: {
+  fn: RouterOutputs["project"]["getFunctions"]["functions"][number];
 }) {
   const router = useRouter();
   const { projectId } = useParams();
@@ -61,29 +60,30 @@ function HandlerRow(props: {
     <div
       className="flex h-32 cursor-pointer flex-col rounded-sm border bg-muted p-3 transition-all hover:border-muted-foreground/25"
       onClick={() =>
-        router.push(`/projects/${projectId}/${props.handler.id.toString()}`)
+        router.push(`/projects/${projectId}/${props.fn.id.toString()}`)
       }
     >
       <div className="flex-1">
-        <div>{props.handler.name}</div>
+        <div>{props.fn.name}</div>
         <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-          {props.handler.description}
+          {props.fn.description}
         </div>
       </div>
 
       <span className="ml-auto flex w-min items-center gap-2 whitespace-nowrap rounded-full bg-background px-2 py-1">
-        <ChainIcon chainId={props.handler.producer.chainId} />
-        <span className="text-[11px]">{props.handler.producer.name}</span>
+        {props.fn.handlers.map((h) => (
+          <ChainIcon chainId={h.chainId} />
+        ))}
       </span>
     </div>
   );
 }
 
-function HandlerRowSkeleton() {
+function FnRowSkeleton() {
   return <Skeleton className="h-40 w-full" />;
 }
 
-function NoHandlers() {
+function NoFns() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
