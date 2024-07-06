@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DialogProps } from "@radix-ui/react-dialog";
-import { useForm, useFormContext } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogOverlay } from "~/components/ui/dialog";
@@ -16,13 +16,6 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import xZod from "~/lib/shared/validation";
 import { api } from "~/trpc/react";
 import { useParams } from "./hooks/useParams";
@@ -42,7 +35,6 @@ export default function CreateHandler(props: Props) {
 
 const schema = z.object({
   name: xZod.handler,
-  producerId: z.string(),
 });
 
 type Values = z.infer<typeof schema>;
@@ -66,7 +58,6 @@ function Content(props: Props) {
   const onSubmit = async (values: Values) =>
     createHandler({
       projectId: Number(projectId),
-      producerId: Number(values.producerId),
       name: values.name,
     });
 
@@ -90,7 +81,6 @@ function Content(props: Props) {
               </FormItem>
             )}
           />
-          <ChainField />
           <Button
             type="submit"
             disabled={form.formState.isSubmitting || !form.formState.isValid}
@@ -101,46 +91,5 @@ function Content(props: Props) {
         </div>
       </form>
     </Form>
-  );
-}
-
-function ChainField() {
-  const form = useFormContext<Values>();
-  const { data: producers } = api.producers.getProducers.useInfiniteQuery(
-    {},
-    {
-      getNextPageParam(_) {
-        return 0;
-      },
-    },
-  );
-
-  return (
-    <FormField
-      control={form.control}
-      name="producerId"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Chain</FormLabel>
-          <Select onValueChange={field.onChange} defaultValue={field.value}>
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a supported chain" />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              {producers?.pages
-                .flatMap((p) => p.producers)
-                .map((producer) => (
-                  <SelectItem value={producer.id.toString()}>
-                    {producer.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
   );
 }

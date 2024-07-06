@@ -141,63 +141,87 @@ export const projectsRelations = relations(projects, ({ one }) => ({
   user: one(users, { fields: [projects.userId], references: [users.id] }),
 }));
 
-export const handler = createTable(
-  "handler",
+export const convectFunctions = createTable(
+  "convectFunction",
   {
     id: serial("id").notNull().primaryKey(),
     projectId: integer("projectId")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
-    internalId: varchar("internal_id")
-      .unique()
-      .default(sql`gen_random_uuid()`)
-      .notNull(),
-    version: integer("version").notNull().default(0),
     name: varchar("name").notNull(),
     description: varchar("description").notNull().default(""),
-    producerId: integer("producerId")
-      .notNull()
-      .references(() => producers.id),
-    infraVersion: varchar("infra_version").notNull(),
   },
   (handler) => ({
     projectIdName: unique().on(handler.name, handler.projectId),
   })
 );
 
+export const convectFunctionsRelations = relations(
+  convectFunctions,
+  ({ one, many }) => ({
+    project: one(projects, {
+      fields: [convectFunctions.projectId],
+      references: [projects.id],
+    }),
+    handlers: many(handler),
+    envs: many(functionEnv),
+  })
+);
+
+export const handler = createTable(
+  "handler",
+  {
+    id: serial("id").notNull().primaryKey(),
+    internalId: varchar("internal_id")
+      .unique()
+      .default(sql`gen_random_uuid()`)
+      .notNull(),
+    functionId: integer("function_id")
+      .notNull()
+      .references(() => convectFunctions.id),
+    version: integer("version").notNull().default(0),
+    producerId: integer("producerId")
+      .notNull()
+      .references(() => producers.id),
+    infraVersion: varchar("infra_version").notNull(),
+  },
+  (handler) => ({
+    functionProducerUnique: unique().on(handler.functionId, handler.producerId),
+  })
+);
+
 export const handlerRelations = relations(handler, ({ one, many }) => ({
-  project: one(projects, {
-    fields: [handler.projectId],
-    references: [projects.id],
+  convectFunction: one(convectFunctions, {
+    fields: [handler.functionId],
+    references: [convectFunctions.id],
   }),
   producer: one(producers, {
     fields: [handler.producerId],
     references: [producers.id],
   }),
-  envs: many(handlerEnv),
 }));
 
-export const handlerEnv = createTable(
-  "handler_env",
+export const functionEnv = createTable(
+  "function_env",
   {
     id: serial("id").notNull().primaryKey(),
-    handlerId: integer("handler_id")
+    functionId: integer("function_id")
       .notNull()
-      .references(() => handler.id, { onDelete: "cascade" }),
+      .references(() => convectFunctions.id, { onDelete: "cascade" }),
     key: varchar("key").notNull(),
     value: varchar("value").notNull(),
     iv: varchar("iv").notNull(),
     lastUpdatedAt: timestamp("last_updated_at").defaultNow().notNull(),
   },
   (handlerEnv) => ({
-    handlerIdName: unique().on(handlerEnv.handlerId, handlerEnv.key),
+    functionIdName: unique().on(handlerEnv.functionId, handlerEnv.key),
   })
 );
 
-export const handlerEnvRelations = relations(handlerEnv, ({ one, many }) => ({
-  handler: one(handler, {
-    fields: [handlerEnv.handlerId],
-    references: [handler.id],
+export const handlerEnvRelations = relations(functionEnv, ({ one }) => ({
+  fn: one(convectFunctions, {
+    fields: [functionEnv.functionId],
+    references: [convectFunctions.id],
   }),
 }));
 
