@@ -160,7 +160,7 @@ export default function Main() {
 
 function LastUpdatedAt() {
   const { handlerId } = useParams();
-  const { dataUpdatedAt, isLoading } = api.handlers.getOverview.useQuery(
+  const { data: overview, dataUpdatedAt } = api.handlers.getOverview.useQuery(
     {
       handlerId: handlerId ?? 0,
     },
@@ -169,7 +169,7 @@ function LastUpdatedAt() {
     },
   );
 
-  if (isLoading) {
+  if (!overview) {
     return <Skeleton className="h-6 w-[200px] bg-muted" />;
   }
 
