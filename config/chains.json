@@ -7,6 +7,13 @@
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-mainnet"
   },
   {
+    "id": 11155111,
+    "name": "Ethereum Sepolia",
+    "polling_url": "https://eth-sepolia.g.alchemy.com/v2/REDACTED",
+    "ws_url": "wss://eth-sepolia.g.alchemy.com/v2/REDACTED",
+    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia"
+  },
+  {
     "id": 137,
     "name": "Polygon MATIC",
     "polling_url": "",
