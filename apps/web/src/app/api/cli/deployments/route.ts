@@ -4,28 +4,40 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { v4 } from "uuid";
 import { z } from "zod";
+import { env } from "~/env";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
+import { monikerRegex } from "~/lib/shared/validation";
 import { createDeployment } from "~/server/actions/builds";
-import { getStripeCustomerId } from "~/server/api/routers/billing/switchPlan";
 import { db } from "~/server/db";
-import { getFormData, getUserContext } from "../utils";
+import { getStripeCustomerId } from "~/trpc/routers/billing/switchPlan";
+import { getConvectFn, getFormData, getUserContext } from "../utils";
 
 const MANIFEST_BUCKET = "ingest-fetch-logs";
+
+const zodId = z
+  .string()
+  .transform((v) => v.split("/"))
+  .pipe(
+    z.tuple([z.string().regex(monikerRegex), z.string().regex(monikerRegex)]),
+  )
+  .transform(([project, convectFn]) => ({ project, convectFn }));
 
 const requestSchema = z
   .object({
     mode: z.literal("init"),
-    id: z.string(),
+    id: zodId,
     handler: z.instanceof(Blob),
     manifest: z.instanceof(Blob),
     override: z.coerce.boolean(),
+    producerId: z.coerce.number(),
   })
   .or(
     z.object({
       mode: z.literal("update"),
-      id: z.string(),
+      id: zodId,
       handler: z.instanceof(Blob),
+      producerId: z.coerce.number(),
     }),
   );
 
@@ -40,21 +52,68 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ message: dataError.message }, { status: 401 });
   }
 
+  const fn = await getConvectFn({
+    convectFn: data.id.convectFn,
+    project: data.id.project,
+    userId: user.id,
+  }).then((v) => v.at(0));
+
+  if (!fn) {
+    return NextResponse.json(
+      { message: `Could not find function.` },
+      { status: 401 },
+    );
+  }
+
+  const exists = await db.query.handler
+    .findFirst({
+      where(fields, { eq, and }) {
+        return and(
+          eq(fields.producerId, data.producerId),
+          eq(fields.functionId, fn.convectFunction.id),
+        );
+      },
+    })
+    .then((v) => !!v);
+
+  if (!exists) {
+    await db
+      .insert(schema.handler)
+      .values({
+        functionId: fn.convectFunction.id,
+        version: -1,
+        infraVersion: env.VERSION,
+        producerId: data.producerId,
+      })
+      .returning()
+      .then((v) => v[0]);
+  }
+
   const handler = await db.query.handler.findFirst({
     where(fields, { eq, and }) {
-      return and(eq(fields.internalId, data.id));
+      return and(
+        eq(fields.producerId, data.producerId),
+        eq(fields.functionId, fn.convectFunction.id),
+      );
     },
     with: {
-      project: true,
       producer: true,
-      envs: true,
+      convectFunction: {
+        with: {
+          envs: true,
+        },
+      },
     },
   });
 
-  if (!handler || handler.project.userId !== user.id) {
+  if (!handler) {
     return NextResponse.json(
-      { message: `Could not find handler.` },
-      { status: 401 },
+      {
+        message: "Handler not found",
+      },
+      {
+        status: 400,
+      },
     );
   }
 
@@ -121,7 +180,7 @@ export const POST = async (req: NextRequest) => {
     chainSns: handler.producer.topicArn!,
     chainId: handler.producer.chainId,
     mode: data.mode,
-    envs: handler.envs.map((env) => ({
+    envs: handler.convectFunction.envs.map((env) => ({
       ...env,
       value: decryptEnvValue(env.value, env.iv),
     })),

@@ -1,13 +1,15 @@
+import { schema } from "@convect-xyz/lib";
+import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "~/server/db";
 
-export function getUrlParams(req: NextRequest, schema: z.Schema) {
+export function getUrlParams<T extends z.Schema>(req: NextRequest, schema: T) {
   const data = Object.fromEntries(req.nextUrl.searchParams.entries());
 
   try {
     return {
-      data: schema.parse(data),
+      data: schema.parse(data) as z.infer<T>,
       error: undefined,
     };
   } catch (e: any) {
@@ -22,9 +24,22 @@ export async function getFormData<T extends z.Schema>(
   const data = await req.formData();
   try {
     return {
-      data: schema.parse(Object.fromEntries(data.entries())) as z.infer<
-        typeof schema
-      >,
+      data: schema.parse(Object.fromEntries(data.entries())) as z.infer<T>,
+      error: undefined,
+    };
+  } catch (e: any) {
+    return { data: undefined, error: e as Error };
+  }
+}
+
+export async function getJsonData<T extends z.Schema>(
+  req: NextRequest,
+  schema: T,
+) {
+  const data = await req.json();
+  try {
+    return {
+      data: schema.parse(data) as z.infer<T>,
       error: undefined,
     };
   } catch (e: any) {
@@ -60,4 +75,29 @@ export async function getUserContext(req: NextRequest) {
   }
 
   return { user: apiKey.user, error: undefined };
+}
+
+export async function getConvectFn({
+  convectFn,
+  project,
+  userId,
+}: {
+  convectFn: string;
+  project: string;
+  userId: string;
+}) {
+  return db
+    .select()
+    .from(schema.convectFunctions)
+    .innerJoin(
+      schema.projects,
+      eq(schema.convectFunctions.projectId, schema.projects.id),
+    )
+    .where(
+      and(
+        eq(schema.convectFunctions.name, convectFn),
+        eq(schema.projects.name, project),
+        eq(schema.projects.userId, userId),
+      ),
+    );
 }

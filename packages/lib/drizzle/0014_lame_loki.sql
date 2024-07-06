@@ -1,0 +1,1 @@
+ALTER TABLE "web_handler" ADD CONSTRAINT "web_handler_function_id_producerId_unique" UNIQUE("function_id","producerId");
