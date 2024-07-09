@@ -1,5 +1,15 @@
 import { isNull } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  base,
+  baseSepolia,
+  blast,
+  blastSepolia,
+  mainnet,
+  polygon,
+  polygonAmoy,
+  sepolia,
+} from "viem/chains";
 import { z } from "zod";
 import { db } from "~/server/db";
 import { getJsonData, getUserContext } from "../utils";
@@ -23,21 +33,26 @@ export const POST = async (req: NextRequest) => {
     where(fields, { eq, and }) {
       var filter = and();
 
-      console.log(data.ids);
+      const nameToId: Record<string, number> = {
+        "blast-mainnet": blast.id,
+        "blast-testnet": blastSepolia.id,
+        "eth-mainnet": mainnet.id,
+        "eth-sepolia": sepolia.id,
+        "polygon-mainnet": polygon.id,
+        "polygon-amoy": polygonAmoy.id,
+        "base-mainnet": base.id,
+        "base-sepolia": baseSepolia.id,
+      };
+
       for (const id of data.ids) {
-        if (id === "blast-mainnet") {
+        const chainId = nameToId[id];
+        if (chainId) {
           filter = and(
             filter,
-            and(eq(fields.chainId, 81457), isNull(fields.userId)),
+            and(eq(fields.chainId, chainId), isNull(fields.userId)),
           );
-        } else if (id === "eth-sepolia") {
-          filter = and(
-            filter,
-            and(eq(fields.chainId, 11155111), isNull(fields.userId)),
-          );
-        } else if (id === "eth-mainnet") {
         } else {
-          filter = and(filter, eq(fields.id, parseInt(id)));
+          throw new Error(`Invalid producer id: ${id}`);
         }
       }
 
