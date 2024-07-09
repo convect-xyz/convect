@@ -2,7 +2,7 @@
   {
     "id": 1,
     "name": "Ethereum Mainnet",
-    "polling_url": "",
+    "polling_url": "https://eth-mainnet.g.alchemy.com/v2/REDACTED",
     "ws_url": "wss://eth-mainnet.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-mainnet"
   },
@@ -16,14 +16,14 @@
   {
     "id": 137,
     "name": "Polygon MATIC",
-    "polling_url": "",
+    "polling_url": "https://polygon-mainnet.g.alchemy.com/v2/REDACTED",
     "ws_url": "wss://polygon-mainnet.g.alchemy.com/v2/REDACTED",
-    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-matic"
+    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-mainnet"
   },
   {
     "id": 80002,
     "name": "Polygon Amoy",
-    "polling_url": "",
+    "polling_url": "https://polygon-amoy.g.alchemy.com/v2/REDACTED",
     "ws_url": "wss://polygon-amoy.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-amoy"
   },
@@ -33,5 +33,19 @@
     "polling_url": "https://rpc.blast.io",
     "ws_url": "wss://orbital-lively-shape.blast-mainnet.quiknode.pro/REDACTED/",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast"
+  },
+  {
+    "id": 8453,
+    "name": "Base Mainnet",
+    "polling_url": "https://base-mainnet.g.alchemy.com/v2/REDACTED",
+    "ws_url": "wss://base-mainnet.g.alchemy.com/v2/REDACTED",
+    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-mainnet"
+  },
+  {
+    "id": 84532,
+    "name": "Base Sepolia",
+    "polling_url": "https://base-sepolia.g.alchemy.com/v2/REDACTED",
+    "ws_url": "wss://base-sepolia.g.alchemy.com/v2/REDACTED",
+    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-sepolia"
   }
 ]
