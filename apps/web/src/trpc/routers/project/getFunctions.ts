@@ -50,7 +50,6 @@ export const getFunctions = protectedProcedure
             schema.producers,
             eq(schema.handler.producerId, schema.producers.id),
           )
-          .limit(3)
           .where(
             inArray(
               schema.handler.functionId,
