@@ -53,6 +53,7 @@ export function Chain() {
           <SelectItem value={h.id.toString()}>
             <div className="flex items-center gap-2">
               <ChainIcon chainId={h.producer.chainId} />
+              <div>{h.producer.name}</div>
             </div>
           </SelectItem>
         ))}
