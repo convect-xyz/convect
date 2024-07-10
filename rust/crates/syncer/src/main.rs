@@ -65,7 +65,7 @@ async fn run(
 
     let mut delete_handles = Vec::new();
 
-    for chunk in configs.chunks(100) {
+    for chunk in configs.chunks(70) {
         let invocations = invoke_lambdas(chunk).await;
         let s3_results: Vec<IngestTransaction> = get_s3_results(&invocations)
             .await
