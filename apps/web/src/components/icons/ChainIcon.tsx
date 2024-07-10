@@ -1,6 +1,7 @@
 import { ComponentProps } from "react";
 import {
   base,
+  baseSepolia,
   blast,
   blastSepolia,
   mainnet,
@@ -26,6 +27,7 @@ export default function ChainIcon(props: ChainIconProps) {
     case blastSepolia.id:
       return <BlastIcon width={14} height={14} {...rest} />;
     case base.id:
+    case baseSepolia.id:
       return <BaseIcon width={14} height={14} {...rest} />;
     default:
       return (
