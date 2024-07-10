@@ -48,6 +48,7 @@ async fn run(network: &SupportedNetwork, sns: &aws_sdk_sns::Client) -> Result<()
     let provider = Provider::<Ws>::connect(network.ws_url.clone())
         .await
         .inspect_err(|e| println!("{:?}", e))?;
+    println!("Connected to {p}", p = network.name);
 
     let mut stream = provider.subscribe_blocks().await?;
     while let Some(block) = stream.next().await {
