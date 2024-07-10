@@ -10,7 +10,7 @@
     "id": 11155111,
     "name": "Ethereum Sepolia",
     "polling_url": "https://eth-sepolia.g.alchemy.com/v2/RR6SauaFrOOffGTqGrmea2EzWQvIUCtK",
-    "ws_url": "wss://eth-sepolia.g.alchemy.com/v2/RR6SauaFrOOffGTqGrmea2EzWQvIUCtK",
+    "ws_url": "wss://eth-sepolia.g.alchemy.com/v2/9XxfVSh91vo3fDuPN6zVouOwn82IPlpu",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia"
   },
   {
