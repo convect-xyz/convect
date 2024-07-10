@@ -1,4 +1,4 @@
-import { isNull } from "drizzle-orm";
+import { isNull, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import {
   base,
@@ -47,7 +47,7 @@ export const POST = async (req: NextRequest) => {
       for (const id of data.ids) {
         const chainId = nameToId[id];
         if (chainId) {
-          filter = and(
+          filter = or(
             filter,
             and(eq(fields.chainId, chainId), isNull(fields.userId)),
           );
