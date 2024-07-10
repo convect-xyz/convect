@@ -1,4 +1,13 @@
 import { ComponentProps } from "react";
+import {
+  base,
+  blast,
+  blastSepolia,
+  mainnet,
+  polygon,
+  polygonAmoy,
+  sepolia,
+} from "viem/chains";
 
 type ChainIconProps = ComponentProps<"svg"> & {
   chainId: number;
@@ -7,14 +16,17 @@ type ChainIconProps = ComponentProps<"svg"> & {
 export default function ChainIcon(props: ChainIconProps) {
   const { chainId, ...rest } = props;
   switch (chainId) {
-    case 1:
-    case 11155111:
+    case mainnet.id:
+    case sepolia.id:
       return <EthereumIcon width={14} height={14} {...rest} />;
-    case 80002:
-    case 137:
+    case polygon.id:
+    case polygonAmoy.id:
       return <PolygonIcon width={14} height={14} {...rest} />;
-    case 81457:
+    case blast.id:
+    case blastSepolia.id:
       return <BlastIcon width={14} height={14} {...rest} />;
+    case base.id:
+      return <BaseIcon width={14} height={14} {...rest} />;
     default:
       return (
         <svg
@@ -91,6 +103,23 @@ function PolygonIcon(props: Omit<ChainIconProps, "chainId">) {
       <path
         fill="#6C00F6"
         d="m66.766 54.741-16.69-9.661L0 74.061v57.958L50.075 161l50.078-28.981v-90.16l27.818-16.099 27.822 16.099v32.202L127.971 90.16l-16.691-9.658v25.757l16.691 9.661 50.076-28.981V28.981L127.971 0 77.896 28.981v90.16l-27.82 16.099-27.82-16.099V86.939l27.82-16.099 16.69 9.658V54.741Z"
+      />
+    </svg>
+  );
+}
+
+function BaseIcon(props: Omit<ChainIconProps, "chainId">) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 146 146"
+      {...props}
+    >
+      <circle cx={73} cy={73} r={73} fill="#0052FF" />
+      <path
+        fill="#fff"
+        d="M73.323 123.729c28.294 0 51.23-22.897 51.23-51.141 0-28.245-22.936-51.142-51.23-51.142-26.843 0-48.865 20.61-51.052 46.843h67.715v8.597H22.27c2.187 26.233 24.209 46.843 51.052 46.843Z"
       />
     </svg>
   );
