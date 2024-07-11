@@ -46,7 +46,7 @@ pub mod manifest {
         pub start_block: i64,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Clone)]
     pub struct LogConfig {
         pub address: String,
         pub topics: Vec<String>,

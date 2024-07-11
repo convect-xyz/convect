@@ -12,9 +12,7 @@ use crate::types::manifest::LogConfig;
 pub trait Web3Client {
     fn get_logs_for_config(
         &self,
-        config: &LogConfig,
-        start_block: u64,
-        end_block: u64,
+        configs: Vec<GetLogConfig>,
     ) -> impl std::future::Future<Output = Result<Vec<Log>, BoxError>> + Send;
 }
 
@@ -36,27 +34,32 @@ impl Web3ClientImpl {
     }
 }
 
+pub struct GetLogConfig {
+    pub config: LogConfig,
+    pub start_block: u64,
+    pub end_block: u64,
+}
+
 impl Web3Client for Web3ClientImpl {
-    async fn get_logs_for_config(
-        &self,
-        config: &LogConfig,
-        start_block: u64,
-        end_block: u64,
-    ) -> Result<Vec<Log>, BoxError> {
-        let address = H160::from_str(config.address.as_str()).unwrap();
+    async fn get_logs_for_config(&self, configs: Vec<GetLogConfig>) -> Result<Vec<Log>, BoxError> {
+        let addresses = configs
+            .iter()
+            .map(|c| H160::from_str(c.config.address.as_str()).unwrap())
+            .collect();
+
+        let start_block = configs.iter().map(|c| c.start_block).min().unwrap();
+        let end_block = configs.iter().map(|c| c.end_block).max().unwrap();
+
+        let topics = configs
+            .iter()
+            .map(|c| H256::from_str(c.config.topics[0].as_str()).unwrap())
+            .collect();
 
         let filter = FilterBuilder::default()
-            .address(vec![address])
+            .address(addresses)
             .from_block(web3::types::BlockNumber::Number(start_block.into()))
             .to_block(web3::types::BlockNumber::Number(end_block.into()))
-            .topics(
-                Some(vec![
-                    H256::from_str(&config.topics[0]).expect("Log topic not set")
-                ]),
-                None,
-                None,
-                None,
-            )
+            .topics(Some(topics), None, None, None)
             .build();
 
         let result = self.web3.eth().logs(filter).await?;
