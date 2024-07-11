@@ -15,7 +15,7 @@
   },
   {
     "id": 137,
-    "name": "Polygon MATIC",
+    "name": "Polygon Mainnet",
     "polling_url": "https://polygon-mainnet.g.alchemy.com/v2/REDACTED",
     "ws_url": "wss://polygon-mainnet.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-mainnet"
