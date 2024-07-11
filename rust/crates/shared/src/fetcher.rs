@@ -7,7 +7,7 @@ use web3::types::{Log, H256};
 
 use crate::types::manifest::Manifest;
 use crate::types::transactions::{IngestLog, IngestTransaction};
-use crate::web3_client::{Web3Client, Web3ClientImpl};
+use crate::web3_client::{GetLogConfig, Web3Client, Web3ClientImpl};
 
 pub trait TransactionFetcher {
     fn get_transactions(
@@ -37,7 +37,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         start_block: u64,
         end_block: u64,
     ) -> Result<Vec<IngestTransaction>, BoxError> {
-        let log_futures = manifest
+        let configs = manifest
             .log_configs
             .iter()
             .filter(|log_config| {
@@ -57,24 +57,24 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
                     .min()
                     .expect("Tx configs were empty for this log");
 
-                self.web3_client.get_logs_for_config(
-                    log_config,
-                    max(
+                GetLogConfig {
+                    config: log_config.clone(),
+                    start_block: max(
                         start_block,
                         u64::try_from(min_start_block).expect("Start block"),
                     ),
                     end_block,
-                )
-            });
+                }
+            })
+            .collect();
 
-        let all_logs: Result<Vec<Vec<Log>>, BoxError> =
-            join_all(log_futures).await.into_iter().collect();
+        let logs = self.web3_client.get_logs_for_config(configs).await;
 
         let mut tx_indexes: HashMap<H256, usize> = HashMap::new();
         let mut txs: Vec<IngestTransaction> = Vec::new();
 
         let id = uuid::Uuid::new_v4();
-        for log in all_logs?.into_iter().flatten() {
+        for log in logs?.into_iter() {
             let tx_hash = log.transaction_hash.unwrap();
 
             if !tx_indexes.contains_key(&tx_hash) {
