@@ -18,7 +18,7 @@ async fn function_handler(
     let s3_bucket = env::var("S3_BUCKET").expect("S3_BUCKET is not set");
 
     let transactions = match fetcher
-        .get_transactions(
+        .get_transactions_in_range(
             &manifest,
             event.payload.start_block,
             event.payload.end_block,
