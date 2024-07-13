@@ -49,11 +49,16 @@ jobs:
           repo: cargo-lambda/cargo-lambda
           platform: linux
           arch: x86_64
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
       - uses: actions/checkout@master
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.binary }}
           workspaces: "rust"
+      - name: Test
+        working-directory: rust
+        run: cargo nextest run -p ${{ matrix.binary }}
       - name: Build
         working-directory: rust
         env:
@@ -78,11 +83,16 @@ jobs:
           repo: cargo-lambda/cargo-lambda
           platform: linux
           arch: x86_64
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
       - uses: actions/checkout@master
       - uses: Swatinem/rust-cache@v2
         with:
           key: reporting
           workspaces: "rust"
+      - name: Test
+        working-directory: rust
+        run: cargo nextest run -p reporting
       - name: Build
         working-directory: rust
         env:

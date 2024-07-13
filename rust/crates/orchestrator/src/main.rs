@@ -85,7 +85,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
     let manifest = Manifest::from_env().await.unwrap();
     let transactions = fetcher
-        .get_transactions(&manifest, from_block, incoming_block)
+        .get_transactions_in_range(&manifest, from_block, incoming_block)
         .inspect_err(|e| {
             println!("{:?}", e);
             pipeline
