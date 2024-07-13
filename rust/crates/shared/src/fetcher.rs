@@ -1,16 +1,16 @@
 use aws_sdk_s3::error::BoxError;
-use futures::future::join_all;
 use futures::Future;
 use std::cmp::{max, Ordering};
 use std::collections::HashMap;
-use web3::types::{Log, H256};
+use std::str::FromStr;
+use web3::types::{Filter, FilterBuilder, Log, H160, H256};
 
-use crate::types::manifest::Manifest;
+use crate::types::manifest::{LogConfig, Manifest, TransactionConfig};
 use crate::types::transactions::{IngestLog, IngestTransaction};
-use crate::web3_client::{GetLogConfig, Web3Client, Web3ClientImpl};
+use crate::web3_client::{Web3Client, Web3ClientImpl};
 
 pub trait TransactionFetcher {
-    fn get_transactions(
+    fn get_transactions_in_range(
         &self,
         manifest: &Manifest,
         start_block: u64,
@@ -22,6 +22,101 @@ pub struct TransactionFetcherImpl<T: Web3Client> {
     web3_client: T,
 }
 
+impl<T: Web3Client> TransactionFetcherImpl<T> {
+    fn get_log_configs_in_range<'a>(
+        &'a self,
+        manifest: &'a Manifest,
+        range_start: u64,
+        range_end: u64,
+    ) -> Vec<&'a LogConfig> {
+        let has_tx_config_in_range = |log_config: &&LogConfig| {
+            log_config.tx_configs.iter().any(|tx_config_idx| {
+                let tx_cfg = &manifest.tx_configs[tx_config_idx.clone() as usize];
+                let tx_cfg_start_block =
+                    u64::try_from(tx_cfg.start_block).expect("Could not convert to u64");
+
+                range_start <= tx_cfg_start_block && range_end >= tx_cfg_start_block
+            })
+        };
+
+        manifest
+            .log_configs
+            .iter()
+            .filter(has_tx_config_in_range)
+            .collect()
+    }
+
+    /**
+      Returns a Filter that covers all the logs that are relevant to the given range.
+      The Filter is constructed by:
+
+      * taking all log config addresses and topics that are relevant to the current range.
+      * taking the smallest start block of all the tx_configs as the start block that are relevant to the current range.
+
+      Any extraneous logs that are not relevant to the Manifest should be removed with
+      the remove_extranous_logs method.
+    */
+    fn get_web3_client_filter(
+        &self,
+        tx_configs: &Vec<TransactionConfig>,
+        log_configs: &Vec<&LogConfig>,
+        range_start: u64,
+        range_end: u64,
+    ) -> Filter {
+        let addresses = log_configs
+            .iter()
+            .map(|c| H160::from_str(c.address.as_str()).unwrap())
+            .collect();
+
+        let topics = log_configs
+            .iter()
+            .map(|c| H256::from_str(c.topics[0].as_str()).unwrap())
+            .collect();
+
+        let smallest_tx_cfg_start_block = log_configs
+            .iter()
+            .map(|c| {
+                c.tx_configs
+                    .iter()
+                    .map(|idx| tx_configs[*idx as usize].start_block)
+                    .min()
+                    .unwrap()
+            })
+            .min()
+            .unwrap();
+
+        let start_block = max(
+            u64::try_from(smallest_tx_cfg_start_block).expect("Could not convert to u64"),
+            range_start,
+        );
+
+        FilterBuilder::default()
+            .address(addresses)
+            .topics(Some(topics), None, None, None)
+            .from_block(web3::types::BlockNumber::Number(start_block.into()))
+            .to_block(web3::types::BlockNumber::Number(range_end.into()))
+            .build()
+    }
+
+    fn remove_extranous_logs(&self, manifest: &Manifest, logs: Vec<Log>) -> Vec<Log> {
+        let has_matching_log_cfg = |log: &Log| {
+            manifest.log_configs.iter().any(|log_cfg| {
+                let parsed_cfg_address = H160::from_str(log_cfg.address.as_str())
+                    .expect(format!("Could not convert to H256: {}", log_cfg.address).as_str());
+
+                let parsed_cfg_topic = H256::from_str(log_cfg.topics[0].as_str())
+                    .expect(format!("Could not convert to H256: {}", log_cfg.topics[0]).as_str());
+
+                log.address.eq(&parsed_cfg_address) && log.topics[0].eq(&parsed_cfg_topic)
+            })
+        };
+
+        logs.into_iter()
+            .filter(|log| has_matching_log_cfg(log))
+            .collect()
+    }
+}
+
 impl TransactionFetcherImpl<Web3ClientImpl> {
     pub fn new() -> Self {
         Self {
@@ -31,50 +126,30 @@ impl TransactionFetcherImpl<Web3ClientImpl> {
 }
 
 impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
-    async fn get_transactions(
+    async fn get_transactions_in_range(
         &self,
         manifest: &Manifest,
-        start_block: u64,
-        end_block: u64,
+        range_start: u64,
+        range_end: u64,
     ) -> Result<Vec<IngestTransaction>, BoxError> {
-        let configs = manifest
-            .log_configs
-            .iter()
-            .filter(|log_config| {
-                log_config.tx_configs.iter().any(|tx_config_idx| {
-                    let tx_config = &manifest.tx_configs[tx_config_idx.clone() as usize];
-                    let tx_start_block =
-                        u64::try_from(tx_config.start_block).expect("Could not convert to u64");
+        let eligible_log_cfgs: Vec<_> =
+            self.get_log_configs_in_range(manifest, range_start, range_end);
 
-                    start_block >= tx_start_block || end_block >= tx_start_block
-                })
-            })
-            .map(|log_config| {
-                let min_start_block = log_config
-                    .tx_configs
-                    .iter()
-                    .map(|idx| manifest.tx_configs[idx.clone() as usize].start_block)
-                    .min()
-                    .expect("Tx configs were empty for this log");
+        let filter = self.get_web3_client_filter(
+            &manifest.tx_configs,
+            &eligible_log_cfgs,
+            range_start,
+            range_end,
+        );
 
-                GetLogConfig {
-                    config: log_config.clone(),
-                    start_block: max(
-                        start_block,
-                        u64::try_from(min_start_block).expect("Start block"),
-                    ),
-                    end_block,
-                }
-            })
-            .collect();
-
-        let logs = self.web3_client.get_logs_for_config(configs).await;
+        let logs: Vec<_> =
+            self.remove_extranous_logs(manifest, self.web3_client.get_logs(filter).await?);
 
         let mut tx_indexes: HashMap<H256, usize> = HashMap::new();
         let mut txs: Vec<IngestTransaction> = Vec::new();
 
         let id = uuid::Uuid::new_v4();
-        for log in logs?.into_iter() {
+        for log in logs.into_iter() {
             let tx_hash = log.transaction_hash.unwrap();
 
             if !tx_indexes.contains_key(&tx_hash) {
@@ -114,5 +189,144 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         });
 
         Ok(txs)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::web3_client::Web3Client;
+    use std::str::FromStr;
+    use web3::types::{Bytes, Log, H160, H256, U256};
+
+    struct MockWeb3Client {
+        logs: Vec<Log>,
+        expected_filter: Filter,
+    }
+
+    impl Web3Client for MockWeb3Client {
+        async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, BoxError> {
+            assert_eq!(filter, self.expected_filter);
+            Ok(self.logs.clone())
+        }
+    }
+
+    mod get_transactions_in_range {
+        use super::*;
+        use crate::types::manifest::{LogConfig, Manifest, TransactionConfig};
+
+        #[tokio::test]
+        async fn calls_filter_with_correct_params() {
+            let manifest = Manifest {
+                log_configs: vec![
+                    LogConfig {
+                        address: "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002".to_string(),
+                        topics: vec![
+                            "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"
+                                .to_string(),
+                        ],
+                        tx_configs: vec![0],
+                    },
+                    LogConfig {
+                        address: "0x8d9088383506437d8De8897B5cF924a2ac70BBDb".to_string(),
+                        topics: vec![
+                            "0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"
+                                .to_string(),
+                        ],
+                        tx_configs: vec![1],
+                    },
+                ],
+                tx_configs: vec![
+                    TransactionConfig { start_block: 0 },
+                    TransactionConfig { start_block: 5 },
+                ],
+            };
+
+            let logs = vec![
+                build_log(
+                    "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
+                    "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62",
+                    5,
+                    "0x0e2fe9129f6bdd1a524b3a9d12ccb8476b70f69777f73672cf59330cba5a2638",
+                ),
+                build_log(
+                    "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+                    "0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33",
+                    5,
+                    "0x0e2fe9129f6bdd1a524b3a9d12ccb8476b70f69777f73672cf59330cba5a2638",
+                ),
+            ];
+
+            let web3_client = MockWeb3Client {
+                logs,
+                expected_filter: build_filter(
+                    vec![
+                        "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
+                        "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+                    ],
+                    vec![
+                        "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62",
+                        "0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33",
+                    ],
+                    0,
+                    10,
+                ),
+            };
+
+            let fetcher = TransactionFetcherImpl { web3_client };
+            let txs = fetcher
+                .get_transactions_in_range(&manifest, 0, 10)
+                .await
+                .unwrap();
+
+            assert_eq!(txs.len(), 1);
+            assert_eq!(txs[0].block_number, 5);
+            assert_eq!(txs[0].logs.len(), 2);
+        }
+    }
+
+    fn build_log(address: &str, topic: &str, block_number: u64, transaction_hash: &str) -> Log {
+        Log {
+            address: H160::from_str(address).unwrap(),
+            topics: vec![H256::from_str(topic).unwrap()],
+            data: Bytes(vec![]),
+            log_index: Some(U256::from(0)),
+            transaction_hash: Some(H256::from_str(transaction_hash).unwrap()),
+            block_number: Some(block_number.into()),
+            block_hash: Some(
+                H256::from_str(
+                    "0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33",
+                )
+                .unwrap(),
+            ),
+            transaction_index: Some(0.into()),
+            removed: Some(false),
+            transaction_log_index: Some(U256::from_str("0").unwrap()),
+            log_type: Some("".to_string()),
+        }
+    }
+
+    fn build_filter(
+        addresses: Vec<&str>,
+        topics: Vec<&str>,
+        start_block: u64,
+        end_block: u64,
+    ) -> Filter {
+        FilterBuilder::default()
+            .address(
+                addresses
+                    .iter()
+                    .map(|a| H160::from_str(a).unwrap())
+                    .collect(),
+            )
+            .topics(
+                Some(topics.iter().map(|t| H256::from_str(t).unwrap()).collect()),
+                None,
+                None,
+                None,
+            )
+            .from_block(web3::types::BlockNumber::Number(start_block.into()))
+            .to_block(web3::types::BlockNumber::Number(end_block.into()))
+            .build()
     }
 }

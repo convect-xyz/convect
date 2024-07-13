@@ -17,3 +17,6 @@ pub mod schema;
 pub mod telemetry;
 pub mod types;
 pub mod web3_client;
+
+#[cfg(test)]
+pub mod testing;
