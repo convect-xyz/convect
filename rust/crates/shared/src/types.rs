@@ -248,38 +248,6 @@ pub mod syncing {
             count
         }
 
-        pub fn acquire_lock(&mut self) -> Result<(), BoxError> {
-            let key = format!(
-                "lock-{handler_id}-{handler_version}",
-                handler_id = &self.inner.handler_id,
-                handler_version = &self.inner.handler_version
-            );
-
-            let v: Option<String> = redis::cmd("SET")
-                .arg(key)
-                .arg("LOCKED")
-                .arg("NX")
-                .query(&mut self.connection)?;
-
-            if v.is_none() {
-                return Err(LockError.into());
-            }
-
-            Ok(())
-        }
-
-        pub fn release_lock(&mut self) -> Result<(), BoxError> {
-            let key = format!(
-                "lock-{handler_id}-{handler_version}",
-                handler_id = &self.inner.handler_id,
-                handler_version = &self.inner.handler_version
-            );
-
-            let _: u64 = self.connection.del(key)?;
-
-            Ok(())
-        }
-
         pub fn inner(&self) -> &Inner {
             &self.inner
         }
