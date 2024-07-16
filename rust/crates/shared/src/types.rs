@@ -40,13 +40,13 @@ pub mod manifest {
     }
 
     #[serde_as]
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Debug)]
     pub struct TransactionConfig {
         #[serde_as(as = "DisplayFromStr")]
         pub start_block: i64,
     }
 
-    #[derive(Deserialize, Clone)]
+    #[derive(Deserialize, Clone, Debug)]
     pub struct LogConfig {
         pub address: String,
         pub topics: Vec<String>,
