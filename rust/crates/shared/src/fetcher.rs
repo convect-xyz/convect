@@ -3,6 +3,8 @@ use futures::Future;
 use std::cmp::{max, Ordering};
 use std::collections::HashMap;
 use std::str::FromStr;
+use tokio_retry::strategy::{jitter, ExponentialBackoff};
+use tokio_retry::Retry;
 use web3::types::{Filter, FilterBuilder, Log, H160, H256};
 
 use crate::types::manifest::{LogConfig, Manifest, TransactionConfig};
@@ -146,8 +148,14 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
             range_end,
         );
 
-        let logs: Vec<_> =
-            self.remove_extranous_logs(manifest, self.web3_client.get_logs(filter).await?);
+        let retry_strategy = ExponentialBackoff::from_millis(10).map(jitter).take(3);
+
+        let fetched_logs = Retry::spawn(retry_strategy, || async {
+            Ok::<_, BoxError>(self.web3_client.get_logs(filter.clone()).await?)
+        })
+        .await?;
+
+        let logs: Vec<_> = self.remove_extranous_logs(manifest, fetched_logs);
 
         let mut tx_indexes: HashMap<H256, usize> = HashMap::new();
         let mut txs: Vec<IngestTransaction> = Vec::new();

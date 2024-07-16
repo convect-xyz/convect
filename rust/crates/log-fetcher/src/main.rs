@@ -26,7 +26,7 @@ async fn function_handler(
         .await
     {
         Ok(txs) => txs,
-        Err(_) => todo!(),
+        Err(e) => panic!(e),
     };
 
     if transactions.is_empty() {
