@@ -26,7 +26,7 @@ async fn function_handler(
         .await
     {
         Ok(txs) => txs,
-        Err(e) => panic!(e),
+        Err(e) => panic!("Failed to fetch transactions: {:?}", e),
     };
 
     if transactions.is_empty() {
