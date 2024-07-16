@@ -35,7 +35,7 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
                 let tx_cfg_start_block =
                     u64::try_from(tx_cfg.start_block).expect("Could not convert to u64");
 
-                range_start <= tx_cfg_start_block && range_end >= tx_cfg_start_block
+                range_start >= tx_cfg_start_block
             })
         };
 
