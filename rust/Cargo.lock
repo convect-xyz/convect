@@ -5600,6 +5600,7 @@ dependencies = [
  "serde_with",
  "tokio",
  "tokio-postgres",
+ "tokio-retry",
  "tracing-subscriber",
  "uuid 1.8.0",
  "web3",
