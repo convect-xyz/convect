@@ -73,6 +73,9 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
             .map(|c| H256::from_str(c.topics[0].as_str()).unwrap())
             .collect();
 
+        println!("tx_configs: {:?}", tx_configs);
+        println!("log_configs: {:?}", log_configs);
+
         let smallest_tx_cfg_start_block = log_configs
             .iter()
             .map(|c| {
