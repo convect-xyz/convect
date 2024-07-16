@@ -76,9 +76,6 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
             .map(|c| H256::from_str(c.topics[0].as_str()).unwrap())
             .collect();
 
-        println!("tx_configs: {:?}", tx_configs);
-        println!("log_configs: {:?}", log_configs);
-
         let smallest_tx_cfg_start_block = log_configs
             .iter()
             .map(|c| {
@@ -147,6 +144,8 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
             range_start,
             range_end,
         );
+
+        println!("filter: {:?}", filter);
 
         let retry_strategy = ExponentialBackoff::from_millis(10).map(jitter).take(3);
 
