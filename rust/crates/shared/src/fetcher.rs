@@ -29,6 +29,7 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
         range_start: u64,
         range_end: u64,
     ) -> Vec<&'a LogConfig> {
+        println!("manifest: {:?}", manifest);
         let has_tx_config_in_range = |log_config: &&LogConfig| {
             log_config.tx_configs.iter().any(|tx_config_idx| {
                 let tx_cfg = &manifest.tx_configs[tx_config_idx.clone() as usize];
