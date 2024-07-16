@@ -33,7 +33,7 @@ pub mod manifest {
     use serde_with::{serde_as, DisplayFromStr};
     use std::env;
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Debug)]
     pub struct Manifest {
         pub log_configs: Vec<LogConfig>,
         pub tx_configs: Vec<TransactionConfig>,
