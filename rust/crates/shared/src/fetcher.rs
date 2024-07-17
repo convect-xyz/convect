@@ -145,7 +145,6 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         );
 
         let retry_strategy = ExponentialBackoff::from_millis(10).map(jitter).take(3);
-
         let fetched_logs = Retry::spawn(retry_strategy, || async {
             Ok::<_, BoxError>(self.web3_client.get_logs(filter.clone()).await?)
         })
@@ -153,15 +152,15 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
 
         let logs: Vec<_> = self.remove_extranous_logs(manifest, fetched_logs);
 
-        let mut tx_indexes: HashMap<H256, usize> = HashMap::new();
+        let mut tx_indices: HashMap<H256, usize> = HashMap::new();
         let mut txs: Vec<IngestTransaction> = Vec::new();
 
         let id = uuid::Uuid::new_v4();
         for log in logs.into_iter() {
             let tx_hash = log.transaction_hash.unwrap();
 
-            if !tx_indexes.contains_key(&tx_hash) {
-                tx_indexes.insert(tx_hash.clone(), txs.len());
+            if !tx_indices.contains_key(&tx_hash) {
+                tx_indices.insert(tx_hash.clone(), txs.len());
 
                 txs.push(IngestTransaction {
                     block_number: log.block_number.unwrap().as_u64(),
@@ -173,8 +172,11 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
                 });
             }
 
-            let tx_index = tx_indexes.get(&tx_hash).unwrap().clone();
-            let mut transaction = txs.get(tx_index).unwrap().clone();
+            let tx_index = tx_indices
+                .get(&tx_hash)
+                .expect(format!("Could not find index for hash {:?}", tx_hash).as_str())
+                .clone();
+            let transaction = txs.get_mut(tx_index).unwrap();
 
             transaction.logs.push(IngestLog {
                 address: format!("{:#x}", log.address),
@@ -183,8 +185,6 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
                 log_index: log.log_index,
                 removed: log.removed,
             });
-
-            txs[tx_index] = transaction;
         }
 
         txs.sort_by(|a, b| {
