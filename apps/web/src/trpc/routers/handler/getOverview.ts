@@ -85,7 +85,7 @@ export const getOverview = protectedProcedure
     ]);
 
     return {
-      status: fetchState ? "processing" : "provisioning",
+      status: fetchState.state ? "processing" : "provisioning",
       chain: {
         name: handler.producer.name,
         chainId: handler.producer.chainId,
