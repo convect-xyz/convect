@@ -36,7 +36,7 @@ export function Chain() {
     params.set("handlerId", v);
 
     params.toString();
-    router.push(pathname + "?" + params.toString());
+    router.replace(pathname + "?" + params.toString());
   };
 
   return (
