@@ -8,7 +8,7 @@ use aws_sdk_sns::error::SdkError;
 use aws_sdk_sns::operation::publish::PublishError;
 use futures::StreamExt;
 use shared::networks::{get_supported_networks, SupportedNetwork};
-use tokio_retry::strategy::{jitter, ExponentialBackoff};
+use tokio_retry::strategy::jitter;
 use tokio_retry::Retry;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
@@ -23,7 +23,9 @@ async fn main() {
 
     for network in supported_networks.into_iter() {
         let handle = tokio::spawn(async move {
-            let retry_strategy = ExponentialBackoff::from_millis(10).map(jitter).take(3);
+            let retry_strategy = tokio_retry::strategy::FixedInterval::from_millis(2000)
+                .map(jitter)
+                .take(usize::MAX);
             let func = || async {
                 let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
                 let client = aws_sdk_sns::Client::new(&config);
@@ -31,9 +33,9 @@ async fn main() {
 
                 run(&network_clone, &client)
                     .await
-                    .inspect_err(|e| println!("{:?}", e))?;
+                    .inspect_err(|e| println!("Producer Error {:?}", e))?;
 
-                Ok::<(), ProducerError>(())
+                Err::<(), ProducerError>(ProducerError::EmptyBlock)
             };
 
             match Retry::spawn(retry_strategy, func).await {
