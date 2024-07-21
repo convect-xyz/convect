@@ -138,13 +138,13 @@ const getTxCount = async (internalId: string, version: number) => {
 };
 
 const getFetchState = async (internalId: string, version: number) => {
-  const response = await redisClient
-    .call(`JSON.GET`, `${internalId}-${version}`)
-    .then((v) => JSON.parse(v as string));
+  const [lastBlock, state] = await redisClient.mget(
+    `${internalId}-${version}-last-block`,
+    `${internalId}-${version}-state`,
+  );
 
-  return response
-    ? {
-        lastBlock: Number(response.LastBlock_),
-      }
-    : null;
+  return {
+    lastBlock: lastBlock ? Number(lastBlock) : null,
+    state: state ? state : null,
+  };
 };
