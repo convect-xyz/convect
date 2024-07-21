@@ -179,7 +179,7 @@ pub mod syncing {
         }
 
         pub fn load(handler_id: String, handler_version: String) -> Self {
-            let client = redis::Client::open("rediss://default:REDACTED@stirred-jawfish-46999.upstash.io:6379")
+            let client = redis::Client::open("rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061")
             .unwrap();
 
             let mut con = client.get_connection().unwrap();
@@ -325,7 +325,7 @@ pub mod processing {
         }
 
         pub async fn load(handler_id: String, handler_version: String) -> Self {
-            let client = redis::Client::open("rediss://default:REDACTED@stirred-jawfish-46999.upstash.io:6379").unwrap();
+            let client = redis::Client::open("rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061").unwrap();
 
             let mut con = client.get_multiplexed_async_connection().await.unwrap();
 
