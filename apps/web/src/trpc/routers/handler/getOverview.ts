@@ -21,7 +21,7 @@ const conn = new Pool({
 
 const redisClient = new Redis(
   6379,
-  "rediss://default:AbeXAAIncDFjNTRiNjgyMmZjNzM0ZGQzOTZmYTQzZTA5ODQ4YjVkM3AxNDY5OTk@stirred-jawfish-46999.upstash.io",
+  "rediss://default:AVNS_7BaBQxFTF74jG4c8B1T@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061",
   {
     tls: {
       checkServerIdentity: (servername, cert) => {
