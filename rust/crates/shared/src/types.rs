@@ -144,13 +144,9 @@ pub mod syncing {
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct Inner {
-        #[serde(rename(serialize = "HandlerId_", deserialize = "HandlerId_"))]
         pub handler_id: String,
-        #[serde(rename(serialize = "HandlerVersion_", deserialize = "HandlerVersion_"))]
         pub handler_version: String,
-        #[serde(rename(serialize = "State_", deserialize = "State_"))]
         pub state: SyncState,
-        #[serde(rename(serialize = "LastBlock_", deserialize = "LastBlock_"))]
         pub last_block: Option<String>,
     }
 
@@ -183,39 +179,23 @@ pub mod syncing {
             .unwrap();
 
             let mut con = client.get_connection().unwrap();
-            let result: Option<String> = con
-                .json_get(format!("{handler_id}-{handler_version}"), "$")
+            let result: Vec<Option<String>> = con
+                .mget(vec![
+                    format!("{handler_id}-{handler_version}-state"),
+                    format!("{handler_id}-{handler_version}-last-block"),
+                ])
                 .unwrap();
-
-            let inner = match result {
-                Some(result) => {
-                    let inner: Vec<Inner> = serde_json::from_str(result.as_str()).unwrap();
-                    inner
-                }
-                None => {
-                    vec![Inner {
-                        handler_id: handler_id.clone(),
-                        handler_version: handler_version.clone(),
-                        state: SyncState::IDLE,
-                        last_block: None,
-                    }]
-                }
-            };
-
-            if let Some(inner) = inner.first() {
-                return Self {
-                    connection: con,
-                    inner: inner.to_owned(),
-                };
-            }
 
             Self {
                 connection: con,
                 inner: Inner {
                     handler_id: handler_id.clone(),
                     handler_version: handler_version.clone(),
-                    state: SyncState::IDLE,
-                    last_block: None,
+                    state: match result[0].as_ref() {
+                        Some(state) => serde_json::from_str(state.as_str()).unwrap(),
+                        None => SyncState::IDLE,
+                    },
+                    last_block: result[1].clone(),
                 },
             }
         }
@@ -280,11 +260,16 @@ pub mod syncing {
             backoff::retry::<_, ExponentialBackoff<SystemClock>, (), RedisError>(
                 ExponentialBackoff::default(),
                 || {
-                    self.connection.json_set(
-                        format!("{handler_id}-{handler_version}"),
-                        "$",
-                        &self.inner,
-                    )?;
+                    self.connection.mset(&[
+                        (
+                            format!("{handler_id}-{handler_version}-state"),
+                            serde_json::to_string(&self.inner.state).unwrap(),
+                        ),
+                        (
+                            format!("{handler_id}-{handler_version}-last-block"),
+                            self.inner.last_block.clone().unwrap_or_default(),
+                        ),
+                    ])?;
 
                     Ok(())
                 },
@@ -299,7 +284,7 @@ pub mod processing {
     use backoff::{exponential::ExponentialBackoff, SystemClock};
     use futures::lock::Mutex;
     use lambda_runtime::tower::BoxError;
-    use redis::{JsonAsyncCommands, RedisError};
+    use redis::{AsyncCommands, JsonAsyncCommands, RedisError};
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -329,40 +314,21 @@ pub mod processing {
 
             let mut con = client.get_multiplexed_async_connection().await.unwrap();
 
-            let result: Option<String> = con
-                .json_get(format!("process-state-{handler_id}-{handler_version}"), "$")
+            let result: Vec<Option<String>> = con
+                .mget(vec![
+                    format!("process-state-{handler_id}-{handler_version}-error-tx"),
+                    format!("process-state-{handler_id}-{handler_version}-error-label"),
+                ])
                 .await
                 .unwrap();
-
-            let inner = match result {
-                Some(result) => {
-                    let inner: Vec<Inner> = serde_json::from_str(result.as_str()).unwrap();
-                    inner
-                }
-                None => {
-                    vec![Inner {
-                        handler_id: handler_id.clone(),
-                        handler_version: handler_version.clone(),
-                        error_tx: None,
-                        error_label: None,
-                    }]
-                }
-            };
-
-            if let Some(inner) = inner.first() {
-                return Self {
-                    connection: con,
-                    inner: inner.to_owned(),
-                };
-            }
 
             Self {
                 connection: con,
                 inner: Inner {
                     handler_id: handler_id.clone(),
                     handler_version: handler_version.clone(),
-                    error_tx: None,
-                    error_label: None,
+                    error_tx: result[0].clone(),
+                    error_label: result[1].clone(),
                 },
             }
         }
@@ -412,11 +378,16 @@ pub mod processing {
                     connection
                         .lock()
                         .await
-                        .json_set(
-                            format!("process-state-{handler_id}-{handler_version}"),
-                            "$",
-                            &self.inner,
-                        )
+                        .mset(&[
+                            (
+                                format!("process-state-{handler_id}-{handler_version}-error-tx"),
+                                self.temp_inner.error_tx.clone().unwrap_or_default(),
+                            ),
+                            (
+                                format!("process-state-{handler_id}-{handler_version}-error-label"),
+                                self.temp_inner.error_label.clone().unwrap_or_default(),
+                            ),
+                        ])
                         .await?;
 
                     Ok(())
