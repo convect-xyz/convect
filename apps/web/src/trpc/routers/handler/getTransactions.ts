@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { and, desc, eq, ilike, max } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { Pool } from "pg";
@@ -62,35 +63,68 @@ export const getTransactions = protectedProcedure
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
-    const recentTransactions = await db.query.processedTransactions.findMany({
-      where(fields, { eq, and, ilike }) {
-        let baseFilter = and(
-          eq(fields.handlerId, handler.internalId),
-          eq(fields.handlerVersion, handler.version.toString()),
-        );
-        if (input.search) {
-          baseFilter = and(
-            baseFilter,
-            ilike(fields.transactionHash, `%${input.search}%`),
-          )!;
-        }
-        if (input.status) {
-          baseFilter = and(baseFilter, eq(fields.status, input.status))!;
-        }
-        return baseFilter;
-      },
-      orderBy(fields, { desc }) {
-        return desc(fields.timestamp);
-      },
-      limit: 25,
-    });
+    const getFilter = () => {
+      let baseFilter = and(
+        eq(processedTransactions.handlerId, handler.internalId),
+        eq(processedTransactions.handlerVersion, handler.version.toString()),
+      );
+      if (input.search) {
+        baseFilter = and(
+          baseFilter,
+          ilike(processedTransactions.transactionHash, `%${input.search}%`),
+        )!;
+      }
+      if (input.status) {
+        baseFilter = and(
+          baseFilter,
+          eq(processedTransactions.status, input.status),
+        )!;
+      }
+      return baseFilter;
+    };
+
+    console.time("distinct");
+    const maxTimestamp = max(processedTransactions.timestamp).as(
+      "max_timestamp",
+    );
+    const distinctTransactions = db
+      .select({
+        transactionHash: processedTransactions.transactionHash,
+        maxTimestamp,
+      })
+      .from(processedTransactions)
+      .where(getFilter())
+      .groupBy(processedTransactions.transactionHash)
+      .orderBy(desc(maxTimestamp))
+      .limit(25)
+      .as("distinct_transactions");
+
+    const recentTransactions = await db
+      .select()
+      .from(processedTransactions)
+      .innerJoin(
+        distinctTransactions,
+        and(
+          eq(
+            processedTransactions.transactionHash,
+            distinctTransactions.transactionHash,
+          ),
+          eq(
+            processedTransactions.timestamp,
+            distinctTransactions.maxTimestamp,
+          ),
+        ),
+      );
+    console.timeEnd("distinct");
 
     return {
-      transactions: recentTransactions.map((tx) => ({
-        id: tx.id,
-        transactionHash: tx.transactionHash,
-        status: tx.status as "SUCCESS" | "FAILED",
-        timestamp: tx.timestamp.getTime(),
-      })),
+      transactions: recentTransactions
+        .flatMap((v) => v.processed_transactions)
+        .map((tx) => ({
+          id: tx.id,
+          transactionHash: tx.transactionHash,
+          status: tx.status as "SUCCESS" | "FAILED",
+          timestamp: tx.timestamp.getTime(),
+        })),
     };
   });
