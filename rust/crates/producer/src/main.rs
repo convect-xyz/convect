@@ -66,11 +66,11 @@ async fn run(network: &SupportedNetwork, sns: &aws_sdk_sns::Client) -> Result<()
     println!("Connected to {p}", p = network.name);
 
     let subscription = provider.subscribe_blocks().await?;
-    let mut stream = subscription.into_result_stream().take(usize::MAX);
 
+    let mut stream = subscription.into_result_stream();
     println!("Subscribed to {p}", p = network.name);
-    while let Some(maybe_block) = stream.next().await {
-        let block = maybe_block.unwrap();
+    while let Some(block) = stream.next().await {
+        let block = block.map_err(|e| ProducerError::UnexpectedError)?;
         println!(
             "Received block {number} on {network}.",
             number = block.header.number.unwrap_or_default(),
@@ -97,6 +97,7 @@ async fn run(network: &SupportedNetwork, sns: &aws_sdk_sns::Client) -> Result<()
 #[derive(Debug)]
 enum ProducerError {
     EmptyBlock,
+    UnexpectedError,
     TransportError(TransportError),
     PublishError(SdkError<PublishError, aws_smithy_runtime_api::http::Response>),
 }
@@ -107,6 +108,7 @@ impl fmt::Display for ProducerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ProducerError::EmptyBlock => write!(f, "Block is empty"),
+            ProducerError::UnexpectedError => write!(f, "Unexpected"),
             ProducerError::TransportError(v) => write!(f, "Transport error {:?}", v),
             ProducerError::PublishError(v) => write!(f, "Publishing error {:?}", v),
         }
