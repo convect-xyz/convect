@@ -71,6 +71,13 @@ function Main(props: PropsWithChildren) {
           <Link {...getLinkProps(`/projects/${projectId}/${functionId}`)}>
             Overview
           </Link>
+          <Link
+            {...getLinkProps(
+              `/projects/${projectId}/${functionId}/deployments`,
+            )}
+          >
+            Deployments
+          </Link>
           <Link {...getLinkProps(`/projects/${projectId}/${functionId}/logs`)}>
             Logs
           </Link>

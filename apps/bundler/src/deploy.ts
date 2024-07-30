@@ -2,6 +2,7 @@ import "./instrumentation";
 
 import { S3 } from "@aws-sdk/client-s3";
 import { InlineProgramArgs, LocalWorkspace } from "@pulumi/pulumi/automation";
+import { eq } from "drizzle-orm";
 import esbuild from "esbuild";
 import fs from "fs";
 import JSZip from "jszip";
@@ -30,6 +31,12 @@ main()
   });
 
 async function main() {
+  db.update(schema.deployment)
+    .set({
+      status: "RUNNING",
+    })
+    .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
+
   console.info("initialising/getting stack...");
   const stack = await getStack();
   console.info("succesfully intialised stack.");
@@ -149,17 +156,23 @@ async function zipLambda() {
 }
 
 async function failDeployment() {
-  await db.update(schema.deployment).set({
-    status: "FAILED",
-  });
+  await db
+    .update(schema.deployment)
+    .set({
+      status: "FAILED",
+    })
+    .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
 
   await triggerNextDeployment();
 }
 
 async function succeedDeployment() {
-  await db.update(schema.deployment).set({
-    status: "SUCCESS",
-  });
+  await db
+    .update(schema.deployment)
+    .set({
+      status: "SUCCESS",
+    })
+    .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
 
   await triggerNextDeployment();
 }
