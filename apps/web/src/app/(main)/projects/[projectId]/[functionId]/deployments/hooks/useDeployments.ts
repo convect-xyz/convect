@@ -10,8 +10,6 @@ export function useDeployments() {
     },
     {
       enabled: !!handlerId,
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
     },
   );
 }
