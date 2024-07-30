@@ -23,6 +23,7 @@ COPY . .
 WORKDIR /usr/src/app
 
 RUN yarn esbuild ./apps/bundler/src/deploy.ts --external:'esbuild' --external:'@pulumi/pulumi' --bundle --platform=node --target=node10.4 --outfile=/deploy.js
+RUN yarn esbuild ./apps/bundler/src/instrumentation.ts --bundle --platform=node --target=node10.4 --outfile=/instrumentation.js
 RUN yarn esbuild ./packages/runtime/runtime.ts --external:'./pipeline' --bundle --platform=node --target=node10.4 --outfile=/runtime.js
 
 
@@ -33,7 +34,7 @@ RUN yarn global add esbuild @pulumi/pulumi
 RUN apk update
 RUN apk --no-cache add curl
 WORKDIR /scripts
-COPY --from=bundle /runtime.js /deploy.js ./
+COPY --from=bundle /runtime.js /deploy.js instrumentation.js ./
 WORKDIR /
 COPY ./apps/bundler/scripts/main.sh .
 

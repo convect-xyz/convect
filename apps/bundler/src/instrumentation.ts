@@ -12,7 +12,7 @@ init({
   profilesSampleRate: 1.0,
 
   // Set initial scope
-  initialScope: (scope: any) => {
+  initialScope: (scope) => {
     scope.setUser({
       id: env.USER_ID,
     });
