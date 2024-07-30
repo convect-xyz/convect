@@ -113,6 +113,20 @@
       "when": 1720252248320,
       "tag": "0015_first_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1722367505442,
+      "tag": "0016_eminent_stature",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1722367917390,
+      "tag": "0017_high_malcolm_colcord",
+      "breakpoints": true
     }
   ]
 }

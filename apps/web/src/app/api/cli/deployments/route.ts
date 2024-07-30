@@ -174,6 +174,7 @@ export const POST = async (req: NextRequest) => {
     deploymentId,
     stripeCustomerId: await getStripeCustomerId(user),
     userId: user.id,
+    handlerId: handler.id,
     internalHandlerId: handler.internalId,
     internalHandlerVersion: handler.version,
     pollingUrl: handler.producer.pollingUrl,
