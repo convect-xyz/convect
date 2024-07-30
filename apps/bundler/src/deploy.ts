@@ -1,4 +1,4 @@
-import "./instrumentation";
+// import "./instrumentation";
 
 import { S3 } from "@aws-sdk/client-s3";
 import { InlineProgramArgs, LocalWorkspace } from "@pulumi/pulumi/automation";
