@@ -8,6 +8,7 @@ import {
 } from "date-fns";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
+import { useState } from "react";
 import { CodeBlock } from "~/components/code/CodeBlock";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
@@ -27,9 +28,15 @@ import {
 } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import { RouterOutputs } from "~/trpc/shared";
 import { Chain } from "./(components)/Chain";
+import TransactionRow from "./(components)/TransactionRow";
 import TransactionFilters, { useTransactionFilters } from "./filters";
 import { useParams } from "./hooks/useParams";
+import InvocationDialog from "./InvocationDialog";
+
+type Transaction =
+  RouterOutputs["handlers"]["getTransactions"]["transactions"][0];
 
 const DASHBOARD_REFETCH_INTERVAL = 30000;
 
@@ -243,6 +250,8 @@ function VersionStatus() {
 function RecentTransactions() {
   const filters = useTransactionFilters();
   const { handlerId } = useParams();
+  const [selectedTransactionHash, setSelectedTransactionHash] =
+    useState<string>();
 
   const { data: maybeTransactions } = api.handlers.getTransactions.useQuery(
     {
@@ -283,25 +292,26 @@ function RecentTransactions() {
           ))}
         {maybeTransactions &&
           maybeTransactions.transactions.map((tx) => (
-            <div
-              className="flex items-center gap-2 py-4"
+            <TransactionRow
+              tx={tx}
               key={tx.id.toString()}
-            >
-              <span
-                className={cn(
-                  "h-2 w-2 rounded-full",
-                  tx.status === "SUCCESS" && "bg-green-400",
-                  tx.status === "FAILED" && "bg-red-400",
-                )}
-              ></span>
-              <div className="flex-1">{tx.transactionHash}</div>
-              <div className="text-sm text-muted-foreground">
-                <ForceRerender>
-                  {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
-                </ForceRerender>
-              </div>
-            </div>
+              onRowSelected={(tx) =>
+                setSelectedTransactionHash(tx.transactionHash)
+              }
+            />
           ))}
+
+        {selectedTransactionHash && (
+          <InvocationDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) {
+                setSelectedTransactionHash(undefined);
+              }
+            }}
+            transactionHash={selectedTransactionHash}
+          />
+        )}
       </div>
     </div>
   );

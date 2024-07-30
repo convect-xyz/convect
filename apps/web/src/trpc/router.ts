@@ -7,6 +7,7 @@ import { createFunction } from "./routers/function/create";
 import { deleteEnv } from "./routers/function/deleteEnv";
 import { getEnvs } from "./routers/function/getEnvs";
 import { getFunction } from "./routers/function/getFunction";
+import { getInvocations } from "./routers/function/getInvocations";
 import { updateDescription } from "./routers/function/updateDescription";
 import { updateEnv } from "./routers/function/updateEnv";
 import { updateName } from "./routers/function/updateName";
@@ -38,6 +39,7 @@ export const functionRouter = createTRPCRouter({
   updateEnv,
   updateName,
   updateDescription,
+  getInvocations,
 });
 
 export const handlerRouter = createTRPCRouter({
