@@ -13,6 +13,7 @@ COPY apps/bundler/yarn.lock apps/bundler/yarn.lock
 # Add workspace package deps
 COPY packages/eslint-config packages/eslint-config
 COPY packages/typescript-config packages/typescript-config
+COPY packages/lib packages/lib
 
 RUN yarn
 
