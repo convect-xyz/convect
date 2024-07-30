@@ -12,6 +12,7 @@ import { updateDescription } from "./routers/function/updateDescription";
 import { updateEnv } from "./routers/function/updateEnv";
 import { updateName } from "./routers/function/updateName";
 import { deleteHandler } from "./routers/handler/delete";
+import { getDeployments } from "./routers/handler/getDeployments";
 import { getHandler } from "./routers/handler/getHandler";
 import { getLogs } from "./routers/handler/getLogs";
 import { getOverview } from "./routers/handler/getOverview";
@@ -46,6 +47,7 @@ export const handlerRouter = createTRPCRouter({
   get: getHandler,
   delete: deleteHandler,
   getLogs,
+  getDeployments,
   getEnvs,
   addEnv,
   deleteEnv,
