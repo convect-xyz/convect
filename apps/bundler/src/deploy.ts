@@ -6,6 +6,8 @@ import esbuild from "esbuild";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
+import { db } from "./db";
+import schema from "./db/schema";
 import { env } from "./env";
 import infraFactory from "./infra";
 
@@ -17,7 +19,15 @@ const BUNDLE_OUT_DIR = path.join(env.CURR_DIR, "bundle_out");
 const RUNTIME_SRC_FILE = "/scripts/runtime.js";
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 
-main();
+main()
+  .then(async () => {
+    await succeedDeployment();
+    process.exit(0);
+  })
+  .catch(async () => {
+    await failDeployment();
+    process.exit(1);
+  });
 
 async function main() {
   console.info("initialising/getting stack...");
@@ -60,8 +70,6 @@ async function main() {
     await stack.up({ onOutput: console.info });
     console.info("stack upped.");
   }
-
-  process.exit(0);
 }
 
 async function getStack() {
@@ -139,3 +147,21 @@ async function zipLambda() {
     Body: zipData,
   });
 }
+
+async function failDeployment() {
+  await db.update(schema.deployment).set({
+    status: "FAILED",
+  });
+
+  await triggerNextDeployment();
+}
+
+async function succeedDeployment() {
+  await db.update(schema.deployment).set({
+    status: "SUCCESS",
+  });
+
+  await triggerNextDeployment();
+}
+
+async function triggerNextDeployment() {}

@@ -225,13 +225,22 @@ export const handlerEnvRelations = relations(functionEnv, ({ one }) => ({
   }),
 }));
 
+export const deploymentStatus = pgEnum("deployment_status", [
+  "PENDING",
+  "RUNNING",
+  "SUCCESS",
+  "FAILED",
+]);
+
 export const deployment = createTable(
   "deployment",
   {
-    id: serial("id").notNull().primaryKey(),
+    id: varchar("id").notNull().primaryKey(),
     handlerId: integer("handlerId")
       .notNull()
       .references(() => handler.id, { onDelete: "cascade" }),
+    status: deploymentStatus("status").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
     ecsTaskId: varchar("ecsTaskId", { length: 255 }).notNull(),
   },
   (deployment) => ({
