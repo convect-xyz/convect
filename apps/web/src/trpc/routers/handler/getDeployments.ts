@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { desc } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -31,7 +32,11 @@ export const getDeployments = protectedProcedure
 
     const deployments = await db.query.deployment.findMany({
       where: (fields, { eq }) => eq(fields.handlerId, handler.id),
+      orderBy(fields, operators) {
+        return desc(fields.createdAt);
+      },
     });
+
     return deployments.map((deployment) => ({
       id: deployment.id,
       status: deployment.status,
