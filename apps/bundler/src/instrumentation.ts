@@ -1,8 +1,8 @@
-const Sentry: any = require("@sentry/node");
+import { init } from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { env } from "./env";
 
-Sentry.init({
+init({
   dsn: "https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104",
   integrations: [nodeProfilingIntegration()],
   // Performance Monitoring
