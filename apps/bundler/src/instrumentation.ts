@@ -1,4 +1,4 @@
-import Sentry from "@sentry/node";
+const Sentry: any = require("@sentry/node");
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { env } from "./env";
 
@@ -12,7 +12,7 @@ Sentry.init({
   profilesSampleRate: 1.0,
 
   // Set initial scope
-  initialScope: (scope) => {
+  initialScope: (scope: any) => {
     scope.setUser({
       id: env.USER_ID,
     });
