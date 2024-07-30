@@ -23,7 +23,7 @@ COPY . .
 WORKDIR /usr/src/app
 
 RUN yarn esbuild ./apps/bundler/src/deploy.ts --external:'esbuild' --external:'@pulumi/pulumi' --bundle --platform=node --target=node10.4 --outfile=/deploy.js
-RUN yarn esbuild ./apps/bundler/src/instrumentation.ts --external:'@sentry/profiling-node' --bundle --platform=node --target=node10.4 --outfile=/instrumentation.js
+RUN yarn esbuild ./apps/bundler/src/instrumentation.ts --bundle --platform=node --target=node10.4 --outfile=/instrumentation.js
 RUN yarn esbuild ./packages/runtime/runtime.ts --external:'./pipeline' --bundle --platform=node --target=node10.4 --outfile=/runtime.js
 
 
