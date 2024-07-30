@@ -1,6 +1,7 @@
 "use client";
 
 import { DialogProps } from "@radix-ui/react-dialog";
+import { formatDistanceToNow } from "date-fns";
 import {
   Sheet,
   SheetContent,
@@ -47,13 +48,15 @@ function DeploymentsTable() {
           {deployments?.map((deployment) => (
             <div
               key={deployment.id}
-              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted"
+              className="flex items-center gap-2 bg-muted p-4  text-sm"
             >
-              <div className="basis-36 truncate">{deployment.id}</div>
-              <div className="basis-56 truncate">
-                {new Date(deployment.createdAt).toLocaleString()}
+              <div className="flex flex-1 items-center gap-2">
+                <div className="basis-96 truncate">{deployment.id}</div>
+                <div className="basis-56 truncate">{deployment.status}</div>
               </div>
-              <div className="basis-16 truncate">{deployment.status}</div>
+              <div className="truncate">
+                {formatDistanceToNow(deployment.createdAt, { addSuffix: true })}
+              </div>
             </div>
           ))}
         </div>

@@ -2,6 +2,19 @@ import { getDb, schema } from "@convect-xyz/lib";
 import { init } from "@sentry/node";
 import { eq } from "drizzle-orm";
 
+process.on("uncaughtException", async function (err) {
+  const dbUrl = process.env.DB_URL;
+  if (!dbUrl) {
+    console.error("DB_URL is not set");
+    return;
+  }
+  const db = getDb({ dbUrl: process.env.DB_URL! });
+  await db
+    .update(schema.deployment)
+    .set({ status: "FAILED" })
+    .where(eq(schema.deployment.id, process.env.DEPLOYMENT_ID!));
+});
+
 init({
   dsn: "https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104",
   integrations: [],
@@ -38,17 +51,4 @@ init({
 
     return scope;
   },
-});
-
-process.prependListener("uncaughtException", async function (err) {
-  const dbUrl = process.env.DB_URL;
-  if (!dbUrl) {
-    console.error("DB_URL is not set");
-    return;
-  }
-  const db = getDb({ dbUrl: process.env.DB_URL! });
-  await db
-    .update(schema.deployment)
-    .set({ status: "FAILED" })
-    .where(eq(schema.deployment.id, process.env.DEPLOYMENT_ID!));
 });
