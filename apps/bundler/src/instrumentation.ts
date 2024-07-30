@@ -1,5 +1,4 @@
 import { init } from "@sentry/node";
-import { env } from "./env";
 
 init({
   dsn: "https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104",
@@ -13,26 +12,26 @@ init({
   // Set initial scope
   initialScope: (scope) => {
     scope.setUser({
-      id: env.USER_ID,
+      id: process.env.USER_ID,
     });
 
     scope.setContext("infra", {
-      version: env.VERSION,
+      version: process.env.VERSION,
     });
 
     scope.setContext("deployment", {
-      id: env.DEPLOYMENT_ID,
+      id: process.env.DEPLOYMENT_ID,
     });
 
     scope.setContext("function", {
-      id: env.HANDLER_ID,
-      version: env.HANDLER_VERSION,
-      manifestBucket: env.MANIFEST_BUCKET,
-      manifestKey: env.MANIFEST_PREFIX,
-      sourceBucket: env.SOURCE_BUCKET,
-      sourceKey: env.SOURCE_PREFIX,
-      mode: env.MODE,
-      chain: env.CHAIN_ID,
+      id: process.env.HANDLER_ID,
+      version: process.env.HANDLER_VERSION,
+      manifestBucket: process.env.MANIFEST_BUCKET,
+      manifestKey: process.env.MANIFEST_PREFIX,
+      sourceBucket: process.env.SOURCE_BUCKET,
+      sourceKey: process.env.SOURCE_PREFIX,
+      mode: process.env.MODE,
+      chain: process.env.CHAIN_ID,
     });
 
     return scope;
