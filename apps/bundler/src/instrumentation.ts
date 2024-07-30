@@ -40,7 +40,7 @@ init({
   },
 });
 
-process.on("uncaughtException", async function (err) {
+process.prependListener("uncaughtException", async function (err) {
   const dbUrl = process.env.DB_URL;
   if (!dbUrl) {
     console.error("DB_URL is not set");

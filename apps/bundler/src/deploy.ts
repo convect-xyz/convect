@@ -18,15 +18,10 @@ const BUNDLE_OUT_DIR = path.join(env.CURR_DIR, "bundle_out");
 const RUNTIME_SRC_FILE = "/scripts/runtime.js";
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 
-main()
-  .then(async () => {
-    await succeedDeployment();
-    process.exit(0);
-  })
-  .catch(async () => {
-    await failDeployment();
-    process.exit(1);
-  });
+main().then(async () => {
+  await succeedDeployment();
+  process.exit(0);
+});
 
 async function main() {
   db.update(schema.deployment)
@@ -151,17 +146,6 @@ async function zipLambda() {
     Key: key,
     Body: zipData,
   });
-}
-
-async function failDeployment() {
-  await db
-    .update(schema.deployment)
-    .set({
-      status: "FAILED",
-    })
-    .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
-
-  await triggerNextDeployment();
 }
 
 async function succeedDeployment() {
