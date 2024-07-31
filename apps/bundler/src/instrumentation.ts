@@ -6,12 +6,12 @@ process.on("uncaughtException", handleFailure);
 process.on("unhandledRejection", handleFailure);
 
 async function handleFailure() {
-  const dbUrl = process.env.DB_URL;
+  const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
     console.error("DB_URL is not set");
     return;
   }
-  const db = getDb({ dbUrl: process.env.DB_URL! });
+  const db = getDb({ dbUrl });
   await db
     .update(schema.deployment)
     .set({ status: "FAILED" })
