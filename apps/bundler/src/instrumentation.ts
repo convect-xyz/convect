@@ -1,21 +1,50 @@
 import { getDb, schema } from "@convect-xyz/lib";
 import { init } from "@sentry/node";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, lt, or } from "drizzle-orm";
 
 process.on("uncaughtException", handleFailure);
 process.on("unhandledRejection", handleFailure);
 
+const deploymentPromise = getDeployment();
+
+async function getDeployment() {
+  const db = getDbInstance();
+  return db.query.deployment.findFirst({
+    where(fields, operators) {
+      return operators.eq(fields.id, process.env.DEPLOYMENT_ID!);
+    },
+  });
+}
+
 async function handleFailure() {
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) {
-    console.error("DB_URL is not set");
-    return;
+  const deployment = await deploymentPromise;
+  if (!deployment) {
+    console.error("Deployment not found");
+    throw new Error("Deployment not found");
   }
-  const db = getDb({ dbUrl });
+
+  const db = getDbInstance();
   await db
     .update(schema.deployment)
     .set({ status: "FAILED" })
-    .where(eq(schema.deployment.id, process.env.DEPLOYMENT_ID!));
+    .where(
+      or(
+        eq(schema.deployment.id, process.env.DEPLOYMENT_ID!),
+        and(
+          lt(schema.deployment.createdAt, deployment?.createdAt),
+          inArray(schema.deployment.status, ["PENDING", "RUNNING"])
+        )
+      )
+    );
+}
+
+function getDbInstance() {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    console.error("DATABASE_URL is not set");
+    throw new Error("DATABASE_URL is not set");
+  }
+  return getDb({ dbUrl });
 }
 
 init({
