@@ -1,16 +1,25 @@
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::error::BoxError;
-use futures::{future::join_all, TryFutureExt};
+use futures::{
+    future::{join, join_all},
+    TryFutureExt,
+};
 use serde::Serialize;
 use shared::{
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
+    fetcher::{TransactionFetcher, TransactionFetcherImpl},
     log_fetcher_sdk::{self, InvocationRequest, InvocationResponse, LogFetcherSdk},
-    types::{self, syncing::State, transactions::IngestTransaction},
+    types::{
+        self,
+        manifest::{self, Manifest},
+        syncing::State,
+        transactions::IngestTransaction,
+    },
 };
 use std::env;
 use std::error::Error;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 struct BlockConfig {
     id: String,
     start_block: u64,
@@ -62,31 +71,39 @@ async fn run(
         syncer_config.end_block,
         BATCH_SIZE,
     );
-
-    let mut delete_handles = Vec::new();
+    let manifest = Manifest::from_env().await.unwrap();
 
     for chunk in configs.chunks(70) {
-        let invocations = invoke_lambdas(chunk).await;
-        let s3_results: Vec<IngestTransaction> = get_s3_results(&invocations)
+        let transactions: Result<Vec<Vec<IngestTransaction>>, tokio::task::JoinError> =
+            join_all(chunk.iter().map(|range| {
+                let range = range.clone();
+                let manifest = manifest.clone();
+                tokio::spawn(async move {
+                    let fetcher = TransactionFetcherImpl::new();
+
+                    match fetcher
+                        .get_transactions_in_range(&manifest, range.start_block, range.end_block)
+                        .await
+                    {
+                        Ok(txs) => txs,
+                        Err(e) => panic!("Failed to fetch transactions: {:?}", e),
+                    }
+                })
+            }))
             .await
             .into_iter()
-            .flatten()
             .collect();
 
-        enqueuer.enqueue_transactions(pipeline, &s3_results).await?;
+        let flattened: Vec<IngestTransaction> =
+            transactions.unwrap().into_iter().flatten().collect();
+        enqueuer.enqueue_transactions(pipeline, &flattened).await?;
 
         pipeline
             .update()
             .set_last_block(chunk.last().unwrap().end_block)
             .send()
             .unwrap();
-
-        delete_handles.push(tokio::spawn(async move {
-            delete_s3_results(&invocations).await;
-        }));
     }
-
-    join_all(delete_handles).await;
 
     Ok(())
 }
