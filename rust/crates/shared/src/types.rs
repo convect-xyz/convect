@@ -33,14 +33,14 @@ pub mod manifest {
     use serde_with::{serde_as, DisplayFromStr};
     use std::env;
 
-    #[derive(Deserialize, Debug)]
+    #[derive(Deserialize, Debug, Clone)]
     pub struct Manifest {
         pub log_configs: Vec<LogConfig>,
         pub tx_configs: Vec<TransactionConfig>,
     }
 
     #[serde_as]
-    #[derive(Deserialize, Debug)]
+    #[derive(Deserialize, Debug, Clone)]
     pub struct TransactionConfig {
         #[serde_as(as = "DisplayFromStr")]
         pub start_block: i64,
