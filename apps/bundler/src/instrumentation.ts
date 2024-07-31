@@ -32,7 +32,7 @@ async function handleFailure() {
         eq(schema.deployment.id, deployment.id),
         and(
           lt(schema.deployment.createdAt, deployment.createdAt),
-          inArray(schema.deployment.status, ["PENDING", "RUNNING"])
+          inArray(schema.deployment.status, ["PENDING"])
         )
       )
     );
