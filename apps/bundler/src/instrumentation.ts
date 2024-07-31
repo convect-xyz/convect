@@ -30,7 +30,9 @@ async function handleFailure() {
     .where(
       or(
         eq(schema.deployment.id, deployment.id),
+        // All previous deployments for the same handler that are pending
         and(
+          eq(schema.handler.id, deployment.handlerId),
           lt(schema.deployment.createdAt, deployment.createdAt),
           inArray(schema.deployment.status, ["PENDING"])
         )
