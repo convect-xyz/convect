@@ -65,7 +65,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
             },
             {
               name: "SOURCE_PREFIX",
-              value: "options.sourcePrefix",
+              value: options.sourcePrefix,
             },
             {
               name: "MANIFEST_BUCKET",
