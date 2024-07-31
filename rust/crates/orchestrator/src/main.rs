@@ -126,6 +126,8 @@ struct Config {
     transation_queue_url: String,
     handler_id: String,
     handler_version: String,
+    manifestBucket: String,
+    manifestPrefix: String,
     syncer_task_definition_arn: String,
     syncer_cluster: String,
     syncer_subnets: Vec<String>,
@@ -142,6 +144,8 @@ impl Config {
                 .expect("TRANSACTION_QUEUE_URL not set"),
             handler_id: env::var("HANDLER_ID").expect("HANDLER_ID not set"),
             handler_version: env::var("HANDLER_VERSION").expect("HANDLER_VERSION not set"),
+            manifestBucket: env::var("MANIFEST_BUCKET").expect("MANIFEST_BUCKET not set"),
+            manifestPrefix: env::var("MANIFEST_PREFIX").expect("MANIFEST_PREFIX not set"),
             syncer_task_definition_arn: env::var("SYNCER_TASK_DEFINITION_ARN")
                 .expect("SYNCER_TASK_DEFINITION_ARN not set"),
             syncer_cluster: env::var("SYNCER_CLUSTER").expect("SYNCER_CLUSTER not set"),
@@ -218,6 +222,8 @@ fn get_task_override(config: &Config, start_block: u64, end_block: u64) -> TaskO
                     create_key_value_pair("HANDLER_ID", &config.handler_id),
                     create_key_value_pair("HANDLER_VERSION", &config.handler_version),
                     create_key_value_pair("VERSION", &config.version),
+                    create_key_value_pair("MANIFEST_BUCKET", &config.manifestBucket),
+                    create_key_value_pair("MANIFEST_PREFIX", &config.manifestPrefix),
                 ]))
                 .build(),
         )
