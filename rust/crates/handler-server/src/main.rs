@@ -4,14 +4,12 @@ use axum::{
 };
 use futures::lock::Mutex;
 use lambda_extension::{service_fn, tracing, Error, LambdaEvent, NextEvent};
-use openssl::conf;
-use sentry::protocol::{Context, Map, RuntimeContext};
+use sentry::protocol::Context;
 use shared::{
     reporting_sdk::{ReportingSdk, SQSReportingSdk},
     types::processing,
 };
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::{env, sync::Arc};
 use tower_http::trace::TraceLayer;
 
@@ -21,6 +19,7 @@ mod errors;
 struct AppState {
     pipeline: Arc<Mutex<processing::State>>,
     reporting: Arc<dyn ReportingSdk + Send + Sync>,
+    config: Config,
 }
 
 async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
@@ -31,27 +30,19 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
     Ok(())
 }
 
+#[derive(Clone)]
 struct Config {
     deployment_id: String,
     handler_id: String,
     handler_version: String,
+    stripe_customer_id: String,
+    user_id: String,
 }
 
-fn main() -> Result<(), Error> {
-    let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
-        release: sentry::release_name!(),
-        ..Default::default()
-    }));
-
-    let config = Config {
-        deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not defined"),
-        handler_id: env::var("HANDLER_ID").expect("HANDLER_ID is not defined"),
-        handler_version: env::var("HANDLER_VERSION").expect("HANDLER_VERSION is not defined"),
-    };
-
+fn configure_sentry_scope(config: &Config) {
     sentry::configure_scope(|scope| {
         scope.set_user(Some(sentry::User {
-            id: Some(env::var("USER_ID").expect("USER_ID is not defined")),
+            id: Some(config.user_id.clone()),
             ..Default::default()
         }));
 
@@ -68,20 +59,39 @@ fn main() -> Result<(), Error> {
 
         scope.set_context("deployment", Context::Other(deployment_map));
     });
+}
+
+fn main() -> Result<(), Error> {
+    let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
+        release: sentry::release_name!(),
+        ..Default::default()
+    }));
+
+    let config = Config {
+        deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not defined"),
+        handler_id: env::var("HANDLER_ID").expect("HANDLER_ID is not defined"),
+        handler_version: env::var("HANDLER_VERSION").expect("HANDLER_VERSION is not defined"),
+        stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
+            .expect("STRIPE_CUSTOMER_ID is not defined"),
+        user_id: env::var("USER_ID").expect("USER_ID is not defined"),
+    };
+
+    configure_sentry_scope(&config);
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .unwrap()
-        .block_on(async {
-            let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-            let handler_version = env::var("HANDLER_VERSION").expect("Handler ID env not set");
+        .block_on(async move {
+            let handler_id = config.handler_id.clone();
+            let handler_version = config.handler_version.clone();
             let state = processing::State::load(handler_id, handler_version).await;
             let pipeline = Arc::new(Mutex::new(state));
             let reporting_sdk = SQSReportingSdk::new();
             let app_state = AppState {
                 pipeline,
                 reporting: Arc::new(reporting_sdk),
+                config,
             };
 
             tracing_subscriber::fmt()
@@ -145,11 +155,10 @@ mod results {
             .map(|v| v.clone());
 
         let reporting_request = reporting_sdk::Request {
-            handler_id: env::var("HANDLER_ID").expect("HANDLER_ID is not defined"),
-            handler_version: env::var("HANDLER_VERSION").expect("HANDLER_VERSION is not defined"),
-            stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
-                .expect("STRIPE_CUSTOMER_ID is not defined"),
-            user_id: Some(env::var("USER_ID").expect("USER_ID is not defined")),
+            handler_id: app_state.config.handler_id.clone(),
+            handler_version: app_state.config.handler_version.clone(),
+            stripe_customer_id: app_state.config.stripe_customer_id.clone(),
+            user_id: Some(app_state.config.user_id.clone()),
             invocation_id: payload.invocation_id.clone(),
             results: payload.results.clone(),
         };
