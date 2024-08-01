@@ -1,15 +1,17 @@
-use std::env;
+use std::{cmp::max, env};
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use futures::TryFutureExt;
+use futures::{future::join_all, TryFutureExt};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
+    contract_info::{self, ContractInfoProvider},
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{TransactionFetcher, TransactionFetcherImpl},
     types::{manifest::Manifest, syncing::State},
+    web3_client::{Web3Client, Web3ClientImpl},
 };
 
 #[tokio::main]
@@ -29,6 +31,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let fetcher = TransactionFetcherImpl::new();
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, config.transation_queue_url.clone(), sqs_client);
+    let web3_client = Web3ClientImpl::new();
     let mut pipeline = State::load(config.handler_id.clone(), config.handler_version.clone());
 
     let incoming_block: u64 = event
@@ -45,7 +48,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         return Ok(());
     }
 
-    println!("{:?}", incoming_block);
     if pipeline
         .state()
         .eq(&shared::types::syncing::SyncState::SYNCING)
@@ -57,15 +59,69 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         Some(_) => None,
         None => {
             let manifest = Manifest::from_env().await.unwrap();
-            manifest
+            let manifest_min_block = manifest
                 .tx_configs
                 .iter()
                 .map(|c| u64::try_from(c.start_block).expect("i64 to u64 failed"))
-                .min()
+                .min();
+
+            let etherscan_provider = contract_info::EtherscanContractInfoProvider::new(
+                env::var("ETHERSCAN_API_KEY").expect("ETHERSCAN_API_KEY not set"),
+                env::var("ETHERSCAN_LIKE").expect("ETHERSCAN_LIKE not set"),
+            );
+
+            let creation_tx_hashes: Vec<_> = etherscan_provider
+                .get_contract_creation_info(
+                    manifest
+                        .log_configs
+                        .iter()
+                        .map(|l| l.address.clone())
+                        .collect(),
+                )
+                .await
+                .unwrap()
+                .iter()
+                .map(|c| c.tx_hash.clone())
+                .collect();
+
+            let transactions: Result<Vec<_>, _> = join_all(
+                creation_tx_hashes
+                    .iter()
+                    .map(|tx_hash| web3_client.get_transaction_receipt(tx_hash.clone())),
+            )
+            .await
+            .into_iter()
+            .collect();
+
+            let contract_min_block = match transactions {
+                Ok(receipts) => {
+                    let mut min_block = None;
+
+                    for receipt in receipts.iter() {
+                        if let Some(receipt) = receipt {
+                            let block_number = receipt.block_number.unwrap().as_u64();
+                            if min_block.is_none() || block_number < min_block.unwrap() {
+                                min_block = Some(block_number);
+                            }
+                        }
+                    }
+
+                    min_block
+                }
+                Err(e) => {
+                    println!("{:?}", e);
+                    None
+                }
+            };
+
+            Some(max(
+                contract_min_block.unwrap_or(0),
+                manifest_min_block.unwrap_or(0),
+            ))
         }
     };
 
-    if incoming_block - pipeline.last_block().or(init_block).unwrap() > 1999 {
+    if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
         pipeline
             .update()
             .set_state(shared::types::syncing::SyncState::SYNCING)
@@ -95,16 +151,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
                 .unwrap();
         })
         .await?;
-
-    println!("{:?}", from_block);
-    println!("{:?}", incoming_block);
-    println!(
-        "{:?}",
-        transactions
-            .iter()
-            .map(|tx| &tx.batch_id)
-            .collect::<Vec<_>>()
-    );
 
     let result = enqueuer
         .enqueue_transactions(&mut pipeline, &transactions)

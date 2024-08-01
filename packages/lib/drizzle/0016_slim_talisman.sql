@@ -1,0 +1,2 @@
+ALTER TABLE "web_producer" ADD COLUMN "etherscanApiKey" varchar(255) DEFAULT '' NOT NULL;--> statement-breakpoint
+ALTER TABLE "web_producer" ADD COLUMN "etherscanLike" varchar(255) DEFAULT '' NOT NULL;

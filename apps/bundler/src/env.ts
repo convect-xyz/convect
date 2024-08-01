@@ -65,6 +65,14 @@ export const env = createEnv({
       .string()
       .optional()
       .refine(modeRequired(["init", "update"])),
+    ETHERSCAN_LIKE: z
+      .string()
+      .optional()
+      .refine(modeRequired(["init", "update"])),
+    ETHERSCAN_API_KEY: z
+      .string()
+      .optional()
+      .refine(modeRequired(["init", "update"])),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

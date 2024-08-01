@@ -1,8 +1,8 @@
 use aws_sdk_s3::error::BoxError;
-use std::env;
+use std::{env, str::FromStr};
 use web3::{
     transports::Http,
-    types::{Filter, Log},
+    types::{Filter, Log, H256},
     Web3,
 };
 
@@ -11,6 +11,12 @@ pub trait Web3Client {
         &self,
         filter: Filter,
     ) -> impl std::future::Future<Output = Result<Vec<Log>, BoxError>> + Send;
+
+    fn get_transaction_receipt(
+        &self,
+        tx_hash: String,
+    ) -> impl std::future::Future<Output = Result<Option<web3::types::TransactionReceipt>, BoxError>>
+           + Send;
 }
 
 pub struct Web3ClientImpl {
@@ -34,5 +40,16 @@ impl Web3ClientImpl {
 impl Web3Client for Web3ClientImpl {
     async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, BoxError> {
         Ok(self.web3.eth().logs(filter).await?)
+    }
+
+    async fn get_transaction_receipt(
+        &self,
+        tx_hash: String,
+    ) -> Result<Option<web3::types::TransactionReceipt>, BoxError> {
+        Ok(self
+            .web3
+            .eth()
+            .transaction_receipt(H256::from_str(&tx_hash)?)
+            .await?)
     }
 }

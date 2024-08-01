@@ -113,6 +113,13 @@
       "when": 1720252248320,
       "tag": "0015_first_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1722520130142,
+      "tag": "0016_slim_talisman",
+      "breakpoints": true
     }
   ]
 }
