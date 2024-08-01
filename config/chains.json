@@ -38,7 +38,7 @@
   {
     "id": 81457,
     "name": "Blast Mainnet",
-    "polling_url": "https://orbital-lively-shape.blast-mainnet.quiknode.pro/REDACTED/",
+    "polling_url": "https://blast-mainnet.core.chainstack.com/REDACTED",
     "ws_url": "wss://lb.drpc.org/ogws?network=blast&dkey=REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast",
     "etherscan_like": "https://api.blastscan.io",
