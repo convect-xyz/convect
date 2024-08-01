@@ -4,16 +4,16 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
-pub enum EtherscanResponse {
-    Success(EtherscanSuccessResponse<Vec<ContractCreationInfo>>),
-    Error(EtherscanErrorResponse),
-}
-
-#[derive(Debug, Deserialize, Clone, PartialEq)]
-pub struct EtherscanSuccessResponse<T> {
-    pub status: String,
-    pub message: String,
-    pub result: T,
+pub enum EtherscanResponse<T> {
+    Success {
+        status: String,
+        message: String,
+        result: T,
+    },
+    Error {
+        status: String,
+        message: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -34,7 +34,7 @@ pub struct ContractCreationInfo {
 pub trait ContractInfoProvider {
     async fn get_contract_creation_info(
         &self,
-        contract_address: Vec<String>,
+        contract_addresses: Vec<String>,
     ) -> Result<Vec<ContractCreationInfo>, BoxError>;
 }
 
@@ -67,11 +67,12 @@ impl ContractInfoProvider for EtherscanContractInfoProvider {
 
         let response = reqwest::get(url).await?;
         let response_body = response.text().await?;
-        let response: EtherscanResponse = serde_json::from_str(&response_body)?;
+        let response: EtherscanResponse<Vec<ContractCreationInfo>> =
+            serde_json::from_str(&response_body)?;
 
         match response {
-            EtherscanResponse::Success(success_response) => Ok(success_response.result),
-            EtherscanResponse::Error(_) => Ok(vec![]),
+            EtherscanResponse::Success { result, .. } => Ok(result),
+            EtherscanResponse::Error { .. } => Ok(vec![]),
         }
     }
 }
