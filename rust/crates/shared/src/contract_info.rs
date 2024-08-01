@@ -3,18 +3,31 @@ use aws_sdk_lambda::error::BoxError;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum EtherscanResponse {
+    Success(EtherscanSuccessResponse<Vec<ContractCreationInfo>>),
+    Error(EtherscanErrorResponse),
+}
+
+#[derive(Debug, Deserialize, Clone, PartialEq)]
+pub struct EtherscanSuccessResponse<T> {
+    pub status: String,
+    pub message: String,
+    pub result: T,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct EtherscanErrorResponse {
+    pub status: String,
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct ContractCreationInfo {
     #[serde(rename = "contractAddress")]
     pub contract_address: String,
     #[serde(rename = "txHash")]
     pub tx_hash: String,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct EtherscanResponse<T> {
-    pub status: String,
-    pub message: String,
-    pub result: T,
 }
 
 #[async_trait]
@@ -54,9 +67,11 @@ impl ContractInfoProvider for EtherscanContractInfoProvider {
 
         let response = reqwest::get(url).await?;
         let response_body = response.text().await?;
-        let response: EtherscanResponse<Vec<ContractCreationInfo>> =
-            serde_json::from_str(&response_body)?;
+        let response: EtherscanResponse = serde_json::from_str(&response_body)?;
 
-        Ok(response.result)
+        match response {
+            EtherscanResponse::Success(success_response) => Ok(success_response.result),
+            EtherscanResponse::Error(_) => Ok(vec![]),
+        }
     }
 }
