@@ -53,7 +53,6 @@ fn main() -> Result<(), Error> {
         .unwrap()
         .block_on(async move {
             tracing::init_default_subscriber();
-
             run(service_fn(function_handler)).await
         })
 }

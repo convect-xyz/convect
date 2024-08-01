@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
-pub enum EtherscanResponse<T> {
+enum EtherscanResponse<T> {
     Success {
         status: String,
         message: String,
@@ -14,12 +14,6 @@ pub enum EtherscanResponse<T> {
         status: String,
         message: String,
     },
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct EtherscanErrorResponse {
-    pub status: String,
-    pub message: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
