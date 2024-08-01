@@ -62,6 +62,8 @@ export default async () => {
         SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
         SYNCER_CONTAINER_NAME,
         GITHUB_SHA: githubSha,
+        ETHERSCAN_LIKE: env.ETHERSCAN_LIKE,
+        ETHERSCAN_API_KEY: env.ETHERSCAN_API_KEY,
       },
     },
     timeout: 200,

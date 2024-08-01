@@ -1,5 +1,7 @@
 #[cfg(feature = "pg")]
 pub mod connection;
+#[cfg(feature = "contract-info")]
+pub mod contract_info;
 pub mod enqueuer;
 pub mod fetcher;
 #[cfg(feature = "log-fetcher-sdk")]

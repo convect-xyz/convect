@@ -22,6 +22,8 @@ type TriggerBuildOptions = {
   envs: Array<{ key: string; value: string }>;
   mode: "init" | "update";
   sourcePrefix: string;
+  etherscanApiKey: string;
+  etherscanLike: string;
 };
 
 export async function createDeployment(options: TriggerBuildOptions) {
@@ -106,6 +108,14 @@ export async function createDeployment(options: TriggerBuildOptions) {
             {
               name: "HANDLER_ENVS",
               value: JSON.stringify(options.envs),
+            },
+            {
+              name: "ETHERSCAN_API_KEY",
+              value: options.etherscanApiKey,
+            },
+            {
+              name: "ETHERSCAN_LIKE",
+              value: options.etherscanLike,
             },
           ],
         },
