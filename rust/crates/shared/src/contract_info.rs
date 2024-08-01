@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use aws_sdk_lambda::error::BoxError;
-use ethers::middleware::gas_oracle::etherscan;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
