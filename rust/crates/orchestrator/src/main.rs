@@ -6,6 +6,7 @@ use aws_sdk_ecs::types::{
 };
 use futures::{future::join_all, TryFutureExt};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
+use sentry::protocol::Context;
 use shared::{
     contract_info::{self, ContractInfoProvider},
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
@@ -13,12 +14,48 @@ use shared::{
     types::{manifest::Manifest, syncing::State},
     web3_client::{Web3Client, Web3ClientImpl},
 };
+use std::collections::BTreeMap;
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    tracing::init_default_subscriber();
+fn configure_sentry_scope(config: &Config) {
+    sentry::configure_scope(|scope| {
+        scope.set_user(Some(sentry::User {
+            id: Some(config.user_id.clone()),
+            ..Default::default()
+        }));
 
-    run(service_fn(function_handler)).await
+        let mut deployment_map = BTreeMap::new();
+        deployment_map.insert(
+            "deployment_id".to_string(),
+            config.deployment_id.clone().into(),
+        );
+        deployment_map.insert("handler_id".to_string(), config.handler_id.clone().into());
+        deployment_map.insert(
+            "handler_version".to_string(),
+            config.handler_version.clone().into(),
+        );
+
+        scope.set_context("deployment", Context::Other(deployment_map));
+    });
+}
+
+fn main() -> Result<(), Error> {
+    let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
+      release: sentry::release_name!(),
+      ..Default::default()
+  }));
+
+    let config = Config::new();
+    configure_sentry_scope(&config);
+
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async move {
+            tracing::init_default_subscriber();
+
+            run(service_fn(function_handler)).await
+        })
 }
 
 // Make sure we received higher block number only
@@ -180,6 +217,8 @@ struct Config {
     version: String,
     syncer_container_name: String,
     node_endpoint: String,
+    deployment_id: String,
+    user_id: String,
 }
 
 impl Config {
@@ -203,6 +242,8 @@ impl Config {
             syncer_container_name: env::var("SYNCER_CONTAINER_NAME")
                 .expect("SYNCER_CONTAINER_NAME not set"),
             node_endpoint: env::var("NODE_ENDPOINT").expect("NODE_ENDPOINT not set"),
+            deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID not set"),
+            user_id: env::var("USER_ID").expect("USER_ID not set"),
         }
     }
 }

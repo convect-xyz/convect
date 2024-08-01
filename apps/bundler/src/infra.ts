@@ -38,6 +38,8 @@ export default async () => {
         GITHUB_SHA: githubSha,
         ETHERSCAN_LIKE: env.ETHERSCAN_LIKE,
         ETHERSCAN_API_KEY: env.ETHERSCAN_API_KEY,
+        DEPLOYMENT_ID: env.DEPLOYMENT_ID,
+        USER_ID: env.USER_ID,
       },
     },
     timeout: 200,
