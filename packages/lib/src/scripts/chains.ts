@@ -31,6 +31,8 @@ async function main() {
         wsUrl: c.ws_url,
         topicArn: c.sns_topic,
         name: c.name,
+        etherscanLike: c.etherscan_like,
+        etherscanApiKey: c.etherscan_api_key,
       }))
     )
     .onConflictDoNothing()

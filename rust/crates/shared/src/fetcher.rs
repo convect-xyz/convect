@@ -217,6 +217,13 @@ mod tests {
             assert_eq!(filter, self.expected_filter);
             Ok(self.logs.clone())
         }
+
+        async fn get_transaction_receipt(
+            &self,
+            tx_hash: String,
+        ) -> Result<Option<web3::types::TransactionReceipt>, BoxError> {
+            Ok(None)
+        }
     }
 
     mod get_transactions_in_range {

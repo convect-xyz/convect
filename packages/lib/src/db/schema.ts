@@ -257,6 +257,12 @@ export const producers = createTable(
     serviceArn: varchar("serviceArn", { length: 255 }),
     topicArn: varchar("topicArn", { length: 255 }),
     name: varchar("name").notNull(),
+    etherscanApiKey: varchar("etherscanApiKey", { length: 255 })
+      .notNull()
+      .default(""),
+    etherscanLike: varchar("etherscanLike", { length: 255 })
+      .notNull()
+      .default(""),
   },
   (producers) => ({
     uniqueName: unique().on(producers.userId, producers.name),

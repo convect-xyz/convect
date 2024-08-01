@@ -184,6 +184,8 @@ export const POST = async (req: NextRequest) => {
       ...env,
       value: decryptEnvValue(env.value, env.iv),
     })),
+    etherscanApiKey: handler.producer.etherscanApiKey,
+    etherscanLike: handler.producer.etherscanLike,
   });
 
   return NextResponse.json({});

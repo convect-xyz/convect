@@ -50,6 +50,8 @@ postgres-openssl = { version = "0.5.0", optional = true }
 chrono = "0.4.38"
 deadpool = { version = "0.12.1", features = ["managed"], optional = true }
 backoff = { version = "0.4.0", features = ["futures", "tokio"] }
+ethers-etherscan = "2.0.14"
+
 
 [dev-dependencies]
 mockall = "0.12.1"
@@ -69,3 +71,4 @@ telemetry = []
 supported-networks = []
 reporting-sdk = []
 log-fetcher-sdk = []
+contract-info = []
