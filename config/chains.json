@@ -5,7 +5,7 @@
     "polling_url": "https://eth-mainnet.g.alchemy.com/v2/xlCz0CxtG7gSJxrjG-YMvjQVfUfRQhKI",
     "ws_url": "wss://lb.drpc.org/ogws?network=ethereum&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-mainnet",
-    "etherscan_like": "https://api.etherscan.org",
+    "etherscan_like": "https://api.etherscan.io",
     "etherscan_api_key": "8KM3GY51K8PDT3TM62CVQ6PPKBPSGI86SR"
   },
   {
@@ -14,7 +14,7 @@
     "polling_url": "https://eth-sepolia.g.alchemy.com/v2/xlCz0CxtG7gSJxrjG-YMvjQVfUfRQhKI",
     "ws_url": "wss://lb.drpc.org/ogws?network=sepolia&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia",
-    "etherscan_like": "https://api-sepolia.etherscan.org",
+    "etherscan_like": "https://api-sepolia.etherscan.io",
     "etherscan_api_key": "8KM3GY51K8PDT3TM62CVQ6PPKBPSGI86SR"
   },
   {
