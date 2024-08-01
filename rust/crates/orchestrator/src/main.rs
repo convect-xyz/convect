@@ -177,7 +177,6 @@ struct Config {
     syncer_task_definition_arn: String,
     syncer_cluster: String,
     syncer_subnets: Vec<String>,
-    log_fetcher_lambda_arn: String,
     version: String,
     syncer_container_name: String,
     node_endpoint: String,
@@ -200,8 +199,6 @@ impl Config {
                 .split(",")
                 .map(|s| s.to_string())
                 .collect(),
-            log_fetcher_lambda_arn: env::var("LOG_FETCHER_LAMBDA_ARN")
-                .expect("LOG_FETCHER_LAMBDA_ARN not set"),
             version: env::var("VERSION").expect("VERSION not set"),
             syncer_container_name: env::var("SYNCER_CONTAINER_NAME")
                 .expect("SYNCER_CONTAINER_NAME not set"),
@@ -262,7 +259,6 @@ fn get_task_override(config: &Config, start_block: u64, end_block: u64) -> TaskO
                 .set_environment(Some(vec![
                     create_key_value_pair("START_BLOCK", &start_block.to_string()),
                     create_key_value_pair("END_BLOCK", &end_block.to_string()),
-                    create_key_value_pair("LOG_FETCHER_LAMBDA_ARN", &config.log_fetcher_lambda_arn),
                     create_key_value_pair("TRANSACTION_QUEUE_URL", &config.transation_queue_url),
                     create_key_value_pair("NODE_ENDPOINT", &config.node_endpoint),
                     create_key_value_pair("HANDLER_ID", &config.handler_id),
