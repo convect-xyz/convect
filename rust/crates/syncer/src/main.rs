@@ -1,20 +1,9 @@
-use aws_config::BehaviorVersion;
-use aws_sdk_s3::error::BoxError;
-use futures::{
-    future::{join, join_all},
-    TryFutureExt,
-};
+use futures::future::join_all;
 use serde::Serialize;
 use shared::{
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{TransactionFetcher, TransactionFetcherImpl},
-    log_fetcher_sdk::{self, InvocationRequest, InvocationResponse, LogFetcherSdk},
-    types::{
-        self,
-        manifest::{self, Manifest},
-        syncing::State,
-        transactions::IngestTransaction,
-    },
+    types::{self, manifest::Manifest, syncing::State, transactions::IngestTransaction},
 };
 use std::env;
 use std::error::Error;
@@ -106,100 +95,6 @@ async fn run(
     }
 
     Ok(())
-}
-
-async fn invoke_lambdas(configs: &[BlockConfig]) -> Vec<Result<InvocationResponse, BoxError>> {
-    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    let syncer_config = load_config_from_env();
-    let sdk =
-        log_fetcher_sdk::LambdaLogFetcherSdk::new_from_config(syncer_config.function_name, &config);
-
-    let lambda_invocation_futures: Vec<_> = configs
-        .iter()
-        .map(|config| {
-            sdk.handle(InvocationRequest {
-                id: config.id.clone(),
-                start_block: config.start_block,
-                end_block: config.end_block,
-            })
-        })
-        .collect();
-
-    return join_all(lambda_invocation_futures).await;
-}
-
-async fn get_s3_results(
-    invocations: &Vec<Result<InvocationResponse, BoxError>>,
-) -> Vec<Vec<IngestTransaction>> {
-    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    let s3_client = aws_sdk_s3::Client::new(&config);
-
-    let mut s3_result_futures = Vec::new();
-    for invocation in invocations {
-        let response = match invocation {
-            Ok(v) => v,
-            Err(e) => panic!("Invocation Error: {e}"),
-        };
-
-        if let InvocationResponse::Transactions {
-            s3_bucket,
-            s3_prefix,
-            size: _,
-        } = response
-        {
-            s3_result_futures.push(
-                s3_client
-                    .get_object()
-                    .bucket(s3_bucket.to_string())
-                    .key(s3_prefix.to_string())
-                    .send()
-                    .and_then(move |r| async move {
-                        let data = r.body.collect().await.unwrap();
-                        let content =
-                            String::from_utf8(data.into_bytes().to_vec()).expect("Invalid UTF-8");
-
-                        let data: Vec<IngestTransaction> = serde_json::from_str(&content).unwrap();
-                        Ok(data)
-                    }),
-            );
-        }
-    }
-
-    join_all(s3_result_futures)
-        .await
-        .into_iter()
-        .map(|f| f.unwrap())
-        .collect::<Vec<Vec<IngestTransaction>>>()
-}
-
-async fn delete_s3_results(invocations: &Vec<Result<InvocationResponse, BoxError>>) {
-    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    let s3_client = aws_sdk_s3::Client::new(&config);
-
-    let mut s3_deletion_futures = Vec::new();
-    for invocation in invocations {
-        let response = match invocation {
-            Ok(v) => v.to_owned(),
-            Err(e) => panic!("Invocation Error: {e}"),
-        };
-
-        if let InvocationResponse::Transactions {
-            s3_bucket,
-            s3_prefix,
-            size: _,
-        } = response
-        {
-            s3_deletion_futures.push(
-                s3_client
-                    .delete_object()
-                    .bucket(s3_bucket)
-                    .key(s3_prefix)
-                    .send(),
-            );
-        }
-    }
-
-    join_all(s3_deletion_futures).await;
 }
 
 fn get_block_configs(mut start_block: u64, end_block: u64, batch_size: u64) -> Vec<BlockConfig> {

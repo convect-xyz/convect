@@ -38,7 +38,7 @@
   {
     "id": 81457,
     "name": "Blast Mainnet",
-    "polling_url": "https://rpc.blast.io",
+    "polling_url": "https://orbital-lively-shape.blast-mainnet.quiknode.pro/4438d7ee9173c04e77eb8f42d52f9fb2a9fb7a47/",
     "ws_url": "wss://lb.drpc.org/ogws?network=blast&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast",
     "etherscan_like": "https://api.blastscan.io",
