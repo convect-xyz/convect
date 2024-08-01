@@ -48,6 +48,8 @@ async function main() {
           wsUrl: p.ws_url,
           topicArn: p.sns_topic,
           name: p.name,
+          etherscanLike: p.etherscan_like,
+          etherscanApiKey: p.etherscan_api_key,
         })
         .where(eq(producers.chainId, p.id))
         .returning()
