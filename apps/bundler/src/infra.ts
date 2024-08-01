@@ -71,6 +71,7 @@ export default async () => {
         STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
         USER_ID: env.USER_ID,
         REPORTING_QUEUE_URL: stackRef.getOutput("reportingQueueUrl"),
+        DEPLOYMENT_ID: env.DEPLOYMENT_ID,
       },
     },
     layers: [

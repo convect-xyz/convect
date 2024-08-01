@@ -1,15 +1,18 @@
-use std::{env, sync::Arc};
-
 use axum::{
     routing::{get, post},
     Router,
 };
 use futures::lock::Mutex;
 use lambda_extension::{service_fn, tracing, Error, LambdaEvent, NextEvent};
+use openssl::conf;
+use sentry::protocol::{Context, Map, RuntimeContext};
 use shared::{
     reporting_sdk::{ReportingSdk, SQSReportingSdk},
     types::processing,
 };
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::{env, sync::Arc};
 use tower_http::trace::TraceLayer;
 
 mod errors;
@@ -28,41 +31,83 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
-    let handler_version = env::var("HANDLER_VERSION").expect("Handler ID env not set");
-    let state = processing::State::load(handler_id, handler_version).await;
-    let pipeline = Arc::new(Mutex::new(state));
-    let reporting_sdk = SQSReportingSdk::new();
-    let app_state = AppState {
-        pipeline,
-        reporting: Arc::new(reporting_sdk),
+struct Config {
+    deployment_id: String,
+    handler_id: String,
+    handler_version: String,
+}
+
+fn main() -> Result<(), Error> {
+    let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
+        release: sentry::release_name!(),
+        ..Default::default()
+    }));
+
+    let config = Config {
+        deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not defined"),
+        handler_id: env::var("HANDLER_ID").expect("HANDLER_ID is not defined"),
+        handler_version: env::var("HANDLER_VERSION").expect("HANDLER_VERSION is not defined"),
     };
 
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .with_target(false)
-        .without_time()
-        .init();
+    sentry::configure_scope(|scope| {
+        scope.set_user(Some(sentry::User {
+            id: Some(env::var("USER_ID").expect("USER_ID is not defined")),
+            ..Default::default()
+        }));
 
-    let app = Router::new()
-        .route("/results", post(results::handler))
-        .route("/pipeline", get(get_pipeline::handler))
-        .with_state(app_state)
-        .layer(TraceLayer::new_for_http());
+        let mut deployment_map = BTreeMap::new();
+        deployment_map.insert(
+            "deployment_id".to_string(),
+            config.deployment_id.clone().into(),
+        );
+        deployment_map.insert("handler_id".to_string(), config.handler_id.clone().into());
+        deployment_map.insert(
+            "handler_version".to_string(),
+            config.handler_version.clone().into(),
+        );
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
-
-    tokio::spawn(async {
-        println!("Starting server");
-
-        axum::serve(listener, app).await.unwrap();
+        scope.set_context("deployment", Context::Other(deployment_map));
     });
 
-    let func = service_fn(my_extension);
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async {
+            let handler_id = env::var("HANDLER_ID").expect("Handler ID env not set");
+            let handler_version = env::var("HANDLER_VERSION").expect("Handler ID env not set");
+            let state = processing::State::load(handler_id, handler_version).await;
+            let pipeline = Arc::new(Mutex::new(state));
+            let reporting_sdk = SQSReportingSdk::new();
+            let app_state = AppState {
+                pipeline,
+                reporting: Arc::new(reporting_sdk),
+            };
 
-    lambda_extension::run(func).await
+            tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::DEBUG)
+                .with_target(false)
+                .without_time()
+                .init();
+
+            let app = Router::new()
+                .route("/results", post(results::handler))
+                .route("/pipeline", get(get_pipeline::handler))
+                .with_state(app_state)
+                .layer(TraceLayer::new_for_http());
+
+            let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
+
+            tokio::spawn(async {
+                println!("Starting server");
+
+                axum::serve(listener, app).await.unwrap();
+            });
+
+            let func = service_fn(my_extension);
+
+            lambda_extension::run(func).await
+        })
 }
 
 mod results {

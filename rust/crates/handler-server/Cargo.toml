@@ -25,3 +25,4 @@ lambda-extension = "0.10.0"
 uuid = { version = "1.8.0", features = ["v4", "v7", "js"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
+sentry = "0.34.0"
