@@ -41,8 +41,8 @@
     "polling_url": "https://rpc.blast.io",
     "ws_url": "wss://lb.drpc.org/ogws?network=blast&dkey=REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast",
-    "etherscan_like": "",
-    "etherscan_api_key": ""
+    "etherscan_like": "https://api.blastscan.io",
+    "etherscan_api_key": "REDACTED"
   },
   {
     "id": 8453,

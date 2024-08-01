@@ -4,7 +4,9 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ContractCreationInfo {
+    #[serde(rename = "contractAddress")]
     pub contract_address: String,
+    #[serde(rename = "txHash")]
     pub tx_hash: String,
 }
 
