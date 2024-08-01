@@ -70,5 +70,4 @@ pg = [
 telemetry = []
 supported-networks = []
 reporting-sdk = []
-log-fetcher-sdk = []
 contract-info = []

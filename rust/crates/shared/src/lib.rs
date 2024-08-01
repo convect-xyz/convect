@@ -4,8 +4,6 @@ pub mod connection;
 pub mod contract_info;
 pub mod enqueuer;
 pub mod fetcher;
-#[cfg(feature = "log-fetcher-sdk")]
-pub mod log_fetcher_sdk;
 #[cfg(feature = "pg")]
 pub mod models;
 #[cfg(feature = "supported-networks")]
