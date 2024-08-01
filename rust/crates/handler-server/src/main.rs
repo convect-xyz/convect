@@ -37,6 +37,7 @@ struct Config {
     handler_version: String,
     stripe_customer_id: String,
     user_id: String,
+    transaction_queue_url: String,
 }
 
 fn configure_sentry_scope(config: &Config) {
@@ -74,6 +75,8 @@ fn main() -> Result<(), Error> {
         stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
             .expect("STRIPE_CUSTOMER_ID is not defined"),
         user_id: env::var("USER_ID").expect("USER_ID is not defined"),
+        transaction_queue_url: env::var("TRANSACTION_QUEUE_URL")
+            .expect("TRANSACTION_QUEUE_URL is not defined"),
     };
 
     configure_sentry_scope(&config);
@@ -122,7 +125,7 @@ fn main() -> Result<(), Error> {
 
 mod results {
     use super::errors::ServerError;
-    use crate::AppState;
+    use crate::{AppState, Config};
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
@@ -131,7 +134,6 @@ mod results {
     use serde::Deserialize;
     use serde_json::{json, Value};
     use shared::reporting_sdk::{self, TransactionResult};
-    use std::env;
 
     #[derive(Deserialize, Debug)]
     pub struct Request {
@@ -166,7 +168,7 @@ mod results {
         let (reporting_result, process_result, visibility_result) = join!(
             app_state.reporting.handle(&reporting_request),
             maybe_update_process_state(&app_state, &failed_tx),
-            maybe_update_message_visibility(&sqs_client, &payload, &failed_tx)
+            maybe_update_message_visibility(&sqs_client, &payload, &failed_tx, &app_state.config)
         );
 
         reporting_result?;
@@ -191,23 +193,23 @@ mod results {
         sqs_client: &aws_sdk_sqs::Client,
         request: &Request,
         failed_tx: &Option<TransactionResult>,
+        config: &Config,
     ) -> Result<(), BoxError> {
         if let Some(_) = failed_tx {
-            return update_message_visibility(&sqs_client, &request.message_ids).await;
+            return update_message_visibility(config, &sqs_client, &request.message_ids).await;
         }
 
         Ok(())
     }
 
     async fn update_message_visibility(
+        config: &Config,
         sqs_client: &aws_sdk_sqs::Client,
         message_ids: &Vec<String>,
     ) -> Result<(), BoxError> {
         Ok(sqs_client
             .change_message_visibility_batch()
-            .set_queue_url(Some(
-                env::var("TRANSACTION_QUEUE_URL").expect("TX Queue not defined"),
-            ))
+            .set_queue_url(Some(config.transaction_queue_url.clone()))
             .set_entries(Some(
                 message_ids
                     .into_iter()
