@@ -11,10 +11,12 @@ use shared::{
 };
 
 fn main() -> Result<(), Error> {
-    let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
-    release: sentry::release_name!(),
-    ..Default::default()
-}));
+    let _guard = sentry::init((
+      "https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104",
+      sentry::ClientOptions {
+          release: sentry::release_name!(),
+          ..Default::default()
+      }));
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()

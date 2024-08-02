@@ -51,7 +51,7 @@ fn main() -> Result<(), Error> {
         .enable_all()
         .build()
         .unwrap()
-        .block_on(async move {
+        .block_on(async {
             tracing::init_default_subscriber();
             run(service_fn(function_handler)).await
         })
