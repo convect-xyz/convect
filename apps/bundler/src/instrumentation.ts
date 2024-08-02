@@ -1,6 +1,7 @@
 import { getDb, schema } from "@convect-xyz/lib";
 import { init } from "@sentry/node";
 import { and, eq, inArray, lt, or } from "drizzle-orm";
+import { env } from "./env";
 
 process.on("uncaughtException", handleFailure);
 process.on("unhandledRejection", handleFailure);
@@ -8,6 +9,8 @@ process.on("unhandledRejection", handleFailure);
 const deploymentPromise = getDeployment();
 
 async function getDeployment() {
+  if (env.MODE === "destroy") return;
+
   const db = getDbInstance();
   return db.query.deployment.findFirst({
     where(fields, operators) {
@@ -17,6 +20,8 @@ async function getDeployment() {
 }
 
 async function handleFailure() {
+  if (env.MODE === "destroy") return;
+
   const deployment = await deploymentPromise;
   if (!deployment) {
     console.error("Deployment not found");

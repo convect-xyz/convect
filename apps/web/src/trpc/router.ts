@@ -48,14 +48,8 @@ export const handlerRouter = createTRPCRouter({
   delete: deleteHandler,
   getLogs,
   getDeployments,
-  getEnvs,
-  addEnv,
-  deleteEnv,
-  updateEnv,
   getOverview,
   getTransactions,
-  updateName,
-  updateDescription,
 });
 
 export const producersRouter = createTRPCRouter({

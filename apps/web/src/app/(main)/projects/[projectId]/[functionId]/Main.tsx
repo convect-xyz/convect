@@ -10,6 +10,7 @@ import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { CodeBlock } from "~/components/code/CodeBlock";
+import { Button } from "~/components/ui/button";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
 import {
@@ -154,13 +155,17 @@ export default function Main() {
         )}
       </div>
 
-      {overview && overview.isInitialised && (
+      {(!overview || overview.isInitialised) && (
         <div className="mt-2">
           <TransactionFilters>
             <RecentTransactions />
           </TransactionFilters>
         </div>
       )}
+
+      <div className="mt-2">
+        <DeleteHandler />
+      </div>
     </div>
   );
 }
@@ -312,6 +317,29 @@ function RecentTransactions() {
             transactionHash={selectedTransactionHash}
           />
         )}
+      </div>
+    </div>
+  );
+}
+
+function DeleteHandler() {
+  const { handlerId } = useParams();
+  const { mutateAsync: deleteHandler } = api.handlers.delete.useMutation();
+
+  const handleDelete = () => {
+    if (!handlerId) return;
+    deleteHandler({ handlerId });
+  };
+
+  return (
+    <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="flex-1 uppercase text-muted-foreground">
+          Delete Handler
+        </span>
+        <Button onClick={handleDelete} variant="destructive">
+          Delete
+        </Button>
       </div>
     </div>
   );
