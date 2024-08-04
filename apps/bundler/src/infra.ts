@@ -9,8 +9,6 @@ const SYNCER_CLUSTER = "arn:aws:ecs:eu-west-1:730335604495:cluster/syncers";
 const SYNCER_SUBNETS = ["subnet-05d39f2476de29dc7"];
 const SYNCER_CONTAINER_NAME = "syncer";
 
-const LOG_FETCHER_S3_BUCKET = "ingest-fetch-logs";
-
 export default async () => {
   const stackRef = new pulumi.StackReference(`${org}/infra/${env.VERSION}`);
   const githubSha = stackRef.getOutput("githubSha");
@@ -20,29 +18,6 @@ export default async () => {
     fifoQueue: true,
   });
 
-  const logFetcher = new aws.lambda.Function(`log-fetcher`, {
-    role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-    s3Bucket: "ingest-functions",
-    s3Key: pulumi.interpolate`log-fetcher/${githubSha}.zip`,
-    environment: {
-      variables: {
-        TRANSACTION_QUEUE_URL: transactionQueue.url,
-        MANIFEST_BUCKET: env.MANIFEST_BUCKET,
-        MANIFEST_PREFIX: env.MANIFEST_PREFIX,
-        NODE_ENDPOINT: env.POLLING_URL,
-        HANDLER_ID: env.HANDLER_ID,
-        HANDLER_VERSION: env.HANDLER_VERSION,
-        VERSION: env.VERSION,
-        S3_BUCKET: LOG_FETCHER_S3_BUCKET,
-        GITHUB_SHA: githubSha,
-      },
-    },
-    timeout: 200,
-    handler: "bootstrap",
-    packageType: "Zip",
-    runtime: "provided.al2023",
-  });
-
   const orchestrator = new aws.lambda.Function(`orchestrator`, {
     role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     s3Bucket: "ingest-functions",
@@ -50,7 +25,6 @@ export default async () => {
     environment: {
       variables: {
         TRANSACTION_QUEUE_URL: transactionQueue.url,
-        LOG_FETCHER_LAMBDA_ARN: logFetcher.arn,
         MANIFEST_BUCKET: env.MANIFEST_BUCKET,
         MANIFEST_PREFIX: env.MANIFEST_PREFIX,
         NODE_ENDPOINT: env.POLLING_URL,
@@ -64,6 +38,8 @@ export default async () => {
         GITHUB_SHA: githubSha,
         ETHERSCAN_LIKE: env.ETHERSCAN_LIKE,
         ETHERSCAN_API_KEY: env.ETHERSCAN_API_KEY,
+        DEPLOYMENT_ID: env.DEPLOYMENT_ID,
+        USER_ID: env.USER_ID,
       },
     },
     timeout: 200,
@@ -97,6 +73,7 @@ export default async () => {
         STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
         USER_ID: env.USER_ID,
         REPORTING_QUEUE_URL: stackRef.getOutput("reportingQueueUrl"),
+        DEPLOYMENT_ID: env.DEPLOYMENT_ID,
       },
     },
     layers: [
@@ -138,7 +115,6 @@ export default async () => {
   return {
     txQueueUrl: transactionQueue.url,
     orchestratorArn: orchestrator.arn,
-    logFetcherArn: logFetcher.arn,
     handlerArn: handler.arn,
   };
 };

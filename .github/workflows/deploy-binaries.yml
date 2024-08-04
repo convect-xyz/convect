@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        binary: ["log-fetcher", "orchestrator"]
+        binary: ["orchestrator"]
     steps:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

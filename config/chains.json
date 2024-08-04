@@ -5,7 +5,7 @@
     "polling_url": "https://eth-mainnet.g.alchemy.com/v2/xlCz0CxtG7gSJxrjG-YMvjQVfUfRQhKI",
     "ws_url": "wss://lb.drpc.org/ogws?network=ethereum&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-mainnet",
-    "etherscan_like": "https://api.etherscan.org",
+    "etherscan_like": "https://api.etherscan.io",
     "etherscan_api_key": "8KM3GY51K8PDT3TM62CVQ6PPKBPSGI86SR"
   },
   {
@@ -14,7 +14,7 @@
     "polling_url": "https://eth-sepolia.g.alchemy.com/v2/xlCz0CxtG7gSJxrjG-YMvjQVfUfRQhKI",
     "ws_url": "wss://lb.drpc.org/ogws?network=sepolia&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia",
-    "etherscan_like": "https://api-sepolia.etherscan.org",
+    "etherscan_like": "https://api-sepolia.etherscan.io",
     "etherscan_api_key": "8KM3GY51K8PDT3TM62CVQ6PPKBPSGI86SR"
   },
   {
@@ -38,11 +38,11 @@
   {
     "id": 81457,
     "name": "Blast Mainnet",
-    "polling_url": "https://rpc.blast.io",
+    "polling_url": "https://blast-mainnet.core.chainstack.com/e3d98827eaf7db81390ae1326429eda7",
     "ws_url": "wss://lb.drpc.org/ogws?network=blast&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast",
-    "etherscan_like": "",
-    "etherscan_api_key": ""
+    "etherscan_like": "https://api.blastscan.io",
+    "etherscan_api_key": "N4E4D52CV6S4318FVBJ2P88AY9CWP1GNMV"
   },
   {
     "id": 8453,

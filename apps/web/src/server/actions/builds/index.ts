@@ -1,6 +1,9 @@
 import { RunTaskCommand } from "@aws-sdk/client-ecs";
+import { eq } from "drizzle-orm";
 import { env } from "~/env";
 import { ecs } from "~/lib/server/aws";
+import { db } from "~/server/db";
+import schema from "~/server/db/schema";
 import { getStackOutputs } from "../pulumi/getStackOutputs";
 
 type TriggerBuildOptions = {
@@ -9,6 +12,7 @@ type TriggerBuildOptions = {
   stripeCustomerId: string;
   userId: string;
   chainId: number;
+  handlerId: number;
   internalHandlerId: string;
   internalHandlerVersion: number;
   manifestBucket: string;
@@ -24,6 +28,13 @@ type TriggerBuildOptions = {
 
 export async function createDeployment(options: TriggerBuildOptions) {
   const outputs = await getStackOutputs();
+
+  await db.insert(schema.deployment).values({
+    id: options.deploymentId,
+    handlerId: options.handlerId,
+    ecsTaskId: "",
+    status: "PENDING",
+  });
 
   const command = new RunTaskCommand({
     cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
@@ -116,13 +127,16 @@ export async function createDeployment(options: TriggerBuildOptions) {
 
   const task = output.tasks?.at(0);
   if (!task || !task.taskArn) {
+    await db
+      .delete(schema.deployment)
+      .where(eq(schema.deployment.id, options.deploymentId));
+
     throw new Error("Task did not start");
   }
 
-  // await db.insert(schema.deployment).values({
-  //   handlerId: options.internalHandlerId,
-  //   ecsTaskId: task.taskArn,
-  // });
+  await db.update(schema.deployment).set({
+    ecsTaskId: task.taskArn,
+  });
 
   return {
     ecsOutput: "",

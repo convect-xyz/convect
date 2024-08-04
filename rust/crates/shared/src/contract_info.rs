@@ -1,26 +1,34 @@
 use async_trait::async_trait;
 use aws_sdk_lambda::error::BoxError;
-use ethers::middleware::gas_oracle::etherscan;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct ContractCreationInfo {
-    pub contract_address: String,
-    pub tx_hash: String,
+#[serde(untagged)]
+enum EtherscanResponse<T> {
+    Success {
+        status: String,
+        message: String,
+        result: T,
+    },
+    Error {
+        status: String,
+        message: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct EtherscanResponse<T> {
-    pub status: String,
-    pub message: String,
-    pub result: T,
+pub struct ContractCreationInfo {
+    #[serde(rename = "contractAddress")]
+    pub contract_address: String,
+    #[serde(rename = "txHash")]
+    pub tx_hash: String,
 }
 
 #[async_trait]
 pub trait ContractInfoProvider {
     async fn get_contract_creation_info(
         &self,
-        contract_address: Vec<String>,
+        contract_addresses: Vec<String>,
     ) -> Result<Vec<ContractCreationInfo>, BoxError>;
 }
 
@@ -56,6 +64,9 @@ impl ContractInfoProvider for EtherscanContractInfoProvider {
         let response: EtherscanResponse<Vec<ContractCreationInfo>> =
             serde_json::from_str(&response_body)?;
 
-        Ok(response.result)
+        match response {
+            EtherscanResponse::Success { result, .. } => Ok(result),
+            EtherscanResponse::Error { .. } => Ok(vec![]),
+        }
     }
 }

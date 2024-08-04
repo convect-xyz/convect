@@ -1,9 +1,12 @@
 import { S3 } from "@aws-sdk/client-s3";
 import { InlineProgramArgs, LocalWorkspace } from "@pulumi/pulumi/automation";
+import { eq } from "drizzle-orm";
 import esbuild from "esbuild";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
+import { db } from "./db";
+import schema from "./db/schema";
 import { env } from "./env";
 import infraFactory from "./infra";
 
@@ -15,9 +18,18 @@ const BUNDLE_OUT_DIR = path.join(env.CURR_DIR, "bundle_out");
 const RUNTIME_SRC_FILE = "/scripts/runtime.js";
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 
-main();
+main().then(async () => {
+  await succeedDeployment();
+  process.exit(0);
+});
 
 async function main() {
+  db.update(schema.deployment)
+    .set({
+      status: "RUNNING",
+    })
+    .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
+
   console.info("initialising/getting stack...");
   const stack = await getStack();
   console.info("succesfully intialised stack.");
@@ -58,8 +70,6 @@ async function main() {
     await stack.up({ onOutput: console.info });
     console.info("stack upped.");
   }
-
-  process.exit(0);
 }
 
 async function getStack() {
@@ -137,3 +147,16 @@ async function zipLambda() {
     Body: zipData,
   });
 }
+
+async function succeedDeployment() {
+  await db
+    .update(schema.deployment)
+    .set({
+      status: "SUCCESS",
+    })
+    .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
+
+  await triggerNextDeployment();
+}
+
+async function triggerNextDeployment() {}

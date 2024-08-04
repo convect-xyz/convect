@@ -8,7 +8,9 @@ import {
 } from "date-fns";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
+import { useState } from "react";
 import { CodeBlock } from "~/components/code/CodeBlock";
+import { Button } from "~/components/ui/button";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
 import {
@@ -27,9 +29,15 @@ import {
 } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import { RouterOutputs } from "~/trpc/shared";
 import { Chain } from "./(components)/Chain";
+import TransactionRow from "./(components)/TransactionRow";
 import TransactionFilters, { useTransactionFilters } from "./filters";
 import { useParams } from "./hooks/useParams";
+import InvocationDialog from "./InvocationDialog";
+
+type Transaction =
+  RouterOutputs["handlers"]["getTransactions"]["transactions"][0];
 
 const DASHBOARD_REFETCH_INTERVAL = 30000;
 
@@ -147,13 +155,17 @@ export default function Main() {
         )}
       </div>
 
-      {overview && overview.isInitialised && (
+      {(!overview || overview.isInitialised) && (
         <div className="mt-2">
           <TransactionFilters>
             <RecentTransactions />
           </TransactionFilters>
         </div>
       )}
+
+      <div className="mt-2">
+        <DeleteHandler />
+      </div>
     </div>
   );
 }
@@ -243,18 +255,24 @@ function VersionStatus() {
 function RecentTransactions() {
   const filters = useTransactionFilters();
   const { handlerId } = useParams();
+  const [selectedTransactionHash, setSelectedTransactionHash] =
+    useState<string>();
 
-  const { data: maybeTransactions } = api.handlers.getTransactions.useQuery(
-    {
-      handlerId: handlerId ?? -1,
-      search: filters.debouncedSearch,
-      status: filters.status,
-    },
-    {
-      refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-      enabled: !!handlerId,
-    },
-  );
+  console.log("handlerId", handlerId);
+  const { data: maybeTransactions, error } =
+    api.handlers.getTransactions.useQuery(
+      {
+        handlerId: handlerId ?? -1,
+        search: filters.debouncedSearch,
+        status: filters.status,
+      },
+      {
+        refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+        enabled: !!handlerId,
+      },
+    );
+  console.log("error", error);
+  console.log("maybeTransactions", maybeTransactions);
 
   return (
     <div className="rounded-md border border-[#191B1F] bg-muted p-4">
@@ -281,27 +299,50 @@ function RecentTransactions() {
               <Skeleton className="h-6 w-24 bg-background" />
             </div>
           ))}
-        {maybeTransactions &&
-          maybeTransactions.transactions.map((tx) => (
-            <div
-              className="flex items-center gap-2 py-4"
-              key={tx.id.toString()}
-            >
-              <span
-                className={cn(
-                  "h-2 w-2 rounded-full",
-                  tx.status === "SUCCESS" && "bg-green-400",
-                  tx.status === "FAILED" && "bg-red-400",
-                )}
-              ></span>
-              <div className="flex-1">{tx.transactionHash}</div>
-              <div className="text-sm text-muted-foreground">
-                <ForceRerender>
-                  {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
-                </ForceRerender>
-              </div>
-            </div>
-          ))}
+        {maybeTransactions?.transactions.map((tx) => (
+          <TransactionRow
+            tx={tx}
+            key={tx.id.toString()}
+            onRowSelected={(tx) =>
+              setSelectedTransactionHash(tx.transactionHash)
+            }
+          />
+        ))}
+
+        {selectedTransactionHash && (
+          <InvocationDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) {
+                setSelectedTransactionHash(undefined);
+              }
+            }}
+            transactionHash={selectedTransactionHash}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DeleteHandler() {
+  const { handlerId } = useParams();
+  const { mutateAsync: deleteHandler } = api.handlers.delete.useMutation();
+
+  const handleDelete = () => {
+    if (!handlerId) return;
+    deleteHandler({ handlerId });
+  };
+
+  return (
+    <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="flex-1 uppercase text-muted-foreground">
+          Delete Handler
+        </span>
+        <Button onClick={handleDelete} variant="destructive">
+          Delete
+        </Button>
       </div>
     </div>
   );
