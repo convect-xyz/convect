@@ -258,17 +258,21 @@ function RecentTransactions() {
   const [selectedTransactionHash, setSelectedTransactionHash] =
     useState<string>();
 
-  const { data: maybeTransactions } = api.handlers.getTransactions.useQuery(
-    {
-      handlerId: handlerId ?? -1,
-      search: filters.debouncedSearch,
-      status: filters.status,
-    },
-    {
-      refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-      enabled: !!handlerId,
-    },
-  );
+  console.log("handlerId", handlerId);
+  const { data: maybeTransactions, error } =
+    api.handlers.getTransactions.useQuery(
+      {
+        handlerId: handlerId ?? -1,
+        search: filters.debouncedSearch,
+        status: filters.status,
+      },
+      {
+        refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+        enabled: !!handlerId,
+      },
+    );
+  console.log("error", error);
+  console.log("maybeTransactions", maybeTransactions);
 
   return (
     <div className="rounded-md border border-[#191B1F] bg-muted p-4">
@@ -295,16 +299,15 @@ function RecentTransactions() {
               <Skeleton className="h-6 w-24 bg-background" />
             </div>
           ))}
-        {maybeTransactions &&
-          maybeTransactions.transactions.map((tx) => (
-            <TransactionRow
-              tx={tx}
-              key={tx.id.toString()}
-              onRowSelected={(tx) =>
-                setSelectedTransactionHash(tx.transactionHash)
-              }
-            />
-          ))}
+        {maybeTransactions?.transactions.map((tx) => (
+          <TransactionRow
+            tx={tx}
+            key={tx.id.toString()}
+            onRowSelected={(tx) =>
+              setSelectedTransactionHash(tx.transactionHash)
+            }
+          />
+        ))}
 
         {selectedTransactionHash && (
           <InvocationDialog
