@@ -31,7 +31,7 @@ const redisClient = new Redis(
   },
 );
 
-export const processedTransactions = pgTable("processed_transactions_temp", {
+export const processedTransactions = pgTable("processed_transactions", {
   id: serial("id").primaryKey(),
   transactionHash: varchar("transaction_hash").notNull(),
   status: varchar("status", { length: 256 }).notNull(),
@@ -124,7 +124,7 @@ const getSuccessfulTxCount = async (internalId: string, version: number) => {
   return db
     .execute(
       sql`SELECT COUNT(*) FROM
-        (SELECT DISTINCT transaction_hash FROM processed_transactions_temp WHERE handler_id = ${internalId} 
+        (SELECT DISTINCT transaction_hash FROM processed_transactions WHERE handler_id = ${internalId} 
           AND handler_version = ${version}
           AND status = 'SUCCESS')
       `,

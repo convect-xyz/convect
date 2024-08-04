@@ -17,7 +17,7 @@ const conn = new Pool({
   },
 });
 
-export const processedTransactions = pgTable("processed_transactions_temp", {
+export const processedTransactions = pgTable("processed_transactions", {
   id: serial("id").primaryKey(),
   handlerId: varchar("handler_id").notNull(),
   handlerVersion: varchar("handler_version").notNull(),
@@ -98,7 +98,6 @@ export const getTransactions = protectedProcedure
       .limit(input.limit)
       .as("distinct_transactions");
 
-    console.time("recentTransactions");
     const recentTransactions = await db
       .select()
       .from(processedTransactions)
@@ -115,13 +114,12 @@ export const getTransactions = protectedProcedure
           ),
         ),
       )
-      .orderBy(desc(distinctTransactions.maxTimestamp))
+      .orderBy(desc(processedTransactions.timestamp))
       .limit(input.limit);
-    console.timeEnd("recentTransactions");
 
     return {
       transactions: recentTransactions
-        .flatMap((v) => v.processed_transactions_temp)
+        .flatMap((v) => v.processed_transactions)
         .map((tx) => ({
           id: tx.id,
           transactionHash: tx.transactionHash,
