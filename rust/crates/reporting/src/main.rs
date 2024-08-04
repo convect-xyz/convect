@@ -10,6 +10,24 @@ use shared::{
     schema::{invocation, processed_transactions},
 };
 
+fn main() -> Result<(), Error> {
+    let _guard = sentry::init((
+      "https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104",
+      sentry::ClientOptions {
+          release: sentry::release_name!(),
+          ..Default::default()
+      }));
+
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async move {
+            tracing::init_default_subscriber();
+            run(service_fn(function_handler)).await
+        })
+}
+
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     let pool = establish_connection_pool().await;
 
@@ -94,11 +112,4 @@ fn extract_transactions(r: &reporting_sdk::Request) -> Vec<ProcessedTransaction>
     }
 
     rows
-}
-
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    tracing::init_default_subscriber();
-
-    run(service_fn(function_handler)).await
 }

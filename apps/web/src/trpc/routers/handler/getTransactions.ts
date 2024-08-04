@@ -83,7 +83,6 @@ export const getTransactions = protectedProcedure
       return baseFilter;
     };
 
-    console.time("distinct");
     const maxTimestamp = max(processedTransactions.timestamp).as(
       "max_timestamp",
     );
@@ -96,7 +95,7 @@ export const getTransactions = protectedProcedure
       .where(getFilter())
       .groupBy(processedTransactions.transactionHash)
       .orderBy(desc(maxTimestamp))
-      .limit(25)
+      .limit(input.limit)
       .as("distinct_transactions");
 
     const recentTransactions = await db
@@ -114,8 +113,9 @@ export const getTransactions = protectedProcedure
             distinctTransactions.maxTimestamp,
           ),
         ),
-      );
-    console.timeEnd("distinct");
+      )
+      .orderBy(desc(processedTransactions.timestamp))
+      .limit(input.limit);
 
     return {
       transactions: recentTransactions

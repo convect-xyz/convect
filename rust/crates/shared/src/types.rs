@@ -33,14 +33,14 @@ pub mod manifest {
     use serde_with::{serde_as, DisplayFromStr};
     use std::env;
 
-    #[derive(Deserialize, Debug)]
+    #[derive(Deserialize, Debug, Clone)]
     pub struct Manifest {
         pub log_configs: Vec<LogConfig>,
         pub tx_configs: Vec<TransactionConfig>,
     }
 
     #[serde_as]
-    #[derive(Deserialize, Debug)]
+    #[derive(Deserialize, Debug, Clone)]
     pub struct TransactionConfig {
         #[serde_as(as = "DisplayFromStr")]
         pub start_block: i64,
@@ -121,7 +121,7 @@ pub mod syncing {
 
     use backoff::{exponential::ExponentialBackoff, SystemClock};
     use lambda_runtime::tower::BoxError;
-    use redis::{Commands, JsonCommands, RedisError};
+    use redis::{Commands, RedisError};
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -284,7 +284,7 @@ pub mod processing {
     use backoff::{exponential::ExponentialBackoff, SystemClock};
     use futures::lock::Mutex;
     use lambda_runtime::tower::BoxError;
-    use redis::{AsyncCommands, JsonAsyncCommands, RedisError};
+    use redis::{AsyncCommands, RedisError};
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Clone, Debug)]

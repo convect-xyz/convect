@@ -1,0 +1,1 @@
+ALTER TABLE "web_deployment" ALTER COLUMN "id" SET DATA TYPE varchar;

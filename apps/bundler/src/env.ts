@@ -15,6 +15,10 @@ const modeRequired =
 
 export const env = createEnv({
   server: {
+    DATABASE_URL: z
+      .string()
+      .optional()
+      .refine(modeRequired(["init", "update"])),
     MODE: modeSchema,
     VERSION: z.string(),
     CURR_DIR: z.string().min(1),
