@@ -19,14 +19,32 @@ pub struct TransactionResult {
     pub failed_label: Option<TransactionResultLabel>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Metric {
+    pub duration_ms: f64,
+    pub billed_duration_ms: u64,
+    pub memory_size_mb: u64,
+    pub max_memory_used_mb: u64,
+    pub init_duration_ms: Option<f64>,
+    pub restore_duration_ms: Option<f64>,
+}
+
 #[derive(Serialize, Deserialize)]
-pub struct Request {
-    pub handler_id: String,
-    pub handler_version: String,
-    pub stripe_customer_id: String,
-    pub user_id: Option<String>,
-    pub invocation_id: String,
-    pub results: Vec<TransactionResult>,
+pub enum Request {
+    Results {
+        handler_id: String,
+        handler_version: String,
+        stripe_customer_id: String,
+        user_id: String,
+        invocation_id: String,
+        results: Vec<TransactionResult>,
+    },
+    Metrics {
+        handler_id: String,
+        handler_version: String,
+        user_id: String,
+        metrics: Vec<Metric>,
+    },
 }
 
 #[async_trait]
