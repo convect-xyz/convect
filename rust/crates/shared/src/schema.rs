@@ -2368,6 +2368,22 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    reported_metrics (id) {
+        id -> Int4,
+        #[max_length = 255]
+        handler_id -> Varchar,
+        #[max_length = 255]
+        handler_version -> Varchar,
+        duration_ms -> Float8,
+        billed_duration_ms -> Int8,
+        memory_size_mb -> Int8,
+        max_memory_used_mb -> Int8,
+        init_duration_ms -> Nullable<Float8>,
+        restore_duration_ms -> Nullable<Float8>,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     invocation,
     processed_transactions,
@@ -2494,4 +2510,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     processed_transactions_temp_p97,
     processed_transactions_temp_p98,
     processed_transactions_temp_p99,
+    reported_metrics,
 );

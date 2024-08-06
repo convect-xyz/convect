@@ -5,10 +5,16 @@ use futures::try_join;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
-    models::{Invocation, ProcessedTransaction},
+    models::{Invocation, Metric, ProcessedTransaction},
     reporting_sdk,
-    schema::{invocation, processed_transactions},
+    schema::{invocation, processed_transactions, reported_metrics},
 };
+
+enum ExtractedRequest {
+    Transaction(ProcessedTransaction),
+    Metric(Metric),
+    Invocation(Invocation),
+}
 
 fn main() -> Result<(), Error> {
     let _guard = sentry::init((
@@ -38,22 +44,37 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .map(|r| serde_json::from_str(r.body.unwrap().as_str()).unwrap())
         .collect();
 
-    let transactions: Vec<_> = requests
-        .iter()
+    let extracted: Vec<_> = requests
+        .into_iter()
         .map(extract_transactions)
         .flatten()
         .collect();
 
-    let invocations: Vec<_> = requests
+    let invocations: Vec<_> = extracted
         .iter()
-        .map(|r| match &r.user_id {
-            Some(user_id) => Some(Invocation {
-                invocation_id: &r.invocation_id,
-                user_id,
-                num_processed: r.results.len().try_into().unwrap(),
-                timestamp: Utc::now(),
-            }),
-            None => None,
+        .map(|r| match r {
+            ExtractedRequest::Invocation(i) => Some(i),
+            _ => None,
+        })
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .collect();
+
+    let transactions: Vec<_> = extracted
+        .iter()
+        .map(|r| match r {
+            ExtractedRequest::Transaction(t) => Some(t),
+            _ => None,
+        })
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .collect();
+
+    let metrics: Vec<_> = extracted
+        .iter()
+        .map(|r| match r {
+            ExtractedRequest::Metric(m) => Some(m),
+            _ => None,
         })
         .filter(Option::is_some)
         .map(Option::unwrap)
@@ -69,6 +90,9 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
                         .execute(conn),
                     diesel::insert_into(processed_transactions::table)
                         .values(transactions)
+                        .execute(conn),
+                    diesel::insert_into(reported_metrics::table)
+                        .values(metrics)
                         .execute(conn)
                 )?;
 
@@ -82,34 +106,71 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     Ok(())
 }
 
-fn extract_transactions(r: &reporting_sdk::Request) -> Vec<ProcessedTransaction> {
+fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
     let mut rows = Vec::new();
 
-    for result in r.results.iter() {
-        for label in result.successful_labels.iter() {
-            rows.push(ProcessedTransaction {
-                transaction_hash: result.transaction_hash.clone(),
-                label: label.label.clone(),
-                status: "SUCCESS".to_string(),
-                timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                handler_id: &r.handler_id,
-                handler_version: &r.handler_version,
-                batch_id: &result.batch_id,
-            })
-        }
+    match r {
+        reporting_sdk::Request::Results {
+            results,
+            handler_id,
+            handler_version,
+            user_id,
+            invocation_id,
+            ..
+        } => {
+            rows.push(ExtractedRequest::Invocation(Invocation {
+                user_id: user_id.clone(),
+                invocation_id: invocation_id.clone(),
+                timestamp: Utc::now(),
+                num_processed: results.len().try_into().unwrap(),
+            }));
 
-        if let Some(label) = result.failed_label.as_ref() {
-            rows.push(ProcessedTransaction {
-                transaction_hash: result.transaction_hash.clone(),
-                label: label.label.clone(),
-                status: "FAILED".to_string(),
-                timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                handler_id: &r.handler_id,
-                handler_version: &r.handler_version,
-                batch_id: &result.batch_id,
-            })
+            for result in results.into_iter() {
+                for label in result.successful_labels.iter() {
+                    rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
+                        transaction_hash: result.transaction_hash.clone(),
+                        label: label.label.clone(),
+                        status: "SUCCESS".to_string(),
+                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
+                        handler_id: handler_id.clone(),
+                        handler_version: handler_version.clone(),
+                        batch_id: result.batch_id.clone(),
+                    }))
+                }
+
+                if let Some(label) = result.failed_label.as_ref() {
+                    rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
+                        transaction_hash: result.transaction_hash.clone(),
+                        label: label.label.clone(),
+                        status: "FAILED".to_string(),
+                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
+                        handler_id: handler_id.clone(),
+                        handler_version: handler_version.clone(),
+                        batch_id: result.batch_id.clone(),
+                    }))
+                }
+            }
         }
-    }
+        reporting_sdk::Request::Metrics {
+            handler_id,
+            handler_version,
+            metrics,
+            ..
+        } => {
+            for metric in metrics.into_iter() {
+                rows.push(ExtractedRequest::Metric(Metric {
+                    duration_ms: metric.duration_ms,
+                    billed_duration_ms: metric.billed_duration_ms as i64,
+                    memory_size_mb: metric.memory_size_mb as i64,
+                    max_memory_used_mb: metric.max_memory_used_mb as i64,
+                    init_duration_ms: metric.init_duration_ms,
+                    restore_duration_ms: metric.restore_duration_ms,
+                    handler_id: handler_id.clone(),
+                    handler_version: handler_version.clone(),
+                }))
+            }
+        }
+    };
 
     rows
 }

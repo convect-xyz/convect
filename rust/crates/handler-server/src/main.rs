@@ -156,11 +156,11 @@ mod results {
             .find(|v| v.failed_label.is_some())
             .map(|v| v.clone());
 
-        let reporting_request = reporting_sdk::Request {
+        let reporting_request = reporting_sdk::Request::Results {
             handler_id: app_state.config.handler_id.clone(),
             handler_version: app_state.config.handler_version.clone(),
             stripe_customer_id: app_state.config.stripe_customer_id.clone(),
-            user_id: Some(app_state.config.user_id.clone()),
+            user_id: app_state.config.user_id.clone(),
             invocation_id: payload.invocation_id.clone(),
             results: payload.results.clone(),
         };
