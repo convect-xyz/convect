@@ -4,22 +4,36 @@ use diesel::prelude::*;
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::processed_transactions)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct ProcessedTransaction<'a> {
+pub struct ProcessedTransaction {
     pub transaction_hash: String,
     pub label: String,
     pub status: String,
     pub timestamp: DateTime<Utc>,
-    pub handler_id: &'a str,
-    pub handler_version: &'a str,
-    pub batch_id: &'a str,
+    pub handler_id: String,
+    pub handler_version: String,
+    pub batch_id: String,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::invocation)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Invocation<'a> {
-    pub user_id: &'a str,
-    pub invocation_id: &'a str,
+pub struct Invocation {
+    pub user_id: String,
+    pub invocation_id: String,
     pub timestamp: DateTime<Utc>,
     pub num_processed: i32,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::reported_metrics)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Metric {
+    pub handler_id: String,
+    pub handler_version: String,
+    pub duration_ms: f64,
+    pub billed_duration_ms: i64,
+    pub memory_size_mb: i64,
+    pub max_memory_used_mb: i64,
+    pub init_duration_ms: Option<f64>,
+    pub restore_duration_ms: Option<f64>,
 }
