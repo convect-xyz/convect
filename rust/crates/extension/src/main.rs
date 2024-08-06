@@ -8,6 +8,7 @@ use lambda_extension::{
 };
 use reqwest::blocking::Client;
 use serde_json::json;
+use shared::reporting_sdk::{self, ReportingSdk, SQSReportingSdk};
 
 /// Report metrics
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -60,30 +61,18 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     Ok(())
 }
 
-async fn upload_metrics(metrics: Vec<ReportMetrics<'_>>) -> Result<(), Error> {
-    let records: Vec<String> = metrics
-        .into_iter()
-        .map(|record| serde_json::to_string(&record).unwrap())
-        .collect();
+async fn upload_metrics(request: reporting_sdk::Request) -> Result<(), Error> {
+    let reporting_sdk = SQSReportingSdk::new();
 
-    let client = Client::new();
-    let res = client
-        .post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_metrics")
-        .header("Authorization", format!("Bearer {TINYBIRD_API_KEY}"))
-        .body(records.join("\n"))
-        .send();
-
-    match res {
-        Ok(res) => println!("Successfully uploaded: {:?}", res.text()),
-        Err(e) => println!("Error: {:?}", e),
-    }
+    reporting_sdk.handle(&request).await?;
 
     Ok(())
 }
 
 async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
     let mut logs = Vec::new();
-    let mut all_metrics = Vec::new();
+    let mut all_metrics: Vec<reporting_sdk::Metric> = Vec::new();
+
     let handler_id = env::var("HANDLER_ID").expect("Handler ID is undefined");
     let handler_version = env::var("HANDLER_VERSION").expect("Handler Version is undefined");
 
@@ -99,9 +88,7 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
                 error_type: _,
                 spans: _,
                 tracing: _,
-            } => all_metrics.push(ReportMetrics {
-                handler_id: &handler_id,
-                handler_version: &handler_version,
+            } => all_metrics.push(reporting_sdk::Metric {
                 duration_ms: metrics.duration_ms,
                 billed_duration_ms: metrics.billed_duration_ms,
                 memory_size_mb: metrics.memory_size_mb,
@@ -113,7 +100,15 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
         }
     }
 
-    let _ = join!(upload_logs(logs), upload_metrics(all_metrics));
+    let _ = join!(
+        upload_logs(logs),
+        upload_metrics(reporting_sdk::Request::Metrics {
+            handler_id: handler_id.clone(),
+            handler_version: handler_version.clone(),
+            user_id: env::var("USER_ID").expect("USER_ID is not defined"),
+            metrics: all_metrics
+        })
+    );
 
     Ok(())
 }
