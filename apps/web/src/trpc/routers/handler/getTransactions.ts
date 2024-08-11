@@ -57,6 +57,9 @@ export const getTransactions = protectedProcedure
       where(fields, { eq }) {
         return eq(fields.id, input.handlerId);
       },
+      with: {
+        producer: true,
+      },
     });
 
     if (!handler) {
@@ -64,10 +67,13 @@ export const getTransactions = protectedProcedure
     }
 
     const getFilter = () => {
-      let baseFilter =
-        and();
-        // eq(processedTransactions.handlerId, handler.internalId),
-        // eq(processedTransactions.handlerVersion, handler.version.toString()),
+      let baseFilter = and(
+        eq(processedTransactions.handlerId, handler.functionId.toString()),
+        eq(
+          processedTransactions.handlerVersion,
+          handler.producer.chainId.toString(),
+        ),
+      );
       if (input.search) {
         baseFilter = and(
           baseFilter,

@@ -70,6 +70,7 @@ export const getOverview = protectedProcedure
       },
       with: {
         producer: true,
+        convectFunction: true,
       },
     });
 
@@ -77,11 +78,46 @@ export const getOverview = protectedProcedure
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
+    const currentDeployment = await ctx.db.query.deployment.findFirst({
+      where(fields, { eq, and }) {
+        return and(
+          eq(fields.functionId, handler.functionId),
+          eq(fields.status, "SUCCESS"),
+        );
+      },
+      orderBy(fields, { desc }) {
+        return desc(fields.createdAt);
+      },
+    });
+
+    if (!currentDeployment) {
+      throw new TRPCError({
+        message: "Deployment not found",
+        code: "NOT_FOUND",
+      });
+    }
+
     const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
-      getFetchState(handler.internalId, handler.version),
-      getTxCount(handler.internalId, handler.version),
-      getAvgDuration(handler.internalId, handler.version),
-      getSuccessfulTxCount(handler.internalId, handler.version),
+      getFetchState(
+        handler.functionId.toString(),
+        handler.producer.chainId,
+        currentDeployment.id,
+      ),
+      getTxCount(
+        handler.functionId.toString(),
+        handler.producer.chainId,
+        currentDeployment.id,
+      ),
+      getAvgDuration(
+        handler.functionId.toString(),
+        handler.producer.chainId,
+        currentDeployment.id,
+      ),
+      getSuccessfulTxCount(
+        handler.functionId.toString(),
+        handler.producer.chainId,
+        currentDeployment.id,
+      ),
     ]);
 
     return {
@@ -94,12 +130,16 @@ export const getOverview = protectedProcedure
       processedTransactionsCount: successfulTx,
       lastFetchedBlock: fetchState?.lastBlock ?? 0,
       avgDuration: avgDuration,
-      version: handler.version,
-      internalId: handler.internalId,
+      version: 0,
+      internalId: " handler.internalId",
     };
   });
 
-const getAvgDuration = async (internalId: string, version: number) => {
+const getAvgDuration = async (
+  internalId: string,
+  version: number,
+  deploymentId: string,
+) => {
   return axios
     .post(
       "https://api.eu-central-1.aws.tinybird.co/v0/sql",
@@ -120,7 +160,11 @@ const getAvgDuration = async (internalId: string, version: number) => {
     .then((v) => (Number.isNaN(v) ? 0 : v));
 };
 
-const getSuccessfulTxCount = async (internalId: string, version: number) => {
+const getSuccessfulTxCount = async (
+  internalId: string,
+  version: number,
+  deploymentId: string,
+) => {
   return db
     .execute(
       sql`SELECT COUNT(*) FROM
@@ -132,15 +176,25 @@ const getSuccessfulTxCount = async (internalId: string, version: number) => {
     .then((r) => Number(r.rows.at(0)!.count));
 };
 
-const getTxCount = async (internalId: string, version: number) => {
-  const txCount = await redisClient.get(`tx-count-${internalId}-${version}`);
+const getTxCount = async (
+  internalId: string,
+  version: number,
+  deploymentId: string,
+) => {
+  const txCount = await redisClient.get(
+    `tx-count-${internalId}-${version}-${deploymentId}`,
+  );
   return txCount ? Number(txCount) : null;
 };
 
-const getFetchState = async (internalId: string, version: number) => {
+const getFetchState = async (
+  internalId: string,
+  version: number,
+  deploymentId: string,
+) => {
   const [lastBlock, state] = await redisClient.mget(
-    `${internalId}-${version}-last-block`,
-    `${internalId}-${version}-state`,
+    `${internalId}-${version}-${deploymentId}-last-block`,
+    `${internalId}-${version}-${deploymentId}-state`,
   );
 
   return {
