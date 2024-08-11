@@ -23,6 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut pipeline = State::load(
         syncer_config.function_id.clone(),
         syncer_config.chain_id.clone(),
+        syncer_config.deployment_id.clone(),
     );
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
@@ -129,6 +130,7 @@ pub struct Config {
     pub start_block: u64,
     pub end_block: u64,
     pub tx_queue_url: String,
+    pub deployment_id: String,
 }
 
 pub fn load_config_from_env() -> Config {
@@ -145,6 +147,7 @@ pub fn load_config_from_env() -> Config {
             .expect("END_BLOCK is not a u64"),
         tx_queue_url: env::var("TRANSACTION_QUEUE_URL")
             .expect("TRANSACTION_QUEUE_URL is not present"),
+        deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not present"),
     };
 }
 

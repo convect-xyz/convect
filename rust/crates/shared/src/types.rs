@@ -144,6 +144,7 @@ pub mod syncing {
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct Inner {
+        pub deployment_id: String,
         pub function_id: String,
         pub chain_id: String,
         pub state: SyncState,
@@ -174,21 +175,22 @@ pub mod syncing {
             })
         }
 
-        pub fn load(function_id: String, chain_id: String) -> Self {
+        pub fn load(function_id: String, chain_id: String, deployment_id: String) -> Self {
             let client = redis::Client::open("rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061")
             .unwrap();
 
             let mut con = client.get_connection().unwrap();
             let result: Vec<Option<String>> = con
                 .mget(vec![
-                    format!("{function_id}-{chain_id}-state"),
-                    format!("{function_id}-{chain_id}-last-block"),
+                    format!("{function_id}-{chain_id}-{deployment_id}-state"),
+                    format!("{function_id}-{chain_id}-{deployment_id}-last-block"),
                 ])
                 .unwrap();
 
             Self {
                 connection: con,
                 inner: Inner {
+                    deployment_id: deployment_id.clone(),
                     function_id: function_id.clone(),
                     chain_id: chain_id.clone(),
                     state: match result[0].as_ref() {
@@ -209,9 +211,10 @@ pub mod syncing {
 
         pub fn increment_transaction_count(&mut self, tx_count: usize) {
             let key = format!(
-                "tx-count-{function_id}-{chain_id}",
+                "tx-count-{function_id}-{chain_id}-{deployment_id}",
                 function_id = &self.inner.function_id,
-                chain_id = &self.inner.chain_id
+                chain_id = &self.inner.chain_id,
+                deployment_id = &self.inner.deployment_id
             );
 
             let _: u64 = self.connection.incr(key, tx_count).unwrap();
@@ -219,9 +222,10 @@ pub mod syncing {
 
         pub fn get_transaction_count(&mut self) -> u64 {
             let key = format!(
-                "tx-count-{function_id}-{chain_id}",
+                "tx-count-{function_id}-{chain_id}-{deployment_id}",
                 function_id = &self.inner.function_id,
-                chain_id = &self.inner.chain_id
+                chain_id = &self.inner.chain_id,
+                deployment_id = &self.inner.deployment_id
             );
 
             let count: u64 = self.connection.get(key).unwrap();
@@ -254,6 +258,7 @@ pub mod syncing {
         }
 
         pub fn send(self) -> Result<(), BoxError> {
+            let deployment_id = &self.inner.deployment_id;
             let function_id = &self.inner.function_id;
             let chain_id = &self.inner.chain_id;
 
@@ -262,11 +267,11 @@ pub mod syncing {
                 || {
                     self.connection.mset(&[
                         (
-                            format!("{function_id}-{chain_id}-state"),
+                            format!("{function_id}-{chain_id}-{deployment_id}-state"),
                             serde_json::to_string(&self.inner.state).unwrap(),
                         ),
                         (
-                            format!("{function_id}-{chain_id}-last-block"),
+                            format!("{function_id}-{chain_id}-{deployment_id}-last-block"),
                             self.inner.last_block.clone().unwrap_or_default(),
                         ),
                     ])?;
@@ -289,6 +294,8 @@ pub mod processing {
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct Inner {
+        #[serde(rename = "DeploymentId_")]
+        pub deployment_id: String,
         #[serde(rename = "FunctionId_")]
         pub function_id: String,
         #[serde(rename = "ChainId_")]
@@ -309,15 +316,15 @@ pub mod processing {
             self.inner.function_id.clone()
         }
 
-        pub async fn load(function_id: String, chain_id: String) -> Self {
+        pub async fn load(function_id: String, chain_id: String, deployment_id: String) -> Self {
             let client = redis::Client::open("rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061").unwrap();
 
             let mut con = client.get_multiplexed_async_connection().await.unwrap();
 
             let result: Vec<Option<String>> = con
                 .mget(vec![
-                    format!("process-state-{function_id}-{chain_id}-error-tx"),
-                    format!("process-state-{function_id}-{chain_id}-error-label"),
+                    format!("process-state-{function_id}-{chain_id}-{deployment_id}-error-tx"),
+                    format!("process-state-{function_id}-{chain_id}-{deployment_id}-error-label"),
                 ])
                 .await
                 .unwrap();
@@ -325,6 +332,7 @@ pub mod processing {
             Self {
                 connection: con,
                 inner: Inner {
+                    deployment_id: deployment_id.clone(),
                     function_id: function_id.clone(),
                     chain_id: chain_id.clone(),
                     error_tx: result[0].clone(),
@@ -370,6 +378,7 @@ pub mod processing {
         pub async fn send(self) -> Result<(), BoxError> {
             let function_id = self.inner.function_id.to_string();
             let chain_id = self.inner.chain_id.to_string();
+            let deployment_id = self.inner.deployment_id.to_string();
             let connection = Mutex::new(self.connection);
 
             backoff::future::retry::<(), RedisError, _, _, ExponentialBackoff<SystemClock>>(
@@ -380,11 +389,11 @@ pub mod processing {
                         .await
                         .mset(&[
                             (
-                                format!("process-state-{function_id}-{chain_id}-error-tx"),
+                                format!("process-state-{function_id}-{chain_id}-{deployment_id}-error-tx"),
                                 self.temp_inner.error_tx.clone().unwrap_or_default(),
                             ),
                             (
-                                format!("process-state-{function_id}-{chain_id}-error-label"),
+                                format!("process-state-{function_id}-{chain_id}-{deployment_id}-error-label"),
                                 self.temp_inner.error_label.clone().unwrap_or_default(),
                             ),
                         ])

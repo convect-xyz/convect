@@ -86,6 +86,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             let mut pipeline = State::load(
                 config.function_id.clone(),
                 chain_config.chain_id.to_string(),
+                config.deployment_id.clone(),
             );
 
             let s3_client = aws_sdk_s3::Client::new(&sdk_config);
@@ -337,6 +338,7 @@ fn get_task_override(
                     create_key_value_pair("VERSION", &config.version),
                     create_key_value_pair("MANIFEST_BUCKET", &config.manifest_bucket),
                     create_key_value_pair("MANIFEST_PREFIX", &config.manifest_prefix),
+                    create_key_value_pair("DEPLOYMENT_ID", &config.deployment_id),
                 ]))
                 .build(),
         )

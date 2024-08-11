@@ -84,7 +84,9 @@ fn main() -> Result<(), Error> {
         .block_on(async move {
             let function_id = config.function_id.clone();
             let chain_id = config.chain_id.clone();
-            let state = processing::State::load(function_id, chain_id).await;
+            let deployment_id = config.deployment_id.clone();
+
+            let state = processing::State::load(function_id, chain_id, deployment_id).await;
             let pipeline = Arc::new(Mutex::new(state));
             let reporting_sdk = SQSReportingSdk::new();
             let app_state = AppState {
