@@ -9,6 +9,8 @@ diesel::table! {
         invocation_id -> Varchar,
         timestamp -> Timestamptz,
         num_processed -> Int4,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -28,6 +30,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -294,6 +298,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -313,6 +319,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -332,6 +340,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -351,6 +361,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -370,6 +382,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -389,6 +403,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -408,6 +424,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -427,6 +445,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -446,6 +466,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -465,6 +487,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 
@@ -2381,6 +2405,8 @@ diesel::table! {
         max_memory_used_mb -> Int8,
         init_duration_ms -> Nullable<Float8>,
         restore_duration_ms -> Nullable<Float8>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
     }
 }
 

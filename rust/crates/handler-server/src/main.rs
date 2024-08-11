@@ -161,6 +161,7 @@ mod results {
             user_id: app_state.config.user_id.clone(),
             invocation_id: payload.invocation_id.clone(),
             results: payload.results.clone(),
+            deployment_id: app_state.config.deployment_id.clone(),
         };
 
         let (reporting_result, process_result, visibility_result) = join!(

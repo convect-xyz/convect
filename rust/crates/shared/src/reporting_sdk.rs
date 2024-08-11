@@ -38,12 +38,14 @@ pub enum Request {
         user_id: String,
         invocation_id: String,
         results: Vec<TransactionResult>,
+        deployment_id: String,
     },
     Metrics {
         function_id: String,
         chain_id: String,
         user_id: String,
         metrics: Vec<Metric>,
+        deployment_id: String,
     },
 }
 

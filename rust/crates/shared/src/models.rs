@@ -12,6 +12,7 @@ pub struct ProcessedTransaction {
     pub handler_id: String,
     pub handler_version: String,
     pub batch_id: String,
+    pub deployment_id: String,
 }
 
 #[derive(Insertable)]
@@ -22,6 +23,7 @@ pub struct Invocation {
     pub invocation_id: String,
     pub timestamp: DateTime<Utc>,
     pub num_processed: i32,
+    pub deployment_id: String,
 }
 
 #[derive(Insertable)]
@@ -36,4 +38,5 @@ pub struct Metric {
     pub max_memory_used_mb: i64,
     pub init_duration_ms: Option<f64>,
     pub restore_duration_ms: Option<f64>,
+    pub deployment_id: String,
 }
