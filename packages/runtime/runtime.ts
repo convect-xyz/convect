@@ -16,8 +16,6 @@ const USER_ENVS = (
   {} as Record<string, string>
 );
 
-const HANDLER_ID = process.env.HANDLER_ID;
-const HANDLER_VERSION = process.env.HANDLER_VERSION;
 const CHAIN_ID = process.env.CHAIN_ID;
 
 for (const env of Object.keys(process.env)) {
@@ -27,8 +25,6 @@ for (const env of Object.keys(process.env)) {
 for (const [name, value] of Object.entries(USER_ENVS)) {
   process.env[name] = value;
 }
-process.env["HANDLER_ID"] = HANDLER_ID;
-process.env["HANDLER_VERSION"] = HANDLER_VERSION;
 
 const { default: pipeline } = require("./pipeline");
 
