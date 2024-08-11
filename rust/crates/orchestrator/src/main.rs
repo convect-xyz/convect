@@ -73,10 +73,11 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     println!("Incoming block: {:?}", incoming_block);
 
     let config = Config::new();
+    let mut handles = Vec::new();
     for chain_config in config.chains.into_iter() {
         let incoming_block = incoming_block.get(&chain_config.chain_id).unwrap().clone();
 
-        tokio::spawn(async move {
+        handles.push(tokio::spawn(async move {
             let sdk_config = aws_config::load_from_env().await;
             let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
             let web3_client = Web3ClientImpl::new_from_endpoint(chain_config.polling_url.clone());
@@ -220,8 +221,13 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             .unwrap();
 
             Ok(())
-        });
+        }));
     }
+
+    for handle in handles {
+        let _ = handle.await.unwrap();
+    }
+
     Ok(())
 }
 
