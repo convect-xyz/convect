@@ -84,11 +84,10 @@ export default async () => {
         ETHERSCAN_API_KEY: env.ETHERSCAN_API_KEY,
         DEPLOYMENT_ID: env.DEPLOYMENT_ID,
         USER_ID: env.USER_ID,
-        CHAINS: JSON.stringify(
-          env.CHAINS.map((c, idx) => ({
-            ...c,
-            txQueueUrl: txQueueUrlOutputs.apply((v) => v[idx]),
-          }))
+        CHAINS: txQueueUrlOutputs.apply((output) =>
+          JSON.stringify(
+            output.map((url, idx) => ({ ...env.CHAINS[idx], txQueueUrl: url }))
+          )
         ),
       },
     },
