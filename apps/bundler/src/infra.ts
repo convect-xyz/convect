@@ -24,13 +24,14 @@ export default async () => {
 
     txQueueUrls.push(queue.url);
 
+    const chainConfig = env.CHAINS.find((c) => c.chainId === chain.chainId)!;
     const handler = new aws.lambda.Function(`handler-${chain.chainId}`, {
       role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
       s3Bucket: "ingest-build-outputs",
       s3Key: path.join("outputs", env.FUNCTION_ID, env.DEPLOYMENT_ID + ".zip"),
       environment: {
         variables: {
-          CHAINS: JSON.stringify(env.CHAINS),
+          CHAIN_ID: chainConfig.chainId.toString(),
           USER_ENVS: env.FUNCTION_ENVS,
           TRANSACTION_QUEUE_URL: queue.url,
           STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
