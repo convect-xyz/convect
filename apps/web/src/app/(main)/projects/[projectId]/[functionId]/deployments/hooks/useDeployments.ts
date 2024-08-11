@@ -2,14 +2,14 @@ import { api } from "~/trpc/react";
 import { useParams } from "../../hooks/useParams";
 
 export function useDeployments() {
-  const { handlerId } = useParams();
+  const { functionId } = useParams();
 
-  return api.handlers.getDeployments.useQuery(
+  return api.functions.getDeployments.useQuery(
     {
-      handlerId: handlerId ?? -1,
+      functionId: functionId ?? -1,
     },
     {
-      enabled: !!handlerId,
+      enabled: !!functionId,
     },
   );
 }

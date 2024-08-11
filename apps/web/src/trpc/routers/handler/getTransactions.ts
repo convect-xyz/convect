@@ -64,10 +64,10 @@ export const getTransactions = protectedProcedure
     }
 
     const getFilter = () => {
-      let baseFilter = and(
-        eq(processedTransactions.handlerId, handler.internalId),
-        eq(processedTransactions.handlerVersion, handler.version.toString()),
-      );
+      let baseFilter =
+        and();
+        // eq(processedTransactions.handlerId, handler.internalId),
+        // eq(processedTransactions.handlerVersion, handler.version.toString()),
       if (input.search) {
         baseFilter = and(
           baseFilter,

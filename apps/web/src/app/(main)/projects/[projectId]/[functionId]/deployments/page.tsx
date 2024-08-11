@@ -9,7 +9,6 @@ import {
   SheetTitle,
 } from "~/components/ui/sheet";
 import { RouterOutputs } from "~/trpc/shared";
-import { Chain } from "../(components)/Chain";
 import { useDeployments } from "./hooks/useDeployments";
 
 type LogRow = RouterOutputs["handlers"]["getLogs"][0];
@@ -23,9 +22,6 @@ function Content() {
 
   return (
     <div className="flex flex-col gap-2 overflow-hidden p-1">
-      <div className="flex items-stretch gap-2">
-        <Chain />
-      </div>
       <div className="overflow-hidden rounded-md border">
         {data && <DeploymentsTable />}
       </div>

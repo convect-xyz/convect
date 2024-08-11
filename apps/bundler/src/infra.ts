@@ -27,12 +27,7 @@ export default async () => {
     const handler = new aws.lambda.Function(`handler-${chain.chainId}`, {
       role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
       s3Bucket: "ingest-build-outputs",
-      s3Key: path.join(
-        "outputs",
-        env.FUNCTION_ID,
-        chain.chainId.toString(),
-        env.DEPLOYMENT_ID + ".zip"
-      ),
+      s3Key: path.join("outputs", env.FUNCTION_ID, env.DEPLOYMENT_ID + ".zip"),
       environment: {
         variables: {
           CHAINS: JSON.stringify(env.CHAINS),
