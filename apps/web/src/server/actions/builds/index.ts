@@ -11,9 +11,7 @@ type TriggerBuildOptions = {
   deploymentId: string;
   stripeCustomerId: string;
   userId: string;
-  handlerId: number;
-  internalHandlerId: string;
-  internalHandlerVersion: number;
+  functionId: number;
   manifestBucket: string;
   manifestPrefix: string;
   envs: Array<{ key: string; value: string }>;
@@ -29,7 +27,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
 
   await db.insert(schema.deployment).values({
     id: options.deploymentId,
-    handlerId: options.handlerId,
+    functionId: options.functionId,
     ecsTaskId: "",
     status: "PENDING",
   });
@@ -52,12 +50,12 @@ export async function createDeployment(options: TriggerBuildOptions) {
             { name: "VERSION", value: options.version },
             { name: "MODE", value: options.mode },
             {
-              name: "HANDLER_VERSION",
-              value: options.internalHandlerVersion.toString(),
+              name: "FUNCTION_ID",
+              value: options.functionId.toString(),
             },
             {
-              name: "HANDLER_ID",
-              value: options.internalHandlerId.toString(),
+              name: "FUNCTION_ENVS",
+              value: JSON.stringify(options.envs),
             },
             {
               name: "SOURCE_BUCKET",
@@ -94,10 +92,6 @@ export async function createDeployment(options: TriggerBuildOptions) {
             {
               name: "USER_ID",
               value: options.userId,
-            },
-            {
-              name: "HANDLER_ENVS",
-              value: JSON.stringify(options.envs),
             },
             {
               name: "ETHERSCAN_API_KEY",

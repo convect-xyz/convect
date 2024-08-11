@@ -172,14 +172,9 @@ export const handler = createTable(
   "handler",
   {
     id: serial("id").notNull().primaryKey(),
-    internalId: varchar("internal_id")
-      .unique()
-      .default(sql`gen_random_uuid()`)
-      .notNull(),
     functionId: integer("function_id")
       .notNull()
       .references(() => convectFunctions.id),
-    version: integer("version").notNull().default(0),
     producerId: integer("producerId")
       .notNull()
       .references(() => producers.id),
@@ -213,8 +208,8 @@ export const functionEnv = createTable(
     iv: varchar("iv").notNull(),
     lastUpdatedAt: timestamp("last_updated_at").defaultNow().notNull(),
   },
-  (handlerEnv) => ({
-    functionIdName: unique().on(handlerEnv.functionId, handlerEnv.key),
+  (functionEnv) => ({
+    functionIdName: unique().on(functionEnv.functionId, functionEnv.key),
   })
 );
 
@@ -236,22 +231,22 @@ export const deployment = createTable(
   "deployment",
   {
     id: varchar("id").notNull().primaryKey(),
-    handlerId: integer("handlerId")
+    functionId: integer("functionId")
       .notNull()
-      .references(() => handler.id, { onDelete: "cascade" }),
+      .references(() => convectFunctions.id, { onDelete: "cascade" }),
     status: deploymentStatus("status").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     ecsTaskId: varchar("ecsTaskId", { length: 255 }).notNull(),
   },
   (deployment) => ({
-    handlerIdIdx: index("deployment_handlerId_idx").on(deployment.handlerId),
+    functionIdIdx: index("deployment_functionId_idx").on(deployment.functionId),
   })
 );
 
 export const deploymentsRelations = relations(deployment, ({ one }) => ({
-  handler: one(handler, {
-    fields: [deployment.handlerId],
-    references: [handler.id],
+  function: one(convectFunctions, {
+    fields: [deployment.functionId],
+    references: [convectFunctions.id],
   }),
 }));
 

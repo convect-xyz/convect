@@ -55,11 +55,6 @@ async function main() {
   await zipLambda();
 
   if (env.MODE === "init") {
-    if (Number(env.HANDLER_VERSION) > 0) {
-      console.info("destroying stack...");
-      await stack.destroy({ onOutput: console.info });
-      console.info("stack destroyed");
-    }
     console.info("stack up...");
     await stack.up({ onOutput: console.info });
     console.info("stack upped.");
@@ -74,7 +69,7 @@ async function main() {
 
 async function getStack() {
   const args: InlineProgramArgs = {
-    stackName: env.HANDLER_ID,
+    stackName: env.FUNCTION_ID,
     projectName: "convect-v1",
     program: infraFactory,
   };
@@ -134,12 +129,7 @@ async function zipLambda() {
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
   const bucket = "ingest-build-outputs";
-  const key = path.join(
-    "outputs",
-    env.HANDLER_ID,
-    env.HANDLER_VERSION,
-    env.DEPLOYMENT_ID + ".zip"
-  );
+  const key = path.join("outputs", env.FUNCTION_ID, env.DEPLOYMENT_ID + ".zip");
 
   await s3.putObject({
     Bucket: bucket,
