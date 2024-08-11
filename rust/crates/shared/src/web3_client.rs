@@ -35,6 +35,13 @@ impl Web3ClientImpl {
 
         Self { web3 }
     }
+
+    pub fn new_from_endpoint(endpoint: String) -> Self {
+        let transport: Http = web3::transports::Http::new(endpoint.as_str()).unwrap();
+        let web3: Web3<Http> = web3::Web3::new(transport);
+
+        Self { web3 }
+    }
 }
 
 impl Web3Client for Web3ClientImpl {
