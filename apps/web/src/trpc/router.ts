@@ -5,6 +5,7 @@ import { switchPlan } from "./routers/billing/switchPlan";
 import { addEnv } from "./routers/function/addEnv";
 import { createFunction } from "./routers/function/create";
 import { deleteEnv } from "./routers/function/deleteEnv";
+import { getDeployments } from "./routers/function/getDeployments";
 import { getEnvs } from "./routers/function/getEnvs";
 import { getFunction } from "./routers/function/getFunction";
 import { getInvocations } from "./routers/function/getInvocations";
@@ -12,7 +13,6 @@ import { updateDescription } from "./routers/function/updateDescription";
 import { updateEnv } from "./routers/function/updateEnv";
 import { updateName } from "./routers/function/updateName";
 import { deleteHandler } from "./routers/handler/delete";
-import { getDeployments } from "./routers/handler/getDeployments";
 import { getHandler } from "./routers/handler/getHandler";
 import { getLogs } from "./routers/handler/getLogs";
 import { getOverview } from "./routers/handler/getOverview";
@@ -41,13 +41,13 @@ export const functionRouter = createTRPCRouter({
   updateName,
   updateDescription,
   getInvocations,
+  getDeployments,
 });
 
 export const handlerRouter = createTRPCRouter({
   get: getHandler,
   delete: deleteHandler,
   getLogs,
-  getDeployments,
   getOverview,
   getTransactions,
 });

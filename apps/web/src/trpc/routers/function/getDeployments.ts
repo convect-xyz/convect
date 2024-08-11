@@ -7,7 +7,7 @@ import { protectedProcedure } from "~/trpc/trpc";
 export const getDeployments = protectedProcedure
   .input(
     z.object({
-      handlerId: z.number(),
+      functionId: z.number(),
     }),
   )
   .output(
@@ -20,9 +20,9 @@ export const getDeployments = protectedProcedure
     ),
   )
   .query(async ({ input, ctx }) => {
-    const handler = await ctx.db.query.handler.findFirst({
+    const handler = await ctx.db.query.convectFunctions.findFirst({
       where(fields, { eq }) {
-        return eq(fields.id, input.handlerId);
+        return eq(fields.id, input.functionId);
       },
     });
 
@@ -31,7 +31,7 @@ export const getDeployments = protectedProcedure
     }
 
     const deployments = await db.query.deployment.findMany({
-      where: (fields, { eq }) => eq(fields.handlerId, handler.id),
+      where: (fields, { eq }) => eq(fields.functionId, handler.id),
       orderBy(fields, operators) {
         return desc(fields.createdAt);
       },
