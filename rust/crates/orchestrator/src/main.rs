@@ -70,6 +70,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         serde_json::from_str(event.payload.records.last().unwrap().sns.message.as_str())
             .expect("Invalid SNS Message");
 
+    println!("Incoming block: {:?}", incoming_block);
+
     let config = Config::new();
     for chain_config in config.chains.into_iter() {
         let incoming_block = incoming_block.get(&chain_config.chain_id).unwrap().clone();
