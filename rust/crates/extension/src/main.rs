@@ -82,7 +82,6 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
                 max_memory_used_mb: metrics.max_memory_used_mb,
                 init_duration_ms: metrics.init_duration_ms,
                 restore_duration_ms: metrics.restore_duration_ms,
-                deployment_id: deployment_id.clone(),
             }),
             _ => (),
         }
@@ -94,7 +93,8 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
             function_id: function_id.clone(),
             chain_id: chain_id.clone(),
             user_id: env::var("USER_ID").expect("USER_ID is not defined"),
-            metrics: all_metrics
+            metrics: all_metrics,
+            deployment_id: deployment_id.clone(),
         })
     );
 
