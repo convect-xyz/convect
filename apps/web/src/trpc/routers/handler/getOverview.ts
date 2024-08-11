@@ -170,7 +170,8 @@ const getSuccessfulTxCount = async (
       sql`SELECT COUNT(*) FROM
         (SELECT DISTINCT transaction_hash FROM processed_transactions WHERE handler_id = ${internalId} 
           AND handler_version = ${version}
-          AND status = 'SUCCESS')
+          AND status = 'SUCCESS'
+          AND deployment_id = ${deploymentId})
       `,
     )
     .then((r) => Number(r.rows.at(0)!.count));

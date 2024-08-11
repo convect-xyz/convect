@@ -61,6 +61,7 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
 
     let function_id = env::var("FUNCTION_ID").expect("Function ID is undefined");
     let chain_id = env::var("CHAIN_ID").expect("Chain ID is undefined");
+    let deployment_id = env::var("DEPLOYMENT_ID").expect("Deployment ID is undefined");
 
     for event in events {
         match event.record {
@@ -81,6 +82,7 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
                 max_memory_used_mb: metrics.max_memory_used_mb,
                 init_duration_ms: metrics.init_duration_ms,
                 restore_duration_ms: metrics.restore_duration_ms,
+                deployment_id: deployment_id.clone(),
             }),
             _ => (),
         }
