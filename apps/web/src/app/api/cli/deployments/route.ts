@@ -1,5 +1,4 @@
 import { schema } from "@convect-xyz/lib";
-import { eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { v4 } from "uuid";
@@ -81,7 +80,6 @@ export const POST = async (req: NextRequest) => {
       .insert(schema.handler)
       .values({
         functionId: fn.convectFunction.id,
-        version: -1,
         infraVersion: env.VERSION,
         producerId: data.producerId,
       })
@@ -119,26 +117,8 @@ export const POST = async (req: NextRequest) => {
 
   const deploymentId = v4();
 
-  if (data.mode === "init") {
-    if (!data.override) {
-      return NextResponse.json(
-        { message: "Override denied." },
-        { status: 401 },
-      );
-    }
-
-    handler.version = await db
-      .update(schema.handler)
-      .set({
-        version: sql`${schema.handler.version} + 1`,
-      })
-      .where(eq(schema.handler.id, handler.id))
-      .returning({ version: schema.handler.version })
-      .then((v) => v[0]!.version);
-  }
-
   const bundledHandler = data.handler;
-  const sourcePrefix = `code/${handler.internalId}/${handler.version}/${deploymentId}.zip`;
+  const sourcePrefix = `code/${handler.convectFunction.id}/${deploymentId}.zip`;
   const promises: Promise<any>[] = [
     s3.putObject({
       Bucket: "ingest-build-outputs",
@@ -149,8 +129,8 @@ export const POST = async (req: NextRequest) => {
 
   const manifestPrefix = path.join(
     "manifests",
-    handler.internalId,
-    handler.version + ".json",
+    handler.convectFunction.id.toString(),
+    deploymentId + ".json",
   );
   if (data.mode === "init") {
     const manifest = data.manifest;
@@ -183,9 +163,7 @@ export const POST = async (req: NextRequest) => {
     deploymentId,
     stripeCustomerId: await getStripeCustomerId(user),
     userId: user.id,
-    handlerId: handler.id,
-    internalHandlerId: handler.internalId,
-    internalHandlerVersion: handler.version,
+    functionId: handler.functionId,
     mode: data.mode,
     envs: handler.convectFunction.envs.map((env) => ({
       ...env,

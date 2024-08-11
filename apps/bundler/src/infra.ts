@@ -24,21 +24,19 @@ export default async () => {
 
     txQueueUrls.push(queue.url);
 
-    const handler = new aws.lambda.Function(`handler`, {
+    const handler = new aws.lambda.Function(`handler-${chain.chainId}`, {
       role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
       s3Bucket: "ingest-build-outputs",
       s3Key: path.join(
         "outputs",
-        env.HANDLER_ID,
-        env.HANDLER_VERSION,
+        env.FUNCTION_ID,
+        chain.chainId.toString(),
         env.DEPLOYMENT_ID + ".zip"
       ),
       environment: {
         variables: {
-          HANDLER_ID: env.HANDLER_ID,
-          HANDLER_VERSION: env.HANDLER_VERSION,
           CHAINS: JSON.stringify(env.CHAINS),
-          USER_ENVS: env.HANDLER_ENVS,
+          USER_ENVS: env.FUNCTION_ENVS,
           TRANSACTION_QUEUE_URL: queue.url,
           STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
           USER_ID: env.USER_ID,
@@ -57,10 +55,13 @@ export default async () => {
       runtime: "nodejs20.x",
     });
 
-    new aws.lambda.EventSourceMapping(env.HANDLER_ID + "-source-mapping", {
-      eventSourceArn: queue.arn,
-      functionName: handler.arn,
-    });
+    new aws.lambda.EventSourceMapping(
+      env.FUNCTION_ID + chain.chainId.toString() + "-source-mapping",
+      {
+        eventSourceArn: queue.arn,
+        functionName: handler.arn,
+      }
+    );
   }
 
   const txQueueUrlOutputs = pulumi.all(txQueueUrls);
@@ -73,8 +74,6 @@ export default async () => {
       variables: {
         MANIFEST_BUCKET: env.MANIFEST_BUCKET,
         MANIFEST_PREFIX: env.MANIFEST_PREFIX,
-        HANDLER_ID: env.HANDLER_ID,
-        HANDLER_VERSION: env.HANDLER_VERSION,
         VERSION: env.VERSION,
         SYNCER_TASK_DEFINITION_ARN: stackRef.getOutput("syncerTaskDefinition"),
         SYNCER_CLUSTER,
@@ -108,7 +107,7 @@ export default async () => {
   const snsOrchestratorPermission = new aws.lambda.Permission(
     `allow_sns_invoke_orchestrator`,
     {
-      statementId: `${env.HANDLER_ID}`,
+      statementId: `${env.FUNCTION_ID}`,
       action: "lambda:InvokeFunction",
       principal: "sns.amazonaws.com",
       sourceArn: ALL_CHAINS_SNS_TOPIC,

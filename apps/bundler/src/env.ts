@@ -30,8 +30,11 @@ export const env = createEnv({
       .min(1)
       .optional()
       .refine(modeRequired(["init", "update"])),
-    HANDLER_ID: z.string().min(1),
-    HANDLER_VERSION: z.string(),
+    FUNCTION_ID: z.string().min(1),
+    FUNCTION_ENVS: z
+      .string()
+      .optional()
+      .refine(modeRequired(["init", "update"])),
     SOURCE_BUCKET: z
       .string()
       .optional()
@@ -45,10 +48,6 @@ export const env = createEnv({
       .optional()
       .refine(modeRequired(["init", "update"])),
     USER_ID: z
-      .string()
-      .optional()
-      .refine(modeRequired(["init", "update"])),
-    HANDLER_ENVS: z
       .string()
       .optional()
       .refine(modeRequired(["init", "update"])),
