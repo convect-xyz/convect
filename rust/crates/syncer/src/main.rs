@@ -21,8 +21,8 @@ const BATCH_SIZE: u64 = 1500;
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
     let mut pipeline = State::load(
-        syncer_config.handler_id.clone(),
-        syncer_config.handler_version.clone(),
+        syncer_config.function_id.clone(),
+        syncer_config.chain_id.clone(),
     );
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
@@ -124,8 +124,8 @@ fn get_block_configs(mut start_block: u64, end_block: u64, batch_size: u64) -> V
 }
 
 pub struct Config {
-    pub handler_id: String,
-    pub handler_version: String,
+    pub function_id: String,
+    pub chain_id: String,
     pub start_block: u64,
     pub end_block: u64,
     pub tx_queue_url: String,
@@ -133,8 +133,8 @@ pub struct Config {
 
 pub fn load_config_from_env() -> Config {
     return Config {
-        handler_id: env::var("HANDLER_ID").expect("Handler ID not set"),
-        handler_version: env::var("HANDLER_VERSION").expect("Handler ID not set"),
+        function_id: env::var("FUNCTION_ID").expect("Function ID not set"),
+        chain_id: env::var("CHAIN_ID").expect("Chain ID not set"),
         start_block: env::var("START_BLOCK")
             .expect("START_BLOCK is not present")
             .parse()

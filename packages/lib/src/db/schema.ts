@@ -150,6 +150,7 @@ export const convectFunctions = createTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     name: varchar("name").notNull(),
     description: varchar("description").notNull().default(""),
+    infraVersion: varchar("infra_version"),
   },
   (handler) => ({
     projectIdName: unique().on(handler.name, handler.projectId),

@@ -1,6 +1,7 @@
 import { init } from "@paralleldrive/cuid2";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { env } from "~/env";
 import xZod from "~/lib/shared/validation";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -36,6 +37,7 @@ export const createFunction = protectedProcedure
       .values({
         projectId: project.id,
         name: input.name,
+        infraVersion: env.VERSION,
       })
       .returning()
       .then((d) => d.at(0)!);

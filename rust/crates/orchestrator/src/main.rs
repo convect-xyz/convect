@@ -17,7 +17,7 @@ use shared::{
 };
 use std::collections::BTreeMap;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct ChainConfig {
     #[serde(rename = "chainId")]
     chain_id: u64,
@@ -39,11 +39,7 @@ fn configure_sentry_scope(config: &Config) {
             "deployment_id".to_string(),
             config.deployment_id.clone().into(),
         );
-        deployment_map.insert("handler_id".to_string(), config.handler_id.clone().into());
-        deployment_map.insert(
-            "handler_version".to_string(),
-            config.handler_version.clone().into(),
-        );
+        deployment_map.insert("function_id".to_string(), config.function_id.clone().into());
 
         scope.set_context("deployment", Context::Other(deployment_map));
     });
@@ -70,152 +66,165 @@ fn main() -> Result<(), Error> {
 
 // Make sure we received higher block number only
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
-    let config = Config::new();
-    let sdk_config = aws_config::load_from_env().await;
-    let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
-    let fetcher = TransactionFetcherImpl::new();
-    let web3_client = Web3ClientImpl::new();
-    let mut pipeline = State::load(config.handler_id.clone(), config.handler_version.clone());
-
     let incoming_block: HashMap<u64, u64> =
         serde_json::from_str(event.payload.records.last().unwrap().sns.message.as_str())
             .expect("Invalid SNS Message");
 
-    for chain_config in config.chains.iter() {
-        let s3_client = aws_sdk_s3::Client::new(&sdk_config);
-        let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
-        let enqueuer =
-            SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
-
+    let config = Config::new();
+    for chain_config in config.chains.into_iter() {
         let incoming_block = incoming_block.get(&chain_config.chain_id).unwrap().clone();
-        if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
-            return Ok(());
-        }
 
-        if pipeline
-            .state()
-            .eq(&shared::types::syncing::SyncState::SYNCING)
-        {
-            return Ok(());
-        }
+        tokio::spawn(async move {
+            let sdk_config = aws_config::load_from_env().await;
+            let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
+            let fetcher = TransactionFetcherImpl::new();
+            let web3_client = Web3ClientImpl::new();
 
-        let init_block: Option<u64> = match pipeline.last_block() {
-            Some(_) => None,
-            None => {
-                let manifest = Manifest::from_env().await.unwrap();
-                let manifest_min_block = manifest
-                    .tx_configs
-                    .iter()
-                    .map(|c| u64::try_from(c.start_block).expect("i64 to u64 failed"))
-                    .min();
+            let config = Config::new();
+            let mut pipeline = State::load(
+                config.function_id.clone(),
+                chain_config.chain_id.to_string(),
+            );
 
-                let etherscan_provider = contract_info::EtherscanContractInfoProvider::new(
-                    env::var("ETHERSCAN_API_KEY").expect("ETHERSCAN_API_KEY not set"),
-                    env::var("ETHERSCAN_LIKE").expect("ETHERSCAN_LIKE not set"),
-                );
+            let s3_client = aws_sdk_s3::Client::new(&sdk_config);
+            let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
+            let enqueuer = SQSTransactionEnqueuer::new(
+                s3_client,
+                chain_config.tx_queue_url.clone(),
+                sqs_client,
+            );
 
-                let creation_tx_hashes: Vec<_> = etherscan_provider
-                    .get_contract_creation_info(
-                        manifest
-                            .log_configs
+            if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
+                return Ok(());
+            }
+
+            if pipeline
+                .state()
+                .eq(&shared::types::syncing::SyncState::SYNCING)
+            {
+                return Ok(());
+            }
+
+            let init_block: Option<u64> = match pipeline.last_block() {
+                Some(_) => None,
+                None => {
+                    let manifest = Manifest::from_env().await.unwrap();
+                    let manifest_min_block = manifest
+                        .tx_configs
+                        .iter()
+                        .map(|c| u64::try_from(c.start_block).expect("i64 to u64 failed"))
+                        .min();
+
+                    let etherscan_provider = contract_info::EtherscanContractInfoProvider::new(
+                        env::var("ETHERSCAN_API_KEY").expect("ETHERSCAN_API_KEY not set"),
+                        env::var("ETHERSCAN_LIKE").expect("ETHERSCAN_LIKE not set"),
+                    );
+
+                    let creation_tx_hashes: Vec<_> = etherscan_provider
+                        .get_contract_creation_info(
+                            manifest
+                                .log_configs
+                                .iter()
+                                .map(|l| l.address.clone())
+                                .collect(),
+                        )
+                        .await
+                        .unwrap()
+                        .iter()
+                        .map(|c| c.tx_hash.clone())
+                        .collect();
+
+                    let transactions: Result<Vec<_>, _> = join_all(
+                        creation_tx_hashes
                             .iter()
-                            .map(|l| l.address.clone())
-                            .collect(),
+                            .map(|tx_hash| web3_client.get_transaction_receipt(tx_hash.clone())),
                     )
                     .await
-                    .unwrap()
-                    .iter()
-                    .map(|c| c.tx_hash.clone())
+                    .into_iter()
                     .collect();
 
-                let transactions: Result<Vec<_>, _> = join_all(
-                    creation_tx_hashes
-                        .iter()
-                        .map(|tx_hash| web3_client.get_transaction_receipt(tx_hash.clone())),
-                )
-                .await
-                .into_iter()
-                .collect();
+                    let contract_min_block = match transactions {
+                        Ok(receipts) => {
+                            let mut min_block = None;
 
-                let contract_min_block = match transactions {
-                    Ok(receipts) => {
-                        let mut min_block = None;
-
-                        for receipt in receipts.iter() {
-                            if let Some(receipt) = receipt {
-                                let block_number = receipt.block_number.unwrap().as_u64();
-                                if min_block.is_none() || block_number < min_block.unwrap() {
-                                    min_block = Some(block_number);
+                            for receipt in receipts.iter() {
+                                if let Some(receipt) = receipt {
+                                    let block_number = receipt.block_number.unwrap().as_u64();
+                                    if min_block.is_none() || block_number < min_block.unwrap() {
+                                        min_block = Some(block_number);
+                                    }
                                 }
                             }
+
+                            min_block
                         }
+                        Err(e) => {
+                            println!("{:?}", e);
+                            None
+                        }
+                    };
 
-                        min_block
-                    }
-                    Err(e) => {
-                        println!("{:?}", e);
-                        None
-                    }
-                };
+                    Some(max(
+                        contract_min_block.unwrap_or(0),
+                        manifest_min_block.unwrap_or(0),
+                    ))
+                }
+            };
 
-                Some(max(
-                    contract_min_block.unwrap_or(0),
-                    manifest_min_block.unwrap_or(0),
-                ))
-            }
-        };
-
-        if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
-            pipeline
-                .update()
-                .set_state(shared::types::syncing::SyncState::SYNCING)
-                .send()
-                .expect("Failed to update pipeline");
-
-            return batch_sync(
-                chain_config.chain_id,
-                &ecs_client,
-                &mut pipeline,
-                incoming_block,
-                init_block,
-                &config,
-            )
-            .await;
-        }
-
-        let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
-        let manifest = Manifest::from_env().await.unwrap();
-        let transactions = fetcher
-            .get_transactions_in_range(&manifest, from_block, incoming_block)
-            .inspect_err(|e| {
-                println!("{:?}", e);
+            if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
                 pipeline
                     .update()
-                    .set_state(shared::types::syncing::SyncState::FAILED)
+                    .set_state(shared::types::syncing::SyncState::SYNCING)
                     .send()
-                    .unwrap();
-            })
-            .await?;
+                    .expect("Failed to update pipeline");
 
-        let result = enqueuer
-            .enqueue_transactions(&mut pipeline, &transactions)
-            .await;
+                return batch_sync(
+                    chain_config.chain_id,
+                    &ecs_client,
+                    &mut pipeline,
+                    incoming_block,
+                    init_block,
+                    &config,
+                )
+                .await;
+            }
 
-        match result {
-            Ok(_) => pipeline.update().set_last_block(incoming_block).send(),
-            Err(_) => pipeline
-                .update()
-                .set_state(shared::types::syncing::SyncState::FAILED)
-                .send(),
-        }
-        .unwrap();
+            let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
+            let manifest = Manifest::from_env().await.unwrap();
+            let transactions = fetcher
+                .get_transactions_in_range(&manifest, from_block, incoming_block)
+                .inspect_err(|e| {
+                    println!("{:?}", e);
+                    pipeline
+                        .update()
+                        .set_state(shared::types::syncing::SyncState::FAILED)
+                        .send()
+                        .unwrap();
+                })
+                .await?;
+
+            let result = enqueuer
+                .enqueue_transactions(&mut pipeline, &transactions)
+                .await;
+
+            match result {
+                Ok(_) => pipeline.update().set_last_block(incoming_block).send(),
+                Err(_) => pipeline
+                    .update()
+                    .set_state(shared::types::syncing::SyncState::FAILED)
+                    .send(),
+            }
+            .unwrap();
+
+            Ok(())
+        });
     }
     Ok(())
 }
 
+#[derive(Debug, Clone)]
 struct Config {
-    handler_id: String,
-    handler_version: String,
+    function_id: String,
     manifest_bucket: String,
     manifest_prefix: String,
     syncer_task_definition_arn: String,
@@ -231,8 +240,7 @@ struct Config {
 impl Config {
     fn new() -> Self {
         Self {
-            handler_id: env::var("HANDLER_ID").expect("HANDLER_ID not set"),
-            handler_version: env::var("HANDLER_VERSION").expect("HANDLER_VERSION not set"),
+            function_id: env::var("FUNCTION_ID").expect("FUNCTION_ID not set"),
             manifest_bucket: env::var("MANIFEST_BUCKET").expect("MANIFEST_BUCKET not set"),
             manifest_prefix: env::var("MANIFEST_PREFIX").expect("MANIFEST_PREFIX not set"),
             syncer_task_definition_arn: env::var("SYNCER_TASK_DEFINITION_ARN")
@@ -322,8 +330,8 @@ fn get_task_override(
                     create_key_value_pair("END_BLOCK", &end_block.to_string()),
                     create_key_value_pair("TRANSACTION_QUEUE_URL", &chain_config.tx_queue_url),
                     create_key_value_pair("NODE_ENDPOINT", &chain_config.polling_url),
-                    create_key_value_pair("HANDLER_ID", &config.handler_id),
-                    create_key_value_pair("HANDLER_VERSION", &config.handler_version),
+                    create_key_value_pair("CHAIN_ID", &chain_id.to_string()),
+                    create_key_value_pair("FUNCTION_ID", &config.function_id),
                     create_key_value_pair("VERSION", &config.version),
                     create_key_value_pair("MANIFEST_BUCKET", &config.manifest_bucket),
                     create_key_value_pair("MANIFEST_PREFIX", &config.manifest_prefix),

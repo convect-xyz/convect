@@ -156,7 +156,7 @@ export const POST = async (req: NextRequest) => {
   });
 
   await createDeployment({
-    version: handler.infraVersion,
+    version: handler.convectFunction.infraVersion!,
     sourcePrefix,
     manifestBucket: MANIFEST_BUCKET,
     manifestPrefix,

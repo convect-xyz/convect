@@ -148,6 +148,13 @@
       "when": 1723387039105,
       "tag": "0020_blue_next_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1723391336741,
+      "tag": "0021_true_cyclops",
+      "breakpoints": true
     }
   ]
 }

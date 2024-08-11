@@ -1,5 +1,4 @@
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 use std::env;
 use tokio::join;
 
@@ -10,31 +9,18 @@ use reqwest::blocking::Client;
 use serde_json::json;
 use shared::reporting_sdk::{self, ReportingSdk, SQSReportingSdk};
 
-/// Report metrics
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct ReportMetrics<'a> {
-    handler_id: &'a str,
-    handler_version: &'a str,
-    duration_ms: f64,
-    billed_duration_ms: u64,
-    memory_size_mb: u64,
-    max_memory_used_mb: u64,
-    init_duration_ms: Option<f64>,
-    restore_duration_ms: Option<f64>,
-}
-
 const TINYBIRD_API_KEY: &'static str = env!("TINYBIRD_API_KEY");
 
 async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
-    let handler_id = env::var("HANDLER_ID").expect("Handler ID is undefined");
-    let handler_version = env::var("HANDLER_VERSION").expect("Handler VERSION is undefined");
+    let function_id = env::var("FUNCTION_ID").expect("Function ID is undefined");
+    let chain_id = env::var("CHAIN_ID").expect("Chain ID is undefined");
 
     let records: Vec<String> = logs.into_iter().map(|record|{
       let re = Regex::new(r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$").unwrap();
-      print!("{:?}", re);
+
       re.captures(&record).map(|result| serde_json::to_string(&json!({
-        "handler_id": handler_id,
-        "handler_version": handler_version,
+        "function_id": function_id,
+        "chain_id": chain_id,
         "time": result["time"].to_string(),
         "invocation_id": result["uuid"].to_string(),
         "log_level": result["log_level"].to_string(),
@@ -73,8 +59,8 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
     let mut logs = Vec::new();
     let mut all_metrics: Vec<reporting_sdk::Metric> = Vec::new();
 
-    let handler_id = env::var("HANDLER_ID").expect("Handler ID is undefined");
-    let handler_version = env::var("HANDLER_VERSION").expect("Handler Version is undefined");
+    let function_id = env::var("FUNCTION_ID").expect("Function ID is undefined");
+    let chain_id = env::var("CHAIN_ID").expect("Chain ID is undefined");
 
     for event in events {
         match event.record {
@@ -103,8 +89,8 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
     let _ = join!(
         upload_logs(logs),
         upload_metrics(reporting_sdk::Request::Metrics {
-            handler_id: handler_id.clone(),
-            handler_version: handler_version.clone(),
+            function_id: function_id.clone(),
+            chain_id: chain_id.clone(),
             user_id: env::var("USER_ID").expect("USER_ID is not defined"),
             metrics: all_metrics
         })
