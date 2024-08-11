@@ -4621,6 +4621,7 @@ name = "producer"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "async-trait",
  "aws-config",
  "aws-sdk-sns",
  "aws-smithy-runtime-api",

@@ -2,6 +2,9 @@ import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 const modeSchema = z.enum(["init", "update", "destroy"]);
+const chainConfigSchema = z.array(
+  z.object({ chainId: z.number(), pollingUrl: z.string() })
+);
 
 const modeRequired =
   <T>(modes: Array<z.infer<typeof modeSchema>>) =>
@@ -49,18 +52,6 @@ export const env = createEnv({
       .string()
       .optional()
       .refine(modeRequired(["init", "update"])),
-    CHAIN_SNS: z
-      .string()
-      .optional()
-      .refine(modeRequired(["init", "update"])),
-    CHAIN_ID: z.coerce
-      .number()
-      .optional()
-      .refine(modeRequired(["init", "update"])),
-    POLLING_URL: z
-      .string()
-      .optional()
-      .refine(modeRequired(["init", "update"])),
     MANIFEST_PREFIX: z
       .string()
       .optional()
@@ -77,6 +68,7 @@ export const env = createEnv({
       .string()
       .optional()
       .refine(modeRequired(["init", "update"])),
+    CHAINS: z.string().transform((v) => chainConfigSchema.parse(JSON.parse(v))),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
