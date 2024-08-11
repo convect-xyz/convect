@@ -166,6 +166,15 @@ export const POST = async (req: NextRequest) => {
 
   await Promise.all(promises);
 
+  const allHandlers = await db.query.handler.findMany({
+    where(fields, { eq }) {
+      return eq(fields.functionId, handler.functionId);
+    },
+    with: {
+      producer: true,
+    },
+  });
+
   await createDeployment({
     version: handler.infraVersion,
     sourcePrefix,
@@ -177,13 +186,14 @@ export const POST = async (req: NextRequest) => {
     handlerId: handler.id,
     internalHandlerId: handler.internalId,
     internalHandlerVersion: handler.version,
-    pollingUrl: handler.producer.pollingUrl,
-    chainSns: handler.producer.topicArn!,
-    chainId: handler.producer.chainId,
     mode: data.mode,
     envs: handler.convectFunction.envs.map((env) => ({
       ...env,
       value: decryptEnvValue(env.value, env.iv),
+    })),
+    chainConfigs: allHandlers.map((chainConfig) => ({
+      chainId: chainConfig.producer.chainId,
+      pollingUrl: chainConfig.producer.pollingUrl,
     })),
     etherscanApiKey: handler.producer.etherscanApiKey,
     etherscanLike: handler.producer.etherscanLike,

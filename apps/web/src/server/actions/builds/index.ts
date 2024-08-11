@@ -11,15 +11,13 @@ type TriggerBuildOptions = {
   deploymentId: string;
   stripeCustomerId: string;
   userId: string;
-  chainId: number;
   handlerId: number;
   internalHandlerId: string;
   internalHandlerVersion: number;
   manifestBucket: string;
   manifestPrefix: string;
-  pollingUrl: string;
-  chainSns: string;
   envs: Array<{ key: string; value: string }>;
+  chainConfigs: Array<{ chainId: number; pollingUrl: string }>;
   mode: "init" | "update";
   sourcePrefix: string;
   etherscanApiKey: string;
@@ -78,16 +76,8 @@ export async function createDeployment(options: TriggerBuildOptions) {
               value: options.manifestPrefix,
             },
             {
-              name: "POLLING_URL",
-              value: options.pollingUrl,
-            },
-            {
-              name: "CHAIN_SNS",
-              value: options.chainSns,
-            },
-            {
-              name: "CHAIN_ID",
-              value: options.chainId.toString(),
+              name: "CHAINS",
+              value: JSON.stringify(options.chainConfigs),
             },
             {
               name: "DATABASE_URL",
