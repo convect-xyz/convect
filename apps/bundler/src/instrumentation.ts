@@ -79,14 +79,12 @@ init({
     });
 
     scope.setContext("function", {
-      id: process.env.HANDLER_ID,
-      version: process.env.HANDLER_VERSION,
+      id: process.env.FUNCTION_ID,
       manifestBucket: process.env.MANIFEST_BUCKET,
       manifestKey: process.env.MANIFEST_PREFIX,
       sourceBucket: process.env.SOURCE_BUCKET,
       sourceKey: process.env.SOURCE_PREFIX,
       mode: process.env.MODE,
-      chain: process.env.CHAIN_ID,
     });
 
     return scope;
