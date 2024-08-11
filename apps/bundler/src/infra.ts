@@ -17,10 +17,13 @@ export default async () => {
   const txQueueUrls: Array<pulumi.Output<string>> = [];
 
   for (const chain of env.CHAINS) {
-    const queue = new aws.sqs.Queue(`tx-queue-${chain.chainId}`, {
-      visibilityTimeoutSeconds: 900,
-      fifoQueue: true,
-    });
+    const queue = new aws.sqs.Queue(
+      `tx-queue-${chain.chainId}-${env.DEPLOYMENT_ID}`,
+      {
+        visibilityTimeoutSeconds: 900,
+        fifoQueue: true,
+      }
+    );
 
     txQueueUrls.push(queue.url);
 
@@ -76,6 +79,7 @@ export default async () => {
         SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
         SYNCER_CONTAINER_NAME,
         GITHUB_SHA: githubSha,
+        FUNCTION_ID: env.FUNCTION_ID,
         ETHERSCAN_LIKE: env.ETHERSCAN_LIKE,
         ETHERSCAN_API_KEY: env.ETHERSCAN_API_KEY,
         DEPLOYMENT_ID: env.DEPLOYMENT_ID,
