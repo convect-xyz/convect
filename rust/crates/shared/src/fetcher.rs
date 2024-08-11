@@ -25,6 +25,10 @@ pub struct TransactionFetcherImpl<T: Web3Client> {
 }
 
 impl<T: Web3Client> TransactionFetcherImpl<T> {
+    pub fn new_from_client(web3_client: T) -> Self {
+        Self { web3_client }
+    }
+
     fn get_log_configs_in_range<'a>(
         &'a self,
         manifest: &'a Manifest,

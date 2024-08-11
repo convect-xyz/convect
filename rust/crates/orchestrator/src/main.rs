@@ -79,8 +79,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         tokio::spawn(async move {
             let sdk_config = aws_config::load_from_env().await;
             let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
-            let fetcher = TransactionFetcherImpl::new();
             let web3_client = Web3ClientImpl::new_from_endpoint(chain_config.polling_url.clone());
+            let fetcher = TransactionFetcherImpl::new_from_client(web3_client.clone());
 
             let config = Config::new();
             let mut pipeline = State::load(

@@ -19,6 +19,7 @@ pub trait Web3Client {
            + Send;
 }
 
+#[derive(Clone)]
 pub struct Web3ClientImpl {
     web3: Web3<Http>,
 }
