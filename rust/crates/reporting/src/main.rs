@@ -112,8 +112,8 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
     match r {
         reporting_sdk::Request::Results {
             results,
-            handler_id,
-            handler_version,
+            function_id,
+            chain_id,
             user_id,
             invocation_id,
             ..
@@ -132,8 +132,8 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
                         label: label.label.clone(),
                         status: "SUCCESS".to_string(),
                         timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        handler_id: handler_id.clone(),
-                        handler_version: handler_version.clone(),
+                        handler_id: function_id.clone(),
+                        handler_version: chain_id.clone(),
                         batch_id: result.batch_id.clone(),
                     }))
                 }
@@ -144,16 +144,16 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
                         label: label.label.clone(),
                         status: "FAILED".to_string(),
                         timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        handler_id: handler_id.clone(),
-                        handler_version: handler_version.clone(),
+                        handler_id: function_id.clone(),
+                        handler_version: chain_id.clone(),
                         batch_id: result.batch_id.clone(),
                     }))
                 }
             }
         }
         reporting_sdk::Request::Metrics {
-            handler_id,
-            handler_version,
+            function_id,
+            chain_id,
             metrics,
             ..
         } => {
@@ -165,8 +165,8 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
                     max_memory_used_mb: metric.max_memory_used_mb as i64,
                     init_duration_ms: metric.init_duration_ms,
                     restore_duration_ms: metric.restore_duration_ms,
-                    handler_id: handler_id.clone(),
-                    handler_version: handler_version.clone(),
+                    handler_id: function_id.clone(),
+                    handler_version: chain_id.clone(),
                 }))
             }
         }

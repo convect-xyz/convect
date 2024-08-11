@@ -32,16 +32,16 @@ pub struct Metric {
 #[derive(Serialize, Deserialize)]
 pub enum Request {
     Results {
-        handler_id: String,
-        handler_version: String,
+        function_id: String,
+        chain_id: String,
         stripe_customer_id: String,
         user_id: String,
         invocation_id: String,
         results: Vec<TransactionResult>,
     },
     Metrics {
-        handler_id: String,
-        handler_version: String,
+        function_id: String,
+        chain_id: String,
         user_id: String,
         metrics: Vec<Metric>,
     },

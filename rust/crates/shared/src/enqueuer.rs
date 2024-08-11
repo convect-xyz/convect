@@ -121,10 +121,8 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
 
             let bucket = "ingest-fetch-logs";
             let key = format!(
-                "syncs/{handler}/{version}/{id}",
-                handler = env::var("HANDLER_ID").expect("Handler ID not defined"),
-                version = env::var("HANDLER_VERSION").expect("Handler Version not defined"),
-                id = id
+                "syncs/{function_id}/{id}",
+                function_id = env::var("FUNCTION_ID").expect("FUNCTION ID not defined"),
             );
 
             let response = self

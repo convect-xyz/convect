@@ -144,8 +144,8 @@ pub mod syncing {
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct Inner {
-        pub handler_id: String,
-        pub handler_version: String,
+        pub function_id: String,
+        pub chain_id: String,
         pub state: SyncState,
         pub last_block: Option<String>,
     }
@@ -156,8 +156,8 @@ pub mod syncing {
     }
 
     impl State {
-        pub fn handler_id(&self) -> String {
-            self.inner.handler_id.clone()
+        pub fn function_id(&self) -> String {
+            self.inner.function_id.clone()
         }
 
         pub fn state(&self) -> SyncState {
@@ -174,23 +174,23 @@ pub mod syncing {
             })
         }
 
-        pub fn load(handler_id: String, handler_version: String) -> Self {
+        pub fn load(function_id: String, chain_id: String) -> Self {
             let client = redis::Client::open("rediss://default:AVNS_7BaBQxFTF74jG4c8B1T@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061")
             .unwrap();
 
             let mut con = client.get_connection().unwrap();
             let result: Vec<Option<String>> = con
                 .mget(vec![
-                    format!("{handler_id}-{handler_version}-state"),
-                    format!("{handler_id}-{handler_version}-last-block"),
+                    format!("{function_id}-{chain_id}-state"),
+                    format!("{function_id}-{chain_id}-last-block"),
                 ])
                 .unwrap();
 
             Self {
                 connection: con,
                 inner: Inner {
-                    handler_id: handler_id.clone(),
-                    handler_version: handler_version.clone(),
+                    function_id: function_id.clone(),
+                    chain_id: chain_id.clone(),
                     state: match result[0].as_ref() {
                         Some(state) => serde_json::from_str(state.as_str()).unwrap(),
                         None => SyncState::IDLE,
@@ -209,9 +209,9 @@ pub mod syncing {
 
         pub fn increment_transaction_count(&mut self, tx_count: usize) {
             let key = format!(
-                "tx-count-{handler_id}-{handler_version}",
-                handler_id = &self.inner.handler_id,
-                handler_version = &self.inner.handler_version
+                "tx-count-{function_id}-{chain_id}",
+                function_id = &self.inner.function_id,
+                chain_id = &self.inner.chain_id
             );
 
             let _: u64 = self.connection.incr(key, tx_count).unwrap();
@@ -219,9 +219,9 @@ pub mod syncing {
 
         pub fn get_transaction_count(&mut self) -> u64 {
             let key = format!(
-                "tx-count-{handler_id}-{handler_version}",
-                handler_id = &self.inner.handler_id,
-                handler_version = &self.inner.handler_version
+                "tx-count-{function_id}-{chain_id}",
+                function_id = &self.inner.function_id,
+                chain_id = &self.inner.chain_id
             );
 
             let count: u64 = self.connection.get(key).unwrap();
@@ -254,19 +254,19 @@ pub mod syncing {
         }
 
         pub fn send(self) -> Result<(), BoxError> {
-            let handler_id = &self.inner.handler_id;
-            let handler_version = &self.inner.handler_version;
+            let function_id = &self.inner.function_id;
+            let chain_id = &self.inner.chain_id;
 
             backoff::retry::<_, ExponentialBackoff<SystemClock>, (), RedisError>(
                 ExponentialBackoff::default(),
                 || {
                     self.connection.mset(&[
                         (
-                            format!("{handler_id}-{handler_version}-state"),
+                            format!("{function_id}-{chain_id}-state"),
                             serde_json::to_string(&self.inner.state).unwrap(),
                         ),
                         (
-                            format!("{handler_id}-{handler_version}-last-block"),
+                            format!("{function_id}-{chain_id}-last-block"),
                             self.inner.last_block.clone().unwrap_or_default(),
                         ),
                     ])?;
@@ -289,10 +289,10 @@ pub mod processing {
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct Inner {
-        #[serde(rename = "HandlerId_")]
-        pub handler_id: String,
-        #[serde(rename = "HandlerVersion_")]
-        pub handler_version: String,
+        #[serde(rename = "FunctionId_")]
+        pub function_id: String,
+        #[serde(rename = "ChainId_")]
+        pub chain_id: String,
         #[serde(rename = "ErrorTx_")]
         pub error_tx: Option<String>,
         #[serde(rename = "ErrorLabel_")]
@@ -305,19 +305,19 @@ pub mod processing {
     }
 
     impl State {
-        pub fn handler_id(&self) -> String {
-            self.inner.handler_id.clone()
+        pub fn function_id(&self) -> String {
+            self.inner.function_id.clone()
         }
 
-        pub async fn load(handler_id: String, handler_version: String) -> Self {
+        pub async fn load(function_id: String, chain_id: String) -> Self {
             let client = redis::Client::open("rediss://default:AVNS_7BaBQxFTF74jG4c8B1T@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061").unwrap();
 
             let mut con = client.get_multiplexed_async_connection().await.unwrap();
 
             let result: Vec<Option<String>> = con
                 .mget(vec![
-                    format!("process-state-{handler_id}-{handler_version}-error-tx"),
-                    format!("process-state-{handler_id}-{handler_version}-error-label"),
+                    format!("process-state-{function_id}-{chain_id}-error-tx"),
+                    format!("process-state-{function_id}-{chain_id}-error-label"),
                 ])
                 .await
                 .unwrap();
@@ -325,8 +325,8 @@ pub mod processing {
             Self {
                 connection: con,
                 inner: Inner {
-                    handler_id: handler_id.clone(),
-                    handler_version: handler_version.clone(),
+                    function_id: function_id.clone(),
+                    chain_id: chain_id.clone(),
                     error_tx: result[0].clone(),
                     error_label: result[1].clone(),
                 },
@@ -368,8 +368,8 @@ pub mod processing {
         }
 
         pub async fn send(self) -> Result<(), BoxError> {
-            let handler_id = self.inner.handler_id.to_string();
-            let handler_version = self.inner.handler_version.to_string();
+            let function_id = self.inner.function_id.to_string();
+            let chain_id = self.inner.chain_id.to_string();
             let connection = Mutex::new(self.connection);
 
             backoff::future::retry::<(), RedisError, _, _, ExponentialBackoff<SystemClock>>(
@@ -380,11 +380,11 @@ pub mod processing {
                         .await
                         .mset(&[
                             (
-                                format!("process-state-{handler_id}-{handler_version}-error-tx"),
+                                format!("process-state-{function_id}-{chain_id}-error-tx"),
                                 self.temp_inner.error_tx.clone().unwrap_or_default(),
                             ),
                             (
-                                format!("process-state-{handler_id}-{handler_version}-error-label"),
+                                format!("process-state-{function_id}-{chain_id}-error-label"),
                                 self.temp_inner.error_label.clone().unwrap_or_default(),
                             ),
                         ])
