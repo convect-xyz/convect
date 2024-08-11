@@ -41,7 +41,6 @@ export default async () => {
           USER_ID: env.USER_ID,
           REPORTING_QUEUE_URL: stackRef.getOutput("reportingQueueUrl"),
           DEPLOYMENT_ID: env.DEPLOYMENT_ID,
-          NODE_ENDPOINT: chainConfig.pollingUrl,
         },
       },
       layers: [
