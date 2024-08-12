@@ -40,5 +40,6 @@ COPY ./apps/bundler/scripts/main.sh .
 RUN curl -fsSL https://get.pulumi.com | sh
 ENV PATH="${PATH}:/root/.pulumi/bin"
 RUN echo "export PATH=$PATH" >> /etc/profile
+RUN pulumi plugin install resource aws 
 
 ENTRYPOINT [ "./main.sh" ]
