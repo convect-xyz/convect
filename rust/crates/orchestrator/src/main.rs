@@ -129,7 +129,9 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         return Ok(());
     }
 
+    let now = Instant::now();
     let init_block: Option<u64> = get_init_block(&mut pipeline, manifest, &web3_client).await;
+    println!("get init block: {:?}", now.elapsed());
 
     if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
         pipeline
@@ -151,6 +153,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
 
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
 
+    let now = Instant::now();
     let transactions = fetcher
         .get_transactions_in_range(&manifest, from_block, incoming_block)
         .inspect_err(|_| {
@@ -161,11 +164,16 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
                 .unwrap();
         })
         .await?;
+    println!("fetch transactions: {:?}", now.elapsed());
+
+    let now = Instant::now();
 
     let result = enqueuer
         .enqueue_transactions(&mut pipeline, &transactions)
         .await;
+    println!("enqueue transactions: {:?}", now.elapsed());
 
+    let now = Instant::now();
     match result {
         Ok(_) => pipeline.update().set_last_block(incoming_block).send(),
         Err(_) => pipeline
@@ -174,6 +182,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
             .send(),
     }
     .unwrap();
+    println!("update pipeline: {:?}", now.elapsed());
 
     Ok(())
 }
