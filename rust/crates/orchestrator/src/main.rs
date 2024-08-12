@@ -76,6 +76,7 @@ fn main() -> Result<(), Error> {
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
+        .worker_threads(10)
         .build()
         .unwrap()
         .block_on(async {
