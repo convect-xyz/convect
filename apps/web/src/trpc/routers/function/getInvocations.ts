@@ -23,6 +23,7 @@ export const processedTransactions = pgTable("processed_transactions", {
   handlerVersion: varchar("handler_version").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
   status: varchar("status", { length: 256 }).notNull(),
+  deploymentId: varchar("deployment_id").notNull(),
   timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
 });
 
@@ -58,16 +59,42 @@ export const getInvocations = protectedProcedure
       where(fields, { eq }) {
         return eq(fields.id, input.handlerId);
       },
+      with: {
+        producer: true,
+      },
     });
 
     if (!handler) {
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
+    const currentDeployment = await ctx.db.query.deployment.findFirst({
+      where(fields, { eq, and }) {
+        return and(
+          eq(fields.functionId, handler.functionId),
+          eq(fields.status, "SUCCESS"),
+        );
+      },
+      orderBy(fields, { desc }) {
+        return desc(fields.createdAt);
+      },
+    });
+
+    if (!currentDeployment) {
+      throw new TRPCError({
+        message: "Deployment not found",
+        code: "NOT_FOUND",
+      });
+    }
+
     const getFilter = () => {
       let baseFilter = and(
-        eq(processedTransactions.handlerId, handler.internalId),
-        eq(processedTransactions.handlerVersion, handler.version.toString()),
+        eq(processedTransactions.handlerId, handler.functionId.toString()),
+        eq(
+          processedTransactions.handlerVersion,
+          handler.producer.chainId.toString(),
+        ),
+        eq(processedTransactions.deploymentId, currentDeployment.id),
         eq(processedTransactions.transactionHash, input.transactionHash),
       );
       if (input.search) {
