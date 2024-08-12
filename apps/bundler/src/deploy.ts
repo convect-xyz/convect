@@ -34,10 +34,9 @@ async function main() {
   const stack = await getStack();
   console.info("succesfully intialised stack.");
 
-  console.info("installing aws plugin...");
-  await stack.workspace.installPlugin("aws", "v6.37.0");
+  console.info("setting aws config...");
   await stack.setConfig("aws:region", { value: "eu-west-1" });
-  console.info("aws plugin installed.");
+  console.info("aws config set.");
 
   if (env.MODE === "destroy") {
     console.info("destroying stack...");
