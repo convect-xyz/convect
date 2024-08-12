@@ -97,13 +97,31 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let now = Instant::now();
     let sdk_config = aws_config::load_from_env().await;
     println!("load sdk: {:?}", now.elapsed());
+    let now = Instant::now();
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
+    println!("load ecs client: {:?}", now.elapsed());
+
+    let now = Instant::now();
     let web3_client = Web3ClientImpl::new_from_endpoint(chain_config.polling_url.clone());
+    println!("load web3 client: {:?}", now.elapsed());
+
+    let now = Instant::now();
     let fetcher = TransactionFetcherImpl::new_from_client(web3_client.clone());
+    println!("load fetcher: {:?}", now.elapsed());
+
+    let now = Instant::now();
     let s3_client = aws_sdk_s3::Client::new(&sdk_config);
+    println!("load s3 client: {:?}", now.elapsed());
+
+    let now = Instant::now();
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
+    println!("load sqs client: {:?}", now.elapsed());
+
+    let now = Instant::now();
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
+    println!("load enqueuer: {:?}", now.elapsed());
+
     let now = Instant::now();
     let manifest = get_manifest().await;
     println!("load manifest: {:?}", now.elapsed());
