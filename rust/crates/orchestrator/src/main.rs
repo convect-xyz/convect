@@ -94,7 +94,9 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 }
 
 async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<(), Error> {
+    let now = Instant::now();
     let sdk_config = aws_config::load_from_env().await;
+    println!("load sdk: {:?}", now.elapsed());
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
     let web3_client = Web3ClientImpl::new_from_endpoint(chain_config.polling_url.clone());
     let fetcher = TransactionFetcherImpl::new_from_client(web3_client.clone());
@@ -102,7 +104,9 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
+    let now = Instant::now();
     let manifest = get_manifest().await;
+    println!("load manifest: {:?}", now.elapsed());
     let config = Config::new();
 
     let now = Instant::now();
@@ -112,7 +116,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         chain_config.chain_id.to_string(),
         config.deployment_id.clone(),
     );
-    println!("load: {:?}", now.elapsed());
+    println!("load pipeline: {:?}", now.elapsed());
 
     if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
         return Ok(());
