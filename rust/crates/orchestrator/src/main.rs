@@ -16,7 +16,7 @@ use shared::{
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::BTreeMap;
-use tokio::sync::OnceCell;
+use tokio::{sync::OnceCell, time::Instant};
 
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
 
@@ -104,11 +104,15 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
     let manifest = get_manifest().await;
     let config = Config::new();
+
+    let now = Instant::now();
+    // benchmark this
     let mut pipeline = State::load(
         config.function_id.clone(),
         chain_config.chain_id.to_string(),
         config.deployment_id.clone(),
     );
+    println!("load: {:?}", now.elapsed());
 
     if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
         return Ok(());
