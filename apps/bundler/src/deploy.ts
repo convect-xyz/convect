@@ -19,16 +19,20 @@ const RUNTIME_SRC_FILE = "/scripts/runtime.js";
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 
 main().then(async () => {
-  await succeedDeployment();
+  if (env.MODE !== "destroy") {
+    await succeedDeployment();
+  }
   process.exit(0);
 });
 
 async function main() {
-  db.update(schema.deployment)
-    .set({
-      status: "RUNNING",
-    })
-    .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
+  if (env.MODE !== "destroy") {
+    db.update(schema.deployment)
+      .set({
+        status: "RUNNING",
+      })
+      .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
+  }
 
   console.info("initialising/getting stack...");
   const stack = await getStack();
