@@ -76,7 +76,6 @@ fn main() -> Result<(), Error> {
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
-        .worker_threads(10)
         .build()
         .unwrap()
         .block_on(async {
@@ -93,12 +92,12 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     println!("Incoming block: {:?}", incoming_blocks);
 
     let config = Config::new();
-    let handles = config.chains.into_iter().map(|chain_config| {
+    let futures = config.chains.into_iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-        tokio::spawn(async move { sync_chain(chain_config, block_for_chain).await })
+        async move { sync_chain(chain_config, block_for_chain).await }
     });
 
-    join_all(handles).await;
+    join_all(futures).await;
 
     Ok(())
 }
