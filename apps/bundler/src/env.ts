@@ -70,8 +70,10 @@ export const env = createEnv({
     CHAINS: z
       .string()
       .optional()
-      .refine(modeRequired(["init", "update"]))
-      .transform((v) => chainConfigSchema.parse(JSON.parse(v))),
+      .transform((v) =>
+        v ? chainConfigSchema.parse(JSON.parse(v)) : undefined
+      )
+      .refine(modeRequired(["init", "update"])),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
