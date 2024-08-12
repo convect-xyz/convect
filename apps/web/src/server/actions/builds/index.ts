@@ -128,8 +128,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
 }
 
 type DestroyDeploymentOptions = {
-  internalHandlerId: string;
-  internalHandlerVersion: number;
+  functionId: number;
   version: string;
 };
 
@@ -153,12 +152,8 @@ export async function destroyDeployment(options: DestroyDeploymentOptions) {
           environment: [
             { name: "MODE", value: "destroy" },
             {
-              name: "HANDLER_VERSION",
-              value: options.internalHandlerVersion.toString(),
-            },
-            {
-              name: "HANDLER_ID",
-              value: options.internalHandlerId.toString(),
+              name: "FUNCTION_ID",
+              value: options.functionId.toString(),
             },
           ],
         },

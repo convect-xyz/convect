@@ -16,7 +16,7 @@ use shared::{
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::BTreeMap;
-use tokio::{sync::OnceCell, time::Instant};
+use tokio::sync::OnceCell;
 
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
 static WEB3_CLIENT: OnceCell<Web3ClientImpl> = OnceCell::const_new();
@@ -336,7 +336,7 @@ async fn get_contract_creation_block(
     .into_iter()
     .collect();
 
-    Ok(match transactions {
+    let min_block = match transactions {
         Ok(receipts) => {
             let mut min_block = None;
 
@@ -355,7 +355,9 @@ async fn get_contract_creation_block(
             println!("{:?}", e);
             None
         }
-    })
+    };
+
+    Ok(min_block)
 }
 
 async fn get_init_block(
