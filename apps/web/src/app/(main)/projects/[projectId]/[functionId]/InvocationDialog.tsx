@@ -14,7 +14,7 @@ export default function InvocationDialog(
     transactionHash: string;
   },
 ) {
-  const { handlerId } = useParams();
+  const { chainId: handlerId } = useParams();
   const { data: response } = api.functions.getInvocations.useQuery(
     {
       transactionHash: props.transactionHash,

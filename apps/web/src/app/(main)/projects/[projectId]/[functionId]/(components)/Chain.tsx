@@ -11,7 +11,7 @@ import { api } from "~/trpc/react";
 import { useParams } from "../hooks/useParams";
 
 export function Chain() {
-  const { handlerId, projectId, functionId } = useParams();
+  const { chainId, projectId, functionId } = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -21,31 +21,29 @@ export function Chain() {
       functionId,
     },
     {
-      enabled: !!handlerId,
+      enabled: !!chainId,
     },
   );
 
   useEffect(() => {
-    if (!searchParams.get("handlerId") && fn && fn.chains.length > 0) {
+    if (!searchParams.get("chainId") && fn && fn.chains.length > 0) {
       handleValueChange(fn.chains.at(0)!.chainId.toString());
     }
   }, [searchParams, fn]);
 
   const handleValueChange = (v: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("handlerId", v);
+    params.set("chainId", v);
 
     params.toString();
     router.replace(pathname + "?" + params.toString());
   };
 
   return (
-    <Select value={handlerId?.toString()} onValueChange={handleValueChange}>
+    <Select value={chainId?.toString()} onValueChange={handleValueChange}>
       <SelectTrigger className="h-auto w-[55px] bg-muted">
         <ChainIcon
-          chainId={
-            fn?.chains.find((f) => f.chainId === handlerId)?.chainId ?? 0
-          }
+          chainId={fn?.chains.find((f) => f.chainId === chainId)?.chainId ?? 0}
         />
       </SelectTrigger>
       <SelectContent>

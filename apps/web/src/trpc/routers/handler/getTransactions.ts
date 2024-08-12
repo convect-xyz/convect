@@ -12,7 +12,8 @@ export const getTransactions = protectedProcedure
       cursor: z.number().nullish(),
       search: z.string().nullish(),
       status: z.enum(["FAILED", "SUCCESS"]).nullish(),
-      handlerId: z.number(),
+      functionId: z.number(),
+      chainId: z.number(),
     }),
   )
   .output(
@@ -30,23 +31,10 @@ export const getTransactions = protectedProcedure
   .query(async (opts) => {
     const { input, ctx } = opts;
 
-    const handler = await ctx.db.query.handler.findFirst({
-      where(fields, { eq }) {
-        return eq(fields.id, input.handlerId);
-      },
-      with: {
-        producer: true,
-      },
-    });
-
-    if (!handler) {
-      throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
-    }
-
     const currentDeployment = await ctx.db.query.deployment.findFirst({
       where(fields, { eq, and }) {
         return and(
-          eq(fields.functionId, handler.functionId),
+          eq(fields.functionId, input.functionId),
           eq(fields.status, "SUCCESS"),
         );
       },
@@ -66,11 +54,11 @@ export const getTransactions = protectedProcedure
       let baseFilter = and(
         eq(
           analysisSchema.processedTransactions.handlerId,
-          handler.functionId.toString(),
+          input.functionId.toString(),
         ),
         eq(
           analysisSchema.processedTransactions.handlerVersion,
-          handler.producer.chainId.toString(),
+          input.chainId.toString(),
         ),
         eq(
           analysisSchema.processedTransactions.deploymentId,

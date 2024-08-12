@@ -66,10 +66,24 @@ export const getFunction = protectedProcedure
       },
     });
 
+    if (!currentDeployment) {
+      throw new TRPCError({
+        message: "This function does not exist",
+        code: "NOT_FOUND",
+      });
+    }
+
+    const manifest = JSON.parse(currentDeployment.manifest as string);
+    console.log(manifest);
+    const chains = manifest.chains.map((c: any) => ({
+      name: c.name,
+      chainId: c.chainId,
+    }));
+
     return {
       ...fn.convectFunction,
       isInitialised: true,
       project: fn.project,
-      chains: [],
+      chains,
     };
   });
