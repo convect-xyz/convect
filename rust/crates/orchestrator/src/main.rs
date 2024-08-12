@@ -19,12 +19,22 @@ use std::collections::BTreeMap;
 use tokio::{sync::OnceCell, time::Instant};
 
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
+static WEB3_CLIENT: OnceCell<Web3ClientImpl> = OnceCell::const_new();
 
 async fn get_manifest() -> &'static Manifest {
     MANIFEST
         .get_or_init(|| async {
             println!("Fetching manifest");
             Manifest::from_env().await.unwrap()
+        })
+        .await
+}
+
+async fn get_web3_client(chain_config: &ChainConfig) -> &'static Web3ClientImpl {
+    WEB3_CLIENT
+        .get_or_init(|| async {
+            println!("Fetching web3 client");
+            Web3ClientImpl::new_from_endpoint(chain_config.polling_url.clone())
         })
         .await
 }
@@ -102,7 +112,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     println!("load ecs client: {:?}", now.elapsed());
 
     let now = Instant::now();
-    let web3_client = Web3ClientImpl::new_from_endpoint(chain_config.polling_url.clone());
+    let web3_client = get_web3_client(&chain_config).await;
     println!("load web3 client: {:?}", now.elapsed());
 
     let now = Instant::now();
