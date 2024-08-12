@@ -104,47 +104,23 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 }
 
 async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<(), Error> {
-    let now = Instant::now();
     let sdk_config = aws_config::load_from_env().await;
-    println!("load sdk: {:?}", now.elapsed());
-    let now = Instant::now();
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
-    println!("load ecs client: {:?}", now.elapsed());
-
-    let now = Instant::now();
     let web3_client = get_web3_client(&chain_config).await;
-    println!("load web3 client: {:?}", now.elapsed());
-
-    let now = Instant::now();
     let fetcher = TransactionFetcherImpl::new_from_client(web3_client.clone());
-    println!("load fetcher: {:?}", now.elapsed());
-
-    let now = Instant::now();
     let s3_client = aws_sdk_s3::Client::new(&sdk_config);
-    println!("load s3 client: {:?}", now.elapsed());
-
-    let now = Instant::now();
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
-    println!("load sqs client: {:?}", now.elapsed());
-
-    let now = Instant::now();
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
-    println!("load enqueuer: {:?}", now.elapsed());
-
-    let now = Instant::now();
     let manifest = get_manifest().await;
-    println!("load manifest: {:?}", now.elapsed());
     let config = Config::new();
 
-    let now = Instant::now();
     // benchmark this
     let mut pipeline = State::load(
         config.function_id.clone(),
         chain_config.chain_id.to_string(),
         config.deployment_id.clone(),
     );
-    println!("load pipeline: {:?}", now.elapsed());
 
     if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
         return Ok(());
@@ -157,10 +133,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         return Ok(());
     }
 
-    let now = Instant::now();
     let init_block: Option<u64> = get_init_block(&mut pipeline, manifest, &web3_client).await;
-    println!("get init block: {:?}", now.elapsed());
-
     if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
         pipeline
             .update()
@@ -180,8 +153,6 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     }
 
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
-
-    let now = Instant::now();
     let transactions = fetcher
         .get_transactions_in_range(&manifest, from_block, incoming_block)
         .inspect_err(|_| {
@@ -192,16 +163,11 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
                 .unwrap();
         })
         .await?;
-    println!("fetch transactions: {:?}", now.elapsed());
-
-    let now = Instant::now();
 
     let result = enqueuer
         .enqueue_transactions(&mut pipeline, &transactions)
         .await;
-    println!("enqueue transactions: {:?}", now.elapsed());
 
-    let now = Instant::now();
     match result {
         Ok(_) => pipeline.update().set_last_block(incoming_block).send(),
         Err(_) => pipeline
@@ -210,7 +176,6 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
             .send(),
     }
     .unwrap();
-    println!("update pipeline: {:?}", now.elapsed());
 
     Ok(())
 }
