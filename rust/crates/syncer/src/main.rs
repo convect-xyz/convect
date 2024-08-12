@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
     let mut pipeline = State::load(
         syncer_config.function_id.clone(),
-        syncer_config.chain_id.clone(),
+        syncer_config.chain_id.clone().to_string(),
         syncer_config.deployment_id.clone(),
     );
     let config = aws_config::load_from_env().await;
@@ -72,7 +72,12 @@ async fn run(
                     let fetcher = TransactionFetcherImpl::new();
 
                     match fetcher
-                        .get_transactions_in_range(&manifest, range.start_block, range.end_block)
+                        .get_transactions_in_range(
+                            &manifest,
+                            syncer_config.chain_id,
+                            range.start_block,
+                            range.end_block,
+                        )
                         .await
                     {
                         Ok(txs) => txs,
@@ -126,7 +131,7 @@ fn get_block_configs(mut start_block: u64, end_block: u64, batch_size: u64) -> V
 
 pub struct Config {
     pub function_id: String,
-    pub chain_id: String,
+    pub chain_id: u64,
     pub start_block: u64,
     pub end_block: u64,
     pub tx_queue_url: String,
@@ -136,7 +141,10 @@ pub struct Config {
 pub fn load_config_from_env() -> Config {
     return Config {
         function_id: env::var("FUNCTION_ID").expect("Function ID not set"),
-        chain_id: env::var("CHAIN_ID").expect("Chain ID not set"),
+        chain_id: env::var("CHAIN_ID")
+            .expect("Chain ID not set")
+            .parse()
+            .expect("Chain ID not a u64"),
         start_block: env::var("START_BLOCK")
             .expect("START_BLOCK is not present")
             .parse()

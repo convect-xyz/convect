@@ -31,7 +31,7 @@ pub mod transactions {
 pub mod manifest {
     use serde::Deserialize;
     use serde_with::{serde_as, DisplayFromStr};
-    use std::env;
+    use std::{collections::HashMap, env};
 
     #[derive(Deserialize, Debug, Clone)]
     pub struct Manifest {
@@ -46,9 +46,16 @@ pub mod manifest {
         pub start_block: i64,
     }
 
+    #[derive(Deserialize, Debug, Clone)]
+    #[serde(untagged)]
+    pub enum LogOrigin {
+        String(String),
+        Map(HashMap<u64, String>),
+    }
+
     #[derive(Deserialize, Clone, Debug)]
     pub struct LogConfig {
-        pub address: String,
+        pub address: LogOrigin,
         pub topics: Vec<String>,
         pub tx_configs: Vec<i64>,
     }
