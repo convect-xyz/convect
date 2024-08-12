@@ -20,7 +20,8 @@ const redisClient = new Redis(
 export const getOverview = protectedProcedure
   .input(
     z.object({
-      handlerId: z.number(),
+      functionId: z.number(),
+      chainId: z.number(),
     }),
   )
   .output(
@@ -41,24 +42,10 @@ export const getOverview = protectedProcedure
   .query(async (opts) => {
     const { input, ctx } = opts;
 
-    const handler = await ctx.db.query.handler.findFirst({
-      where(fields, { eq }) {
-        return eq(fields.id, input.handlerId);
-      },
-      with: {
-        producer: true,
-        convectFunction: true,
-      },
-    });
-
-    if (!handler) {
-      throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
-    }
-
     const currentDeployment = await ctx.db.query.deployment.findFirst({
       where(fields, { eq, and }) {
         return and(
-          eq(fields.functionId, handler.functionId),
+          eq(fields.functionId, input.functionId),
           eq(fields.status, "SUCCESS"),
         );
       },
@@ -76,32 +63,45 @@ export const getOverview = protectedProcedure
 
     const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
       getFetchState(
-        handler.functionId.toString(),
-        handler.producer.chainId,
+        input.functionId.toString(),
+        input.chainId,
         currentDeployment.id,
       ),
       getTxCount(
-        handler.functionId.toString(),
-        handler.producer.chainId,
+        input.functionId.toString(),
+        input.chainId,
         currentDeployment.id,
       ),
       getAvgDuration(
-        handler.functionId.toString(),
-        handler.producer.chainId,
+        input.functionId.toString(),
+        input.chainId,
         currentDeployment.id,
       ),
       getSuccessfulTxCount(
-        handler.functionId.toString(),
-        handler.producer.chainId,
+        input.functionId.toString(),
+        input.chainId,
         currentDeployment.id,
       ),
     ]);
 
+    const producer = await ctx.db.query.producers.findFirst({
+      where(fields, { eq }) {
+        return eq(fields.chainId, input.chainId);
+      },
+    });
+
+    if (!producer) {
+      throw new TRPCError({
+        message: "Producer not found",
+        code: "NOT_FOUND",
+      });
+    }
+
     return {
       status: fetchState.state ? "processing" : "provisioning",
       chain: {
-        name: handler.producer.name,
-        chainId: handler.producer.chainId,
+        name: producer.name,
+        chainId: producer.chainId,
       },
       transactionCount: txCount ?? 0,
       processedTransactionsCount: successfulTx,

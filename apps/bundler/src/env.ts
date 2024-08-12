@@ -3,7 +3,12 @@ import { z } from "zod";
 
 const modeSchema = z.enum(["init", "update", "destroy"]);
 const chainConfigSchema = z.array(
-  z.object({ chainId: z.number(), pollingUrl: z.string() })
+  z.object({
+    chainId: z.number(),
+    pollingUrl: z.string(),
+    etherscanApiKey: z.string(),
+    etherscanLike: z.string(),
+  })
 );
 
 const modeRequired =

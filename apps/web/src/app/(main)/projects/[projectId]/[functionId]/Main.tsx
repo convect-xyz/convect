@@ -56,13 +56,14 @@ export default ingest({
 });`;
 
 export default function Main() {
-  const { handlerId } = useParams();
+  const { chainId, functionId } = useParams();
   const { data: overview } = api.handlers.getOverview.useQuery(
     {
-      handlerId: handlerId ?? -1,
+      functionId: functionId ?? -1,
+      chainId: chainId ?? -1,
     },
     {
-      enabled: !!handlerId,
+      enabled: !!functionId && !!chainId,
       refetchInterval: DASHBOARD_REFETCH_INTERVAL,
       refetchOnMount: true,
       refetchOnWindowFocus: true,
@@ -161,13 +162,14 @@ export default function Main() {
 }
 
 function LastUpdatedAt() {
-  const { handlerId } = useParams();
+  const { chainId, functionId } = useParams();
   const { data: overview, dataUpdatedAt } = api.handlers.getOverview.useQuery(
     {
-      handlerId: handlerId ?? 0,
+      functionId: functionId ?? 0,
+      chainId: chainId ?? 0,
     },
     {
-      enabled: !!handlerId,
+      enabled: !!functionId && !!chainId,
     },
   );
 
@@ -189,13 +191,14 @@ function LastUpdatedAt() {
 }
 
 function VersionStatus() {
-  const { handlerId } = useParams();
+  const { functionId, chainId } = useParams();
   const { data, isLoading } = api.handlers.getOverview.useQuery(
     {
-      handlerId: handlerId ?? -1,
+      functionId: functionId ?? -1,
+      chainId: chainId ?? -1,
     },
     {
-      enabled: !!handlerId,
+      enabled: !!functionId && !!chainId,
     },
   );
 
@@ -244,7 +247,7 @@ function VersionStatus() {
 
 function RecentTransactions() {
   const filters = useTransactionFilters();
-  const { handlerId } = useParams();
+  const { functionId, chainId: handlerId } = useParams();
   const [selectedTransactionHash, setSelectedTransactionHash] =
     useState<string>();
 
@@ -252,13 +255,14 @@ function RecentTransactions() {
   const { data: maybeTransactions, error } =
     api.handlers.getTransactions.useQuery(
       {
-        handlerId: handlerId ?? -1,
+        functionId: functionId ?? -1,
+        chainId: handlerId ?? -1,
         search: filters.debouncedSearch,
         status: filters.status,
       },
       {
         refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-        enabled: !!handlerId,
+        enabled: !!handlerId && !!functionId,
       },
     );
   console.log("error", error);
