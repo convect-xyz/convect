@@ -276,11 +276,11 @@ pub mod syncing {
                     connection.mset(&[
                         (
                             format!("{function_id}-{chain_id}-{deployment_id}-state"),
-                            serde_json::to_string(&self.inner.state).unwrap(),
+                            serde_json::to_string(&self.temp_inner.state).unwrap(),
                         ),
                         (
                             format!("{function_id}-{chain_id}-{deployment_id}-last-block"),
-                            self.inner.last_block.clone().unwrap_or_default(),
+                            self.temp_inner.last_block.clone().unwrap_or_default(),
                         ),
                     ])?;
 
