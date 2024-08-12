@@ -4132,6 +4132,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "lazy_static",
+ "once_cell",
  "openssl",
  "redis",
  "regex",

@@ -6,6 +6,7 @@ use aws_sdk_ecs::types::{
 };
 use futures::{future::join_all, TryFutureExt};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
+use once_cell::sync::Lazy;
 use sentry::protocol::Context;
 use serde::Deserialize;
 use shared::{
@@ -16,9 +17,37 @@ use shared::{
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::BTreeMap;
-use tokio::sync::OnceCell;
+use tokio::sync::{Mutex, MutexGuard, OnceCell};
 
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
+static USE_CACHE: Lazy<Mutex<bool>> = Lazy::new(|| Mutex::new(false));
+static PIPELINE: Lazy<Mutex<Option<State>>> = Lazy::new(|| Mutex::new(None));
+
+async fn get_use_cache() -> bool {
+    return *USE_CACHE.lock().await;
+}
+
+async fn set_use_cache(use_cache: bool) {
+    *USE_CACHE.lock().await = use_cache;
+}
+
+async fn get_pipeline(
+    config: &Config,
+    chain_config: &ChainConfig,
+) -> MutexGuard<'static, Option<State>> {
+    let mut pipeline_guard = PIPELINE.lock().await;
+    if !get_use_cache().await || pipeline_guard.is_none() {
+        let state = State::load(
+            config.function_id.clone(),
+            chain_config.chain_id.to_string(),
+            config.deployment_id.clone(),
+        );
+
+        let _ = pipeline_guard.replace(state);
+    }
+
+    return pipeline_guard;
+}
 
 async fn get_manifest() -> &'static Manifest {
     MANIFEST
@@ -102,13 +131,10 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
-    let manifest = get_manifest().await;
     let config = Config::new();
-    let mut pipeline = State::load(
-        config.function_id.clone(),
-        chain_config.chain_id.to_string(),
-        config.deployment_id.clone(),
-    );
+    let manifest = get_manifest().await;
+    let mut pipeline = get_pipeline(&config, &chain_config).await;
+    let mut pipeline = pipeline.as_mut().unwrap();
 
     if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
         return Ok(());
@@ -121,7 +147,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         return Ok(());
     }
 
-    let init_block: Option<u64> = get_init_block(&mut pipeline, manifest, &web3_client).await;
+    let init_block: Option<u64> = get_init_block(&mut pipeline, &manifest, &web3_client).await;
 
     if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
         pipeline
@@ -130,6 +156,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
             .send()
             .expect("Failed to update pipeline");
 
+        set_use_cache(false).await;
         return batch_sync(
             chain_config.chain_id,
             &ecs_client,
@@ -141,12 +168,12 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         .await;
     }
 
+    set_use_cache(true).await;
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
 
     let transactions = fetcher
         .get_transactions_in_range(&manifest, from_block, incoming_block)
-        .inspect_err(|e| {
-            println!("{:?}", e);
+        .inspect_err(|_| {
             pipeline
                 .update()
                 .set_state(shared::types::syncing::SyncState::FAILED)
