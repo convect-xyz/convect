@@ -22,7 +22,10 @@ static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
 
 async fn get_manifest() -> &'static Manifest {
     MANIFEST
-        .get_or_init(|| async { Manifest::from_env().await.unwrap() })
+        .get_or_init(|| async {
+            println!("Fetching manifest");
+            Manifest::from_env().await.unwrap()
+        })
         .await
 }
 
