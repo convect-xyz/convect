@@ -1,9 +1,7 @@
-import { schema } from "@convect-xyz/lib";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { v4 } from "uuid";
 import { z } from "zod";
-import { env } from "~/env";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
 import { monikerRegex } from "~/lib/shared/validation";
@@ -54,61 +52,10 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
-  const exists = await db.query.handler
-    .findFirst({
-      where(fields, { eq, and }) {
-        return and(
-          eq(fields.producerId, data.producerId),
-          eq(fields.functionId, fn.convectFunction.id),
-        );
-      },
-    })
-    .then((v) => !!v);
-
-  if (!exists) {
-    await db
-      .insert(schema.handler)
-      .values({
-        functionId: fn.convectFunction.id,
-        infraVersion: env.VERSION,
-        producerId: data.producerId,
-      })
-      .returning()
-      .then((v) => v[0]);
-  }
-
-  const handler = await db.query.handler.findFirst({
-    where(fields, { eq, and }) {
-      return and(
-        eq(fields.producerId, data.producerId),
-        eq(fields.functionId, fn.convectFunction.id),
-      );
-    },
-    with: {
-      producer: true,
-      convectFunction: {
-        with: {
-          envs: true,
-        },
-      },
-    },
-  });
-
-  if (!handler) {
-    return NextResponse.json(
-      {
-        message: "Handler not found",
-      },
-      {
-        status: 400,
-      },
-    );
-  }
-
   const deploymentId = v4();
 
   const bundledHandler = data.handler;
-  const sourcePrefix = `code/${handler.convectFunction.id}/${deploymentId}.zip`;
+  const sourcePrefix = `code/${fn.convectFunction.id}/${deploymentId}.zip`;
   const promises: Promise<any>[] = [
     s3.putObject({
       Bucket: "ingest-build-outputs",
@@ -119,7 +66,7 @@ export const POST = async (req: NextRequest) => {
 
   const manifestPrefix = path.join(
     "manifests",
-    handler.convectFunction.id.toString(),
+    fn.convectFunction.id.toString(),
     deploymentId + ".json",
   );
   const manifest = data.manifest;
@@ -134,17 +81,23 @@ export const POST = async (req: NextRequest) => {
 
   await Promise.all(promises);
 
-  const allHandlers = await db.query.handler.findMany({
+  const envs = await db.query.functionEnv.findMany({
     where(fields, { eq }) {
-      return eq(fields.functionId, handler.functionId);
+      return eq(fields.functionId, fn.convectFunction.id);
     },
-    with: {
-      producer: true,
+  });
+
+  const producers = await db.query.producers.findMany({
+    where(fields, { inArray }) {
+      return inArray(
+        fields.chainId,
+        JSON.parse(rawManifest).chains.map((chain: any) => chain.chainId),
+      );
     },
   });
 
   await createDeployment({
-    version: handler.convectFunction.infraVersion!,
+    version: fn.convectFunction.infraVersion!,
     sourcePrefix,
     manifestBucket: MANIFEST_BUCKET,
     manifestPrefix,
@@ -152,18 +105,18 @@ export const POST = async (req: NextRequest) => {
     deploymentId,
     stripeCustomerId: await getStripeCustomerId(user),
     userId: user.id,
-    functionId: handler.functionId,
+    functionId: fn.convectFunction.id,
     mode: data.mode,
-    envs: handler.convectFunction.envs.map((env) => ({
+    envs: envs.map((env) => ({
       ...env,
       value: decryptEnvValue(env.value, env.iv),
     })),
-    chainConfigs: allHandlers.map((chainConfig) => ({
-      chainId: chainConfig.producer.chainId,
-      pollingUrl: chainConfig.producer.pollingUrl,
+    chainConfigs: producers.map((p) => ({
+      chainId: p.chainId,
+      pollingUrl: p.pollingUrl,
+      etherscanApiKey: p.etherscanApiKey,
+      etherscanLike: p.etherscanLike,
     })),
-    etherscanApiKey: handler.producer.etherscanApiKey,
-    etherscanLike: handler.producer.etherscanLike,
   });
 
   return NextResponse.json({});
