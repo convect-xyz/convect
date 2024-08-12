@@ -35,18 +35,18 @@ async fn get_pipeline(
     config: &Config,
     chain_config: &ChainConfig,
 ) -> MutexGuard<'static, Option<State>> {
-    let mut pipeline_guard = PIPELINE.lock().await;
-    if !get_use_cache().await || pipeline_guard.is_none() {
+    let mut maybe_pipeline = PIPELINE.lock().await;
+    if !get_use_cache().await || maybe_pipeline.is_none() {
         let state = State::load(
             config.function_id.clone(),
             chain_config.chain_id.to_string(),
             config.deployment_id.clone(),
         );
 
-        let _ = pipeline_guard.replace(state);
+        let _ = maybe_pipeline.replace(state);
     }
 
-    return pipeline_guard;
+    return maybe_pipeline;
 }
 
 async fn get_manifest() -> &'static Manifest {

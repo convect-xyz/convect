@@ -205,7 +205,8 @@ pub mod syncing {
         pub fn update(&mut self) -> UpdateStateFluentBuilder {
             UpdateStateFluentBuilder {
                 connection: &mut self.connection,
-                inner: self.inner.clone(),
+                temp_inner: self.inner.clone(),
+                inner: &mut self.inner,
             }
         }
 
@@ -243,21 +244,22 @@ pub mod syncing {
 
     pub struct UpdateStateFluentBuilder<'a> {
         connection: &'a mut redis::Connection,
-        inner: Inner,
+        temp_inner: Inner,
+        inner: &'a mut Inner,
     }
 
     impl<'a> UpdateStateFluentBuilder<'a> {
         pub fn set_state(mut self, new_state: SyncState) -> Self {
-            self.inner.state = new_state;
+            self.temp_inner.state = new_state;
             self
         }
 
         pub fn set_last_block(mut self, new_last_block: u64) -> Self {
-            self.inner.last_block = Some(new_last_block.to_string());
+            self.temp_inner.last_block = Some(new_last_block.to_string());
             self
         }
 
-        pub fn send(self) -> Result<(), BoxError> {
+        pub fn send(&mut self) -> Result<(), BoxError> {
             let deployment_id = &self.inner.deployment_id;
             let function_id = &self.inner.function_id;
             let chain_id = &self.inner.chain_id;
@@ -279,6 +281,9 @@ pub mod syncing {
                     Ok(())
                 },
             )?;
+
+            self.inner.last_block = self.temp_inner.last_block.clone();
+            self.inner.state = self.temp_inner.state.clone();
 
             Ok(())
         }
