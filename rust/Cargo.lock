@@ -5739,6 +5739,7 @@ dependencies = [
  "futures",
  "lambda_runtime",
  "mockall",
+ "once_cell",
  "openssl",
  "postgres",
  "postgres-openssl",
