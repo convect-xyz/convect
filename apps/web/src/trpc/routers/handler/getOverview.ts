@@ -1,5 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import axios from "axios";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
@@ -140,24 +139,15 @@ const getAvgDuration = async (
   version: number,
   deploymentId: string,
 ) => {
-  return axios
-    .post(
-      "https://api.eu-central-1.aws.tinybird.co/v0/sql",
-      {
-        q: `%
-    SELECT AVG(duration_ms) FROM ingest_metrics WHERE handler_id = {{String(handler_id)}} AND handler_version = {{String(handler_version)}}`,
-        handler_id: internalId,
-        handler_version: version.toString(),
-      },
-      {
-        headers: {
-          Authorization:
-            "Bearer REDACTED",
-        },
-      },
+  return db
+    .execute(
+      sql`SELECT AVG(duration_ms) FROM reported_metrics WHERE handler_id = ${internalId} AND handler_version = ${version} AND deployment_id = ${deploymentId}`,
     )
-    .then((r) => Number(r.data))
-    .then((v) => (Number.isNaN(v) ? 0 : v));
+    .then((c) => {
+      console.log(c);
+      return c;
+    })
+    .then((r) => Number(r.rows.at(0)!.avg));
 };
 
 const getSuccessfulTxCount = async (

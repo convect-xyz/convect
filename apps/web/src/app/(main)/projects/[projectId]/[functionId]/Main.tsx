@@ -1,16 +1,10 @@
 "use client";
 
-import {
-  formatDistanceToNow,
-  millisecondsToMinutes,
-  millisecondsToSeconds,
-  minutesToMilliseconds,
-} from "date-fns";
+import { formatDistanceToNow, millisecondsToMinutes } from "date-fns";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { CodeBlock } from "~/components/code/CodeBlock";
-import { Button } from "~/components/ui/button";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
 import {
@@ -74,9 +68,7 @@ export default function Main() {
       refetchOnWindowFocus: true,
       select(data) {
         const mins = millisecondsToMinutes(data.avgDuration);
-        const secs = millisecondsToSeconds(
-          data.avgDuration - minutesToMilliseconds(mins),
-        );
+        const secs = (data.avgDuration / 1000).toFixed(1);
 
         return {
           ...data,
@@ -139,7 +131,9 @@ export default function Main() {
               <div className="text-xl">
                 {overview && (
                   <>
-                    {overview.avgDurationParsed.mins}m{" "}
+                    {overview.avgDurationParsed.mins > 0 && (
+                      <>{overview.avgDurationParsed.mins}m </>
+                    )}
                     {overview.avgDurationParsed.secs}s
                   </>
                 )}
@@ -162,10 +156,6 @@ export default function Main() {
           </TransactionFilters>
         </div>
       )}
-
-      <div className="mt-2">
-        <DeleteHandler />
-      </div>
     </div>
   );
 }
@@ -320,29 +310,6 @@ function RecentTransactions() {
             transactionHash={selectedTransactionHash}
           />
         )}
-      </div>
-    </div>
-  );
-}
-
-function DeleteHandler() {
-  const { handlerId } = useParams();
-  const { mutateAsync: deleteHandler } = api.handlers.delete.useMutation();
-
-  const handleDelete = () => {
-    if (!handlerId) return;
-    deleteHandler({ handlerId });
-  };
-
-  return (
-    <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-      <div className="flex items-center gap-2 text-sm">
-        <span className="flex-1 uppercase text-muted-foreground">
-          Delete Handler
-        </span>
-        <Button onClick={handleDelete} variant="destructive">
-          Delete
-        </Button>
       </div>
     </div>
   );
