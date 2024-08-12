@@ -126,6 +126,7 @@ pub mod syncing {
     use serde::{Deserialize, Serialize};
 
     static CONNECTION: Lazy<Mutex<redis::Connection>> = Lazy::new(|| {
+        println!("Getting redis connection");
         let client = redis::Client::open("rediss://default:AVNS_7BaBQxFTF74jG4c8B1T@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061")
                 .unwrap();
 
