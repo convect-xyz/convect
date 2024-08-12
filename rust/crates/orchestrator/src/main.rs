@@ -96,9 +96,8 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
         tokio::spawn(async move { sync_chain(chain_config, block_for_chain).await })
     });
-    for handle in handles {
-        let _ = handle.await.unwrap();
-    }
+
+    join_all(handles).await;
 
     Ok(())
 }
