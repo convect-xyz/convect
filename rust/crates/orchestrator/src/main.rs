@@ -6,7 +6,6 @@ use aws_sdk_ecs::types::{
 };
 use futures::{future::join_all, TryFutureExt};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
-use once_cell::sync::Lazy;
 use sentry::protocol::Context;
 use serde::Deserialize;
 use shared::{
@@ -17,44 +16,9 @@ use shared::{
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::BTreeMap;
-use tokio::sync::{Mutex, MutexGuard, OnceCell};
+use tokio::sync::OnceCell;
 
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
-static USE_CACHE: Lazy<Mutex<HashMap<u64, bool>>> = Lazy::new(|| Mutex::new(HashMap::new()));
-static PIPELINE: Lazy<Mutex<HashMap<u64, State>>> = Lazy::new(|| Mutex::new(HashMap::new()));
-
-async fn get_use_cache(chain_config: &ChainConfig) -> bool {
-    let cache = *USE_CACHE
-        .lock()
-        .await
-        .get(&chain_config.chain_id)
-        .unwrap_or(&false);
-
-    return cache;
-}
-
-async fn set_use_cache(use_cache: bool, chain_config: &ChainConfig) {
-    let mut use_cache_map = USE_CACHE.lock().await;
-    use_cache_map.insert(chain_config.chain_id, use_cache);
-}
-
-async fn get_pipeline(
-    config: &Config,
-    chain_config: &ChainConfig,
-) -> MutexGuard<'static, HashMap<u64, State>> {
-    let mut maybe_pipeline = PIPELINE.lock().await;
-    if !get_use_cache(chain_config).await || !maybe_pipeline.contains_key(&chain_config.chain_id) {
-        let state = State::load(
-            config.function_id.clone(),
-            chain_config.chain_id.to_string(),
-            config.deployment_id.clone(),
-        );
-
-        let _ = maybe_pipeline.insert(chain_config.chain_id, state);
-    }
-
-    return maybe_pipeline;
-}
 
 async fn get_manifest() -> &'static Manifest {
     MANIFEST
@@ -138,10 +102,13 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
-    let config = Config::new();
     let manifest = get_manifest().await;
-    let mut pipeline = get_pipeline(&config, &chain_config).await;
-    let mut pipeline = pipeline.get_mut(&chain_config.chain_id).unwrap();
+    let config = Config::new();
+    let mut pipeline = State::load(
+        config.function_id.clone(),
+        chain_config.chain_id.to_string(),
+        config.deployment_id.clone(),
+    );
 
     if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
         return Ok(());
@@ -154,7 +121,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         return Ok(());
     }
 
-    let init_block: Option<u64> = get_init_block(&mut pipeline, &manifest, &web3_client).await;
+    let init_block: Option<u64> = get_init_block(&mut pipeline, manifest, &web3_client).await;
 
     if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
         pipeline
@@ -163,7 +130,6 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
             .send()
             .expect("Failed to update pipeline");
 
-        set_use_cache(false, &chain_config).await;
         return batch_sync(
             chain_config.chain_id,
             &ecs_client,
@@ -175,7 +141,6 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         .await;
     }
 
-    set_use_cache(true, &chain_config).await;
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
 
     let transactions = fetcher
