@@ -16,11 +16,14 @@ type TriggerBuildOptions = {
   manifestPrefix: string;
   rawManifest: string;
   envs: Array<{ key: string; value: string }>;
-  chainConfigs: Array<{ chainId: number; pollingUrl: string }>;
+  chainConfigs: Array<{
+    chainId: number;
+    pollingUrl: string;
+    etherscanApiKey: string;
+    etherscanLike: string;
+  }>;
   mode: "init" | "update";
   sourcePrefix: string;
-  etherscanApiKey: string;
-  etherscanLike: string;
 };
 
 export async function createDeployment(options: TriggerBuildOptions) {
@@ -94,14 +97,6 @@ export async function createDeployment(options: TriggerBuildOptions) {
             {
               name: "USER_ID",
               value: options.userId,
-            },
-            {
-              name: "ETHERSCAN_API_KEY",
-              value: options.etherscanApiKey,
-            },
-            {
-              name: "ETHERSCAN_LIKE",
-              value: options.etherscanLike,
             },
           ],
         },

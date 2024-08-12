@@ -50,6 +50,10 @@ struct ChainConfig {
     polling_url: String,
     #[serde(rename = "txQueueUrl")]
     tx_queue_url: String,
+    #[serde(rename = "etherscanApiKey")]
+    etherscan_api_key: String,
+    #[serde(rename = "etherscanLike")]
+    etherscan_like: String,
 }
 
 fn configure_sentry_scope(config: &Config) {
@@ -137,7 +141,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     }
 
     let init_block: Option<u64> =
-        get_init_block(&mut pipeline, manifest, &web3_client, chain_config.chain_id).await;
+        get_init_block(&mut pipeline, manifest, &web3_client, &chain_config).await;
     if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
         pipeline
             .update()
@@ -311,11 +315,11 @@ fn create_key_value_pair(name: &str, value: &String) -> KeyValuePair {
 async fn get_contract_creation_block(
     web3_client: &Web3ClientImpl,
     manifest: &Manifest,
-    chain_id: u64,
+    chain_config: &ChainConfig,
 ) -> Result<Option<u64>, Error> {
     let etherscan_provider = contract_info::EtherscanContractInfoProvider::new(
-        env::var("ETHERSCAN_API_KEY").expect("ETHERSCAN_API_KEY not set"),
-        env::var("ETHERSCAN_LIKE").expect("ETHERSCAN_LIKE not set"),
+        chain_config.etherscan_api_key.clone(),
+        chain_config.etherscan_like.clone(),
     );
 
     let creation_tx_hashes: Vec<_> = etherscan_provider
@@ -326,7 +330,7 @@ async fn get_contract_creation_block(
                 .map(|l| match &l.address {
                     manifest::LogOrigin::String(address) => address.clone(),
                     manifest::LogOrigin::Map(address_map) => {
-                        address_map.get(&chain_id).unwrap().clone()
+                        address_map.get(&chain_config.chain_id).unwrap().clone()
                     }
                 })
                 .collect(),
@@ -374,7 +378,7 @@ async fn get_init_block(
     pipeline: &mut State,
     manifest: &Manifest,
     web3_client: &Web3ClientImpl,
-    chain_id: u64,
+    chain_config: &ChainConfig,
 ) -> Option<u64> {
     match pipeline.last_block() {
         Some(_) => None,
@@ -386,7 +390,7 @@ async fn get_init_block(
                 .min();
 
             let contract_creation_block =
-                get_contract_creation_block(&web3_client, &manifest, chain_id)
+                get_contract_creation_block(&web3_client, &manifest, chain_config)
                     .await
                     .unwrap();
 

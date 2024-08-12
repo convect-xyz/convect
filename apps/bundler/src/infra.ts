@@ -81,8 +81,6 @@ export default async () => {
         SYNCER_CONTAINER_NAME,
         GITHUB_SHA: githubSha,
         FUNCTION_ID: env.FUNCTION_ID,
-        ETHERSCAN_LIKE: env.ETHERSCAN_LIKE,
-        ETHERSCAN_API_KEY: env.ETHERSCAN_API_KEY,
         DEPLOYMENT_ID: env.DEPLOYMENT_ID,
         USER_ID: env.USER_ID,
         CHAINS: txQueueUrlOutputs.apply((output) =>
