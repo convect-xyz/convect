@@ -117,12 +117,25 @@ pub mod manifest {
 }
 
 pub mod syncing {
-    use std::{error::Error, fmt};
+    use std::{error::Error, fmt, sync::OnceLock};
 
     use backoff::{exponential::ExponentialBackoff, SystemClock};
     use lambda_runtime::tower::BoxError;
     use redis::{Commands, RedisError};
     use serde::{Deserialize, Serialize};
+
+    static CONNECTION: OnceLock<redis::Connection> = OnceLock::new();
+
+    fn get_connection() -> redis::Connection {
+        CONNECTION
+            .get_or_init(|| {
+              let client = redis::Client::open("rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061")
+                    .unwrap();
+
+               let connection = client.get_connection().unwrap();
+               connection
+            })
+    }
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     pub enum SyncState {
@@ -176,10 +189,8 @@ pub mod syncing {
         }
 
         pub fn load(function_id: String, chain_id: String, deployment_id: String) -> Self {
-            let client = redis::Client::open("rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061")
-            .unwrap();
+            let mut con = get_connection();
 
-            let mut con = client.get_connection().unwrap();
             let result: Vec<Option<String>> = con
                 .mget(vec![
                     format!("{function_id}-{chain_id}-{deployment_id}-state"),
