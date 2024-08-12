@@ -117,25 +117,20 @@ pub mod manifest {
 }
 
 pub mod syncing {
-    use std::{error::Error, fmt, sync::OnceLock};
+    use std::{error::Error, fmt, sync::Mutex};
 
     use backoff::{exponential::ExponentialBackoff, SystemClock};
     use lambda_runtime::tower::BoxError;
+    use once_cell::sync::Lazy;
     use redis::{Commands, RedisError};
     use serde::{Deserialize, Serialize};
 
-    static CONNECTION: OnceLock<redis::Connection> = OnceLock::new();
+    static CONNECTION: Lazy<Mutex<redis::Connection>> = Lazy::new(|| {
+        let client = redis::Client::open("rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061")
+                .unwrap();
 
-    fn get_connection() -> redis::Connection {
-        CONNECTION
-            .get_or_init(|| {
-              let client = redis::Client::open("rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061")
-                    .unwrap();
-
-               let connection = client.get_connection().unwrap();
-               connection
-            })
-    }
+        Mutex::new(client.get_connection().unwrap())
+    });
 
     #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
     pub enum SyncState {
@@ -165,7 +160,6 @@ pub mod syncing {
     }
 
     pub struct State {
-        connection: redis::Connection,
         inner: Inner,
     }
 
@@ -189,7 +183,7 @@ pub mod syncing {
         }
 
         pub fn load(function_id: String, chain_id: String, deployment_id: String) -> Self {
-            let mut con = get_connection();
+            let mut con = CONNECTION.lock().unwrap();
 
             let result: Vec<Option<String>> = con
                 .mget(vec![
@@ -199,7 +193,6 @@ pub mod syncing {
                 .unwrap();
 
             Self {
-                connection: con,
                 inner: Inner {
                     deployment_id: deployment_id.clone(),
                     function_id: function_id.clone(),
@@ -215,13 +208,13 @@ pub mod syncing {
 
         pub fn update(&mut self) -> UpdateStateFluentBuilder {
             UpdateStateFluentBuilder {
-                connection: &mut self.connection,
                 temp_inner: self.inner.clone(),
                 inner: &mut self.inner,
             }
         }
 
         pub fn increment_transaction_count(&mut self, tx_count: usize) {
+            let mut connection = CONNECTION.lock().unwrap();
             let key = format!(
                 "tx-count-{function_id}-{chain_id}-{deployment_id}",
                 function_id = &self.inner.function_id,
@@ -229,10 +222,11 @@ pub mod syncing {
                 deployment_id = &self.inner.deployment_id
             );
 
-            let _: u64 = self.connection.incr(key, tx_count).unwrap();
+            let _: u64 = connection.incr(key, tx_count).unwrap();
         }
 
         pub fn get_transaction_count(&mut self) -> u64 {
+            let mut connection = CONNECTION.lock().unwrap();
             let key = format!(
                 "tx-count-{function_id}-{chain_id}-{deployment_id}",
                 function_id = &self.inner.function_id,
@@ -240,7 +234,7 @@ pub mod syncing {
                 deployment_id = &self.inner.deployment_id
             );
 
-            let count: u64 = self.connection.get(key).unwrap();
+            let count: u64 = connection.get(key).unwrap();
             count
         }
 
@@ -254,7 +248,6 @@ pub mod syncing {
     }
 
     pub struct UpdateStateFluentBuilder<'a> {
-        connection: &'a mut redis::Connection,
         temp_inner: Inner,
         inner: &'a mut Inner,
     }
@@ -271,6 +264,7 @@ pub mod syncing {
         }
 
         pub fn send(&mut self) -> Result<(), BoxError> {
+            let mut connection = CONNECTION.lock().unwrap();
             let deployment_id = &self.inner.deployment_id;
             let function_id = &self.inner.function_id;
             let chain_id = &self.inner.chain_id;
@@ -278,7 +272,7 @@ pub mod syncing {
             backoff::retry::<_, ExponentialBackoff<SystemClock>, (), RedisError>(
                 ExponentialBackoff::default(),
                 || {
-                    self.connection.mset(&[
+                    connection.mset(&[
                         (
                             format!("{function_id}-{chain_id}-{deployment_id}-state"),
                             serde_json::to_string(&self.inner.state).unwrap(),
