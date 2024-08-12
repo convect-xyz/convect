@@ -20,13 +20,10 @@ export const getFunction = protectedProcedure
       project: z.object({
         name: z.string(),
       }),
-      handlers: z.array(
+      chains: z.array(
         z.object({
-          id: z.number(),
-          producer: z.object({
-            name: z.string(),
-            chainId: z.number(),
-          }),
+          name: z.string(),
+          chainId: z.number(),
         }),
       ),
     }),
@@ -57,12 +54,15 @@ export const getFunction = protectedProcedure
       });
     }
 
-    const handlers = await ctx.db.query.handler.findMany({
-      where(fields, { and, eq }) {
-        return and(eq(fields.functionId, input.functionId));
+    const currentDeployment = await ctx.db.query.deployment.findFirst({
+      where(fields, { eq, and }) {
+        return and(
+          eq(fields.functionId, input.functionId),
+          eq(fields.status, "SUCCESS"),
+        );
       },
-      with: {
-        producer: true,
+      orderBy(fields, { desc }) {
+        return desc(fields.createdAt);
       },
     });
 
@@ -70,6 +70,6 @@ export const getFunction = protectedProcedure
       ...fn.convectFunction,
       isInitialised: true,
       project: fn.project,
-      handlers,
+      chains: [],
     };
   });

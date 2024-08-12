@@ -14,6 +14,7 @@ type TriggerBuildOptions = {
   functionId: number;
   manifestBucket: string;
   manifestPrefix: string;
+  rawManifest: string;
   envs: Array<{ key: string; value: string }>;
   chainConfigs: Array<{ chainId: number; pollingUrl: string }>;
   mode: "init" | "update";
@@ -30,6 +31,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
     functionId: options.functionId,
     ecsTaskId: "",
     status: "PENDING",
+    manifest: options.rawManifest,
   });
 
   const command = new RunTaskCommand({
@@ -154,6 +156,10 @@ export async function destroyDeployment(options: DestroyDeploymentOptions) {
             {
               name: "FUNCTION_ID",
               value: options.functionId.toString(),
+            },
+            {
+              name: "DATABASE_URL",
+              value: env.DATABASE_URL,
             },
           ],
         },

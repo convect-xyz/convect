@@ -12,7 +12,10 @@ use shared::{
     contract_info::{self, ContractInfoProvider},
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{TransactionFetcher, TransactionFetcherImpl},
-    types::{manifest::Manifest, syncing::State},
+    types::{
+        manifest::{self, Manifest},
+        syncing::State,
+    },
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::BTreeMap;
@@ -133,7 +136,8 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         return Ok(());
     }
 
-    let init_block: Option<u64> = get_init_block(&mut pipeline, manifest, &web3_client).await;
+    let init_block: Option<u64> =
+        get_init_block(&mut pipeline, manifest, &web3_client, chain_config.chain_id).await;
     if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
         pipeline
             .update()
@@ -154,7 +158,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
 
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
     let transactions = fetcher
-        .get_transactions_in_range(&manifest, from_block, incoming_block)
+        .get_transactions_in_range(&manifest, chain_config.chain_id, from_block, incoming_block)
         .inspect_err(|_| {
             pipeline
                 .update()
@@ -307,6 +311,7 @@ fn create_key_value_pair(name: &str, value: &String) -> KeyValuePair {
 async fn get_contract_creation_block(
     web3_client: &Web3ClientImpl,
     manifest: &Manifest,
+    chain_id: u64,
 ) -> Result<Option<u64>, Error> {
     let etherscan_provider = contract_info::EtherscanContractInfoProvider::new(
         env::var("ETHERSCAN_API_KEY").expect("ETHERSCAN_API_KEY not set"),
@@ -318,7 +323,12 @@ async fn get_contract_creation_block(
             manifest
                 .log_configs
                 .iter()
-                .map(|l| l.address.clone())
+                .map(|l| match &l.address {
+                    manifest::LogOrigin::String(address) => address.clone(),
+                    manifest::LogOrigin::Map(address_map) => {
+                        address_map.get(&chain_id).unwrap().clone()
+                    }
+                })
                 .collect(),
         )
         .await
@@ -364,6 +374,7 @@ async fn get_init_block(
     pipeline: &mut State,
     manifest: &Manifest,
     web3_client: &Web3ClientImpl,
+    chain_id: u64,
 ) -> Option<u64> {
     match pipeline.last_block() {
         Some(_) => None,
@@ -374,9 +385,10 @@ async fn get_init_block(
                 .map(|c| u64::try_from(c.start_block).expect("i64 to u64 failed"))
                 .min();
 
-            let contract_creation_block = get_contract_creation_block(&web3_client, &manifest)
-                .await
-                .unwrap();
+            let contract_creation_block =
+                get_contract_creation_block(&web3_client, &manifest, chain_id)
+                    .await
+                    .unwrap();
 
             Some(max(
                 contract_creation_block.unwrap_or(0),

@@ -1,22 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { Redis } from "ioredis";
-import { Pool } from "pg";
 import { z } from "zod";
-import { env } from "~/env";
+import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
-
-const conn = new Pool({
-  connectionString: env.REPORTING_DATABASE_URL,
-  ssl: {
-    checkServerIdentity: (servername, cert) => {
-      return undefined;
-    },
-    rejectUnauthorized: false,
-  },
-});
 
 const redisClient = new Redis(
   25061,
@@ -29,15 +16,6 @@ const redisClient = new Redis(
     },
   },
 );
-
-export const processedTransactions = pgTable("processed_transactions", {
-  id: serial("id").primaryKey(),
-  transactionHash: varchar("transaction_hash").notNull(),
-  status: varchar("status", { length: 256 }).notNull(),
-  timestamp: timestamp("timestamp").notNull(),
-});
-
-const db = drizzle(conn, { schema: { processedTransactions } });
 
 export const getOverview = protectedProcedure
   .input(
@@ -139,14 +117,10 @@ const getAvgDuration = async (
   version: number,
   deploymentId: string,
 ) => {
-  return db
+  return analysisDb
     .execute(
       sql`SELECT AVG(duration_ms) FROM reported_metrics WHERE handler_id = ${internalId} AND handler_version = ${version} AND deployment_id = ${deploymentId}`,
     )
-    .then((c) => {
-      console.log(c);
-      return c;
-    })
     .then((r) => Number(r.rows.at(0)!.avg));
 };
 
@@ -155,7 +129,7 @@ const getSuccessfulTxCount = async (
   version: number,
   deploymentId: string,
 ) => {
-  return db
+  return analysisDb
     .execute(
       sql`SELECT COUNT(*) FROM
         (SELECT DISTINCT transaction_hash FROM processed_transactions WHERE handler_id = ${internalId} 

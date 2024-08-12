@@ -1,33 +1,9 @@
+import { analysisSchema } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, ilike, max } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { Pool } from "pg";
 import { z } from "zod";
-import { env } from "~/env";
+import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
-
-const conn = new Pool({
-  connectionString: env.REPORTING_DATABASE_URL,
-  ssl: {
-    checkServerIdentity: (servername, cert) => {
-      return undefined;
-    },
-    rejectUnauthorized: false,
-  },
-});
-
-export const processedTransactions = pgTable("processed_transactions", {
-  id: serial("id").primaryKey(),
-  handlerId: varchar("handler_id").notNull(),
-  handlerVersion: varchar("handler_version").notNull(),
-  transactionHash: varchar("transaction_hash").notNull(),
-  deploymentId: varchar("deployment_id").notNull(),
-  status: varchar("status", { length: 256 }).notNull(),
-  timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
-});
-
-const db = drizzle(conn, { schema: { processedTransactions } });
 
 export const getTransactions = protectedProcedure
   .input(
@@ -88,60 +64,69 @@ export const getTransactions = protectedProcedure
 
     const getFilter = () => {
       let baseFilter = and(
-        eq(processedTransactions.handlerId, handler.functionId.toString()),
         eq(
-          processedTransactions.handlerVersion,
+          analysisSchema.processedTransactions.handlerId,
+          handler.functionId.toString(),
+        ),
+        eq(
+          analysisSchema.processedTransactions.handlerVersion,
           handler.producer.chainId.toString(),
         ),
-        eq(processedTransactions.deploymentId, currentDeployment.id),
+        eq(
+          analysisSchema.processedTransactions.deploymentId,
+          currentDeployment.id,
+        ),
       );
       if (input.search) {
         baseFilter = and(
           baseFilter,
-          ilike(processedTransactions.transactionHash, `%${input.search}%`),
+          ilike(
+            analysisSchema.processedTransactions.transactionHash,
+            `%${input.search}%`,
+          ),
         )!;
       }
       if (input.status) {
         baseFilter = and(
           baseFilter,
-          eq(processedTransactions.status, input.status),
+          eq(analysisSchema.processedTransactions.status, input.status),
         )!;
       }
       return baseFilter;
     };
 
-    const maxTimestamp = max(processedTransactions.timestamp).as(
+    const maxTimestamp = max(analysisSchema.processedTransactions.timestamp).as(
       "max_timestamp",
     );
-    const distinctTransactions = db
+    const distinctTransactions = analysisDb
       .select({
-        transactionHash: processedTransactions.transactionHash,
+        transactionHash: analysisSchema.processedTransactions.transactionHash,
         maxTimestamp,
       })
-      .from(processedTransactions)
+      .from(analysisSchema.processedTransactions)
       .where(getFilter())
-      .groupBy(processedTransactions.transactionHash)
+      .groupBy(analysisSchema.processedTransactions.transactionHash)
       .orderBy(desc(maxTimestamp))
       .limit(input.limit)
       .as("distinct_transactions");
 
-    const recentTransactions = await db
+    const recentTransactions = await analysisDb
       .select()
-      .from(processedTransactions)
+      .from(analysisSchema.processedTransactions)
       .innerJoin(
         distinctTransactions,
         and(
           eq(
-            processedTransactions.transactionHash,
+            analysisSchema.processedTransactions.transactionHash,
             distinctTransactions.transactionHash,
           ),
           eq(
-            processedTransactions.timestamp,
+            analysisSchema.processedTransactions.timestamp,
             distinctTransactions.maxTimestamp,
           ),
         ),
       )
-      .orderBy(desc(processedTransactions.timestamp))
+      .orderBy(desc(analysisSchema.processedTransactions.timestamp))
       .limit(input.limit);
 
     return {

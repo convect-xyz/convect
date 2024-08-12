@@ -1,4 +1,6 @@
+import { schema } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
 import { destroyDeployment } from "~/server/actions/builds";
@@ -31,6 +33,10 @@ export const deleteFunction = protectedProcedure
       version: env.VERSION,
       functionId: input.functionId,
     });
+
+    await ctx.db
+      .delete(schema.convectFunctions)
+      .where(eq(schema.convectFunctions.id, input.functionId));
 
     return {};
   });

@@ -7,7 +7,7 @@ use tokio_retry::strategy::{jitter, ExponentialBackoff};
 use tokio_retry::Retry;
 use web3::types::{Filter, FilterBuilder, Log, H160, H256};
 
-use crate::types::manifest::{LogConfig, Manifest, TransactionConfig};
+use crate::types::manifest::{self, LogConfig, Manifest, TransactionConfig};
 use crate::types::transactions::{IngestLog, IngestTransaction};
 use crate::web3_client::{Web3Client, Web3ClientImpl};
 
@@ -15,6 +15,7 @@ pub trait TransactionFetcher {
     fn get_transactions_in_range(
         &self,
         manifest: &Manifest,
+        chain_id: u64,
         start_block: u64,
         end_block: u64,
     ) -> impl Future<Output = Result<Vec<IngestTransaction>, BoxError>>;
@@ -52,6 +53,18 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
             .collect()
     }
 
+    fn get_address_for_chain(&self, address_map: &manifest::LogOrigin, chain_id: u64) -> String {
+        match address_map {
+            manifest::LogOrigin::String(address) => address.clone(),
+            manifest::LogOrigin::Map(address_map) => {
+                let address = address_map
+                    .get(&chain_id)
+                    .expect(format!("No address found for chain id {}", chain_id).as_str());
+                address.clone()
+            }
+        }
+    }
+
     /**
       Returns a Filter that covers all the logs that are relevant to the given range.
       The Filter is constructed by:
@@ -66,12 +79,15 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
         &self,
         tx_configs: &Vec<TransactionConfig>,
         log_configs: &Vec<&LogConfig>,
+        chain_id: u64,
         range_start: u64,
         range_end: u64,
     ) -> Filter {
         let addresses = log_configs
             .iter()
-            .map(|c| H160::from_str(c.address.as_str()).unwrap())
+            .map(|c| {
+                H160::from_str(self.get_address_for_chain(&c.address, chain_id).as_str()).unwrap()
+            })
             .collect();
 
         let topics = log_configs
@@ -104,11 +120,25 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
             .build()
     }
 
-    fn remove_extranous_logs(&self, manifest: &Manifest, logs: Vec<Log>) -> Vec<Log> {
+    fn remove_extranous_logs(
+        &self,
+        manifest: &Manifest,
+        chain_id: u64,
+        logs: Vec<Log>,
+    ) -> Vec<Log> {
         let has_matching_log_cfg = |log: &Log| {
             manifest.log_configs.iter().any(|log_cfg| {
-                let parsed_cfg_address = H160::from_str(log_cfg.address.as_str())
-                    .expect(format!("Could not convert to H256: {}", log_cfg.address).as_str());
+                let parsed_cfg_address = H160::from_str(
+                    self.get_address_for_chain(&log_cfg.address, chain_id)
+                        .as_str(),
+                )
+                .expect(
+                    format!(
+                        "Could not convert to H256: {}",
+                        self.get_address_for_chain(&log_cfg.address, chain_id)
+                    )
+                    .as_str(),
+                );
 
                 let parsed_cfg_topic = H256::from_str(log_cfg.topics[0].as_str())
                     .expect(format!("Could not convert to H256: {}", log_cfg.topics[0]).as_str());
@@ -135,6 +165,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
     async fn get_transactions_in_range(
         &self,
         manifest: &Manifest,
+        chain_id: u64,
         range_start: u64,
         range_end: u64,
     ) -> Result<Vec<IngestTransaction>, BoxError> {
@@ -144,6 +175,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         let filter = self.get_web3_client_filter(
             &manifest.tx_configs,
             &eligible_log_cfgs,
+            chain_id,
             range_start,
             range_end,
         );
@@ -154,7 +186,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         })
         .await?;
 
-        let logs: Vec<_> = self.remove_extranous_logs(manifest, fetched_logs);
+        let logs: Vec<_> = self.remove_extranous_logs(manifest, chain_id, fetched_logs);
 
         let mut tx_indices: HashMap<H256, usize> = HashMap::new();
         let mut txs: Vec<IngestTransaction> = Vec::new();
@@ -231,15 +263,19 @@ mod tests {
     }
 
     mod get_transactions_in_range {
+        use ethers::abi::Hash;
+
         use super::*;
-        use crate::types::manifest::{LogConfig, Manifest, TransactionConfig};
+        use crate::types::manifest::{LogConfig, LogOrigin, Manifest, TransactionConfig};
 
         #[tokio::test]
         async fn calls_filter_with_correct_params() {
             let manifest = Manifest {
                 log_configs: vec![
                     LogConfig {
-                        address: "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002".to_string(),
+                        address: LogOrigin::String(
+                            "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002".to_string(),
+                        ),
                         topics: vec![
                             "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"
                                 .to_string(),
@@ -247,7 +283,9 @@ mod tests {
                         tx_configs: vec![0],
                     },
                     LogConfig {
-                        address: "0x8d9088383506437d8De8897B5cF924a2ac70BBDb".to_string(),
+                        address: LogOrigin::String(
+                            "0x8d9088383506437d8De8897B5cF924a2ac70BBDb".to_string(),
+                        ),
                         topics: vec![
                             "0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"
                                 .to_string(),
@@ -294,7 +332,7 @@ mod tests {
 
             let fetcher = TransactionFetcherImpl { web3_client };
             let txs = fetcher
-                .get_transactions_in_range(&manifest, 0, 10)
+                .get_transactions_in_range(&manifest, 1, 0, 10)
                 .await
                 .unwrap();
 

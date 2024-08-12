@@ -22,23 +22,13 @@ const zodId = z
   )
   .transform(([project, convectFn]) => ({ project, convectFn }));
 
-const requestSchema = z
-  .object({
-    mode: z.literal("init"),
-    id: zodId,
-    handler: z.instanceof(Blob),
-    manifest: z.instanceof(Blob),
-    override: z.coerce.boolean(),
-    producerId: z.coerce.number(),
-  })
-  .or(
-    z.object({
-      mode: z.literal("update"),
-      id: zodId,
-      handler: z.instanceof(Blob),
-      producerId: z.coerce.number(),
-    }),
-  );
+const requestSchema = z.object({
+  mode: z.literal("init"),
+  id: zodId,
+  handler: z.instanceof(Blob),
+  manifest: z.instanceof(Blob),
+  override: z.coerce.boolean(),
+});
 
 export const POST = async (req: NextRequest) => {
   const { user, error: userError } = await getUserContext(req);
@@ -132,17 +122,15 @@ export const POST = async (req: NextRequest) => {
     handler.convectFunction.id.toString(),
     deploymentId + ".json",
   );
-  if (data.mode === "init") {
-    const manifest = data.manifest;
-
-    promises.push(
-      s3.putObject({
-        Bucket: MANIFEST_BUCKET,
-        Key: manifestPrefix,
-        Body: await manifest.text(),
-      }),
-    );
-  }
+  const manifest = data.manifest;
+  const rawManifest = await manifest.text();
+  promises.push(
+    s3.putObject({
+      Bucket: MANIFEST_BUCKET,
+      Key: manifestPrefix,
+      Body: rawManifest,
+    }),
+  );
 
   await Promise.all(promises);
 
@@ -160,6 +148,7 @@ export const POST = async (req: NextRequest) => {
     sourcePrefix,
     manifestBucket: MANIFEST_BUCKET,
     manifestPrefix,
+    rawManifest,
     deploymentId,
     stripeCustomerId: await getStripeCustomerId(user),
     userId: user.id,

@@ -26,8 +26,8 @@ export function Chain() {
   );
 
   useEffect(() => {
-    if (!searchParams.get("handlerId") && fn && fn.handlers.length > 0) {
-      handleValueChange(fn.handlers.at(0)!.id.toString());
+    if (!searchParams.get("handlerId") && fn && fn.chains.length > 0) {
+      handleValueChange(fn.chains.at(0)!.chainId.toString());
     }
   }, [searchParams, fn]);
 
@@ -44,16 +44,16 @@ export function Chain() {
       <SelectTrigger className="h-auto w-[55px] bg-muted">
         <ChainIcon
           chainId={
-            fn?.handlers.find((f) => f.id === handlerId)?.producer.chainId ?? 0
+            fn?.chains.find((f) => f.chainId === handlerId)?.chainId ?? 0
           }
         />
       </SelectTrigger>
       <SelectContent>
-        {fn?.handlers.map((h) => (
-          <SelectItem value={h.id.toString()}>
+        {fn?.chains.map((h) => (
+          <SelectItem value={h.chainId.toString()}>
             <div className="flex items-center gap-2">
-              <ChainIcon chainId={h.producer.chainId} />
-              <div>{h.producer.name}</div>
+              <ChainIcon chainId={h.chainId} />
+              <div>{h.name}</div>
             </div>
           </SelectItem>
         ))}

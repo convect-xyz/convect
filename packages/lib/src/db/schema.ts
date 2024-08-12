@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   index,
   integer,
+  json,
   pgEnum,
   pgTableCreator,
   primaryKey,
@@ -175,7 +176,9 @@ export const handler = createTable(
     id: serial("id").notNull().primaryKey(),
     functionId: integer("function_id")
       .notNull()
-      .references(() => convectFunctions.id),
+      .references(() => convectFunctions.id, {
+        onDelete: "cascade",
+      }),
     producerId: integer("producerId")
       .notNull()
       .references(() => producers.id),
@@ -238,6 +241,7 @@ export const deployment = createTable(
     status: deploymentStatus("status").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     ecsTaskId: varchar("ecsTaskId", { length: 255 }).notNull(),
+    manifest: json("manifest").notNull().default({}),
   },
   (deployment) => ({
     functionIdIdx: index("deployment_functionId_idx").on(deployment.functionId),

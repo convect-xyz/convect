@@ -74,7 +74,6 @@ export const GET = async (req: NextRequest) => {
         chainId: h.producer.chainId,
         name: h.producer.name,
       },
-      version: h.version,
     })),
   });
 };
