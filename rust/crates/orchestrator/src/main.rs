@@ -20,30 +20,37 @@ use std::collections::BTreeMap;
 use tokio::sync::{Mutex, MutexGuard, OnceCell};
 
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
-static USE_CACHE: Lazy<Mutex<bool>> = Lazy::new(|| Mutex::new(false));
-static PIPELINE: Lazy<Mutex<Option<State>>> = Lazy::new(|| Mutex::new(None));
+static USE_CACHE: Lazy<Mutex<HashMap<u64, bool>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static PIPELINE: Lazy<Mutex<HashMap<u64, State>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
-async fn get_use_cache() -> bool {
-    return *USE_CACHE.lock().await;
+async fn get_use_cache(chain_config: &ChainConfig) -> bool {
+    let cache = *USE_CACHE
+        .lock()
+        .await
+        .get(&chain_config.chain_id)
+        .unwrap_or(&false);
+
+    return cache;
 }
 
-async fn set_use_cache(use_cache: bool) {
-    *USE_CACHE.lock().await = use_cache;
+async fn set_use_cache(use_cache: bool, chain_config: &ChainConfig) {
+    let mut use_cache_map = USE_CACHE.lock().await;
+    use_cache_map.insert(chain_config.chain_id, use_cache);
 }
 
 async fn get_pipeline(
     config: &Config,
     chain_config: &ChainConfig,
-) -> MutexGuard<'static, Option<State>> {
+) -> MutexGuard<'static, HashMap<u64, State>> {
     let mut maybe_pipeline = PIPELINE.lock().await;
-    if !get_use_cache().await || maybe_pipeline.is_none() {
+    if !get_use_cache(chain_config).await || !maybe_pipeline.contains_key(&chain_config.chain_id) {
         let state = State::load(
             config.function_id.clone(),
             chain_config.chain_id.to_string(),
             config.deployment_id.clone(),
         );
 
-        let _ = maybe_pipeline.replace(state);
+        let _ = maybe_pipeline.insert(chain_config.chain_id, state);
     }
 
     return maybe_pipeline;
@@ -134,7 +141,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let config = Config::new();
     let manifest = get_manifest().await;
     let mut pipeline = get_pipeline(&config, &chain_config).await;
-    let mut pipeline = pipeline.as_mut().unwrap();
+    let mut pipeline = pipeline.get_mut(&chain_config.chain_id).unwrap();
 
     if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
         return Ok(());
@@ -156,7 +163,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
             .send()
             .expect("Failed to update pipeline");
 
-        set_use_cache(false).await;
+        set_use_cache(false, &chain_config).await;
         return batch_sync(
             chain_config.chain_id,
             &ecs_client,
@@ -168,7 +175,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         .await;
     }
 
-    set_use_cache(true).await;
+    set_use_cache(true, &chain_config).await;
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
 
     let transactions = fetcher
