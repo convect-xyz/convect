@@ -50,7 +50,16 @@ pub mod manifest {
     #[serde(untagged)]
     pub enum LogOrigin {
         String(String),
-        Map(HashMap<u64, String>),
+        Map(HashMap<String, String>),
+    }
+
+    impl LogOrigin {
+        pub fn get_address(&self, chain_id: u64) -> String {
+            match self {
+                LogOrigin::String(address) => address.clone(),
+                LogOrigin::Map(map) => map.get(&chain_id.to_string()).unwrap().clone(),
+            }
+        }
     }
 
     #[derive(Deserialize, Clone, Debug)]

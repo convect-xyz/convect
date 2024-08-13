@@ -327,12 +327,7 @@ async fn get_contract_creation_block(
             manifest
                 .log_configs
                 .iter()
-                .map(|l| match &l.address {
-                    manifest::LogOrigin::String(address) => address.clone(),
-                    manifest::LogOrigin::Map(address_map) => {
-                        address_map.get(&chain_config.chain_id).unwrap().clone()
-                    }
-                })
+                .map(|l| l.address.get_address(chain_config.chain_id))
                 .collect(),
         )
         .await
