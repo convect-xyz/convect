@@ -71,8 +71,8 @@ function FnRow(props: {
       </div>
 
       <span className="ml-auto flex w-min items-center gap-2 whitespace-nowrap rounded-full bg-background px-2 py-1">
-        {props.fn.handlers.map((h) => (
-          <ChainIcon chainId={h.chainId} />
+        {props.fn.chains.map((c) => (
+          <ChainIcon chainId={c.chainId} />
         ))}
       </span>
     </div>
