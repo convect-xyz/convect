@@ -2,6 +2,21 @@ import { z } from "zod";
 
 export type Manifest = z.infer<typeof manifestSchema>;
 
+type AbiParameter = z.infer<typeof baseAbiParameter> & {
+  components?: AbiParameter[];
+};
+
+const baseAbiParameter = z.object({
+  type: z.string(),
+  name: z.string().optional(),
+  internalType: z.string().optional(),
+  indexed: z.boolean().optional(),
+});
+
+const abiParameter: z.ZodType<AbiParameter> = baseAbiParameter.extend({
+  components: z.lazy(() => abiParameter.array().optional()),
+});
+
 export const manifestSchema = z.object({
   chains: z.array(
     z.object({
@@ -19,6 +34,12 @@ export const manifestSchema = z.object({
       address: z.string().or(z.record(z.string())),
       topics: z.array(z.string()),
       tx_configs: z.array(z.number()),
+      abi: z.object({
+        type: z.literal("event"),
+        anonymous: z.boolean().optional(),
+        inputs: z.array(abiParameter),
+        name: z.string(),
+      }),
     }),
   ),
 });
