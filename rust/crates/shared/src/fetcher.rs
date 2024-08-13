@@ -114,17 +114,14 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
     ) -> Vec<Log> {
         let has_matching_log_cfg = |log: &Log| {
             manifest.log_configs.iter().any(|log_cfg| {
-                let parsed_cfg_address = H160::from_str(
-                    self.get_address_for_chain(&log_cfg.address, chain_id)
+                let parsed_cfg_address =
+                    H160::from_str(log_cfg.address.get_address(chain_id).as_str()).expect(
+                        format!(
+                            "Could not convert to H256: {}",
+                            log_cfg.address.get_address(chain_id)
+                        )
                         .as_str(),
-                )
-                .expect(
-                    format!(
-                        "Could not convert to H256: {}",
-                        self.get_address_for_chain(&log_cfg.address, chain_id)
-                    )
-                    .as_str(),
-                );
+                    );
 
                 let parsed_cfg_topic = H256::from_str(log_cfg.topics[0].as_str())
                     .expect(format!("Could not convert to H256: {}", log_cfg.topics[0]).as_str());
