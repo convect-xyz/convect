@@ -72,7 +72,7 @@ async function main() {
 
 async function getStack() {
   const args: InlineProgramArgs = {
-    stackName: env.FUNCTION_ID,
+    stackName: env.FUNCTION_GLOBAL_ID,
     projectName: "convect-v1",
     program: infraFactory,
   };

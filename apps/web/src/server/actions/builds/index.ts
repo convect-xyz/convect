@@ -12,6 +12,7 @@ type TriggerBuildOptions = {
   stripeCustomerId: string;
   userId: string;
   functionId: number;
+  functionGlobalId: string;
   manifestBucket: string;
   manifestPrefix: string;
   rawManifest: string;
@@ -58,6 +59,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
               name: "FUNCTION_ID",
               value: options.functionId.toString(),
             },
+            { name: "FUNCTION_GLOBAL_ID", value: options.functionGlobalId },
             {
               name: "FUNCTION_ENVS",
               value: JSON.stringify(options.envs),

@@ -36,6 +36,7 @@ export const env = createEnv({
       .optional()
       .refine(modeRequired(["init", "update"])),
     FUNCTION_ID: z.string().min(1),
+    FUNCTION_GLOBAL_ID: z.string().min(1),
     FUNCTION_ENVS: z
       .string()
       .optional()

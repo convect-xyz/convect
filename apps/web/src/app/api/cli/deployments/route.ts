@@ -110,6 +110,7 @@ export const POST = async (req: NextRequest) => {
     stripeCustomerId: await getStripeCustomerId(user),
     userId: user.id,
     functionId: fn.convectFunction.id,
+    functionGlobalId: fn.convectFunction.globalId,
     mode: data.mode,
     envs: envs.map((env) => ({
       ...env,
