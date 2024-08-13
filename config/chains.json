@@ -23,8 +23,8 @@
     "polling_url": "https://polygon-mainnet.g.alchemy.com/v2/REDACTED",
     "ws_url": "wss://lb.drpc.org/ogws?network=polygon&dkey=REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-mainnet",
-    "etherscan_like": "",
-    "etherscan_api_key": ""
+    "etherscan_like": "https://api.polygonscan.com",
+    "etherscan_api_key": "REDACTED"
   },
   {
     "id": 80002,
@@ -32,8 +32,8 @@
     "polling_url": "https://polygon-amoy.g.alchemy.com/v2/REDACTED",
     "ws_url": "wss://lb.drpc.org/ogws?network=polygon-amoy&dkey=REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-amoy",
-    "etherscan_like": "",
-    "etherscan_api_key": ""
+    "etherscan_like": "https://api-amoy.polygonscan.com",
+    "etherscan_api_key": "REDACTED"
   },
   {
     "id": 81457,
