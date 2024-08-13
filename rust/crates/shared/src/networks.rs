@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct SupportedNetwork {
+    pub id: u64,
     pub name: String,
     pub polling_url: String,
     pub ws_url: String,

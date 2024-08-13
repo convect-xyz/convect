@@ -1,0 +1,1 @@
+ALTER TABLE "web_convectFunction" ADD COLUMN "infra_version" varchar;

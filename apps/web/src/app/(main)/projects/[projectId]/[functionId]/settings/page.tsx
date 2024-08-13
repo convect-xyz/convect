@@ -179,7 +179,7 @@ function FunctionDescription() {
 }
 
 function DeleteHandler() {
-  const { functionId: handlerId, projectId } = useParams();
+  const { functionId, projectId } = useParams();
   const router = useRouter();
   const { mutateAsync: deleteHandler, isPending: isDeleting } =
     api.functions.delete.useMutation({
@@ -218,7 +218,7 @@ function DeleteHandler() {
           <Button
             onClick={() =>
               deleteHandler({
-                handlerId: Number(handlerId),
+                functionId: Number(functionId),
               })
             }
             isLoading={isDeleting}

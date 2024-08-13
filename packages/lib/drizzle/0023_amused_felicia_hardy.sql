@@ -1,0 +1,1 @@
+ALTER TABLE "web_deployment" ADD COLUMN "manifest" json DEFAULT '{}'::json NOT NULL;

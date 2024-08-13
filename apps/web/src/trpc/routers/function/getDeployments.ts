@@ -1,13 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { desc } from "drizzle-orm";
 import { z } from "zod";
+import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
 
 export const getDeployments = protectedProcedure
   .input(
     z.object({
-      handlerId: z.number(),
+      functionId: z.number(),
     }),
   )
   .output(
@@ -16,13 +17,14 @@ export const getDeployments = protectedProcedure
         id: z.string(),
         status: z.enum(["PENDING", "RUNNING", "SUCCESS", "FAILED"]),
         createdAt: z.number(),
+        manifest: manifestSchema,
       }),
     ),
   )
   .query(async ({ input, ctx }) => {
-    const handler = await ctx.db.query.handler.findFirst({
+    const handler = await ctx.db.query.convectFunctions.findFirst({
       where(fields, { eq }) {
-        return eq(fields.id, input.handlerId);
+        return eq(fields.id, input.functionId);
       },
     });
 
@@ -31,7 +33,7 @@ export const getDeployments = protectedProcedure
     }
 
     const deployments = await db.query.deployment.findMany({
-      where: (fields, { eq }) => eq(fields.handlerId, handler.id),
+      where: (fields, { eq }) => eq(fields.functionId, handler.id),
       orderBy(fields, operators) {
         return desc(fields.createdAt);
       },
@@ -41,5 +43,6 @@ export const getDeployments = protectedProcedure
       id: deployment.id,
       status: deployment.status,
       createdAt: deployment.createdAt.getTime(),
+      manifest: parseManifest(deployment.manifest),
     }));
   });

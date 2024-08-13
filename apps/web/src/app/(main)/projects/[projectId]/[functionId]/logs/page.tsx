@@ -16,7 +16,7 @@ import { columns } from "./columns";
 import LogFilters, { useFilters } from "./filters";
 import { useLogs } from "./hooks/useLogs";
 
-type LogRow = RouterOutputs["handlers"]["getLogs"][0];
+type LogRow = RouterOutputs["functions"]["getLogs"][0];
 
 export default function Page() {
   return (

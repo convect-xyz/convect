@@ -37,12 +37,13 @@ async function handleFailure() {
         eq(schema.deployment.id, deployment.id),
         // All previous deployments for the same handler that are pending
         and(
-          eq(schema.deployment.handlerId, deployment.handlerId),
+          eq(schema.deployment.functionId, deployment.functionId),
           lt(schema.deployment.createdAt, deployment.createdAt),
           inArray(schema.deployment.status, ["PENDING"])
         )
       )
-    );
+    )
+    .catch(() => {});
 }
 
 function getDbInstance() {
@@ -78,14 +79,12 @@ init({
     });
 
     scope.setContext("function", {
-      id: process.env.HANDLER_ID,
-      version: process.env.HANDLER_VERSION,
+      id: process.env.FUNCTION_ID,
       manifestBucket: process.env.MANIFEST_BUCKET,
       manifestKey: process.env.MANIFEST_PREFIX,
       sourceBucket: process.env.SOURCE_BUCKET,
       sourceKey: process.env.SOURCE_PREFIX,
       mode: process.env.MODE,
-      chain: process.env.CHAIN_ID,
     });
 
     return scope;

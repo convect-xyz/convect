@@ -2,7 +2,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { RouterOutputs } from "~/trpc/shared";
 
 const columnHelper =
-  createColumnHelper<RouterOutputs["handlers"]["getLogs"][0]>();
+  createColumnHelper<RouterOutputs["functions"]["getLogs"][0]>();
 
 export const columns = [
   columnHelper.accessor("time", {

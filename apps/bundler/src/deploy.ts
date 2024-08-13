@@ -19,25 +19,28 @@ const RUNTIME_SRC_FILE = "/scripts/runtime.js";
 const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
 
 main().then(async () => {
-  await succeedDeployment();
+  if (env.MODE !== "destroy") {
+    await succeedDeployment();
+  }
   process.exit(0);
 });
 
 async function main() {
-  db.update(schema.deployment)
-    .set({
-      status: "RUNNING",
-    })
-    .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
+  if (env.MODE !== "destroy") {
+    db.update(schema.deployment)
+      .set({
+        status: "RUNNING",
+      })
+      .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
+  }
 
   console.info("initialising/getting stack...");
   const stack = await getStack();
   console.info("succesfully intialised stack.");
 
-  console.info("installing aws plugin...");
-  await stack.workspace.installPlugin("aws", "v6.37.0");
+  console.info("setting aws config...");
   await stack.setConfig("aws:region", { value: "eu-west-1" });
-  console.info("aws plugin installed.");
+  console.info("aws config set.");
 
   if (env.MODE === "destroy") {
     console.info("destroying stack...");
@@ -55,11 +58,6 @@ async function main() {
   await zipLambda();
 
   if (env.MODE === "init") {
-    if (Number(env.HANDLER_VERSION) > 0) {
-      console.info("destroying stack...");
-      await stack.destroy({ onOutput: console.info });
-      console.info("stack destroyed");
-    }
     console.info("stack up...");
     await stack.up({ onOutput: console.info });
     console.info("stack upped.");
@@ -74,7 +72,7 @@ async function main() {
 
 async function getStack() {
   const args: InlineProgramArgs = {
-    stackName: env.HANDLER_ID,
+    stackName: env.FUNCTION_ID,
     projectName: "convect-v1",
     program: infraFactory,
   };
@@ -134,12 +132,7 @@ async function zipLambda() {
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
   const bucket = "ingest-build-outputs";
-  const key = path.join(
-    "outputs",
-    env.HANDLER_ID,
-    env.HANDLER_VERSION,
-    env.DEPLOYMENT_ID + ".zip"
-  );
+  const key = path.join("outputs", env.FUNCTION_ID, env.DEPLOYMENT_ID + ".zip");
 
   await s3.putObject({
     Bucket: bucket,

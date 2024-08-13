@@ -3,15 +3,16 @@ import { useParams } from "../../hooks/useParams";
 import { useFilters } from "../filters";
 
 export function useLogs() {
-  const { handlerId } = useParams();
+  const { chainId, functionId } = useParams();
   const { logLevel } = useFilters();
-  return api.handlers.getLogs.useQuery(
+  return api.functions.getLogs.useQuery(
     {
-      handlerId: handlerId ?? -1,
+      chainId: chainId ?? -1,
+      functionId: functionId,
       logLevel,
     },
     {
-      enabled: !!handlerId,
+      enabled: !!chainId,
       refetchOnMount: false,
       refetchOnWindowFocus: false,
     },

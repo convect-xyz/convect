@@ -33,8 +33,8 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
 #[derive(Clone)]
 struct Config {
     deployment_id: String,
-    handler_id: String,
-    handler_version: String,
+    function_id: String,
+    chain_id: String,
     stripe_customer_id: String,
     user_id: String,
     transaction_queue_url: String,
@@ -52,11 +52,7 @@ fn configure_sentry_scope(config: &Config) {
             "deployment_id".to_string(),
             config.deployment_id.clone().into(),
         );
-        deployment_map.insert("handler_id".to_string(), config.handler_id.clone().into());
-        deployment_map.insert(
-            "handler_version".to_string(),
-            config.handler_version.clone().into(),
-        );
+        deployment_map.insert("function_id".to_string(), config.function_id.clone().into());
 
         scope.set_context("deployment", Context::Other(deployment_map));
     });
@@ -70,8 +66,8 @@ fn main() -> Result<(), Error> {
 
     let config = Config {
         deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not defined"),
-        handler_id: env::var("HANDLER_ID").expect("HANDLER_ID is not defined"),
-        handler_version: env::var("HANDLER_VERSION").expect("HANDLER_VERSION is not defined"),
+        function_id: env::var("FUNCTION_ID").expect("FUNCTION_ID is not defined"),
+        chain_id: env::var("CHAIN_ID").expect("CHAIN_ID is not defined"),
         stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
             .expect("STRIPE_CUSTOMER_ID is not defined"),
         user_id: env::var("USER_ID").expect("USER_ID is not defined"),
@@ -86,9 +82,11 @@ fn main() -> Result<(), Error> {
         .build()
         .unwrap()
         .block_on(async move {
-            let handler_id = config.handler_id.clone();
-            let handler_version = config.handler_version.clone();
-            let state = processing::State::load(handler_id, handler_version).await;
+            let function_id = config.function_id.clone();
+            let chain_id = config.chain_id.clone();
+            let deployment_id = config.deployment_id.clone();
+
+            let state = processing::State::load(function_id, chain_id, deployment_id).await;
             let pipeline = Arc::new(Mutex::new(state));
             let reporting_sdk = SQSReportingSdk::new();
             let app_state = AppState {
@@ -157,12 +155,13 @@ mod results {
             .map(|v| v.clone());
 
         let reporting_request = reporting_sdk::Request::Results {
-            handler_id: app_state.config.handler_id.clone(),
-            handler_version: app_state.config.handler_version.clone(),
+            function_id: app_state.config.function_id.clone(),
+            chain_id: app_state.config.chain_id.clone(),
             stripe_customer_id: app_state.config.stripe_customer_id.clone(),
             user_id: app_state.config.user_id.clone(),
             invocation_id: payload.invocation_id.clone(),
             results: payload.results.clone(),
+            deployment_id: app_state.config.deployment_id.clone(),
         };
 
         let (reporting_result, process_result, visibility_result) = join!(

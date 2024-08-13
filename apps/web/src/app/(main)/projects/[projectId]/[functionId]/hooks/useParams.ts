@@ -5,11 +5,11 @@ export function useParams() {
   const projectParams = useProjectParams();
   const searchParams = useSearchParams();
   const params = _useParams<{ functionId: string }>();
-  const maybeHandlerId = searchParams.get("handlerId");
+  const maybeChainId = searchParams.get("chainId");
 
   return {
     ...projectParams,
     functionId: Number(params.functionId),
-    handlerId: maybeHandlerId ? Number(maybeHandlerId) : null,
+    chainId: maybeChainId ? Number(maybeChainId) : null,
   };
 }

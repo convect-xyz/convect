@@ -1,0 +1,169 @@
+import { TRPCError } from "@trpc/server";
+import { sql } from "drizzle-orm";
+import { Redis } from "ioredis";
+import { z } from "zod";
+import { analysisDb } from "~/server/db/analysis";
+import { protectedProcedure } from "~/trpc/trpc";
+
+const redisClient = new Redis(
+  25061,
+  "rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com",
+  {
+    tls: {
+      checkServerIdentity: (servername, cert) => {
+        return undefined;
+      },
+    },
+  },
+);
+
+export const getOverview = protectedProcedure
+  .input(
+    z.object({
+      functionId: z.number(),
+      chainId: z.number(),
+    }),
+  )
+  .output(
+    z.object({
+      status: z.enum(["failed", "processing", "provisioning"]),
+      chain: z.object({
+        name: z.string(),
+        chainId: z.number(),
+      }),
+      lastFetchedBlock: z.number(),
+      transactionCount: z.number(),
+      processedTransactionsCount: z.number(),
+      avgDuration: z.number(),
+      version: z.number(),
+      internalId: z.string(),
+    }),
+  )
+  .query(async (opts) => {
+    const { input, ctx } = opts;
+
+    const currentDeployment = await ctx.db.query.deployment.findFirst({
+      where(fields, { eq, and }) {
+        return and(
+          eq(fields.functionId, input.functionId),
+          eq(fields.status, "SUCCESS"),
+        );
+      },
+      orderBy(fields, { desc }) {
+        return desc(fields.createdAt);
+      },
+    });
+
+    if (!currentDeployment) {
+      throw new TRPCError({
+        message: "Deployment not found",
+        code: "NOT_FOUND",
+      });
+    }
+
+    const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
+      getFetchState(
+        input.functionId.toString(),
+        input.chainId,
+        currentDeployment.id,
+      ),
+      getTxCount(
+        input.functionId.toString(),
+        input.chainId,
+        currentDeployment.id,
+      ),
+      getAvgDuration(
+        input.functionId.toString(),
+        input.chainId,
+        currentDeployment.id,
+      ),
+      getSuccessfulTxCount(
+        input.functionId.toString(),
+        input.chainId,
+        currentDeployment.id,
+      ),
+    ]);
+
+    const producer = await ctx.db.query.producers.findFirst({
+      where(fields, { eq }) {
+        return eq(fields.chainId, input.chainId);
+      },
+    });
+
+    if (!producer) {
+      throw new TRPCError({
+        message: "Producer not found",
+        code: "NOT_FOUND",
+      });
+    }
+
+    return {
+      status: fetchState.state ? "processing" : "provisioning",
+      chain: {
+        name: producer.name,
+        chainId: producer.chainId,
+      },
+      transactionCount: txCount ?? 0,
+      processedTransactionsCount: successfulTx,
+      lastFetchedBlock: fetchState?.lastBlock ?? 0,
+      avgDuration: avgDuration,
+      version: 0,
+      internalId: " handler.internalId",
+    };
+  });
+
+const getAvgDuration = async (
+  internalId: string,
+  version: number,
+  deploymentId: string,
+) => {
+  return analysisDb
+    .execute(
+      sql`SELECT AVG(duration_ms) FROM reported_metrics WHERE handler_id = ${internalId} AND handler_version = ${version} AND deployment_id = ${deploymentId}`,
+    )
+    .then((r) => Number(r.rows.at(0)!.avg));
+};
+
+const getSuccessfulTxCount = async (
+  internalId: string,
+  version: number,
+  deploymentId: string,
+) => {
+  return analysisDb
+    .execute(
+      sql`SELECT COUNT(*) FROM
+        (SELECT DISTINCT transaction_hash FROM processed_transactions WHERE handler_id = ${internalId} 
+          AND handler_version = ${version}
+          AND status = 'SUCCESS'
+          AND deployment_id = ${deploymentId})
+      `,
+    )
+    .then((r) => Number(r.rows.at(0)!.count));
+};
+
+const getTxCount = async (
+  internalId: string,
+  version: number,
+  deploymentId: string,
+) => {
+  const txCount = await redisClient.get(
+    `tx-count-${internalId}-${version}-${deploymentId}`,
+  );
+  return txCount ? Number(txCount) : null;
+};
+
+const getFetchState = async (
+  internalId: string,
+  version: number,
+  deploymentId: string,
+) => {
+  const [lastBlock, state] = await redisClient.mget(
+    `${internalId}-${version}-${deploymentId}-last-block`,
+    `${internalId}-${version}-${deploymentId}-state`,
+  );
+
+  return {
+    lastBlock: lastBlock ? Number(lastBlock) : null,
+    state: state ? state : null,
+  };
+};

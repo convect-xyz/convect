@@ -4,19 +4,18 @@ import { getApiKeys } from "./routers/apiKey/getApiKeys";
 import { switchPlan } from "./routers/billing/switchPlan";
 import { addEnv } from "./routers/function/addEnv";
 import { createFunction } from "./routers/function/create";
+import { deleteFunction } from "./routers/function/delete";
 import { deleteEnv } from "./routers/function/deleteEnv";
+import { getDeployments } from "./routers/function/getDeployments";
 import { getEnvs } from "./routers/function/getEnvs";
 import { getFunction } from "./routers/function/getFunction";
 import { getInvocations } from "./routers/function/getInvocations";
+import { getLogs } from "./routers/function/getLogs";
+import { getOverview } from "./routers/function/getOverview";
+import { getTransactions } from "./routers/function/getTransactions";
 import { updateDescription } from "./routers/function/updateDescription";
 import { updateEnv } from "./routers/function/updateEnv";
 import { updateName } from "./routers/function/updateName";
-import { deleteHandler } from "./routers/handler/delete";
-import { getDeployments } from "./routers/handler/getDeployments";
-import { getHandler } from "./routers/handler/getHandler";
-import { getLogs } from "./routers/handler/getLogs";
-import { getOverview } from "./routers/handler/getOverview";
-import { getTransactions } from "./routers/handler/getTransactions";
 import { createProducer } from "./routers/producers/create";
 import { getProducers } from "./routers/producers/getProducers";
 import { projectRouter } from "./routers/project";
@@ -33,7 +32,7 @@ export const apiKeysRouter = createTRPCRouter({
 export const functionRouter = createTRPCRouter({
   create: createFunction,
   get: getFunction,
-  delete: deleteHandler,
+  delete: deleteFunction,
   getEnvs,
   addEnv,
   deleteEnv,
@@ -41,13 +40,8 @@ export const functionRouter = createTRPCRouter({
   updateName,
   updateDescription,
   getInvocations,
-});
-
-export const handlerRouter = createTRPCRouter({
-  get: getHandler,
-  delete: deleteHandler,
-  getLogs,
   getDeployments,
+  getLogs,
   getOverview,
   getTransactions,
 });
@@ -61,7 +55,6 @@ export const appRouter = createTRPCRouter({
   project: projectRouter,
   producers: producersRouter,
   functions: functionRouter,
-  handlers: handlerRouter,
   apiKeys: apiKeysRouter,
   billing: billingRouter,
 });
