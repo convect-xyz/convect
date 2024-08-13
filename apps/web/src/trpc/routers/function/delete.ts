@@ -32,6 +32,7 @@ export const deleteFunction = protectedProcedure
     await destroyDeployment({
       version: env.VERSION,
       functionId: input.functionId,
+      functionGlobalId: convectFunction.globalId,
     });
 
     await ctx.db

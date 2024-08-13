@@ -128,6 +128,7 @@ export async function createDeployment(options: TriggerBuildOptions) {
 
 type DestroyDeploymentOptions = {
   functionId: number;
+  functionGlobalId: string;
   version: string;
 };
 
@@ -153,6 +154,10 @@ export async function destroyDeployment(options: DestroyDeploymentOptions) {
             {
               name: "FUNCTION_ID",
               value: options.functionId.toString(),
+            },
+            {
+              name: "FUNCTION_GLOBAL_ID",
+              value: options.functionGlobalId,
             },
             {
               name: "DATABASE_URL",
