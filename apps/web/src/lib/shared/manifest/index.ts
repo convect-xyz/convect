@@ -24,6 +24,8 @@ export const manifestSchema = z.object({
 });
 
 export function parseManifest(manifest: string | any): Manifest {
+  console.log(manifest);
+
   if (typeof manifest === "string") {
     return manifestSchema.parse(JSON.parse(manifest));
   }
