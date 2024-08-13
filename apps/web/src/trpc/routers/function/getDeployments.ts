@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { desc } from "drizzle-orm";
 import { z } from "zod";
+import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
 
@@ -16,6 +17,7 @@ export const getDeployments = protectedProcedure
         id: z.string(),
         status: z.enum(["PENDING", "RUNNING", "SUCCESS", "FAILED"]),
         createdAt: z.number(),
+        manifest: manifestSchema,
       }),
     ),
   )
@@ -41,5 +43,6 @@ export const getDeployments = protectedProcedure
       id: deployment.id,
       status: deployment.status,
       createdAt: deployment.createdAt.getTime(),
+      manifest: parseManifest(deployment.manifest),
     }));
   });

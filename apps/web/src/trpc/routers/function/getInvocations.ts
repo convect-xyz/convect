@@ -1,33 +1,9 @@
+import { analysisSchema } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
 import { and, eq, ilike } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { Pool } from "pg";
 import { z } from "zod";
-import { env } from "~/env";
+import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
-
-const conn = new Pool({
-  connectionString: env.REPORTING_DATABASE_URL,
-  ssl: {
-    checkServerIdentity: (servername, cert) => {
-      return undefined;
-    },
-    rejectUnauthorized: false,
-  },
-});
-
-export const processedTransactions = pgTable("processed_transactions", {
-  id: serial("id").primaryKey(),
-  handlerId: varchar("handler_id").notNull(),
-  handlerVersion: varchar("handler_version").notNull(),
-  transactionHash: varchar("transaction_hash").notNull(),
-  status: varchar("status", { length: 256 }).notNull(),
-  deploymentId: varchar("deployment_id").notNull(),
-  timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
-});
-
-const db = drizzle(conn, { schema: { processedTransactions } });
 
 export const getInvocations = protectedProcedure
   .input(
@@ -37,7 +13,8 @@ export const getInvocations = protectedProcedure
       cursor: z.number().nullish(),
       search: z.string().nullish(),
       status: z.enum(["FAILED", "SUCCESS"]).nullish(),
-      handlerId: z.number(),
+      chainId: z.number(),
+      functionId: z.number(),
     }),
   )
   .output(
@@ -55,23 +32,10 @@ export const getInvocations = protectedProcedure
   .query(async (opts) => {
     const { input, ctx } = opts;
 
-    const handler = await ctx.db.query.handler.findFirst({
-      where(fields, { eq }) {
-        return eq(fields.id, input.handlerId);
-      },
-      with: {
-        producer: true,
-      },
-    });
-
-    if (!handler) {
-      throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
-    }
-
     const currentDeployment = await ctx.db.query.deployment.findFirst({
       where(fields, { eq, and }) {
         return and(
-          eq(fields.functionId, handler.functionId),
+          eq(fields.functionId, input.functionId),
           eq(fields.status, "SUCCESS"),
         );
       },
@@ -89,32 +53,44 @@ export const getInvocations = protectedProcedure
 
     const getFilter = () => {
       let baseFilter = and(
-        eq(processedTransactions.handlerId, handler.functionId.toString()),
         eq(
-          processedTransactions.handlerVersion,
-          handler.producer.chainId.toString(),
+          analysisSchema.processedTransactions.handlerId,
+          input.functionId.toString(),
         ),
-        eq(processedTransactions.deploymentId, currentDeployment.id),
-        eq(processedTransactions.transactionHash, input.transactionHash),
+        eq(
+          analysisSchema.processedTransactions.handlerVersion,
+          input.chainId.toString(),
+        ),
+        eq(
+          analysisSchema.processedTransactions.deploymentId,
+          currentDeployment.id,
+        ),
+        eq(
+          analysisSchema.processedTransactions.transactionHash,
+          input.transactionHash,
+        ),
       );
       if (input.search) {
         baseFilter = and(
           baseFilter,
-          ilike(processedTransactions.transactionHash, `%${input.search}%`),
+          ilike(
+            analysisSchema.processedTransactions.transactionHash,
+            `%${input.search}%`,
+          ),
         )!;
       }
       if (input.status) {
         baseFilter = and(
           baseFilter,
-          eq(processedTransactions.status, input.status),
+          eq(analysisSchema.processedTransactions.status, input.status),
         )!;
       }
       return baseFilter;
     };
 
-    const recentTransactions = await db
+    const recentTransactions = await analysisDb
       .select()
-      .from(processedTransactions)
+      .from(analysisSchema.processedTransactions)
       .where(getFilter());
 
     return {

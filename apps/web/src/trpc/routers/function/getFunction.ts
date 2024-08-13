@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
 
@@ -26,6 +27,9 @@ export const getFunction = protectedProcedure
           chainId: z.number(),
         }),
       ),
+      currentDeployment: z.object({
+        manifest: manifestSchema,
+      }),
     }),
   )
   .query(async (opts) => {
@@ -73,8 +77,8 @@ export const getFunction = protectedProcedure
       });
     }
 
-    const manifest = JSON.parse(currentDeployment.manifest as string);
-    console.log(manifest);
+    const manifest = parseManifest(currentDeployment.manifest);
+
     const chains = manifest.chains.map((c: any) => ({
       name: c.name,
       chainId: c.chainId,
@@ -85,5 +89,8 @@ export const getFunction = protectedProcedure
       isInitialised: true,
       project: fn.project,
       chains,
+      currentDeployment: {
+        manifest,
+      },
     };
   });

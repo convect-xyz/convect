@@ -2,16 +2,20 @@
 
 import { DialogProps } from "@radix-ui/react-dialog";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { Button } from "~/components/ui/button";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/sheet";
+import { Manifest } from "~/lib/shared/manifest";
 import { RouterOutputs } from "~/trpc/shared";
+import ManifestDialog from "../(components)/ManifestDialog";
 import { useDeployments } from "./hooks/useDeployments";
 
-type LogRow = RouterOutputs["handlers"]["getLogs"][0];
+type LogRow = RouterOutputs["functions"]["getLogs"][0];
 
 export default function Page() {
   return <Content />;
@@ -31,6 +35,7 @@ function Content() {
 
 function DeploymentsTable() {
   const { data: deployments } = useDeployments();
+  const [currentManifest, setCurrentManifest] = useState<Manifest>();
 
   return (
     <>
@@ -42,21 +47,36 @@ function DeploymentsTable() {
         )}
         <div className="flex flex-col divide-y">
           {deployments?.map((deployment) => (
-            <div
-              key={deployment.id}
-              className="flex items-center gap-2 bg-muted p-4  text-sm"
-            >
-              <div className="flex flex-1 items-center gap-2">
-                <div className="basis-96 truncate">{deployment.id}</div>
-                <div className="basis-56 truncate">{deployment.status}</div>
+            <div key={deployment.id} className=" bg-muted p-4  text-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex flex-1 items-center gap-2">
+                  <div className="basis-96 truncate">{deployment.id}</div>
+                  <div className="basis-56 truncate">{deployment.status}</div>
+                </div>
+                <div className="truncate">
+                  {formatDistanceToNow(deployment.createdAt, {
+                    addSuffix: true,
+                  })}
+                </div>
               </div>
-              <div className="truncate">
-                {formatDistanceToNow(deployment.createdAt, { addSuffix: true })}
-              </div>
+              <Button onClick={() => setCurrentManifest(deployment.manifest)}>
+                View Manifest
+              </Button>
             </div>
           ))}
         </div>
       </div>
+      {currentManifest && (
+        <ManifestDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setCurrentManifest(undefined);
+            }
+          }}
+          manifest={currentManifest}
+        />
+      )}
     </>
   );
 }

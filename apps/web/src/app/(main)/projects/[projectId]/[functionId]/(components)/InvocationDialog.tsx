@@ -6,22 +6,23 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { api } from "~/trpc/react";
-import InvocationRow from "./(components)/InvocationRow";
-import { useParams } from "./hooks/useParams";
+import { useParams } from "../hooks/useParams";
+import InvocationRow from "./InvocationRow";
 
 export default function InvocationDialog(
   props: DialogProps & {
     transactionHash: string;
   },
 ) {
-  const { chainId: handlerId } = useParams();
+  const { chainId, functionId } = useParams();
   const { data: response } = api.functions.getInvocations.useQuery(
     {
       transactionHash: props.transactionHash,
-      handlerId: handlerId ?? -1,
+      chainId: chainId ?? -1,
+      functionId: functionId ?? -1,
     },
     {
-      enabled: !!handlerId,
+      enabled: !!chainId && !!functionId,
     },
   );
 
