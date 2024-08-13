@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
 
@@ -20,15 +21,15 @@ export const getFunction = protectedProcedure
       project: z.object({
         name: z.string(),
       }),
-      handlers: z.array(
+      chains: z.array(
         z.object({
-          id: z.number(),
-          producer: z.object({
-            name: z.string(),
-            chainId: z.number(),
-          }),
+          name: z.string(),
+          chainId: z.number(),
         }),
       ),
+      currentDeployment: z.object({
+        manifest: manifestSchema,
+      }),
     }),
   )
   .query(async (opts) => {
@@ -57,19 +58,39 @@ export const getFunction = protectedProcedure
       });
     }
 
-    const handlers = await ctx.db.query.handler.findMany({
-      where(fields, { and, eq }) {
-        return and(eq(fields.functionId, input.functionId));
+    const currentDeployment = await ctx.db.query.deployment.findFirst({
+      where(fields, { eq, and }) {
+        return and(
+          eq(fields.functionId, input.functionId),
+          eq(fields.status, "SUCCESS"),
+        );
       },
-      with: {
-        producer: true,
+      orderBy(fields, { desc }) {
+        return desc(fields.createdAt);
       },
     });
+
+    if (!currentDeployment) {
+      throw new TRPCError({
+        message: "This function does not exist",
+        code: "NOT_FOUND",
+      });
+    }
+
+    const manifest = parseManifest(currentDeployment.manifest);
+
+    const chains = manifest.chains.map((c: any) => ({
+      name: c.name,
+      chainId: c.chainId,
+    }));
 
     return {
       ...fn.convectFunction,
       isInitialised: true,
       project: fn.project,
-      handlers,
+      chains,
+      currentDeployment: {
+        manifest,
+      },
     };
   });

@@ -1,12 +1,10 @@
-import { schema } from "@convect-xyz/lib";
-import { eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { v4 } from "uuid";
 import { z } from "zod";
-import { env } from "~/env";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
+import { parseManifest } from "~/lib/shared/manifest";
 import { monikerRegex } from "~/lib/shared/validation";
 import { createDeployment } from "~/server/actions/builds";
 import { db } from "~/server/db";
@@ -23,23 +21,13 @@ const zodId = z
   )
   .transform(([project, convectFn]) => ({ project, convectFn }));
 
-const requestSchema = z
-  .object({
-    mode: z.literal("init"),
-    id: zodId,
-    handler: z.instanceof(Blob),
-    manifest: z.instanceof(Blob),
-    override: z.coerce.boolean(),
-    producerId: z.coerce.number(),
-  })
-  .or(
-    z.object({
-      mode: z.literal("update"),
-      id: zodId,
-      handler: z.instanceof(Blob),
-      producerId: z.coerce.number(),
-    }),
-  );
+const requestSchema = z.object({
+  mode: z.literal("init"),
+  id: zodId,
+  handler: z.instanceof(Blob),
+  manifest: z.instanceof(Blob),
+  override: z.coerce.boolean(),
+});
 
 export const POST = async (req: NextRequest) => {
   const { user, error: userError } = await getUserContext(req);
@@ -65,80 +53,10 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
-  const exists = await db.query.handler
-    .findFirst({
-      where(fields, { eq, and }) {
-        return and(
-          eq(fields.producerId, data.producerId),
-          eq(fields.functionId, fn.convectFunction.id),
-        );
-      },
-    })
-    .then((v) => !!v);
-
-  if (!exists) {
-    await db
-      .insert(schema.handler)
-      .values({
-        functionId: fn.convectFunction.id,
-        version: -1,
-        infraVersion: env.VERSION,
-        producerId: data.producerId,
-      })
-      .returning()
-      .then((v) => v[0]);
-  }
-
-  const handler = await db.query.handler.findFirst({
-    where(fields, { eq, and }) {
-      return and(
-        eq(fields.producerId, data.producerId),
-        eq(fields.functionId, fn.convectFunction.id),
-      );
-    },
-    with: {
-      producer: true,
-      convectFunction: {
-        with: {
-          envs: true,
-        },
-      },
-    },
-  });
-
-  if (!handler) {
-    return NextResponse.json(
-      {
-        message: "Handler not found",
-      },
-      {
-        status: 400,
-      },
-    );
-  }
-
   const deploymentId = v4();
 
-  if (data.mode === "init") {
-    if (!data.override) {
-      return NextResponse.json(
-        { message: "Override denied." },
-        { status: 401 },
-      );
-    }
-
-    handler.version = await db
-      .update(schema.handler)
-      .set({
-        version: sql`${schema.handler.version} + 1`,
-      })
-      .where(eq(schema.handler.id, handler.id))
-      .returning({ version: schema.handler.version })
-      .then((v) => v[0]!.version);
-  }
-
   const bundledHandler = data.handler;
-  const sourcePrefix = `code/${handler.internalId}/${handler.version}/${deploymentId}.zip`;
+  const sourcePrefix = `code/${fn.convectFunction.id}/${deploymentId}.zip`;
   const promises: Promise<any>[] = [
     s3.putObject({
       Bucket: "ingest-build-outputs",
@@ -149,44 +67,60 @@ export const POST = async (req: NextRequest) => {
 
   const manifestPrefix = path.join(
     "manifests",
-    handler.internalId,
-    handler.version + ".json",
+    fn.convectFunction.id.toString(),
+    deploymentId + ".json",
   );
-  if (data.mode === "init") {
-    const manifest = data.manifest;
 
-    promises.push(
-      s3.putObject({
-        Bucket: MANIFEST_BUCKET,
-        Key: manifestPrefix,
-        Body: await manifest.text(),
-      }),
-    );
-  }
+  const manifest = data.manifest;
+  const rawManifest = await manifest.text();
+  const parsedManifest = parseManifest(rawManifest);
+
+  promises.push(
+    s3.putObject({
+      Bucket: MANIFEST_BUCKET,
+      Key: manifestPrefix,
+      Body: rawManifest,
+    }),
+  );
 
   await Promise.all(promises);
 
+  const envs = await db.query.functionEnv.findMany({
+    where(fields, { eq }) {
+      return eq(fields.functionId, fn.convectFunction.id);
+    },
+  });
+
+  const producers = await db.query.producers.findMany({
+    where(fields, { inArray }) {
+      return inArray(
+        fields.chainId,
+        parsedManifest.chains.map((chain) => chain.chainId),
+      );
+    },
+  });
+
   await createDeployment({
-    version: handler.infraVersion,
+    version: fn.convectFunction.infraVersion!,
     sourcePrefix,
     manifestBucket: MANIFEST_BUCKET,
     manifestPrefix,
+    rawManifest,
     deploymentId,
     stripeCustomerId: await getStripeCustomerId(user),
     userId: user.id,
-    handlerId: handler.id,
-    internalHandlerId: handler.internalId,
-    internalHandlerVersion: handler.version,
-    pollingUrl: handler.producer.pollingUrl,
-    chainSns: handler.producer.topicArn!,
-    chainId: handler.producer.chainId,
+    functionId: fn.convectFunction.id,
     mode: data.mode,
-    envs: handler.convectFunction.envs.map((env) => ({
+    envs: envs.map((env) => ({
       ...env,
       value: decryptEnvValue(env.value, env.iv),
     })),
-    etherscanApiKey: handler.producer.etherscanApiKey,
-    etherscanLike: handler.producer.etherscanLike,
+    chainConfigs: producers.map((p) => ({
+      chainId: p.chainId,
+      pollingUrl: p.pollingUrl,
+      etherscanApiKey: p.etherscanApiKey,
+      etherscanLike: p.etherscanLike,
+    })),
   });
 
   return NextResponse.json({});

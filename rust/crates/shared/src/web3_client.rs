@@ -19,6 +19,7 @@ pub trait Web3Client {
            + Send;
 }
 
+#[derive(Clone)]
 pub struct Web3ClientImpl {
     web3: Web3<Http>,
 }
@@ -31,6 +32,13 @@ impl Web3ClientImpl {
                 .as_str(),
         )
         .unwrap();
+        let web3: Web3<Http> = web3::Web3::new(transport);
+
+        Self { web3 }
+    }
+
+    pub fn new_from_endpoint(endpoint: String) -> Self {
+        let transport: Http = web3::transports::Http::new(endpoint.as_str()).unwrap();
         let web3: Web3<Http> = web3::Web3::new(transport);
 
         Self { web3 }

@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   index,
   integer,
+  json,
   pgEnum,
   pgTableCreator,
   primaryKey,
@@ -150,6 +151,7 @@ export const convectFunctions = createTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     name: varchar("name").notNull(),
     description: varchar("description").notNull().default(""),
+    infraVersion: varchar("infra_version"),
   },
   (handler) => ({
     projectIdName: unique().on(handler.name, handler.projectId),
@@ -172,14 +174,11 @@ export const handler = createTable(
   "handler",
   {
     id: serial("id").notNull().primaryKey(),
-    internalId: varchar("internal_id")
-      .unique()
-      .default(sql`gen_random_uuid()`)
-      .notNull(),
     functionId: integer("function_id")
       .notNull()
-      .references(() => convectFunctions.id),
-    version: integer("version").notNull().default(0),
+      .references(() => convectFunctions.id, {
+        onDelete: "cascade",
+      }),
     producerId: integer("producerId")
       .notNull()
       .references(() => producers.id),
@@ -213,8 +212,8 @@ export const functionEnv = createTable(
     iv: varchar("iv").notNull(),
     lastUpdatedAt: timestamp("last_updated_at").defaultNow().notNull(),
   },
-  (handlerEnv) => ({
-    functionIdName: unique().on(handlerEnv.functionId, handlerEnv.key),
+  (functionEnv) => ({
+    functionIdName: unique().on(functionEnv.functionId, functionEnv.key),
   })
 );
 
@@ -236,22 +235,23 @@ export const deployment = createTable(
   "deployment",
   {
     id: varchar("id").notNull().primaryKey(),
-    handlerId: integer("handlerId")
+    functionId: integer("functionId")
       .notNull()
-      .references(() => handler.id, { onDelete: "cascade" }),
+      .references(() => convectFunctions.id, { onDelete: "cascade" }),
     status: deploymentStatus("status").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     ecsTaskId: varchar("ecsTaskId", { length: 255 }).notNull(),
+    manifest: json("manifest").notNull().default({}),
   },
   (deployment) => ({
-    handlerIdIdx: index("deployment_handlerId_idx").on(deployment.handlerId),
+    functionIdIdx: index("deployment_functionId_idx").on(deployment.functionId),
   })
 );
 
 export const deploymentsRelations = relations(deployment, ({ one }) => ({
-  handler: one(handler, {
-    fields: [deployment.handlerId],
-    references: [handler.id],
+  function: one(convectFunctions, {
+    fields: [deployment.functionId],
+    references: [convectFunctions.id],
   }),
 }));
 
