@@ -53,18 +53,6 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
             .collect()
     }
 
-    fn get_address_for_chain(&self, address_map: &manifest::LogOrigin, chain_id: u64) -> String {
-        match address_map {
-            manifest::LogOrigin::String(address) => address.clone(),
-            manifest::LogOrigin::Map(address_map) => {
-                let address = address_map
-                    .get(&chain_id)
-                    .expect(format!("No address found for chain id {}", chain_id).as_str());
-                address.clone()
-            }
-        }
-    }
-
     /**
       Returns a Filter that covers all the logs that are relevant to the given range.
       The Filter is constructed by:
@@ -85,9 +73,7 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
     ) -> Filter {
         let addresses = log_configs
             .iter()
-            .map(|c| {
-                H160::from_str(self.get_address_for_chain(&c.address, chain_id).as_str()).unwrap()
-            })
+            .map(|c| H160::from_str(c.address.get_address(chain_id).as_str()).unwrap())
             .collect();
 
         let topics = log_configs
