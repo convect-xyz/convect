@@ -16,7 +16,7 @@ export const manifestSchema = z.object({
   ),
   log_configs: z.array(
     z.object({
-      address: z.string().or(z.record(z.number(), z.string())),
+      address: z.string().or(z.record(z.string())),
       topics: z.array(z.string()),
       tx_configs: z.array(z.number()),
     }),
