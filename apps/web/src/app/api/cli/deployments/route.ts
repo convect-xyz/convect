@@ -4,6 +4,7 @@ import { v4 } from "uuid";
 import { z } from "zod";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
+import { parseManifest } from "~/lib/shared/manifest";
 import { monikerRegex } from "~/lib/shared/validation";
 import { createDeployment } from "~/server/actions/builds";
 import { db } from "~/server/db";
@@ -69,8 +70,11 @@ export const POST = async (req: NextRequest) => {
     fn.convectFunction.id.toString(),
     deploymentId + ".json",
   );
+
   const manifest = data.manifest;
   const rawManifest = await manifest.text();
+  const parsedManifest = parseManifest(rawManifest);
+
   promises.push(
     s3.putObject({
       Bucket: MANIFEST_BUCKET,
@@ -91,7 +95,7 @@ export const POST = async (req: NextRequest) => {
     where(fields, { inArray }) {
       return inArray(
         fields.chainId,
-        JSON.parse(rawManifest).chains.map((chain: any) => chain.chainId),
+        parsedManifest.chains.map((chain) => chain.chainId),
       );
     },
   });

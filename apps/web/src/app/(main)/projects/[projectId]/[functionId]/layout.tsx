@@ -43,9 +43,9 @@ function Main(props: PropsWithChildren) {
     const isLinked = trim(route, "/") === trim(pathname, "/");
 
     const params = new URLSearchParams();
-    const handlerId = searchParams.get("handlerId");
-    if (handlerId) {
-      params.set("handlerId", handlerId);
+    const chainId = searchParams.get("chainId");
+    if (chainId) {
+      params.set("chainId", chainId);
       route += `?${params}`;
     }
 

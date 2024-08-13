@@ -6,11 +6,8 @@ type Props = {
     functionId: string;
     projectId: string;
   };
-  searchParams: {
-    handlerId?: string;
-  };
 };
-export default async function Page({ params, searchParams }: Props) {
+export default async function Page({ params }: Props) {
   const helper = await getReactQueryHelper();
 
   await helper.functions.get.fetch({

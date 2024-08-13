@@ -10,13 +10,12 @@ import { getDeployments } from "./routers/function/getDeployments";
 import { getEnvs } from "./routers/function/getEnvs";
 import { getFunction } from "./routers/function/getFunction";
 import { getInvocations } from "./routers/function/getInvocations";
+import { getLogs } from "./routers/function/getLogs";
+import { getOverview } from "./routers/function/getOverview";
+import { getTransactions } from "./routers/function/getTransactions";
 import { updateDescription } from "./routers/function/updateDescription";
 import { updateEnv } from "./routers/function/updateEnv";
 import { updateName } from "./routers/function/updateName";
-import { getHandler } from "./routers/handler/getHandler";
-import { getLogs } from "./routers/handler/getLogs";
-import { getOverview } from "./routers/handler/getOverview";
-import { getTransactions } from "./routers/handler/getTransactions";
 import { createProducer } from "./routers/producers/create";
 import { getProducers } from "./routers/producers/getProducers";
 import { projectRouter } from "./routers/project";
@@ -42,10 +41,6 @@ export const functionRouter = createTRPCRouter({
   updateDescription,
   getInvocations,
   getDeployments,
-});
-
-export const handlerRouter = createTRPCRouter({
-  get: getHandler,
   getLogs,
   getOverview,
   getTransactions,
@@ -60,7 +55,6 @@ export const appRouter = createTRPCRouter({
   project: projectRouter,
   producers: producersRouter,
   functions: functionRouter,
-  handlers: handlerRouter,
   apiKeys: apiKeysRouter,
   billing: billingRouter,
 });

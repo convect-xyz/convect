@@ -5,6 +5,7 @@ import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { CodeBlock } from "~/components/code/CodeBlock";
+import { Button } from "~/components/ui/button";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
 import {
@@ -25,13 +26,14 @@ import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
 import { Chain } from "./(components)/Chain";
+import InvocationDialog from "./(components)/InvocationDialog";
+import ManifestDialog from "./(components)/ManifestDialog";
 import TransactionRow from "./(components)/TransactionRow";
 import TransactionFilters, { useTransactionFilters } from "./filters";
 import { useParams } from "./hooks/useParams";
-import InvocationDialog from "./InvocationDialog";
 
 type Transaction =
-  RouterOutputs["handlers"]["getTransactions"]["transactions"][0];
+  RouterOutputs["functions"]["getTransactions"]["transactions"][0];
 
 const DASHBOARD_REFETCH_INTERVAL = 30000;
 
@@ -57,7 +59,7 @@ export default ingest({
 
 export default function Main() {
   const { chainId, functionId } = useParams();
-  const { data: overview } = api.handlers.getOverview.useQuery(
+  const { data: overview } = api.functions.getOverview.useQuery(
     {
       functionId: functionId ?? -1,
       chainId: chainId ?? -1,
@@ -149,7 +151,9 @@ export default function Main() {
           </>
         )}
       </div>
-
+      <div className="mt-2">
+        <ManifestSection />
+      </div>
       {(!overview || overview.isInitialised) && (
         <div className="mt-2">
           <TransactionFilters>
@@ -163,7 +167,7 @@ export default function Main() {
 
 function LastUpdatedAt() {
   const { chainId, functionId } = useParams();
-  const { data: overview, dataUpdatedAt } = api.handlers.getOverview.useQuery(
+  const { data: overview, dataUpdatedAt } = api.functions.getOverview.useQuery(
     {
       functionId: functionId ?? 0,
       chainId: chainId ?? 0,
@@ -192,7 +196,7 @@ function LastUpdatedAt() {
 
 function VersionStatus() {
   const { functionId, chainId } = useParams();
-  const { data, isLoading } = api.handlers.getOverview.useQuery(
+  const { data, isLoading } = api.functions.getOverview.useQuery(
     {
       functionId: functionId ?? -1,
       chainId: chainId ?? -1,
@@ -247,22 +251,21 @@ function VersionStatus() {
 
 function RecentTransactions() {
   const filters = useTransactionFilters();
-  const { functionId, chainId: handlerId } = useParams();
+  const { functionId, chainId } = useParams();
   const [selectedTransactionHash, setSelectedTransactionHash] =
     useState<string>();
 
-  console.log("handlerId", handlerId);
   const { data: maybeTransactions, error } =
-    api.handlers.getTransactions.useQuery(
+    api.functions.getTransactions.useQuery(
       {
         functionId: functionId ?? -1,
-        chainId: handlerId ?? -1,
+        chainId: chainId ?? -1,
         search: filters.debouncedSearch,
         status: filters.status,
       },
       {
         refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-        enabled: !!handlerId && !!functionId,
+        enabled: !!chainId && !!functionId,
       },
     );
   console.log("error", error);
@@ -371,5 +374,36 @@ function StatusFilter() {
         </SelectItem>
       </SelectContent>
     </Select>
+  );
+}
+
+function ManifestSection() {
+  const [isOpen, setIsOpen] = useState(false);
+  const { functionId, projectId } = useParams();
+  const { data: fn } = api.functions.get.useQuery({
+    projectId: projectId,
+    functionId: functionId,
+  });
+
+  if (!fn) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="flex-1 uppercase text-muted-foreground">
+            View Manifest
+          </span>
+          <Button onClick={() => setIsOpen(true)}>View</Button>
+        </div>
+      </div>
+      <ManifestDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        manifest={fn?.currentDeployment?.manifest}
+      />
+    </>
   );
 }
