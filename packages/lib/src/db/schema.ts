@@ -149,6 +149,9 @@ export const convectFunctions = createTable(
     projectId: integer("projectId")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
+    globalId: varchar("globalId")
+      .notNull()
+      .default(sql`gen_random_uuid()`),
     name: varchar("name").notNull(),
     description: varchar("description").notNull().default(""),
     infraVersion: varchar("infra_version"),
@@ -165,40 +168,9 @@ export const convectFunctionsRelations = relations(
       fields: [convectFunctions.projectId],
       references: [projects.id],
     }),
-    handlers: many(handler),
     envs: many(functionEnv),
   })
 );
-
-export const handler = createTable(
-  "handler",
-  {
-    id: serial("id").notNull().primaryKey(),
-    functionId: integer("function_id")
-      .notNull()
-      .references(() => convectFunctions.id, {
-        onDelete: "cascade",
-      }),
-    producerId: integer("producerId")
-      .notNull()
-      .references(() => producers.id),
-    infraVersion: varchar("infra_version").notNull(),
-  },
-  (handler) => ({
-    functionProducerUnique: unique().on(handler.functionId, handler.producerId),
-  })
-);
-
-export const handlerRelations = relations(handler, ({ one, many }) => ({
-  convectFunction: one(convectFunctions, {
-    fields: [handler.functionId],
-    references: [convectFunctions.id],
-  }),
-  producer: one(producers, {
-    fields: [handler.producerId],
-    references: [producers.id],
-  }),
-}));
 
 export const functionEnv = createTable(
   "function_env",
@@ -281,5 +253,4 @@ export const producers = createTable(
 
 export const producersRelations = relations(producers, ({ one, many }) => ({
   user: one(users, { fields: [producers.userId], references: [users.id] }),
-  handlers: many(handler),
 }));
