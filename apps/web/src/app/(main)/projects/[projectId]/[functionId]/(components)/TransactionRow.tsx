@@ -6,7 +6,7 @@ import { cn } from "~/lib/utils";
 import { RouterOutputs } from "~/trpc/shared";
 
 type Transaction =
-  RouterOutputs["handlers"]["getTransactions"]["transactions"][0];
+  RouterOutputs["functions"]["getTransactions"]["transactions"][0];
 
 export default function TransactionRow(props: {
   tx: Transaction;
