@@ -93,11 +93,11 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         serde_json::from_str(event.payload.records.last().unwrap().sns.message.as_str())
             .expect("Invalid SNS Message");
 
-    println!("Incoming block: {:?}", incoming_blocks);
-
     let config = Config::new();
     let futures = config.chains.into_iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
+        println!("Incoming block: {:?}", block_for_chain);
+
         async move { sync_chain(chain_config, block_for_chain).await }
     });
 
@@ -130,6 +130,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let config = Config::new();
 
     let incoming_block = incoming_block.min(web3_client.get_current_block_number().await?);
+    println!("Incoming block: {:?}", incoming_block);
 
     // benchmark this
     let mut pipeline = State::load(
@@ -138,6 +139,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         config.deployment_id.clone(),
     );
 
+    println!("Pipeline Inner: {:?}", pipeline.inner());
     if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
         return Ok(());
     }
