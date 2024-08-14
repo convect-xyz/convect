@@ -71,52 +71,68 @@ function RenderManifest(props: { manifest: Manifest }) {
         </div>
         <div>
           <div className="flex flex-col gap-2">
-            {structuredManifest.txConfigs.map((txConfig) => (
-              <Card>
-                <CardContent className="p-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-full border px-2 py-1 text-xs">
-                        <span className="text-muted-foreground">
-                          Start Block /{" "}
-                        </span>
-                        {txConfig.startBlock}
+            {structuredManifest.txConfigs.map((txConfig) => {
+              const getStartBlock = () => {
+                if (!selectedChainId) {
+                  return undefined;
+                }
+
+                return txConfig.startBlock[selectedChainId.toString()];
+              };
+
+              const startBlock = getStartBlock();
+              return (
+                <Card>
+                  <CardContent className="p-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-full border px-2 py-1 text-xs">
+                          <span className="text-muted-foreground">
+                            Start Block /{" "}
+                          </span>
+                          {startBlock
+                            ? new Intl.NumberFormat("en-US").format(startBlock)
+                            : "-"}
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-3 flex flex-col gap-1 divide-y divide-muted-foreground">
-                      {txConfig.logConfigs.map((logConfig) => {
-                        const getAddress = (
-                          address: string | Record<string, string>,
-                        ) => {
-                          if (!selectedChainId) {
-                            return undefined;
-                          }
+                      <div className="mt-3 flex flex-col divide-y divide-border">
+                        {txConfig.logConfigs.map((logConfig) => {
+                          const getAddress = (
+                            address: string | Record<string, string>,
+                          ) => {
+                            if (!selectedChainId) {
+                              return undefined;
+                            }
 
-                          if (typeof address === "string") {
-                            return address;
-                          }
+                            if (typeof address === "string") {
+                              return address;
+                            }
 
-                          return address[selectedChainId.toString()];
-                        };
+                            return address[selectedChainId.toString()];
+                          };
 
-                        return (
-                          <div key={logConfig.topics.join(",")}>
-                            <div className="flex flex-col gap-1">
-                              <div className="text-sm">
-                                event {toEventSignature(logConfig.abi)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {getAddress(logConfig.address)}
+                          return (
+                            <div
+                              key={logConfig.topics.join(",")}
+                              className="py-2"
+                            >
+                              <div className="flex flex-col gap-1">
+                                <div className="text-sm">
+                                  event {toEventSignature(logConfig.abi)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {getAddress(logConfig.address)}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </div>
