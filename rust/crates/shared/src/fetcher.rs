@@ -169,7 +169,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
             range_end,
         );
 
-        let retry_strategy = ExponentialBackoff::from_millis(10).map(jitter).take(3);
+        let retry_strategy = ExponentialBackoff::from_millis(15).map(jitter).take(3);
         let fetched_logs = Retry::spawn(retry_strategy, || async {
             Ok::<_, BoxError>(self.web3_client.get_logs(filter.clone()).await?)
         })
