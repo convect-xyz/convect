@@ -12,10 +12,7 @@ use shared::{
     contract_info::{self, ContractInfoProvider},
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{TransactionFetcher, TransactionFetcherImpl},
-    types::{
-        manifest::{self, Manifest},
-        syncing::State,
-    },
+    types::{manifest::Manifest, syncing::State},
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::BTreeMap;
@@ -83,7 +80,6 @@ fn main() -> Result<(), Error> {
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
-        .worker_threads(10)
         .build()
         .unwrap()
         .block_on(async {
@@ -100,12 +96,23 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     println!("Incoming block: {:?}", incoming_blocks);
 
     let config = Config::new();
-    let handles = config.chains.into_iter().map(|chain_config| {
+    let futures = config.chains.into_iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-        tokio::spawn(async move { sync_chain(chain_config, block_for_chain).await })
+        async move { sync_chain(chain_config, block_for_chain).await }
     });
 
-    join_all(handles).await;
+    let result = join_all(futures).await;
+
+    for res in result {
+        match res {
+            Ok(_) => {
+                println!("Successfully synced chain");
+            }
+            Err(e) => {
+                println!("Failed to sync chain: {:?}", e);
+            }
+        }
+    }
 
     Ok(())
 }
@@ -312,7 +319,7 @@ fn create_key_value_pair(name: &str, value: &String) -> KeyValuePair {
     KeyValuePair::builder().name(name).value(value).build()
 }
 
-async fn get_contract_creation_block(
+async fn get_min_contract_creation_block(
     web3_client: &Web3ClientImpl,
     manifest: &Manifest,
     chain_config: &ChainConfig,
@@ -345,6 +352,8 @@ async fn get_contract_creation_block(
     .into_iter()
     .collect();
 
+    println!("Transactions: {:?}", transactions);
+
     let min_block = match transactions {
         Ok(receipts) => {
             let mut min_block = None;
@@ -366,6 +375,8 @@ async fn get_contract_creation_block(
         }
     };
 
+    println!("Min block: {:?}", min_block);
+
     Ok(min_block)
 }
 
@@ -375,22 +386,24 @@ async fn get_init_block(
     web3_client: &Web3ClientImpl,
     chain_config: &ChainConfig,
 ) -> Option<u64> {
+    println!("{:?}", pipeline.last_block());
     match pipeline.last_block() {
         Some(_) => None,
         None => {
             let manifest_min_block = manifest
                 .tx_configs
                 .iter()
-                .map(|c| u64::try_from(c.start_block).expect("i64 to u64 failed"))
+                .map(|c| c.get_start_block(chain_config.chain_id).unwrap_or(0))
                 .min();
 
-            let contract_creation_block =
-                get_contract_creation_block(&web3_client, &manifest, chain_config)
+            println!("{:?}", manifest_min_block);
+            let contract_creation_min_block =
+                get_min_contract_creation_block(&web3_client, &manifest, chain_config)
                     .await
                     .unwrap();
-
+            println!("{:?}", contract_creation_min_block);
             Some(max(
-                contract_creation_block.unwrap_or(0),
+                contract_creation_min_block.unwrap_or(0),
                 manifest_min_block.unwrap_or(0),
             ))
         }

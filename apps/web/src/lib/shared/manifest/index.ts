@@ -26,7 +26,7 @@ export const manifestSchema = z.object({
   ),
   tx_configs: z.array(
     z.object({
-      start_block: z.coerce.number(),
+      start_block: z.record(z.number()),
     }),
   ),
   log_configs: z.array(

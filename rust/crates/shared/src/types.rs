@@ -30,7 +30,7 @@ pub mod transactions {
 
 pub mod manifest {
     use serde::Deserialize;
-    use serde_with::{serde_as, DisplayFromStr};
+    use serde_with::serde_as;
     use std::{collections::HashMap, env};
 
     #[derive(Deserialize, Debug, Clone)]
@@ -42,8 +42,13 @@ pub mod manifest {
     #[serde_as]
     #[derive(Deserialize, Debug, Clone)]
     pub struct TransactionConfig {
-        #[serde_as(as = "DisplayFromStr")]
-        pub start_block: i64,
+        pub start_block: HashMap<String, u64>,
+    }
+
+    impl TransactionConfig {
+        pub fn get_start_block(&self, chain_id: u64) -> Option<u64> {
+            self.start_block.get(&chain_id.to_string()).cloned()
+        }
     }
 
     #[derive(Deserialize, Debug, Clone)]
@@ -289,16 +294,18 @@ pub mod syncing {
             backoff::retry::<_, ExponentialBackoff<SystemClock>, (), RedisError>(
                 ExponentialBackoff::default(),
                 || {
-                    connection.mset(&[
-                        (
-                            format!("{function_id}-{chain_id}-{deployment_id}-state"),
-                            serde_json::to_string(&self.temp_inner.state).unwrap(),
-                        ),
-                        (
+                    let mut params = vec![(
+                        format!("{function_id}-{chain_id}-{deployment_id}-state"),
+                        serde_json::to_string(&self.temp_inner.state).unwrap(),
+                    )];
+
+                    if let Some(last_block) = &self.temp_inner.last_block {
+                        params.push((
                             format!("{function_id}-{chain_id}-{deployment_id}-last-block"),
-                            self.temp_inner.last_block.clone().unwrap_or_default(),
-                        ),
-                    ])?;
+                            last_block.clone(),
+                        ));
+                    }
+                    connection.mset(&params)?;
 
                     Ok(())
                 },

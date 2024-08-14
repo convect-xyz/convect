@@ -63,34 +63,33 @@ async fn run(
     );
     let manifest = Manifest::from_env().await.unwrap();
 
+    println!("Configs: {:?}", configs);
     for chunk in configs.chunks(70) {
-        let transactions: Result<Vec<Vec<IngestTransaction>>, tokio::task::JoinError> =
-            join_all(chunk.iter().map(|range| {
-                let range = range.clone();
-                let manifest = manifest.clone();
-                tokio::spawn(async move {
-                    let fetcher = TransactionFetcherImpl::new();
+        let transactions: Vec<Vec<IngestTransaction>> = join_all(chunk.iter().map(|range| {
+            let range = range.clone();
+            let manifest = manifest.clone();
+            async move {
+                let fetcher = TransactionFetcherImpl::new();
 
-                    match fetcher
-                        .get_transactions_in_range(
-                            &manifest,
-                            syncer_config.chain_id,
-                            range.start_block,
-                            range.end_block,
-                        )
-                        .await
-                    {
-                        Ok(txs) => txs,
-                        Err(e) => panic!("Failed to fetch transactions: {:?}", e),
-                    }
-                })
-            }))
-            .await
-            .into_iter()
-            .collect();
+                match fetcher
+                    .get_transactions_in_range(
+                        &manifest,
+                        syncer_config.chain_id,
+                        range.start_block,
+                        range.end_block,
+                    )
+                    .await
+                {
+                    Ok(txs) => txs,
+                    Err(e) => panic!("Failed to fetch transactions: {:?}", e),
+                }
+            }
+        }))
+        .await
+        .into_iter()
+        .collect();
 
-        let flattened: Vec<IngestTransaction> =
-            transactions.unwrap().into_iter().flatten().collect();
+        let flattened: Vec<IngestTransaction> = transactions.into_iter().flatten().collect();
         enqueuer.enqueue_transactions(pipeline, &flattened).await?;
 
         pipeline
