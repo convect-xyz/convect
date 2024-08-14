@@ -312,7 +312,7 @@ fn create_key_value_pair(name: &str, value: &String) -> KeyValuePair {
     KeyValuePair::builder().name(name).value(value).build()
 }
 
-async fn get_contract_creation_block(
+async fn get_min_contract_creation_block(
     web3_client: &Web3ClientImpl,
     manifest: &Manifest,
     chain_config: &ChainConfig,
@@ -381,11 +381,11 @@ async fn get_init_block(
             let manifest_min_block = manifest
                 .tx_configs
                 .iter()
-                .map(|c| u64::try_from(c.start_block).expect("i64 to u64 failed"))
+                .map(|c| c.get_start_block(chain_config.chain_id).unwrap_or(0))
                 .min();
 
             let contract_creation_block =
-                get_contract_creation_block(&web3_client, &manifest, chain_config)
+                get_min_contract_creation_block(&web3_client, &manifest, chain_config)
                     .await
                     .unwrap();
 

@@ -33,16 +33,18 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
     fn get_log_configs_in_range<'a>(
         &'a self,
         manifest: &'a Manifest,
+        chain_id: u64,
         range_start: u64,
         range_end: u64,
     ) -> Vec<&'a LogConfig> {
         let has_tx_config_in_range = |log_config: &&LogConfig| {
             log_config.tx_configs.iter().any(|tx_config_idx| {
                 let tx_cfg = &manifest.tx_configs[tx_config_idx.clone() as usize];
-                let tx_cfg_start_block =
-                    u64::try_from(tx_cfg.start_block).expect("Could not convert to u64");
 
-                range_start >= tx_cfg_start_block
+                match tx_cfg.get_start_block(chain_id) {
+                    Some(tx_cfg_start_block) => range_start >= tx_cfg_start_block,
+                    None => true,
+                }
             })
         };
 
@@ -86,12 +88,16 @@ impl<T: Web3Client> TransactionFetcherImpl<T> {
             .map(|c| {
                 c.tx_configs
                     .iter()
-                    .map(|idx| tx_configs[*idx as usize].start_block)
+                    .map(|idx| {
+                        tx_configs[*idx as usize]
+                            .get_start_block(chain_id)
+                            .unwrap_or(0)
+                    })
                     .min()
-                    .unwrap()
+                    .unwrap_or(0)
             })
             .min()
-            .unwrap();
+            .unwrap_or(0);
 
         let start_block = max(
             u64::try_from(smallest_tx_cfg_start_block).expect("Could not convert to u64"),
@@ -153,7 +159,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         range_end: u64,
     ) -> Result<Vec<IngestTransaction>, BoxError> {
         let eligible_log_cfgs: Vec<_> =
-            self.get_log_configs_in_range(manifest, range_start, range_end);
+            self.get_log_configs_in_range(manifest, chain_id, range_start, range_end);
 
         let filter = self.get_web3_client_filter(
             &manifest.tx_configs,
@@ -277,8 +283,12 @@ mod tests {
                     },
                 ],
                 tx_configs: vec![
-                    TransactionConfig { start_block: 0 },
-                    TransactionConfig { start_block: 5 },
+                    TransactionConfig {
+                        start_block: HashMap::from([("1".to_string(), 0)]),
+                    },
+                    TransactionConfig {
+                        start_block: HashMap::from([("1".to_string(), 5)]),
+                    },
                 ],
             };
 

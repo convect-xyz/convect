@@ -30,7 +30,7 @@ pub mod transactions {
 
 pub mod manifest {
     use serde::Deserialize;
-    use serde_with::{serde_as, DisplayFromStr};
+    use serde_with::serde_as;
     use std::{collections::HashMap, env};
 
     #[derive(Deserialize, Debug, Clone)]
@@ -42,8 +42,13 @@ pub mod manifest {
     #[serde_as]
     #[derive(Deserialize, Debug, Clone)]
     pub struct TransactionConfig {
-        #[serde_as(as = "DisplayFromStr")]
-        pub start_block: i64,
+        pub start_block: HashMap<String, u64>,
+    }
+
+    impl TransactionConfig {
+        pub fn get_start_block(&self, chain_id: u64) -> Option<u64> {
+            self.start_block.get(&chain_id.to_string()).cloned()
+        }
     }
 
     #[derive(Deserialize, Debug, Clone)]
