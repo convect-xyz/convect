@@ -4,6 +4,7 @@ use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
+use ethers::abi::Hash;
 use futures::{future::join_all, TryFutureExt};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
@@ -19,7 +20,7 @@ use std::collections::BTreeMap;
 use tokio::sync::OnceCell;
 
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
-static WEB3_CLIENT: OnceCell<Web3ClientImpl> = OnceCell::const_new();
+static WEB3_CLIENTS: OnceCell<HashMap<u64, Web3ClientImpl>> = OnceCell::const_new();
 
 async fn get_manifest() -> &'static Manifest {
     MANIFEST
@@ -30,14 +31,23 @@ async fn get_manifest() -> &'static Manifest {
         .await
 }
 
-async fn get_web3_client(chain_config: &ChainConfig) -> &'static Web3ClientImpl {
-    WEB3_CLIENT
+async fn get_web3_clients() -> &'static HashMap<u64, Web3ClientImpl> {
+    WEB3_CLIENTS
         .get_or_init(|| async {
-            println!(
-                "Fetching web3 client with endpoint {}",
-                chain_config.polling_url
-            );
-            Web3ClientImpl::new_from_endpoint(chain_config.polling_url.clone())
+            let config = Config::new();
+
+            let mut web3_clients = HashMap::new();
+            for chain_config in config.chains.iter() {
+                println!(
+                    "Fetching web3 client with endpoint {}",
+                    chain_config.polling_url
+                );
+                web3_clients.insert(
+                    chain_config.chain_id,
+                    Web3ClientImpl::new_from_endpoint(chain_config.polling_url.clone()),
+                );
+            }
+            web3_clients
         })
         .await
 }
@@ -123,7 +133,10 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<(), Error> {
     let sdk_config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
-    let web3_client = get_web3_client(&chain_config).await;
+    let web3_client = get_web3_clients()
+        .await
+        .get(&chain_config.chain_id)
+        .unwrap();
     let fetcher = TransactionFetcherImpl::new_from_client(web3_client.clone());
     let s3_client = aws_sdk_s3::Client::new(&sdk_config);
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
