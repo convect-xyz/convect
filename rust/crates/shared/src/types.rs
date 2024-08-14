@@ -294,16 +294,18 @@ pub mod syncing {
             backoff::retry::<_, ExponentialBackoff<SystemClock>, (), RedisError>(
                 ExponentialBackoff::default(),
                 || {
-                    connection.mset(&[
-                        (
-                            format!("{function_id}-{chain_id}-{deployment_id}-state"),
-                            serde_json::to_string(&self.temp_inner.state).unwrap(),
-                        ),
-                        (
+                    let mut params = vec![(
+                        format!("{function_id}-{chain_id}-{deployment_id}-state"),
+                        serde_json::to_string(&self.temp_inner.state).unwrap(),
+                    )];
+
+                    if let Some(last_block) = &self.temp_inner.last_block {
+                        params.push((
                             format!("{function_id}-{chain_id}-{deployment_id}-last-block"),
-                            self.temp_inner.last_block.clone().unwrap(),
-                        ),
-                    ])?;
+                            last_block.clone(),
+                        ));
+                    }
+                    connection.mset(&params)?;
 
                     Ok(())
                 },
