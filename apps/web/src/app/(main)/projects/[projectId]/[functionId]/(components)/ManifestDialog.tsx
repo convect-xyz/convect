@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { getStructuredManifest, Manifest } from "~/lib/shared/manifest";
+import { cn } from "~/lib/utils";
 
 export default function ManifestDialog(
   props: DialogProps & {
@@ -33,6 +34,11 @@ function RenderManifest(props: { manifest: Manifest }) {
   const [selectedChainId, setSelectedChainId] = useState<number | undefined>(
     structuredManifest.chains[0]?.chainId,
   );
+
+  const isChainSelected = (chainId: number) => {
+    return selectedChainId === chainId;
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2">
@@ -43,12 +49,15 @@ function RenderManifest(props: { manifest: Manifest }) {
                 onClick={() => setSelectedChainId(c.chainId)}
                 key={c.chainId}
               >
-                <Card className="w-auto rounded-full">
+                <Card
+                  className={cn(
+                    "w-auto rounded-full text-muted-foreground",
+                    isChainSelected(c.chainId) && "border-white text-white",
+                  )}
+                >
                   <CardContent className="flex items-center gap-2 px-2 py-1">
                     <ChainIcon chainId={c.chainId} />
-                    <div className="text-xs text-muted-foreground">
-                      {c.name}
-                    </div>
+                    <div className="text-xs">{c.name}</div>
                   </CardContent>
                 </Card>
               </button>
@@ -61,51 +70,54 @@ function RenderManifest(props: { manifest: Manifest }) {
           Transaction Configurations
         </div>
         <div>
-          {structuredManifest.txConfigs.map((txConfig) => (
-            <Card>
-              <CardContent className="p-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-full border px-2 py-1 text-xs">
-                      <span className="text-muted-foreground">
-                        Start Block /{" "}
-                      </span>
-                      {txConfig.startBlock}
+          <div className="flex flex-col gap-2">
+            {structuredManifest.txConfigs.map((txConfig) => (
+              <Card>
+                <CardContent className="p-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-full border px-2 py-1 text-xs">
+                        <span className="text-muted-foreground">
+                          Start Block /{" "}
+                        </span>
+                        {txConfig.startBlock}
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-3">
-                    {txConfig.logConfigs.map((logConfig) => {
-                      const getAddress = (
-                        address: string | { [key: string]: string },
-                      ) => {
-                        if (!selectedChainId) {
-                          return undefined;
-                        }
+                    <div className="mt-3 flex flex-col gap-1 divide-y divide-muted-foreground">
+                      {txConfig.logConfigs.map((logConfig) => {
+                        const getAddress = (
+                          address: string | Record<string, string>,
+                        ) => {
+                          if (!selectedChainId) {
+                            return undefined;
+                          }
 
-                        if (typeof address === "string") {
-                          return address;
-                        }
-                        return address[selectedChainId.toString()];
-                      };
+                          if (typeof address === "string") {
+                            return address;
+                          }
 
-                      return (
-                        <div key={logConfig.topics.join(",")}>
-                          <div className="flex flex-col gap-1">
-                            <div className="text-sm">
-                              event {toEventSignature(logConfig.abi)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {getAddress(logConfig.address)}
+                          return address[selectedChainId.toString()];
+                        };
+
+                        return (
+                          <div key={logConfig.topics.join(",")}>
+                            <div className="flex flex-col gap-1">
+                              <div className="text-sm">
+                                event {toEventSignature(logConfig.abi)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {getAddress(logConfig.address)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     </div>
