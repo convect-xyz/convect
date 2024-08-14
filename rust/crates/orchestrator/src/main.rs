@@ -129,6 +129,8 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let manifest = get_manifest().await;
     let config = Config::new();
 
+    let incoming_block = incoming_block.min(web3_client.get_current_block_number().await?);
+
     // benchmark this
     let mut pipeline = State::load(
         config.function_id.clone(),
