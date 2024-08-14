@@ -7,6 +7,10 @@ use web3::{
 };
 
 pub trait Web3Client {
+    fn get_current_block_number(
+        &self,
+    ) -> impl std::future::Future<Output = Result<u64, BoxError>> + Send;
+
     fn get_logs(
         &self,
         filter: Filter,
@@ -46,6 +50,10 @@ impl Web3ClientImpl {
 }
 
 impl Web3Client for Web3ClientImpl {
+    async fn get_current_block_number(&self) -> Result<u64, BoxError> {
+        Ok(self.web3.eth().block_number().await?.as_u64())
+    }
+
     async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, BoxError> {
         Ok(self.web3.eth().logs(filter).await?)
     }
