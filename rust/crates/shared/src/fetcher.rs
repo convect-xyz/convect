@@ -253,6 +253,13 @@ mod tests {
         ) -> Result<Option<web3::types::TransactionReceipt>, BoxError> {
             Ok(None)
         }
+
+        async fn get_transaction_by_hash(
+            &self,
+            tx_hash: String,
+        ) -> Result<Option<web3::types::Transaction>, BoxError> {
+            Ok(None)
+        }
     }
 
     mod get_transactions_in_range {
