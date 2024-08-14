@@ -1,4 +1,6 @@
 import { DialogProps } from "@radix-ui/react-dialog";
+import { useState } from "react";
+import { toEventSignature } from "viem";
 import ChainIcon from "~/components/icons/ChainIcon";
 import { Card, CardContent } from "~/components/ui/card";
 import {
@@ -30,19 +32,28 @@ export default function ManifestDialog(
 
 function RenderManifest(props: { manifest: Manifest }) {
   const structuredManifest = getStructuredManifest(props.manifest);
-
+  const [selectedChainId, setSelectedChainId] = useState<number | undefined>(
+    structuredManifest.chains[0]?.chainId,
+  );
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2">
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-1">
             {structuredManifest.chains.map((c) => (
-              <Card className="w-auto rounded-full">
-                <CardContent className="flex items-center gap-2 px-2 py-1">
-                  <ChainIcon chainId={c.chainId} />
-                  <div className="text-xs text-muted-foreground">{c.name}</div>
-                </CardContent>
-              </Card>
+              <button
+                onClick={() => setSelectedChainId(c.chainId)}
+                key={c.chainId}
+              >
+                <Card className="w-auto rounded-full">
+                  <CardContent className="flex items-center gap-2 px-2 py-1">
+                    <ChainIcon chainId={c.chainId} />
+                    <div className="text-xs text-muted-foreground">
+                      {c.name}
+                    </div>
+                  </CardContent>
+                </Card>
+              </button>
             ))}
           </div>
         </div>
@@ -65,13 +76,33 @@ function RenderManifest(props: { manifest: Manifest }) {
                     </div>
                   </div>
                   <div className="mt-3">
-                    {txConfig.logConfigs.map((logConfig) => (
-                      <div key={logConfig.topics.join(",")}>
-                        {typeof logConfig.address === "string"
-                          ? logConfig.address
-                          : Object.keys(logConfig.address).join(", ")}
-                      </div>
-                    ))}
+                    {txConfig.logConfigs.map((logConfig) => {
+                      const getAddress = (
+                        address: string | { [key: string]: string },
+                      ) => {
+                        if (!selectedChainId) {
+                          return undefined;
+                        }
+
+                        if (typeof address === "string") {
+                          return address;
+                        }
+                        return address[selectedChainId.toString()];
+                      };
+
+                      return (
+                        <div key={logConfig.topics.join(",")}>
+                          <div className="flex flex-col gap-1">
+                            <div className="text-sm">
+                              event {toEventSignature(logConfig.abi)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {getAddress(logConfig.address)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>
