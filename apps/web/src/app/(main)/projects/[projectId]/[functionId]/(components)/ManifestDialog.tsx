@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { getStructuredManifest, Manifest } from "~/lib/shared/manifest";
+import { cn } from "~/lib/utils";
 
 export default function ManifestDialog(
   props: DialogProps & {
@@ -33,6 +34,11 @@ function RenderManifest(props: { manifest: Manifest }) {
   const [selectedChainId, setSelectedChainId] = useState<number | undefined>(
     structuredManifest.chains[0]?.chainId,
   );
+
+  const isChainSelected = (chainId: number) => {
+    return selectedChainId === chainId;
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2">
@@ -43,12 +49,15 @@ function RenderManifest(props: { manifest: Manifest }) {
                 onClick={() => setSelectedChainId(c.chainId)}
                 key={c.chainId}
               >
-                <Card className="w-auto rounded-full">
+                <Card
+                  className={cn(
+                    "w-auto rounded-full text-muted-foreground",
+                    isChainSelected(c.chainId) && "border-white text-white",
+                  )}
+                >
                   <CardContent className="flex items-center gap-2 px-2 py-1">
                     <ChainIcon chainId={c.chainId} />
-                    <div className="text-xs text-muted-foreground">
-                      {c.name}
-                    </div>
+                    <div className="text-xs">{c.name}</div>
                   </CardContent>
                 </Card>
               </button>
