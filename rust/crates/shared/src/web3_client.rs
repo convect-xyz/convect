@@ -21,6 +21,11 @@ pub trait Web3Client {
         tx_hash: String,
     ) -> impl std::future::Future<Output = Result<Option<web3::types::TransactionReceipt>, BoxError>>
            + Send;
+
+    fn get_transaction_by_hash(
+        &self,
+        tx_hash: String,
+    ) -> impl std::future::Future<Output = Result<Option<web3::types::Transaction>, BoxError>> + Send;
 }
 
 #[derive(Clone)]
@@ -66,6 +71,17 @@ impl Web3Client for Web3ClientImpl {
             .web3
             .eth()
             .transaction_receipt(H256::from_str(&tx_hash)?)
+            .await?)
+    }
+
+    async fn get_transaction_by_hash(
+        &self,
+        tx_hash: String,
+    ) -> Result<Option<web3::types::Transaction>, BoxError> {
+        Ok(self
+            .web3
+            .eth()
+            .transaction(H256::from_str(&tx_hash)?)
             .await?)
     }
 }

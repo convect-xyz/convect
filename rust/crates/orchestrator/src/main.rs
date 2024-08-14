@@ -33,7 +33,10 @@ async fn get_manifest() -> &'static Manifest {
 async fn get_web3_client(chain_config: &ChainConfig) -> &'static Web3ClientImpl {
     WEB3_CLIENT
         .get_or_init(|| async {
-            println!("Fetching web3 client");
+            println!(
+                "Fetching web3 client with endpoint {}",
+                chain_config.polling_url
+            );
             Web3ClientImpl::new_from_endpoint(chain_config.polling_url.clone())
         })
         .await
@@ -352,7 +355,7 @@ async fn get_min_contract_creation_block(
     let transactions: Result<Vec<_>, _> = join_all(
         creation_tx_hashes
             .iter()
-            .map(|tx_hash| web3_client.get_transaction_receipt(tx_hash.clone())),
+            .map(|tx_hash| web3_client.get_transaction_by_hash(tx_hash.clone())),
     )
     .await
     .into_iter()
@@ -361,11 +364,11 @@ async fn get_min_contract_creation_block(
     println!("Transactions: {:?}", transactions);
 
     let min_block = match transactions {
-        Ok(receipts) => {
+        Ok(txs) => {
             let mut min_block = None;
 
-            for receipt in receipts.iter() {
-                if let Some(receipt) = receipt {
+            for tx in txs.iter() {
+                if let Some(receipt) = tx {
                     let block_number = receipt.block_number.unwrap().as_u64();
                     if min_block.is_none() || block_number < min_block.unwrap() {
                         min_block = Some(block_number);
