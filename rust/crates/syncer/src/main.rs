@@ -63,6 +63,7 @@ async fn run(
     );
     let manifest = Manifest::from_env().await.unwrap();
 
+    println!("Configs: {:?}", configs);
     for chunk in configs.chunks(70) {
         let transactions: Vec<Vec<IngestTransaction>> = join_all(chunk.iter().map(|range| {
             let range = range.clone();
