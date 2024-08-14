@@ -345,6 +345,8 @@ async fn get_min_contract_creation_block(
         .map(|c| c.tx_hash.clone())
         .collect();
 
+    println!("Creation tx hashes: {:?}", creation_tx_hashes);
+
     let transactions: Result<Vec<_>, _> = join_all(
         creation_tx_hashes
             .iter()

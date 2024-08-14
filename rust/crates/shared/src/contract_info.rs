@@ -52,21 +52,30 @@ impl ContractInfoProvider for EtherscanContractInfoProvider {
         &self,
         contract_addresses: Vec<String>,
     ) -> Result<Vec<ContractCreationInfo>, BoxError> {
-        let url = format!(
-        "{etherscan_like}/api?module=contract&action=getcontractcreation&contractaddresses={contract_addresses}&apikey={api_key}",
-        etherscan_like = self.etherscan_like,
-        contract_addresses = contract_addresses.join(","),
-        api_key = self.etherscan_api_key
-      );
+        let mut info = Vec::new();
+        let mut contract_addresses = contract_addresses.clone();
+        contract_addresses.sort();
+        contract_addresses.dedup();
 
-        let response = reqwest::get(url).await?;
-        let response_body = response.text().await?;
-        let response: EtherscanResponse<Vec<ContractCreationInfo>> =
-            serde_json::from_str(&response_body)?;
+        for chunk in contract_addresses.chunks(5) {
+            let url = format!(
+                "{etherscan_like}/api?module=contract&action=getcontractcreation&contractaddresses={contract_addresses}&apikey={api_key}",
+                etherscan_like = self.etherscan_like,
+                contract_addresses = chunk.join(","),
+                api_key = self.etherscan_api_key
+              );
 
-        match response {
-            EtherscanResponse::Success { result, .. } => Ok(result),
-            EtherscanResponse::Error { .. } => Ok(vec![]),
+            let response = reqwest::get(url).await?;
+            let response_body = response.text().await?;
+            let response: EtherscanResponse<Vec<ContractCreationInfo>> =
+                serde_json::from_str(&response_body)?;
+
+            match response {
+                EtherscanResponse::Success { result, .. } => info.extend(result),
+                _ => {}
+            };
         }
+
+        Ok(info)
     }
 }
