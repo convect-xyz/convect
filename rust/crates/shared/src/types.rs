@@ -301,7 +301,7 @@ pub mod syncing {
                         ),
                         (
                             format!("{function_id}-{chain_id}-{deployment_id}-last-block"),
-                            self.temp_inner.last_block.clone().unwrap_or_default(),
+                            self.temp_inner.last_block.clone().unwrap(),
                         ),
                     ])?;
 
