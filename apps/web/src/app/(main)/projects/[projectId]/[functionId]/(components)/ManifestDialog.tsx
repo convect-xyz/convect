@@ -18,13 +18,11 @@ export default function ManifestDialog(
 ) {
   return (
     <Dialog {...props}>
-      <DialogContent className="max-h-[98%] max-w-screen-lg overflow-hidden">
+      <DialogContent className="max-h-[98%] max-w-screen-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Manifest</DialogTitle>
         </DialogHeader>
-        <div className="overflow-y-auto">
-          <RenderManifest manifest={props.manifest} />
-        </div>
+        <RenderManifest manifest={props.manifest} />
       </DialogContent>
     </Dialog>
   );
