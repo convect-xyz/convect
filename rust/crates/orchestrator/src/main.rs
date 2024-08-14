@@ -345,6 +345,8 @@ async fn get_min_contract_creation_block(
     .into_iter()
     .collect();
 
+    println!("Transactions: {:?}", transactions);
+
     let min_block = match transactions {
         Ok(receipts) => {
             let mut min_block = None;
@@ -365,6 +367,8 @@ async fn get_min_contract_creation_block(
             None
         }
     };
+
+    println!("Min block: {:?}", min_block);
 
     Ok(min_block)
 }
