@@ -2,7 +2,7 @@ use aws_sdk_s3::error::BoxError;
 use std::{env, str::FromStr};
 use web3::{
     transports::Http,
-    types::{Filter, Log, H256},
+    types::{Filter, Log, TransactionId, H256},
     Web3,
 };
 
@@ -61,11 +61,22 @@ impl Web3Client for Web3ClientImpl {
     async fn get_transaction_receipt(
         &self,
         tx_hash: String,
-    ) -> Result<Option<web3::types::TransactionReceipt>, BoxError> {
+    ) -> Result<Option<web3::types::Transaction>, BoxError> {
         Ok(self
             .web3
             .eth()
             .transaction_receipt(H256::from_str(&tx_hash)?)
+            .await?)
+    }
+
+    async fn get_transaction_by_hash(
+        &self,
+        tx_hash: String,
+    ) -> Result<Option<web3::types::Transaction>, BoxError> {
+        Ok(self
+            .web3
+            .eth()
+            .transaction(TransactionId::Hash(H256::from_str(&tx_hash)?))
             .await?)
     }
 }
