@@ -379,6 +379,7 @@ async fn get_init_block(
     web3_client: &Web3ClientImpl,
     chain_config: &ChainConfig,
 ) -> Option<u64> {
+    println!("{:?}", pipeline.last_block());
     match pipeline.last_block() {
         Some(_) => None,
         None => {
@@ -388,13 +389,14 @@ async fn get_init_block(
                 .map(|c| c.get_start_block(chain_config.chain_id).unwrap_or(0))
                 .min();
 
-            let contract_creation_block =
+            println!("{:?}", manifest_min_block);
+            let contract_creation_min_block =
                 get_min_contract_creation_block(&web3_client, &manifest, chain_config)
                     .await
                     .unwrap();
-
+            println!("{:?}", contract_creation_min_block);
             Some(max(
-                contract_creation_block.unwrap_or(0),
+                contract_creation_min_block.unwrap_or(0),
                 manifest_min_block.unwrap_or(0),
             ))
         }

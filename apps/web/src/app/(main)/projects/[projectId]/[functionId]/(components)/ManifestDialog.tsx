@@ -80,6 +80,7 @@ function RenderManifest(props: { manifest: Manifest }) {
                 return txConfig.startBlock[selectedChainId.toString()];
               };
 
+              const startBlock = getStartBlock();
               return (
                 <Card>
                   <CardContent className="p-4">
@@ -89,7 +90,9 @@ function RenderManifest(props: { manifest: Manifest }) {
                           <span className="text-muted-foreground">
                             Start Block /{" "}
                           </span>
-                          {getStartBlock() ?? "-"}
+                          {startBlock
+                            ? new Intl.NumberFormat("en-US").format(startBlock)
+                            : "-"}
                         </div>
                       </div>
                       <div className="mt-3 flex flex-col divide-y divide-border">
