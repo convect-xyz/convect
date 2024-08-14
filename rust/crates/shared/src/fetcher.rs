@@ -238,6 +238,10 @@ mod tests {
     }
 
     impl Web3Client for MockWeb3Client {
+        async fn get_current_block_number(&self) -> Result<u64, BoxError> {
+            Ok(0)
+        }
+
         async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, BoxError> {
             assert_eq!(filter, self.expected_filter);
             Ok(self.logs.clone())
