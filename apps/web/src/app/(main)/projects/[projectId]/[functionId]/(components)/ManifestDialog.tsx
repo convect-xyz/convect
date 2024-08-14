@@ -83,7 +83,7 @@ function RenderManifest(props: { manifest: Manifest }) {
                         {txConfig.startBlock}
                       </div>
                     </div>
-                    <div className="mt-3 flex flex-col gap-1 divide-y divide-muted-foreground">
+                    <div className="mt-3 flex flex-col divide-y divide-border">
                       {txConfig.logConfigs.map((logConfig) => {
                         const getAddress = (
                           address: string | Record<string, string>,
@@ -100,7 +100,10 @@ function RenderManifest(props: { manifest: Manifest }) {
                         };
 
                         return (
-                          <div key={logConfig.topics.join(",")}>
+                          <div
+                            key={logConfig.topics.join(",")}
+                            className="py-2"
+                          >
                             <div className="flex flex-col gap-1">
                               <div className="text-sm">
                                 event {toEventSignature(logConfig.abi)}
