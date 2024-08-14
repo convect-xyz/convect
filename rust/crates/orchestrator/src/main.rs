@@ -1,14 +1,10 @@
-use core::panic;
-use std::{cmp::max, collections::HashMap, env, os::macos::raw};
+use std::{cmp::max, collections::HashMap, env};
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use futures::{
-    future::{join_all, select_all, try_join_all},
-    TryFutureExt,
-};
+use futures::{future::join_all, TryFutureExt};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use serde::Deserialize;
@@ -16,10 +12,7 @@ use shared::{
     contract_info::{self, ContractInfoProvider},
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{TransactionFetcher, TransactionFetcherImpl},
-    types::{
-        manifest::{self, Manifest},
-        syncing::State,
-    },
+    types::{manifest::Manifest, syncing::State},
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::BTreeMap;
