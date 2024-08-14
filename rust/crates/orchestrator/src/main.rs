@@ -105,7 +105,9 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     for res in result {
         match res {
-            Ok(_) => {}
+            Ok(_) => {
+                println!("Successfully synced chain");
+            }
             Err(e) => {
                 println!("Failed to sync chain: {:?}", e);
             }
