@@ -1,10 +1,14 @@
-use std::{cmp::max, collections::HashMap, env};
+use core::panic;
+use std::{cmp::max, collections::HashMap, env, os::macos::raw};
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use futures::{future::join_all, TryFutureExt};
+use futures::{
+    future::{join_all, select_all, try_join_all},
+    TryFutureExt,
+};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use serde::Deserialize;
@@ -100,12 +104,21 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     println!("Incoming block: {:?}", incoming_blocks);
 
     let config = Config::new();
-    let handles = config.chains.into_iter().map(|chain_config| {
+    let futures = config.chains.into_iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-        tokio::spawn(async move { sync_chain(chain_config, block_for_chain).await })
+        async move { sync_chain(chain_config, block_for_chain).await }
     });
 
-    join_all(handles).await;
+    let result = join_all(futures).await;
+
+    for res in result {
+        match res {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Failed to sync chain: {:?}", e);
+            }
+        }
+    }
 
     Ok(())
 }
