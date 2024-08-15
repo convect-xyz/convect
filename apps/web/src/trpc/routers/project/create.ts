@@ -11,15 +11,23 @@ export const createProject = protectedProcedure
     }),
   )
   .mutation(async ({ ctx, input }) => {
-    const newProject = await ctx.db
-      .insert(schema.projects)
-      .values({
-        name: input.name,
-        userId: ctx.session.user.id,
-      })
-      .returning()
-      .then((v) => v.at(0)!);
+    const newProject = await ctx.db.transaction(async (tx) => {
+      const newProject = await tx
+        .insert(schema.projects)
+        .values({
+          name: input.name,
+          userId: ctx.session.user.id,
+        })
+        .returning()
+        .then((v) => v.at(0)!);
 
+      await tx.insert(schema.projectCollaborators).values({
+        projectId: ctx.session.user.id,
+        userId: ctx.session.user.id,
+      });
+
+      return newProject;
+    });
     return {
       id: newProject.id,
       name: newProject.name,

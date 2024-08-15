@@ -19,7 +19,7 @@ export default function ManifestDialog(
 ) {
   return (
     <Dialog {...props}>
-      <DialogContent className="max-h-[98%] max-w-screen-lg overflow-y-auto">
+      <DialogContent className="flex h-full max-h-[84%] max-w-screen-lg flex-col gap-6 overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Manifest</DialogTitle>
         </DialogHeader>
@@ -65,7 +65,7 @@ function RenderManifest(props: { manifest: Manifest }) {
           </div>
         </div>
       </div>
-      <div className="mt-4 flex flex-col gap-2">
+      <div className="mt-2 flex flex-col gap-2">
         <div className="text-sm uppercase text-muted-foreground">
           Transaction Configurations
         </div>
