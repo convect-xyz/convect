@@ -22,6 +22,7 @@ export function NavbarLeading() {
   const pathname = usePathname();
 
   const isApiKeysRoute = pathname === "/account/api-keys";
+  const isPendingInvitesRoute = pathname === "/account/invites";
 
   if (isApiKeysRoute) {
     return (
@@ -30,6 +31,17 @@ export function NavbarLeading() {
           <LogoIcon className="h-6 w-6" />
         </Link>
         <div className="text-md">API Keys</div>
+      </div>
+    );
+  }
+
+  if (isPendingInvitesRoute) {
+    return (
+      <div className="flex items-center gap-2">
+        <Link href="/">
+          <LogoIcon className="h-6 w-6" />
+        </Link>
+        <div className="text-md">Pending Invites</div>
       </div>
     );
   }

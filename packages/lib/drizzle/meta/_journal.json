@@ -176,6 +176,20 @@
       "when": 1723583843409,
       "tag": "0024_wide_starhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1723749440206,
+      "tag": "0025_serious_titania",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1723752269620,
+      "tag": "0026_numerous_eternity",
+      "breakpoints": true
     }
   ]
 }

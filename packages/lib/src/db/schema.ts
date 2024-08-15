@@ -67,8 +67,9 @@ export const accounts = createTable(
   })
 );
 
-export const accountsRelations = relations(accounts, ({ one }) => ({
+export const accountsRelations = relations(accounts, ({ one, many }) => ({
   user: one(users, { fields: [accounts.userId], references: [users.id] }),
+  pendingInvites: many(pendingInvites),
 }));
 
 export const apiKey = createTable(
@@ -138,8 +139,67 @@ export const projects = createTable(
   })
 );
 
-export const projectsRelations = relations(projects, ({ one }) => ({
+export const projectCollaborators = createTable(
+  "project_collaborator",
+  {
+    projectId: integer("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: varchar("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (projectCollaborators) => ({
+    projectIdIdx: index("project_collaborator_projectId_idx").on(
+      projectCollaborators.projectId
+    ),
+    userIdIdx: index("project_collaborator_userId_idx").on(
+      projectCollaborators.userId
+    ),
+  })
+);
+
+export const projectCollaboratorsRelations = relations(
+  projectCollaborators,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [projectCollaborators.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const pendingInvites = createTable(
+  "pending_invite",
+  {
+    id: serial("id").notNull().primaryKey(),
+    projectId: integer("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: varchar("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (pendingInvites) => ({
+    projectIdIdx: index("pending_invite_projectId_idx").on(
+      pendingInvites.projectId
+    ),
+    userIdIdx: index("pending_invite_userId_idx").on(pendingInvites.userId),
+  })
+);
+
+export const pendingInvitesRelations = relations(pendingInvites, ({ one }) => ({
+  user: one(users, { fields: [pendingInvites.userId], references: [users.id] }),
+  project: one(projects, {
+    fields: [pendingInvites.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
   user: one(users, { fields: [projects.userId], references: [users.id] }),
+  collaborators: many(projectCollaborators),
 }));
 
 export const convectFunctions = createTable(

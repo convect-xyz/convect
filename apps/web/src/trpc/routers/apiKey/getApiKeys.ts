@@ -5,6 +5,7 @@ export const getApiKeys = protectedProcedure
   .output(
     z.array(
       z.object({
+        id: z.number(),
         name: z.string(),
         token: z.string(),
       }),

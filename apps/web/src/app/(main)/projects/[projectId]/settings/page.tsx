@@ -31,16 +31,12 @@ import { api } from "~/trpc/react";
 import { useParams } from "../hooks/useParams";
 
 export default function Page() {
-  const { projectId } = useParams();
-  const { data: project } = api.project.getProjectById.useQuery({
-    id: projectId,
-  });
-
-  if (!project) return;
   return (
-    <div className="flex flex-col gap-4">
-      <ProjectName />
-      <DeleteProject />
+    <div>
+      <div className="flex flex-col gap-4">
+        <ProjectName />
+        <DeleteProject />
+      </div>
     </div>
   );
 }
