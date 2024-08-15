@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
+
 export const createApiKey = protectedProcedure
   .input(
     z.object({

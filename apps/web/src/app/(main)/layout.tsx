@@ -54,7 +54,7 @@ async function Profile() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/account/api-keys">API Keys</Link>
+            <Link href="/account/api-keys">Settings</Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="bg-background" />

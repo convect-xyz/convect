@@ -1,5 +1,7 @@
 import { createTRPCRouter } from "~/trpc/trpc";
+import { accountsRouter } from "./routers/accounts";
 import { createApiKey } from "./routers/apiKey/createApiKey";
+import { deleteApiKey } from "./routers/apiKey/deleteApiKey";
 import { getApiKeys } from "./routers/apiKey/getApiKeys";
 import { switchPlan } from "./routers/billing/switchPlan";
 import { addEnv } from "./routers/function/addEnv";
@@ -26,6 +28,7 @@ export const billingRouter = createTRPCRouter({
 
 export const apiKeysRouter = createTRPCRouter({
   createApiKey,
+  deleteApiKey,
   getApiKeys,
 });
 
@@ -52,6 +55,7 @@ export const producersRouter = createTRPCRouter({
 });
 
 export const appRouter = createTRPCRouter({
+  accounts: accountsRouter,
   project: projectRouter,
   producers: producersRouter,
   functions: functionRouter,

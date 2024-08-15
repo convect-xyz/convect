@@ -2,9 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DialogProps } from "@radix-ui/react-dialog";
-import { Terminal } from "lucide-react";
+import { Terminal, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -19,12 +20,13 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { api } from "~/trpc/react";
+import { RouterOutputs } from "~/trpc/shared";
 
 export default function Page() {
   const [open, setIsOpen] = useState(false);
 
   return (
-    <div className="mx-auto w-full max-w-screen-md">
+    <div className="mx-auto w-full max-w-screen-lg">
       <div className="text-3xl">API Keys</div>
       <div>API Keys are required when using the Convect CLI.</div>
       <div className="mt-10 flex justify-end">
@@ -51,18 +53,43 @@ function ListApiKeys() {
   const { data } = api.apiKeys.getApiKeys.useQuery();
   return (
     <div className="flex flex-col gap-2 rounded-md">
-      {data?.map((apiKey) => (
-        <div key={apiKey.name} className="flex rounded-md bg-muted p-4">
-          <div className="flex flex-col">
-            <span className="text-sm text-muted-foreground">Name</span>
-            <span>{apiKey.name}</span>
-          </div>
-        </div>
-      ))}
+      {data?.map((apiKey) => <ApiKeyRow key={apiKey.name} apiKey={apiKey} />)}
     </div>
   );
 }
 
+function ApiKeyRow(props: {
+  apiKey: RouterOutputs["apiKeys"]["getApiKeys"][number];
+}) {
+  const utils = api.useUtils();
+  const { mutateAsync: deleteApiKey, isPending: isDeleting } =
+    api.apiKeys.deleteApiKey.useMutation({
+      onSuccess: () => {
+        toast.success("API Key destroyed successfully");
+        utils.apiKeys.getApiKeys.invalidate();
+      },
+    });
+
+  const { apiKey } = props;
+
+  return (
+    <div className="flex items-center rounded-md bg-muted p-4">
+      <div className="flex flex-1 flex-col">
+        <span className="text-sm text-muted-foreground">Name</span>
+        <span>{apiKey.name}</span>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          variant="ghost"
+          isLoading={isDeleting}
+          onClick={() => deleteApiKey({ apiKeyId: apiKey.id })}
+        >
+          <Trash2Icon className="h-4 w-4 text-destructive-foreground" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 function CreateApiKeyDialog(props: DialogProps) {
   return (
     <Dialog {...props}>
@@ -84,9 +111,11 @@ function Content(props: DialogProps) {
   });
   const { mutateAsync: createApiKey, data: createData } =
     api.apiKeys.createApiKey.useMutation();
+  const utils = api.useUtils();
 
   const onSubmit = async (v: Values) => {
     await createApiKey(v);
+    utils.apiKeys.getApiKeys.invalidate();
   };
 
   function getButtonProps() {
