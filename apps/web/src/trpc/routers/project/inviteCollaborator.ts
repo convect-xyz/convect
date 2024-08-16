@@ -4,6 +4,7 @@ import { z } from "zod";
 import InviteSentTemplate from "~/components/emails/InviteSentTemplate";
 import { sendNoReply } from "~/lib/server/resend";
 import { protectedProcedure } from "~/trpc/trpc";
+import { getCollaborator } from "../permissions";
 
 export const inviteCollaborator = protectedProcedure
   .input(
@@ -15,12 +16,16 @@ export const inviteCollaborator = protectedProcedure
   )
   .output(z.object({}))
   .mutation(async ({ ctx, input }) => {
+    const collaborator = await getCollaborator(
+      input.projectId,
+      ctx.session.user.id,
+    );
+    if (!collaborator) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    }
+
     const project = await ctx.db.query.projects.findFirst({
-      where: (fields, { eq, and }) =>
-        and(
-          eq(fields.id, input.projectId),
-          eq(fields.userId, ctx.session.user.id),
-        ),
+      where: (fields, { eq, and }) => and(eq(fields.id, input.projectId)),
     });
 
     if (!project) {

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
+import { throwIfNotCollaborator } from "../permissions";
 
 export const getDeployments = protectedProcedure
   .input(
@@ -22,18 +23,19 @@ export const getDeployments = protectedProcedure
     ),
   )
   .query(async ({ input, ctx }) => {
-    const handler = await ctx.db.query.convectFunctions.findFirst({
+    const convectFn = await ctx.db.query.convectFunctions.findFirst({
       where(fields, { eq }) {
         return eq(fields.id, input.functionId);
       },
     });
-
-    if (!handler) {
+    if (!convectFn) {
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
+    await throwIfNotCollaborator(convectFn.projectId, ctx.session.user.id);
+
     const deployments = await db.query.deployment.findMany({
-      where: (fields, { eq }) => eq(fields.functionId, handler.id),
+      where: (fields, { eq }) => eq(fields.functionId, convectFn.id),
       orderBy(fields, operators) {
         return desc(fields.createdAt);
       },

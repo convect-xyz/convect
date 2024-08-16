@@ -22,7 +22,7 @@ export const createProject = protectedProcedure
         .then((v) => v.at(0)!);
 
       await tx.insert(schema.projectCollaborators).values({
-        projectId: ctx.session.user.id,
+        projectId: newProject.id,
         userId: ctx.session.user.id,
       });
 

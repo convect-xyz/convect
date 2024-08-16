@@ -4,6 +4,7 @@ import { Redis } from "ioredis";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
+import { throwIfNotCollaborator } from "../permissions";
 
 const redisClient = new Redis(
   25061,
@@ -53,13 +54,23 @@ export const getOverview = protectedProcedure
         return desc(fields.createdAt);
       },
     });
-
     if (!currentDeployment) {
       throw new TRPCError({
         message: "Deployment not found",
         code: "NOT_FOUND",
       });
     }
+
+    const fn = await ctx.db.query.convectFunctions.findFirst({
+      where(fields, { eq }) {
+        return eq(fields.id, input.functionId);
+      },
+    });
+    if (!fn) {
+      throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
+    }
+
+    await throwIfNotCollaborator(fn.projectId, ctx.session.user.id);
 
     const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
       getFetchState(

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
+import { throwIfNotCollaborator } from "../permissions";
 
 export const updateName = protectedProcedure
   .input(
@@ -19,10 +20,11 @@ export const updateName = protectedProcedure
         project: true,
       },
     });
-
-    if (!fn || fn.project.userId !== ctx.session.user.id) {
+    if (!fn) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Handler not found" });
     }
+
+    await throwIfNotCollaborator(fn.projectId, ctx.session.user.id);
 
     await ctx.db
       .update(schema.convectFunctions)

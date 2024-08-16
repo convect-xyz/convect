@@ -5,6 +5,7 @@ import { z } from "zod";
 import { env } from "~/env";
 import { destroyDeployment } from "~/server/actions/builds";
 import { protectedProcedure } from "~/trpc/trpc";
+import { throwIfNotCollaborator } from "../permissions";
 
 export const deleteFunction = protectedProcedure
   .input(
@@ -20,14 +21,14 @@ export const deleteFunction = protectedProcedure
         project: true,
       },
     });
-
     if (!convectFunction) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Function not found" });
     }
 
-    if (convectFunction.project.userId !== ctx.session.user.id) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Function not found" });
-    }
+    await throwIfNotCollaborator(
+      convectFunction.projectId,
+      ctx.session.user.id,
+    );
 
     await destroyDeployment({
       version: env.VERSION,

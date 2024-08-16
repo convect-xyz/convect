@@ -4,6 +4,7 @@ import { z } from "zod";
 import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
+import { throwIfNotCollaborator } from "../permissions";
 
 export const getFunction = protectedProcedure
   .input(
@@ -44,19 +45,22 @@ export const getFunction = protectedProcedure
       )
       .where(
         and(
-          eq(schema.projects.userId, ctx.session.user.id),
           eq(schema.projects.id, input.projectId),
           eq(schema.convectFunctions.id, input.functionId),
         ),
       )
       .then((fns) => fns.at(0));
-
     if (!fn) {
       throw new TRPCError({
         message: "This function does not exist",
         code: "NOT_FOUND",
       });
     }
+
+    await throwIfNotCollaborator(
+      fn.convectFunction.projectId,
+      ctx.session.user.id,
+    );
 
     const currentDeployment = await ctx.db.query.deployment.findFirst({
       where(fields, { eq, and }) {

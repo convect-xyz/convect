@@ -5,6 +5,7 @@ import { env } from "~/env";
 import xZod from "~/lib/shared/validation";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
+import { throwIfNotCollaborator } from "../permissions";
 
 const createId = init({
   random: Math.random,
@@ -27,10 +28,11 @@ export const createFunction = protectedProcedure
           eq(fields.userId, ctx.session.user.id),
         ),
     });
-
     if (!project) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
     }
+
+    await throwIfNotCollaborator(input.projectId, ctx.session.user.id);
 
     const fn = await ctx.db
       .insert(schema.convectFunctions)

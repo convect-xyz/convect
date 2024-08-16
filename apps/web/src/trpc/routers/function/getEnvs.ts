@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { decryptEnvValue } from "~/lib/server/security";
 import { protectedProcedure } from "~/trpc/trpc";
+import { throwIfNotCollaborator } from "../permissions";
 
 export const getEnvs = protectedProcedure
   .input(
@@ -29,10 +30,11 @@ export const getEnvs = protectedProcedure
         envs: true,
       },
     });
-
-    if (!fn || fn.project.userId !== ctx.session.user.id) {
+    if (!fn) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Handler not found" });
     }
+
+    await throwIfNotCollaborator(fn.projectId, ctx.session.user.id);
 
     return fn.envs.map((env) => ({
       ...env,
