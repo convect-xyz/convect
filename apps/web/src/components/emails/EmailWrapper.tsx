@@ -14,9 +14,7 @@ export function EmailWrapper(
       <Head />
       {props.preview}
       <Tailwind config={tailwindConfig}>
-        <Body className="bg-background font-sans text-white">
-          {props.children}
-        </Body>
+        <Body className="bg-white font-sans text-black">{props.children}</Body>
       </Tailwind>
     </Html>
   );
