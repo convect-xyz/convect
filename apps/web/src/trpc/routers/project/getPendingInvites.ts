@@ -19,11 +19,8 @@ export const getPendingInvites = protectedProcedure
   )
   .query(async ({ ctx, input }) => {
     const pendingInvites = await ctx.db.query.pendingInvites.findMany({
-      where(fields, { eq, and }) {
-        return and(
-          eq(fields.userId, ctx.session.user.id),
-          eq(fields.projectId, input.projectId),
-        );
+      where(fields, { eq }) {
+        return eq(fields.projectId, input.projectId);
       },
       with: {
         user: true,
