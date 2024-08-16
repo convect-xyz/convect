@@ -31,13 +31,13 @@ export default function InviteSentTemplate({
     >
       <Container className="mt-16">
         <Img
-          src="https://d3485o3p54n14c.cloudfront.net/logo_white.png"
+          src="https://d3485o3p54n14c.cloudfront.net/logo_black.png"
           alt="logo"
           width={170}
           className="mx-auto"
         />
       </Container>
-      <Container className="mt-10 rounded-[8px] border border-solid border-[#191B1F] bg-[#0d0d0d] text-center text-sm">
+      <Container className="mt-10 rounded-[8px] border border-solid border-[#191B1F] text-center text-sm">
         <Section className="my-8">
           <Text>
             You have been invited to join <strong>{projectName}</strong> by{" "}

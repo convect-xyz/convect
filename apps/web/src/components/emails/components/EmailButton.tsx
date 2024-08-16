@@ -6,7 +6,7 @@ export function EmailButton({ className, ...rest }: ButtonProps) {
     <Button
       {...rest}
       className={cn(
-        "rounded-[5px] bg-white px-5 py-2 text-[14px] font-medium text-black",
+        "rounded-[5px] bg-background px-5 py-[10px] text-[14px] font-medium text-white",
         className,
       )}
     />
