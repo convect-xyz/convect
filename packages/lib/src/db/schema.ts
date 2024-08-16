@@ -166,6 +166,10 @@ export const projectCollaboratorsRelations = relations(
       fields: [projectCollaborators.userId],
       references: [users.id],
     }),
+    project: one(projects, {
+      fields: [projectCollaborators.projectId],
+      references: [projects.id],
+    }),
   })
 );
 

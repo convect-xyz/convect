@@ -15,19 +15,13 @@ export const getProjects = protectedProcedure
       where(fields, { eq }) {
         return eq(fields.userId, ctx.session.user.id);
       },
-    });
-
-    const projects = await ctx.db.query.projects.findMany({
-      where(fields, { eq, or, inArray }) {
-        return or(
-          eq(fields.userId, ctx.session.user.id),
-          inArray(
-            fields.id,
-            collaborations.map((c) => c.projectId),
-          ),
-        );
+      with: {
+        project: true,
       },
     });
 
-    return projects;
+    return collaborations.map((c) => ({
+      id: c.project.id,
+      name: c.project.name,
+    }));
   });
