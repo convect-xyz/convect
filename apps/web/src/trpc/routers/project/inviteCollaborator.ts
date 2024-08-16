@@ -44,7 +44,7 @@ export const inviteCollaborator = protectedProcedure
         where: (fields, { eq, and }) => {
           return and(
             eq(fields.projectId, input.projectId),
-            eq(fields.userId, ctx.session.user.id),
+            eq(fields.userId, invitee.id),
           );
         },
       });
@@ -58,7 +58,7 @@ export const inviteCollaborator = protectedProcedure
 
       await tx.insert(schema.pendingInvites).values({
         projectId: input.projectId,
-        userId: ctx.session.user.id,
+        userId: invitee.id,
       });
     });
 

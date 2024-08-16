@@ -139,6 +139,11 @@ export const projects = createTable(
   })
 );
 
+export const projectRelations = relations(projects, ({ one, many }) => ({
+  user: one(users, { fields: [projects.userId], references: [users.id] }),
+  collaborators: many(projectCollaborators),
+}));
+
 export const projectCollaborators = createTable(
   "project_collaborator",
   {
