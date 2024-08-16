@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import axios from "axios";
 import { z } from "zod";
 import { protectedProcedure } from "~/trpc/trpc";
-import { throwIfNotCollaborator } from "../permissions";
+import { throwIfNotProjectCollaborator } from "../permissions";
 
 const response = z.object({
   data: z.array(
@@ -43,8 +43,10 @@ export const getLogs = protectedProcedure
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
-    await throwIfNotCollaborator(fn.projectId, ctx.session.user.id);
-
+    await throwIfNotProjectCollaborator({
+      projectId: fn.projectId,
+      userId: ctx.session.user.id,
+    });
     const logs = await axios
       .post(
         "https://api.eu-central-1.aws.tinybird.co/v0/sql",

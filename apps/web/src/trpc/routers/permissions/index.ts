@@ -10,10 +10,13 @@ export const getCollaborator = async (projectId: number, userId: string) => {
   return collaborator ?? null;
 };
 
-export const throwIfNotCollaborator = async (
-  projectId: number,
-  userId: string,
-) => {
+export const throwIfNotProjectCollaborator = async ({
+  projectId,
+  userId,
+}: {
+  projectId: number;
+  userId: string;
+}) => {
   const collaborator = await getCollaborator(projectId, userId);
   if (!collaborator) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });

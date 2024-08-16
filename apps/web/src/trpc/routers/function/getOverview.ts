@@ -4,7 +4,7 @@ import { Redis } from "ioredis";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
-import { throwIfNotCollaborator } from "../permissions";
+import { throwIfNotProjectCollaborator } from "../permissions";
 
 const redisClient = new Redis(
   25061,
@@ -70,8 +70,10 @@ export const getOverview = protectedProcedure
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
-    await throwIfNotCollaborator(fn.projectId, ctx.session.user.id);
-
+    await throwIfNotProjectCollaborator({
+      projectId: fn.projectId,
+      userId: ctx.session.user.id,
+    });
     const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
       getFetchState(
         input.functionId.toString(),

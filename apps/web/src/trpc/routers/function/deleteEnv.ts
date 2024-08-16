@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
-import { throwIfNotCollaborator } from "../permissions";
+import { throwIfNotProjectCollaborator } from "../permissions";
 
 export const deleteEnv = protectedProcedure
   .input(
@@ -24,8 +24,10 @@ export const deleteEnv = protectedProcedure
       throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
     }
 
-    await throwIfNotCollaborator(fn.projectId, ctx.session.user.id);
-
+    await throwIfNotProjectCollaborator({
+      projectId: fn.projectId,
+      userId: ctx.session.user.id,
+    });
     await ctx.db
       .delete(schema.functionEnv)
       .where(

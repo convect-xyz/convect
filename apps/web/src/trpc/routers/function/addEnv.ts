@@ -3,7 +3,7 @@ import { z } from "zod";
 import { encryptEnvValue } from "~/lib/server/security";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
-import { throwIfNotCollaborator } from "../permissions";
+import { throwIfNotProjectCollaborator } from "../permissions";
 
 export const addEnv = protectedProcedure
   .input(
@@ -25,8 +25,10 @@ export const addEnv = protectedProcedure
       throw new TRPCError({ code: "NOT_FOUND", message: "Handler not found" });
     }
 
-    await throwIfNotCollaborator(fn.projectId, ctx.session.user.id);
-
+    await throwIfNotProjectCollaborator({
+      projectId: fn.projectId,
+      userId: ctx.session.user.id,
+    });
     const encryptionResult = encryptEnvValue(input.value);
     await ctx.db
       .insert(schema.functionEnv)
