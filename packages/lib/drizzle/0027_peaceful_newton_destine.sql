@@ -1,0 +1,1 @@
+ALTER TABLE "web_project_collaborator" ADD CONSTRAINT "web_project_collaborator_projectId_userId_unique" UNIQUE("projectId","userId");

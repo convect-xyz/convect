@@ -10,7 +10,11 @@ export const acceptInvite = protectedProcedure
       inviteId: z.number(),
     }),
   )
-  .output(z.object({}))
+  .output(
+    z.object({
+      projectId: z.number(),
+    }),
+  )
   .mutation(async ({ ctx, input }) => {
     const invite = await ctx.db.query.pendingInvites.findFirst({
       where: (fields, { eq, and }) =>
@@ -27,16 +31,22 @@ export const acceptInvite = protectedProcedure
       });
     }
 
-    await ctx.db.transaction(async (tx) => {
+    const collaborator = await ctx.db.transaction(async (tx) => {
       await tx
         .delete(schema.pendingInvites)
         .where(eq(schema.pendingInvites.id, input.inviteId));
 
-      await tx.insert(schema.projectCollaborators).values({
-        projectId: invite.projectId,
-        userId: ctx.session.user.id,
-      });
+      return await tx
+        .insert(schema.projectCollaborators)
+        .values({
+          projectId: invite.projectId,
+          userId: ctx.session.user.id,
+        })
+        .returning()
+        .then((res) => res.pop()!);
     });
 
-    return {};
+    return {
+      projectId: collaborator.projectId,
+    };
   });

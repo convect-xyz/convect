@@ -39,6 +39,8 @@ export const env = createEnv({
     STRIPE_API_KEY: z.string(),
 
     REPORTING_DATABASE_URL: z.string(),
+
+    RESEND_API_KEY: z.string(),
   },
   client: {},
   runtimeEnv: {
@@ -60,6 +62,7 @@ export const env = createEnv({
     REPORTING_DATABASE_URL: process.env.REPORTING_DATABASE_URL,
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

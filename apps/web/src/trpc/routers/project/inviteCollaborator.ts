@@ -1,6 +1,8 @@
 import { schema } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import InviteSentTemplate from "~/components/emails/InviteSentTemplate";
+import { sendNoReply } from "~/lib/server/resend";
 import { protectedProcedure } from "~/trpc/trpc";
 
 export const inviteCollaborator = protectedProcedure
@@ -39,7 +41,7 @@ export const inviteCollaborator = protectedProcedure
       });
     }
 
-    await ctx.db.transaction(async (tx) => {
+    const pendingInvite = await ctx.db.transaction(async (tx) => {
       const existingInvite = await tx.query.pendingInvites.findFirst({
         where: (fields, { eq, and }) => {
           return and(
@@ -56,10 +58,41 @@ export const inviteCollaborator = protectedProcedure
         });
       }
 
-      await tx.insert(schema.pendingInvites).values({
-        projectId: input.projectId,
-        userId: invitee.id,
-      });
+      const existingCollaborator =
+        await tx.query.projectCollaborators.findFirst({
+          where: (fields, { eq, and }) => {
+            return and(
+              eq(fields.projectId, input.projectId),
+              eq(fields.userId, invitee.id),
+            );
+          },
+        });
+
+      if (existingCollaborator) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "User is already a collaborator",
+        });
+      }
+
+      return await tx
+        .insert(schema.pendingInvites)
+        .values({
+          projectId: input.projectId,
+          userId: invitee.id,
+        })
+        .returning()
+        .then((res) => res.pop()!);
+    });
+
+    await sendNoReply({
+      subject: "You have been invited to join a Convect project",
+      to: invitee.email,
+      react: InviteSentTemplate({
+        inviteId: pendingInvite.id.toString(),
+        senderUsername: ctx.session.user.name ?? "",
+        projectName: project.name,
+      }),
     });
 
     return {};
