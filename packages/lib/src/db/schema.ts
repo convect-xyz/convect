@@ -161,6 +161,10 @@ export const projectCollaborators = createTable(
     userIdIdx: index("project_collaborator_userId_idx").on(
       projectCollaborators.userId
     ),
+    uniqueProjectUserIdx: unique().on(
+      projectCollaborators.projectId,
+      projectCollaborators.userId
+    ),
   })
 );
 
@@ -195,6 +199,10 @@ export const pendingInvites = createTable(
       pendingInvites.projectId
     ),
     userIdIdx: index("pending_invite_userId_idx").on(pendingInvites.userId),
+    uniqueProjectUserIdx: unique().on(
+      pendingInvites.projectId,
+      pendingInvites.userId
+    ),
   })
 );
 

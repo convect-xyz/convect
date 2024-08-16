@@ -1,0 +1,1 @@
+ALTER TABLE "web_pending_invite" ADD CONSTRAINT "web_pending_invite_projectId_userId_unique" UNIQUE("projectId","userId");

@@ -65,6 +65,9 @@ function InviteUser() {
       onSuccess() {
         toast("Invite sent successfully.");
       },
+      onError(err) {
+        toast.error(err.message);
+      },
     });
 
   return (

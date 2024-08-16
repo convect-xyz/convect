@@ -15,7 +15,10 @@ export const updateName = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     const project = await ctx.db.query.projects.findFirst({
       where: (fields, { eq, and }) =>
-        and(eq(fields.userId, ctx.session.user.id)),
+        and(
+          eq(fields.userId, ctx.session.user.id),
+          eq(fields.id, input.projectId),
+        ),
     });
 
     if (!project) {
