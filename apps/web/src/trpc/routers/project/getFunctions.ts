@@ -1,7 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
+import { getCollaborator } from "../permissions";
 
 export const getFunctions = protectedProcedure
   .input(
@@ -25,27 +27,24 @@ export const getFunctions = protectedProcedure
       ),
     }),
   )
-  .query(async (opts) => {
-    const { input, ctx } = opts;
+  .query(async ({ ctx, input }) => {
+    const collaborator = await getCollaborator(
+      input.projectId,
+      ctx.session.user.id,
+    );
+    if (!collaborator) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    }
 
     const functions = await ctx.db
       .select()
       .from(schema.convectFunctions)
-      .innerJoin(
-        schema.projects,
-        eq(schema.convectFunctions.projectId, schema.projects.id),
-      )
-      .where(
-        and(
-          eq(schema.projects.userId, ctx.session.user.id),
-          eq(schema.projects.id, input.projectId),
-        ),
-      );
+      .where(eq(schema.convectFunctions.projectId, collaborator.projectId));
 
     return {
       functions: functions.map((f) => {
         return {
-          ...f.convectFunction,
+          ...f,
           chains: [],
         };
       }),

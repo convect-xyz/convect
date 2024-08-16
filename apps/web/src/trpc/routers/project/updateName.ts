@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
+import { getCollaborator } from "../permissions";
 
 export const updateName = protectedProcedure
   .input(
@@ -13,12 +14,16 @@ export const updateName = protectedProcedure
   )
   .output(z.object({}))
   .mutation(async ({ ctx, input }) => {
+    const collaborator = await getCollaborator(
+      input.projectId,
+      ctx.session.user.id,
+    );
+    if (!collaborator) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+    }
+
     const project = await ctx.db.query.projects.findFirst({
-      where: (fields, { eq, and }) =>
-        and(
-          eq(fields.userId, ctx.session.user.id),
-          eq(fields.id, input.projectId),
-        ),
+      where: (fields, { eq, and }) => and(eq(fields.id, input.projectId)),
     });
 
     if (!project) {
