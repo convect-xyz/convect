@@ -4,7 +4,7 @@ import { z } from "zod";
 import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
-import { throwIfNotCollaborator } from "../permissions";
+import { throwIfNotProjectCollaborator } from "../permissions";
 
 export const getDeployments = protectedProcedure
   .input(
@@ -32,7 +32,10 @@ export const getDeployments = protectedProcedure
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
-    await throwIfNotCollaborator(convectFn.projectId, ctx.session.user.id);
+    await throwIfNotProjectCollaborator({
+      projectId: convectFn.projectId,
+      userId: ctx.session.user.id,
+    });
 
     const deployments = await db.query.deployment.findMany({
       where: (fields, { eq }) => eq(fields.functionId, convectFn.id),

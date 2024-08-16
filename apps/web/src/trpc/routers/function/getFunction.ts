@@ -4,7 +4,7 @@ import { z } from "zod";
 import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
-import { throwIfNotCollaborator } from "../permissions";
+import { throwIfNotProjectCollaborator } from "../permissions";
 
 export const getFunction = protectedProcedure
   .input(
@@ -57,10 +57,10 @@ export const getFunction = protectedProcedure
       });
     }
 
-    await throwIfNotCollaborator(
-      fn.convectFunction.projectId,
-      ctx.session.user.id,
-    );
+    await throwIfNotProjectCollaborator({
+      projectId: fn.convectFunction.projectId,
+      userId: ctx.session.user.id,
+    });
 
     const currentDeployment = await ctx.db.query.deployment.findFirst({
       where(fields, { eq, and }) {
