@@ -28,6 +28,7 @@ export const createProject = protectedProcedure
 
       return newProject;
     });
+
     return {
       id: newProject.id,
       name: newProject.name,

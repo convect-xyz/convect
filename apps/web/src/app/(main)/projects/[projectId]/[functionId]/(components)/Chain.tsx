@@ -26,6 +26,10 @@ export function Chain() {
   );
 
   useEffect(() => {
+    if (!fn?.chains) {
+      return;
+    }
+
     if (!searchParams.get("chainId") && fn && fn.chains.length > 0) {
       handleValueChange(fn.chains.at(0)!.chainId.toString());
     }
@@ -38,6 +42,10 @@ export function Chain() {
     params.toString();
     router.replace(pathname + "?" + params.toString());
   };
+
+  if (!fn?.chains) {
+    return null;
+  }
 
   return (
     <Select value={chainId?.toString()} onValueChange={handleValueChange}>
