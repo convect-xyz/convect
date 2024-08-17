@@ -18,11 +18,13 @@ export const getFunctions = protectedProcedure
           id: z.number(),
           name: z.string(),
           description: z.string(),
-          chains: z.array(
-            z.object({
-              chainId: z.number(),
-            }),
-          ),
+          chains: z
+            .array(
+              z.object({
+                chainId: z.number(),
+              }),
+            )
+            .nullable(),
         }),
       ),
     }),
@@ -59,7 +61,7 @@ export const getFunctions = protectedProcedure
 
         return {
           ...f.convectFunction,
-          chains: manifest?.chains ?? [],
+          chains: manifest?.chains ?? null,
         };
       }),
     };
