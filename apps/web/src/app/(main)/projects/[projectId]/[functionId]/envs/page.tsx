@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatDistanceToNow } from "date-fns";
 import {
+  Code2,
   EyeIcon,
   EyeOffIcon,
   LoaderIcon,
@@ -121,6 +122,11 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
 
   return (
     <div className="flex items-center justify-between gap-4 p-4">
+      <div className="px-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-700">
+          <Code2 size={20} className="text-gray-700" />
+        </div>
+      </div>
       <div className="basis-[200px] truncate">{env.key}</div>
       <div className="flex min-w-0 flex-1 items-center justify-start gap-2">
         <Button
