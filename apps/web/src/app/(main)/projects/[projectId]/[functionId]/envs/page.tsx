@@ -74,36 +74,35 @@ function NoEnvs() {
 function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
   const { functionId } = useParams();
   const [isCopied, setIsCopied] = useState(false);
+  const [show, setShow] = useState(false);
   const {
     data: value,
     isPending,
     mutateAsync: getEnvValue,
-    reset,
   } = api.functions.getEnvValue.useMutation();
 
   const getButtonProps = () => {
     if (isPending) {
       return {
-        onClick: () => {
-          reset();
-        },
+        onClick: () => setShow(false),
         children: <LoaderIcon className="animate-spin" size={14} />,
       };
     }
 
-    if (value) {
+    if (show) {
       return {
         children: <EyeOffIcon size={14} />,
-        onClick: () => {
-          reset();
-        },
+        onClick: () => setShow(false),
       };
     }
 
     return {
       children: <EyeIcon size={14} />,
-      onClick: () => {
-        getEnvValue({ functionId, envId: env.id });
+      onClick: async () => {
+        if (!value) {
+          await getEnvValue({ functionId, envId: env.id });
+        }
+        setShow(true);
       },
     };
   };
@@ -123,8 +122,8 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
   return (
     <div className="flex items-center justify-between gap-4 p-4">
       <div className="px-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-700">
-          <Code2 size={20} className="text-gray-700" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-muted-foreground">
+          <Code2 size={20} className="text-muted-foreground" />
         </div>
       </div>
       <div className="basis-[200px] truncate">{env.key}</div>
@@ -135,7 +134,7 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
           {...getButtonProps()}
         />
         <div className="min-w-0 flex-1 text-sm">
-          {value ? (
+          {show && value ? (
             <TooltipProvider>
               <Tooltip onOpenChange={handleTooltipOpenChange}>
                 <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
@@ -165,7 +164,7 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
         </div>
       </div>
       <div className="flex items-center justify-end gap-2">
-        <div className="text-xs text-zinc-500">
+        <div className="text-xs text-muted-foreground">
           Modified {formatDistanceToNow(env.lastUpdatedAt, { addSuffix: true })}
         </div>
         <Popover>
