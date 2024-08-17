@@ -50,6 +50,7 @@ export const getFunctions = protectedProcedure
       )
       .where(eq(schema.convectFunctions.projectId, input.projectId));
 
+    console.log(functions);
     return {
       functions: functions.map((f) => {
         const manifest = f.mostRecentDeployment
