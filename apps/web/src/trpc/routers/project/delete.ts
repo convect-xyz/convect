@@ -1,7 +1,6 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure } from "~/trpc/trpc";
-import { getCollaborator } from "../permissions";
+import { throwIfNotProjectCollaborator } from "../permissions";
 
 export const deleteProject = protectedProcedure
   .input(
@@ -11,13 +10,10 @@ export const deleteProject = protectedProcedure
   )
   .output(z.object({}))
   .mutation(async ({ ctx, input }) => {
-    const collaborator = await getCollaborator(
-      input.projectId,
-      ctx.session.user.id,
-    );
-    if (!collaborator) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    }
+    await throwIfNotProjectCollaborator({
+      projectId: input.projectId,
+      userId: ctx.session.user.id,
+    });
 
     return {};
   });
