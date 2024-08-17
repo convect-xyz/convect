@@ -56,6 +56,8 @@ function FnRow(props: {
 }) {
   const router = useRouter();
   const { projectId } = useParams();
+  const { chains } = props.fn;
+
   return (
     <div
       className="flex h-32 cursor-pointer flex-col rounded-sm border bg-muted p-3 transition-all hover:border-muted-foreground/25"
@@ -70,11 +72,13 @@ function FnRow(props: {
         </div>
       </div>
 
-      <span className="ml-auto flex w-min items-center gap-2 whitespace-nowrap rounded-full bg-background px-2 py-1">
-        {props.fn.chains.map((c) => (
-          <ChainIcon chainId={c.chainId} />
-        ))}
-      </span>
+      {chains.length > 0 && (
+        <span className="ml-auto flex w-min items-center gap-2 whitespace-nowrap rounded-full bg-background px-2 py-1">
+          {props.fn.chains.map((c) => (
+            <ChainIcon chainId={c.chainId} />
+          ))}
+        </span>
+      )}
     </div>
   );
 }

@@ -22,15 +22,19 @@ export const getFunction = protectedProcedure
       project: z.object({
         name: z.string(),
       }),
-      chains: z.array(
-        z.object({
-          name: z.string(),
-          chainId: z.number(),
-        }),
-      ),
-      currentDeployment: z.object({
-        manifest: manifestSchema,
-      }),
+      chains: z
+        .array(
+          z.object({
+            name: z.string(),
+            chainId: z.number(),
+          }),
+        )
+        .nullable(),
+      currentDeployment: z
+        .object({
+          manifest: manifestSchema,
+        })
+        .nullable(),
     }),
   )
   .query(async (opts) => {
@@ -49,7 +53,7 @@ export const getFunction = protectedProcedure
           eq(schema.convectFunctions.id, input.functionId),
         ),
       )
-      .then((fns) => fns.at(0));
+      .then((fns) => fns.pop());
     if (!fn) {
       throw new TRPCError({
         message: "This function does not exist",
@@ -74,27 +78,25 @@ export const getFunction = protectedProcedure
       },
     });
 
-    if (!currentDeployment) {
-      throw new TRPCError({
-        message: "This function does not exist",
-        code: "NOT_FOUND",
-      });
-    }
+    const manifest = currentDeployment
+      ? parseManifest(currentDeployment.manifest)
+      : null;
 
-    const manifest = parseManifest(currentDeployment.manifest);
-
-    const chains = manifest.chains.map((c: any) => ({
-      name: c.name,
-      chainId: c.chainId,
-    }));
+    const chains =
+      manifest?.chains.map((c: any) => ({
+        name: c.name,
+        chainId: c.chainId,
+      })) ?? null;
 
     return {
       ...fn.convectFunction,
       isInitialised: true,
       project: fn.project,
       chains,
-      currentDeployment: {
-        manifest,
-      },
+      currentDeployment: manifest
+        ? {
+            manifest,
+          }
+        : null,
     };
   });

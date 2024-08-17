@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure } from "~/trpc/trpc";
-import { getCollaborator } from "../permissions";
+import { throwIfNotProjectCollaborator } from "../permissions";
 
 export const getProjectById = protectedProcedure
   .input(
@@ -16,10 +16,10 @@ export const getProjectById = protectedProcedure
     }),
   )
   .query(async ({ ctx, input }) => {
-    const collaborator = await getCollaborator(input.id, ctx.session.user.id);
-    if (!collaborator) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-    }
+    await throwIfNotProjectCollaborator({
+      projectId: input.id,
+      userId: ctx.session.user.id,
+    });
 
     const project = await ctx.db.query.projects.findFirst({
       where(fields, { eq }) {

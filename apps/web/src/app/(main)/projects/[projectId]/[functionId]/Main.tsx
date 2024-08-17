@@ -385,7 +385,7 @@ function ManifestSection() {
     functionId: functionId,
   });
 
-  if (!fn) {
+  if (!fn || !fn.currentDeployment) {
     return null;
   }
 
