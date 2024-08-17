@@ -10,6 +10,7 @@ import { deleteFunction } from "./routers/function/delete";
 import { deleteEnv } from "./routers/function/deleteEnv";
 import { getDeployments } from "./routers/function/getDeployments";
 import { getEnvs } from "./routers/function/getEnvs";
+import { getEnvValue } from "./routers/function/getEnvValue";
 import { getFunction } from "./routers/function/getFunction";
 import { getInvocations } from "./routers/function/getInvocations";
 import { getLogs } from "./routers/function/getLogs";
@@ -37,6 +38,7 @@ export const functionRouter = createTRPCRouter({
   get: getFunction,
   delete: deleteFunction,
   getEnvs,
+  getEnvValue,
   addEnv,
   deleteEnv,
   updateEnv,
