@@ -40,7 +40,6 @@ export const getFunctions = protectedProcedure
       .from(schema.deployment)
       .where(and(eq(schema.deployment.status, "SUCCESS")))
       .orderBy(desc(schema.deployment.createdAt))
-      .limit(1)
       .as("mostRecentDeployment");
 
     const functions = await ctx.db
