@@ -2,9 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatDistanceToNow } from "date-fns";
-import { EyeIcon, EyeOffIcon, MoreHorizontalIcon } from "lucide-react";
+import {
+  EyeIcon,
+  EyeOffIcon,
+  LoaderIcon,
+  MoreHorizontalIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import {
   AlertDialog,
@@ -22,6 +28,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
 import { useParams } from "../hooks/useParams";
@@ -32,7 +44,7 @@ export default function Page() {
   const { data } = useEnvs();
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-hidden">
       <AddEnvSection />
       {data && <EnvironmentVariables />}
     </div>
@@ -45,7 +57,7 @@ function EnvironmentVariables() {
   return (
     <div className="divide-y rounded-sm border bg-muted">
       {envs && envs.length === 0 && <NoEnvs />}
-      {envs?.map((env) => <EnvRow env={env} />)}
+      {envs?.map((env) => <EnvRow key={env.id} env={env} />)}
     </div>
   );
 }
@@ -59,27 +71,96 @@ function NoEnvs() {
 }
 
 function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
-  const [revealEnv, setRevealEnv] = useState(false);
+  const { functionId } = useParams();
+  const [isCopied, setIsCopied] = useState(false);
+  const {
+    data: value,
+    isPending,
+    mutateAsync: getEnvValue,
+    reset,
+  } = api.functions.getEnvValue.useMutation();
+
+  const getButtonProps = () => {
+    if (isPending) {
+      return {
+        onClick: () => {
+          reset();
+        },
+        children: <LoaderIcon className="animate-spin" size={14} />,
+      };
+    }
+
+    if (value) {
+      return {
+        children: <EyeOffIcon size={14} />,
+        onClick: () => {
+          reset();
+        },
+      };
+    }
+
+    return {
+      children: <EyeIcon size={14} />,
+      onClick: () => {
+        getEnvValue({ functionId, envId: env.id });
+      },
+    };
+  };
+
+  const handleCopy = () => {
+    if (!value) return;
+    navigator.clipboard.writeText(value?.decryptedValue);
+    setIsCopied(true);
+  };
+
+  const handleTooltipOpenChange = (open: boolean) => {
+    if (!open && isCopied) {
+      setTimeout(() => setIsCopied(false), 200);
+    }
+  };
 
   return (
-    <div className="flex items-center justify-between p-4">
-      <div className="basis-[350px] truncate">{env.key}</div>
-      <div className="max-w-20 flex w-full flex-1 items-center justify-center gap-2">
-        <Button variant="ghost" onClick={() => setRevealEnv((v) => !v)}>
-          {revealEnv ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-        </Button>
-        <div className="w-40">
-          {revealEnv ? (
-            <div className="w-fit truncate rounded-sm px-1">{env.value}</div>
+    <div className="flex items-center justify-between gap-4 p-4">
+      <div className="basis-[200px] truncate">{env.key}</div>
+      <div className="flex min-w-0 flex-1 items-center justify-start gap-2">
+        <Button
+          className="h-7 basis-7 p-0"
+          variant="ghost"
+          {...getButtonProps()}
+        />
+        <div className="min-w-0 flex-1 text-sm">
+          {value ? (
+            <TooltipProvider>
+              <Tooltip onOpenChange={handleTooltipOpenChange}>
+                <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                  <button
+                    className="flex h-7 min-w-0 max-w-full items-center rounded-sm bg-background px-1"
+                    onClick={handleCopy}
+                  >
+                    <code className="min-w-0 max-w-full truncate">
+                      {value.decryptedValue}
+                    </code>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent
+                  onPointerDownOutside={(e) => e.preventDefault()}
+                >
+                  {isCopied ? (
+                    <div className="text-xs text-zinc-500">Copied!</div>
+                  ) : (
+                    <div className="text-xs text-zinc-500">Click to copy</div>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             "•••••••••••••"
           )}
         </div>
       </div>
-      <div className="flex flex-1 items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-2">
         <div className="text-xs text-zinc-500">
-          Last updated{" "}
-          {formatDistanceToNow(env.lastUpdatedAt, { addSuffix: true })}
+          Modified {formatDistanceToNow(env.lastUpdatedAt, { addSuffix: true })}
         </div>
         <Popover>
           <PopoverTrigger asChild>
@@ -103,7 +184,12 @@ function DeleteConfirmation(props: { envId: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const { functionId } = useParams();
   const utils = api.useUtils();
-  const { mutateAsync: deleteEnv } = api.functions.deleteEnv.useMutation();
+  const { mutateAsync: deleteEnv } = api.functions.deleteEnv.useMutation({
+    onSuccess: () => {
+      toast.success("Environment variable removed");
+      utils.functions.getEnvs.refetch({ functionId });
+    },
+  });
 
   const form = useForm({
     resolver: zodResolver(z.object({})),
@@ -114,7 +200,6 @@ function DeleteConfirmation(props: { envId: number }) {
       functionId,
       id: props.envId,
     });
-    await utils.functions.getEnvs.refetch({ functionId });
     setIsOpen(false);
   };
 

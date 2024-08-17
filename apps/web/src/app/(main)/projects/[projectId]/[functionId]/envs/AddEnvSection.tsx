@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import {
@@ -25,7 +26,11 @@ export function AddEnvSection() {
   const { functionId } = useParams();
 
   const utils = api.useUtils();
-  const { mutateAsync: addEnv } = api.functions.addEnv.useMutation();
+  const { mutateAsync: addEnv } = api.functions.addEnv.useMutation({
+    onSuccess: () => {
+      toast.success("Environment variable added");
+    },
+  });
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -41,7 +46,6 @@ export function AddEnvSection() {
       value: values.value,
       functionId,
     });
-
     await utils.functions.getEnvs.refetch({ functionId });
 
     form.reset();

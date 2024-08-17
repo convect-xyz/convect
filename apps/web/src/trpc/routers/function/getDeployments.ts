@@ -1,5 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import { desc } from "drizzle-orm";
 import { z } from "zod";
 import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import { db } from "~/server/db";
@@ -39,9 +38,10 @@ export const getDeployments = protectedProcedure
 
     const deployments = await db.query.deployment.findMany({
       where: (fields, { eq }) => eq(fields.functionId, convectFn.id),
-      orderBy(fields, operators) {
+      orderBy(fields, { desc }) {
         return desc(fields.createdAt);
       },
+      limit: 50,
     });
 
     return deployments.map((deployment) => ({
