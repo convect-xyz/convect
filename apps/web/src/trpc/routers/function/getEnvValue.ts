@@ -16,7 +16,7 @@ export const getEnvValue = protectedProcedure
       decryptedValue: z.string(),
     }),
   )
-  .mutation(async ({ ctx, input }) => {
+  .query(async ({ ctx, input }) => {
     const fn = await ctx.db.query.convectFunctions.findFirst({
       where(fields, { eq, and }) {
         return and(eq(fields.id, input.functionId));

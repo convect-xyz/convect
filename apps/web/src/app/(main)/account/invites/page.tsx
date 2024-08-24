@@ -29,6 +29,7 @@ function PendingInvites() {
     </div>
   );
 }
+
 function PendingInvite(props: {
   invite: RouterOutputs["accounts"]["getPendingInvites"][number];
 }) {

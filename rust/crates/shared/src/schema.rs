@@ -2419,6 +2419,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        timestamp -> Timestamptz,
     }
 }
 
