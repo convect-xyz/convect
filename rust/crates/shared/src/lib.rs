@@ -4,19 +4,24 @@ pub mod connection;
 pub mod contract_info;
 pub mod enqueuer;
 pub mod fetcher;
+pub mod macros;
+pub mod manifest;
 #[cfg(feature = "pg")]
 pub mod models;
 #[cfg(feature = "supported-networks")]
 pub mod networks;
+pub mod processing;
+pub mod redis_client;
 #[cfg(feature = "reporting-sdk")]
 pub mod reporting_sdk;
+pub mod resend;
 pub mod s3;
 #[cfg(feature = "pg")]
 pub mod schema;
+pub mod syncing;
 #[cfg(feature = "telemetry")]
 pub mod telemetry;
-pub mod types;
-pub mod web3_client;
-
 #[cfg(test)]
 pub mod testing;
+pub mod types;
+pub mod web3_client;

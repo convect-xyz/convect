@@ -1,15 +1,12 @@
 "use client";
 
 import { CheckIcon } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
 
 export default function Page() {
-  const [open, setIsOpen] = useState(false);
-
   return (
     <div className="mx-auto w-full max-w-screen-lg">
       <div className="text-3xl">Invites</div>

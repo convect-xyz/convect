@@ -46,6 +46,7 @@ function Main(props: PropsWithChildren) {
         >
           <Link {...getLinkProps(`/account/api-keys`)}>API Keys</Link>
           <Link {...getLinkProps(`/account/invites`)}>Invites</Link>
+          <Link {...getLinkProps(`/account/usage`)}>Usage & Billing</Link>
         </nav>
         <div className="grid gap-6">{props.children}</div>
       </div>
