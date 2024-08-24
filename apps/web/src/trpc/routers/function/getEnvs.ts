@@ -1,6 +1,5 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { decryptEnvValue } from "~/lib/server/security";
 import { protectedProcedure } from "~/trpc/trpc";
 import { throwIfNotProjectCollaborator } from "../permissions";
 
@@ -15,7 +14,7 @@ export const getEnvs = protectedProcedure
       z.object({
         id: z.number(),
         key: z.string(),
-        value: z.string(),
+        encryptedValue: z.string(),
         lastUpdatedAt: z.number(),
       }),
     ),
@@ -38,9 +37,10 @@ export const getEnvs = protectedProcedure
       projectId: fn.projectId,
       userId: ctx.session.user.id,
     });
+
     return fn.envs.map((env) => ({
       ...env,
-      value: decryptEnvValue(env.value, env.iv),
+      encryptedValue: env.value,
       lastUpdatedAt: env.lastUpdatedAt.getTime(),
     }));
   });

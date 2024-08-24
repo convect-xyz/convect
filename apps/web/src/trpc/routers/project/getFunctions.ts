@@ -18,11 +18,13 @@ export const getFunctions = protectedProcedure
           id: z.number(),
           name: z.string(),
           description: z.string(),
-          chains: z.array(
-            z.object({
-              chainId: z.number(),
-            }),
-          ),
+          chains: z
+            .array(
+              z.object({
+                chainId: z.number(),
+              }),
+            )
+            .nullable(),
         }),
       ),
     }),
@@ -33,20 +35,25 @@ export const getFunctions = protectedProcedure
       userId: ctx.session.user.id,
     });
 
-    const mostRecentDeployment = ctx.db
-      .select()
+    const mostRecentDeployments = ctx.db
+      .selectDistinctOn([schema.deployment.functionId], {
+        functionId: schema.deployment.functionId,
+        manifest: schema.deployment.manifest,
+      })
       .from(schema.deployment)
       .where(and(eq(schema.deployment.status, "SUCCESS")))
-      .orderBy(desc(schema.deployment.createdAt))
-      .limit(1)
+      .orderBy(
+        desc(schema.deployment.functionId),
+        desc(schema.deployment.createdAt),
+      )
       .as("mostRecentDeployment");
 
     const functions = await ctx.db
       .select()
       .from(schema.convectFunctions)
       .leftJoin(
-        mostRecentDeployment,
-        eq(schema.convectFunctions.id, mostRecentDeployment.functionId),
+        mostRecentDeployments,
+        eq(schema.convectFunctions.id, mostRecentDeployments.functionId),
       )
       .where(eq(schema.convectFunctions.projectId, input.projectId));
 
@@ -58,7 +65,7 @@ export const getFunctions = protectedProcedure
 
         return {
           ...f.convectFunction,
-          chains: manifest?.chains ?? [],
+          chains: manifest?.chains ?? null,
         };
       }),
     };
