@@ -72,9 +72,9 @@ function FnRow(props: {
         </div>
       </div>
 
-      {chains.length > 0 && (
+      {chains && (
         <span className="ml-auto flex w-min items-center gap-2 whitespace-nowrap rounded-full bg-background px-2 py-1">
-          {props.fn.chains.map((c) => (
+          {chains.map((c) => (
             <ChainIcon chainId={c.chainId} />
           ))}
         </span>
