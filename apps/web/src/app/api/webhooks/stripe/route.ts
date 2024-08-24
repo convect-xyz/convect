@@ -6,8 +6,7 @@ import { env } from "~/env";
 import { db } from "~/server/db";
 
 const stripe = new Stripe(env.STRIPE_API_KEY);
-const WEBHOOK_SECRET =
-  "whsec_b223309ef82e681b289f065d682048678b0758c995b18c7770e1d3a48923d3e4";
+const WEBHOOK_SECRET = "whsec_ZiL8BHM9N4QJu3k4hPMMAtemZj5uoeyg";
 
 export const POST = async (req: NextRequest) => {
   const { data: event, err } = await parseBody(req);
@@ -25,6 +24,9 @@ export const POST = async (req: NextRequest) => {
       // The payment failed or the customer does not have a valid payment method.
       // The subscription becomes past_due. Notify your customer and send them to the
       // customer portal to update their payment information.
+      break;
+    case "payment_method.attached":
+      await setDefaultPaymentMethod(event);
       break;
     default:
     // Unhandled event type
@@ -70,4 +72,24 @@ async function handleCheckoutSessionComplete(
       planType,
     })
     .where(eq(schema.users.id, client_reference_id!));
+}
+
+async function setDefaultPaymentMethod(
+  event: Extract<Stripe.Event, { type: "payment_method.attached" }>,
+) {
+  const data = event.data.object;
+
+  const customerId =
+    typeof data.customer === "string" ? data.customer : data.customer?.id;
+  const customer = await stripe.customers.retrieve(customerId!);
+
+  if (customer.deleted) {
+    return;
+  }
+
+  await stripe.customers.update(customerId!, {
+    invoice_settings: {
+      default_payment_method: data.id,
+    },
+  });
 }

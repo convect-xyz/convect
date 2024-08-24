@@ -39,6 +39,7 @@ import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
 import { useParams } from "../hooks/useParams";
 import { AddEnvSection } from "./AddEnvSection";
+import EditEnvSection from "./EditEnvSection";
 import { useEnvs } from "./hooks/useEnvs";
 
 export default function Page() {
@@ -75,14 +76,19 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
   const { functionId } = useParams();
   const [isCopied, setIsCopied] = useState(false);
   const [show, setShow] = useState(false);
-  const {
-    data: value,
-    isPending,
-    mutateAsync: getEnvValue,
-  } = api.functions.getEnvValue.useMutation();
+  const [isEditing, setIsEditing] = useState(false);
+  const { data: value, isLoading } = api.functions.getEnvValue.useQuery(
+    {
+      functionId,
+      envId: env.id,
+    },
+    {
+      enabled: show,
+    },
+  );
 
   const getButtonProps = () => {
-    if (isPending) {
+    if (isLoading) {
       return {
         onClick: () => setShow(false),
         children: <LoaderIcon className="animate-spin" size={14} />,
@@ -99,9 +105,6 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
     return {
       children: <EyeIcon size={14} />,
       onClick: async () => {
-        if (!value) {
-          await getEnvValue({ functionId, envId: env.id });
-        }
         setShow(true);
       },
     };
@@ -120,67 +123,82 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 p-4">
-      <div className="px-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-muted-foreground">
-          <Code2 size={20} className="text-muted-foreground" />
+    <div className="flex flex-col gap-2 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="px-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-muted-foreground">
+            <Code2 size={20} className="text-muted-foreground" />
+          </div>
         </div>
-      </div>
-      <div className="basis-[200px] truncate">{env.key}</div>
-      <div className="flex min-w-0 flex-1 items-center justify-start gap-2">
-        <Button
-          className="h-7 basis-7 p-0"
-          variant="ghost"
-          {...getButtonProps()}
-        />
-        <div className="min-w-0 flex-1 text-sm">
-          {show && value ? (
-            <TooltipProvider>
-              <Tooltip onOpenChange={handleTooltipOpenChange}>
-                <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                  <button
-                    className="flex h-7 min-w-0 max-w-full items-center rounded-sm bg-background px-1"
-                    onClick={handleCopy}
+        <div className="basis-[200px] truncate">{env.key}</div>
+        <div className="flex min-w-0 flex-1 items-center justify-start gap-2">
+          <Button
+            className="h-7 basis-7 p-0"
+            variant="ghost"
+            {...getButtonProps()}
+          />
+          <div className="min-w-0 flex-1 text-sm">
+            {show && value ? (
+              <TooltipProvider>
+                <Tooltip onOpenChange={handleTooltipOpenChange}>
+                  <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                    <button
+                      className="flex h-7 min-w-0 max-w-full items-center rounded-sm bg-background px-1"
+                      onClick={handleCopy}
+                    >
+                      <code className="min-w-0 max-w-full truncate">
+                        {value.decryptedValue}
+                      </code>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    onPointerDownOutside={(e) => e.preventDefault()}
                   >
-                    <code className="min-w-0 max-w-full truncate">
-                      {value.decryptedValue}
-                    </code>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent
-                  onPointerDownOutside={(e) => e.preventDefault()}
-                >
-                  {isCopied ? (
-                    <div className="text-xs text-zinc-500">Copied!</div>
-                  ) : (
-                    <div className="text-xs text-zinc-500">Click to copy</div>
-                  )}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            "•••••••••••••"
-          )}
+                    {isCopied ? (
+                      <div className="text-xs text-zinc-500">Copied!</div>
+                    ) : (
+                      <div className="text-xs text-zinc-500">Click to copy</div>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              "•••••••••••••"
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <div className="text-xs text-muted-foreground">
+            Modified{" "}
+            {formatDistanceToNow(env.lastUpdatedAt, { addSuffix: true })}
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost">
+                <MoreHorizontalIcon />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="flex w-40 flex-col p-1 text-left">
+              <Button
+                variant="ghost"
+                className="cursor-pointer justify-start"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit
+              </Button>
+              <DeleteConfirmation envId={env.id} />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
-      <div className="flex items-center justify-end gap-2">
-        <div className="text-xs text-muted-foreground">
-          Modified {formatDistanceToNow(env.lastUpdatedAt, { addSuffix: true })}
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost">
-              <MoreHorizontalIcon />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="flex w-40 flex-col p-1 text-left">
-            <Button variant="ghost" className="cursor-pointer justify-start">
-              Edit
-            </Button>
-            <DeleteConfirmation envId={env.id} />
-          </PopoverContent>
-        </Popover>
-      </div>
+      {isEditing && (
+        <EditEnvSection
+          open
+          env={env}
+          onUpdate={() => setIsEditing(false)}
+          onOpenChange={() => setIsEditing(false)}
+        />
+      )}
     </div>
   );
 }
