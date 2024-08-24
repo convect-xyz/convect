@@ -1,4 +1,3 @@
-use aws_sdk_s3::error::BoxError;
 use std::{env, str::FromStr};
 use web3::{
     transports::Http,
@@ -9,23 +8,26 @@ use web3::{
 pub trait Web3Client {
     fn get_current_block_number(
         &self,
-    ) -> impl std::future::Future<Output = Result<u64, BoxError>> + Send;
+    ) -> impl std::future::Future<Output = Result<u64, errors::Web3ClientError>> + Send;
 
     fn get_logs(
         &self,
         filter: Filter,
-    ) -> impl std::future::Future<Output = Result<Vec<Log>, BoxError>> + Send;
+    ) -> impl std::future::Future<Output = Result<Vec<Log>, errors::Web3ClientError>> + Send;
 
     fn get_transaction_receipt(
         &self,
         tx_hash: String,
-    ) -> impl std::future::Future<Output = Result<Option<web3::types::TransactionReceipt>, BoxError>>
-           + Send;
+    ) -> impl std::future::Future<
+        Output = Result<Option<web3::types::TransactionReceipt>, errors::Web3ClientError>,
+    > + Send;
 
     fn get_transaction_by_hash(
         &self,
         tx_hash: String,
-    ) -> impl std::future::Future<Output = Result<Option<web3::types::Transaction>, BoxError>> + Send;
+    ) -> impl std::future::Future<
+        Output = Result<Option<web3::types::Transaction>, errors::Web3ClientError>,
+    > + Send;
 }
 
 #[derive(Clone)]
@@ -55,18 +57,18 @@ impl Web3ClientImpl {
 }
 
 impl Web3Client for Web3ClientImpl {
-    async fn get_current_block_number(&self) -> Result<u64, BoxError> {
+    async fn get_current_block_number(&self) -> Result<u64, errors::Web3ClientError> {
         Ok(self.web3.eth().block_number().await?.as_u64())
     }
 
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, BoxError> {
+    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, errors::Web3ClientError> {
         Ok(self.web3.eth().logs(filter).await?)
     }
 
     async fn get_transaction_receipt(
         &self,
         tx_hash: String,
-    ) -> Result<Option<web3::types::TransactionReceipt>, BoxError> {
+    ) -> Result<Option<web3::types::TransactionReceipt>, errors::Web3ClientError> {
         Ok(self
             .web3
             .eth()
@@ -77,11 +79,24 @@ impl Web3Client for Web3ClientImpl {
     async fn get_transaction_by_hash(
         &self,
         tx_hash: String,
-    ) -> Result<Option<web3::types::Transaction>, BoxError> {
+    ) -> Result<Option<web3::types::Transaction>, errors::Web3ClientError> {
         Ok(self
             .web3
             .eth()
             .transaction(TransactionId::Hash(H256::from_str(&tx_hash)?))
             .await?)
+    }
+}
+
+pub mod errors {
+    use rustc_hex::FromHexError;
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum Web3ClientError {
+        #[error("Web3 error: {0}")]
+        Web3(#[from] web3::Error),
+        #[error("From hex error: {0}")]
+        FromHex(#[from] FromHexError),
     }
 }

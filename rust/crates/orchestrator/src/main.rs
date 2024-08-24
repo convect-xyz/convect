@@ -4,7 +4,7 @@ use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use futures::{future::join_all, TryFutureExt};
+use futures::future::join_all;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use serde::Deserialize;
@@ -12,7 +12,9 @@ use shared::{
     contract_info::{self, ContractInfoProvider},
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{TransactionFetcher, TransactionFetcherImpl},
-    types::{manifest::Manifest, syncing::State},
+    manifest::Manifest,
+    redis_client::RedisClient,
+    syncing::State,
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::BTreeMap;
@@ -143,19 +145,16 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     // benchmark this
     let mut pipeline = State::load(
         config.function_id.clone(),
-        chain_config.chain_id.to_string(),
+        chain_config.chain_id,
         config.deployment_id.clone(),
-    );
+    )
+    .await;
 
-    println!("Pipeline Inner: {:?}", pipeline.inner());
     if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
         return Ok(());
     }
 
-    if pipeline
-        .state()
-        .eq(&shared::types::syncing::SyncState::SYNCING)
-    {
+    if pipeline.state().eq(&shared::syncing::SyncState::SYNCING) {
         return Ok(());
     }
 
@@ -164,8 +163,9 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
         pipeline
             .update()
-            .set_state(shared::types::syncing::SyncState::SYNCING)
+            .set_state(shared::syncing::SyncState::SYNCING)
             .send()
+            .await
             .expect("Failed to update pipeline");
 
         return batch_sync(
@@ -182,13 +182,6 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
     let transactions = fetcher
         .get_transactions_in_range(&manifest, chain_config.chain_id, from_block, incoming_block)
-        .inspect_err(|_| {
-            pipeline
-                .update()
-                .set_state(shared::types::syncing::SyncState::FAILED)
-                .send()
-                .unwrap();
-        })
         .await?;
 
     let result = enqueuer
@@ -196,11 +189,21 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         .await;
 
     match result {
-        Ok(_) => pipeline.update().set_last_block(incoming_block).send(),
-        Err(_) => pipeline
-            .update()
-            .set_state(shared::types::syncing::SyncState::FAILED)
-            .send(),
+        Ok(_) => {
+            pipeline
+                .update()
+                .set_last_block(incoming_block)
+                .set_state(shared::syncing::SyncState::IDLE)
+                .send()
+                .await
+        }
+        Err(_) => {
+            pipeline
+                .update()
+                .set_state(shared::syncing::SyncState::FAILED)
+                .send()
+                .await
+        }
     }
     .unwrap();
 
@@ -247,15 +250,15 @@ impl Config {
     }
 }
 
-async fn batch_sync(
+async fn batch_sync<T: RedisClient>(
     chain_id: u64,
     ecs_client: &aws_sdk_ecs::Client,
-    pipeline: &mut State,
+    pipeline: &mut State<T>,
     incoming_block: u64,
     init_block: Option<u64>,
     config: &Config,
 ) -> Result<(), Error> {
-    ecs_client
+    let client_result = ecs_client
         .run_task()
         .cluster(&config.syncer_cluster)
         .task_definition(&config.syncer_task_definition_arn)
@@ -268,16 +271,23 @@ async fn batch_sync(
             incoming_block,
         ))
         .send()
-        .await
-        .inspect_err(|e| {
-            println!("{:?}", e);
+        .await;
 
+    match client_result {
+        Ok(_) => {
             pipeline
                 .update()
-                .set_state(shared::types::syncing::SyncState::IDLE)
+                .set_state(shared::syncing::SyncState::IDLE)
                 .send()
+                .await
                 .unwrap();
-        })?;
+        }
+        Err(e) => {
+            println!("{:?}", e);
+
+            return Err(Box::new(e));
+        }
+    }
 
     Ok(())
 }
@@ -394,8 +404,8 @@ async fn get_min_contract_creation_block(
     Ok(min_block)
 }
 
-async fn get_init_block(
-    pipeline: &mut State,
+async fn get_init_block<T: RedisClient>(
+    pipeline: &mut State<T>,
     manifest: &Manifest,
     web3_client: &Web3ClientImpl,
     chain_config: &ChainConfig,
