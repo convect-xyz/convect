@@ -3,7 +3,8 @@ use std::env;
 use tokio::join;
 
 use lambda_extension::{
-    service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
+    service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, LogBuffering,
+    SharedService,
 };
 use reqwest::blocking::Client;
 use serde_json::json;
@@ -111,6 +112,10 @@ async fn main() -> Result<(), Error> {
 
     Extension::new()
         .with_telemetry_processor(telemetry_processor)
+        .with_telemetry_buffering(LogBuffering {
+            timeout_ms: 25,
+            ..Default::default()
+        })
         .run()
         .await?;
 
