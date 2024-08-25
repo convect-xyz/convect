@@ -64,3 +64,5 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+// forge create --rpc-url https://eth-sepolia.public.blastapi.io --private-key 97544a5e66a06b4daa327950b05cdab83ab10b969e9f4a34df7e828848b69502 --verify --etherscan-api-key YXWBY51235813YT95SRBG99DFHVAZAIU7M src/EventEmitter.sol:EventEmitter
