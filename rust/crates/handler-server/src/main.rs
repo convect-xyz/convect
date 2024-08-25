@@ -104,6 +104,7 @@ fn main() -> Result<(), Error> {
                 .with_max_level(tracing::Level::DEBUG)
                 .with_target(false)
                 .without_time()
+                .with_ansi(false)
                 .init();
 
             let app = Router::new()
