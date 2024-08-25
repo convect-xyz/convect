@@ -1,5 +1,6 @@
 import { createTRPCRouter } from "~/trpc/trpc";
 import { acceptInvite } from "./acceptInvite";
+import { getActivePlan } from "./getActivePlan";
 import { getPaymentMethods } from "./getPaymentMethods";
 import { getPendingInvites } from "./getPendingInvites";
 import { getStripeSetupIntent } from "./getStripeSetupIntent";
@@ -13,4 +14,5 @@ export const accountsRouter = createTRPCRouter({
   getPaymentMethods,
   getStripeSetupIntent,
   setDefaultPaymentMethod,
+  getActivePlan,
 });

@@ -19,6 +19,16 @@ export const getStripeSetupIntent = protectedProcedure
     });
 
     const stripeCustomerId = await getStripeCustomerId(user!);
+    const existingPaymentMethods = await stripe.paymentMethods.list({
+      customer: stripeCustomerId,
+    });
+
+    if (existingPaymentMethods.data.length >= 3) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "User already has 3 payment methods",
+      });
+    }
 
     const setupIntent = await stripe.setupIntents.create({
       customer: stripeCustomerId,
