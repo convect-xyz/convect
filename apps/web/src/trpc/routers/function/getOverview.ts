@@ -121,7 +121,7 @@ export const getOverview = protectedProcedure
       lastFetchedBlock: fetchState?.lastBlock ?? 0,
       avgDuration: avgDuration,
       version: 0,
-      internalId: " handler.internalId",
+      internalId: "handler.internalId",
     };
   });
 
@@ -155,24 +155,24 @@ const getSuccessfulTxCount = async (
 };
 
 const getTxCount = async (
-  internalId: string,
-  version: number,
+  functionId: string,
+  chainId: number,
   deploymentId: string,
 ) => {
   const txCount = await redisClient.get(
-    `tx-count-${internalId}-${version}-${deploymentId}`,
+    `${functionId}-${chainId}-${deploymentId}-tx-count`,
   );
   return txCount ? Number(txCount) : null;
 };
 
 const getFetchState = async (
-  internalId: string,
+  functionId: string,
   version: number,
   deploymentId: string,
 ) => {
   const [lastBlock, state] = await redisClient.mget(
-    `${internalId}-${version}-${deploymentId}-last-block`,
-    `${internalId}-${version}-${deploymentId}-state`,
+    `${functionId}-${version}-${deploymentId}-last-block`,
+    `${functionId}-${version}-${deploymentId}-state`,
   );
 
   return {
