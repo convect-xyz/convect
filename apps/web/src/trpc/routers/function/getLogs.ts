@@ -52,9 +52,9 @@ export const getLogs = protectedProcedure
         "https://api.eu-central-1.aws.tinybird.co/v0/sql",
         {
           q: `%
-        SELECT * FROM ingest_pipe WHERE handler_id = {{String(handler_id)}} AND handler_version = {{String(handler_version)}} AND log_level = {{String(log_level)}} ORDER BY parseDateTimeBestEffortOrNull(time) DESC LIMIT 50 FORMAT JSON`,
-          handler_id: input.functionId,
-          handler_version: input.chainId.toString(),
+        SELECT * FROM ingest_pipe WHERE function_id = {{String(function_id)}} AND chain_id = {{String(chain_id)}} AND log_level = {{String(log_level)}} ORDER BY parseDateTimeBestEffortOrNull(time) DESC LIMIT 50 FORMAT JSON`,
+          function_id: input.functionId,
+          chain_id: input.chainId.toString(),
           log_level: input.logLevel,
         },
         {
