@@ -14,6 +14,7 @@ const TINYBIRD_API_KEY: &'static str = env!("TINYBIRD_API_KEY");
 async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     let function_id = env::var("FUNCTION_ID").expect("Function ID is undefined");
     let chain_id = env::var("CHAIN_ID").expect("Chain ID is undefined");
+    let deployment_id = env::var("DEPLOYMENT_ID").expect("Deployment ID is undefined");
 
     let records: Vec<String> = logs.into_iter().map(|record|{
       let re = Regex::new(r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$").unwrap();
@@ -21,6 +22,7 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
       re.captures(&record).map(|result| serde_json::to_string(&json!({
         "function_id": function_id,
         "chain_id": chain_id,
+        "deployment_id": deployment_id,
         "time": result["time"].to_string(),
         "invocation_id": result["uuid"].to_string(),
         "log_level": result["log_level"].to_string(),
