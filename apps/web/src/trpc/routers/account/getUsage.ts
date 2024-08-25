@@ -1,4 +1,5 @@
 import { analysisSchema } from "@convect-xyz/lib";
+import { TRPCError } from "@trpc/server";
 import { and, count, gt, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -20,7 +21,12 @@ export const getUsage = protectedProcedure
   .output(
     z.array(
       z.object({
-        key: z.enum(["processedTransactions", "gbHours", "invocations"]),
+        key: z.enum([
+          "processedTransactions",
+          "gbHours",
+          "invocations",
+          "basePlan",
+        ]),
         name: z.string(),
         totalUsage: z.number(),
         includedFree: z.number(),
@@ -30,7 +36,7 @@ export const getUsage = protectedProcedure
       }),
     ),
   )
-  .query(async ({ input }) => {
+  .query(async ({ ctx, input }) => {
     const { periodStart, periodEnd } = input;
 
     const [numProcessedTransactions, { gbHours, numInvocations }] =
@@ -39,19 +45,28 @@ export const getUsage = protectedProcedure
         getGbHours(periodStart, periodEnd),
       ]);
 
+    const user = await ctx.db.query.users.findFirst({
+      where(fields, { eq }) {
+        return eq(fields.id, ctx.session.user.id);
+      },
+    });
+    if (!user) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+
     const getResponseForProduct = (product: Product, totalUsage: number) => {
       return {
         key: product.key,
         name: product.name,
         totalUsage,
-        includedFree: product.getIncludedFree("free"),
+        includedFree: product.getIncludedFree(user.planType),
         additionalChargeInCents: product.getAdditionalChargeInCents(
           totalUsage,
-          "free",
+          user.planType,
         ),
         includedFreeUsageAsFraction: product.getIncludedFreeUsageAsFraction(
           totalUsage,
-          "free",
+          user.planType,
         ),
         unitSymbol: product.unitSymbol,
       };
