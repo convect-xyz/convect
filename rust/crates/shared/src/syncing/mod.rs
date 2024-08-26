@@ -86,6 +86,7 @@ impl State<RedisClientImpl> {
             .await
             .unwrap();
 
+        println!("State: {:?}", state);
         Self {
             deployment_id: deployment_id.clone(),
             function_id: function_id.clone(),
