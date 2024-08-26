@@ -91,10 +91,10 @@ impl State<RedisClientImpl> {
             deployment_id: deployment_id.clone(),
             function_id: function_id.clone(),
             chain_id: chain_id.clone(),
-            state: match state.as_ref() {
-                Some(state) => serde_json::from_str(state.as_str()).unwrap(),
-                None => SyncState::IDLE,
-            },
+            state: state.map_or_else(
+                || SyncState::IDLE,
+                |state| serde_json::from_str(state.as_str()).unwrap(),
+            ),
             last_block: last_block.clone(),
             redis_client,
         }
@@ -140,6 +140,7 @@ impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
 
         let retry_strategy = tokio_retry::strategy::ExponentialBackoff::from_millis(15).take(3);
         let func = || async {
+            println!("Sending to redis: {:?}", params);
             redis_client.mset(&params).await?;
             Ok::<(), RedisClientError>(())
         };

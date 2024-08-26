@@ -258,20 +258,20 @@ async fn batch_sync<T: RedisClient>(
     init_block: Option<u64>,
     config: &Config,
 ) -> Result<(), Error> {
-    let client_result = ecs_client
-        .run_task()
-        .cluster(&config.syncer_cluster)
-        .task_definition(&config.syncer_task_definition_arn)
-        .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
-        .network_configuration(get_network_configuration(config.syncer_subnets.clone()))
-        .overrides(get_task_override(
-            chain_id,
-            &config,
-            pipeline.last_block().map(|l| l + 1).or(init_block).unwrap(),
-            incoming_block,
-        ))
-        .send()
-        .await;
+    // let client_result = ecs_client
+    //     .run_task()
+    //     .cluster(&config.syncer_cluster)
+    //     .task_definition(&config.syncer_task_definition_arn)
+    //     .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
+    //     .network_configuration(get_network_configuration(config.syncer_subnets.clone()))
+    //     .overrides(get_task_override(
+    //         chain_id,
+    //         &config,
+    //         pipeline.last_block().map(|l| l + 1).or(init_block).unwrap(),
+    //         incoming_block,
+    //     ))
+    //     .send()
+    //     .await;
 
     match client_result {
         Ok(_) => {
