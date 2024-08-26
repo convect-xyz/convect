@@ -32,7 +32,7 @@ async fn get_manifest() -> &'static Manifest {
         .await
 }
 
-async fn get_web3_clients(chain_id: &u64) -> &'static Web3ClientImpl {
+async fn get_web3_client(chain_id: &u64) -> &'static Web3ClientImpl {
     WEB3_CLIENTS
         .get_or_init(|| async {
             let config = Config::new();
@@ -104,9 +104,10 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             .expect("Invalid SNS Message");
 
     let config = Config::new();
+    println!("Incoming blocks: {:?}", incoming_blocks);
+
     let futures = config.chains.into_iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-        println!("Incoming block: {:?}", block_for_chain);
 
         async move { sync_chain(chain_config, block_for_chain).await }
     });
@@ -130,7 +131,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<(), Error> {
     let sdk_config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
-    let web3_client = get_web3_clients(&chain_config.chain_id).await;
+    let web3_client = get_web3_client(&chain_config.chain_id).await;
     let fetcher = TransactionFetcherImpl::new_from_client(web3_client.clone());
     let s3_client = aws_sdk_s3::Client::new(&sdk_config);
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
@@ -139,7 +140,6 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let manifest = get_manifest().await;
     let config = Config::new();
 
-    let incoming_block = incoming_block.min(web3_client.get_current_block_number().await?);
     println!("Incoming block: {:?}", incoming_block);
 
     // benchmark this
