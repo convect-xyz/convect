@@ -95,7 +95,6 @@ export default async () => {
     packageType: "Zip",
     runtime: "provided.al2023",
     reservedConcurrentExecutions: 1,
-    memorySize: 512,
   });
 
   new aws.lambda.FunctionEventInvokeConfig("orchestrator_config", {
