@@ -1,11 +1,13 @@
-use std::{env, str::FromStr};
+use std::str::FromStr;
 use web3::{
     transports::Http,
     types::{Filter, Log, TransactionId, H256},
     Web3,
 };
 
-pub trait Web3Client {
+pub trait Web3Client: Sync + Send {
+    fn chain_id(&self) -> u64;
+
     fn get_current_block_number(
         &self,
     ) -> impl std::future::Future<Output = Result<u64, errors::Web3ClientError>> + Send;
@@ -33,30 +35,23 @@ pub trait Web3Client {
 #[derive(Clone)]
 pub struct Web3ClientImpl {
     web3: Web3<Http>,
+    chain_id: u64,
 }
 
 impl Web3ClientImpl {
-    pub fn new() -> Self {
-        let transport: Http = web3::transports::Http::new(
-            env::var("NODE_ENDPOINT")
-                .expect("NODE_ENDPOINT is undefined")
-                .as_str(),
-        )
-        .unwrap();
-        let web3: Web3<Http> = web3::Web3::new(transport);
-
-        Self { web3 }
-    }
-
-    pub fn new_from_endpoint(endpoint: String) -> Self {
+    pub fn new(chain_id: u64, endpoint: String) -> Self {
         let transport: Http = web3::transports::Http::new(endpoint.as_str()).unwrap();
         let web3: Web3<Http> = web3::Web3::new(transport);
 
-        Self { web3 }
+        Self { web3, chain_id }
     }
 }
 
 impl Web3Client for Web3ClientImpl {
+    fn chain_id(&self) -> u64 {
+        self.chain_id
+    }
+
     async fn get_current_block_number(&self) -> Result<u64, errors::Web3ClientError> {
         Ok(self.web3.eth().block_number().await?.as_u64())
     }

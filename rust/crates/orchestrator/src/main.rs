@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::HashMap, env};
+use std::{collections::HashMap, env};
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
@@ -7,15 +7,14 @@ use aws_sdk_ecs::types::{
 use futures::future::join_all;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
-use serde::Deserialize;
+use shared::contract_info::EtherscanContractInfoProvider;
+use shared::manifest::providers::{InitBlockProvider, InitBlockProviderImpl};
+use shared::redis_client::RedisClientImpl;
+use shared::syncer::ChainSyncer;
+use shared::types::chains::ChainConfig;
 use shared::{
-    contract_info::{self, ContractInfoProvider},
-    enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
-    fetcher::{TransactionFetcher, TransactionFetcherImpl},
-    manifest::Manifest,
-    redis_client::RedisClient,
-    syncing::State,
-    web3_client::{Web3Client, Web3ClientImpl},
+    enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
+    redis_client::RedisClient, syncing::State, web3_client::Web3ClientImpl,
 };
 use std::collections::BTreeMap;
 use tokio::sync::OnceCell;
@@ -40,27 +39,13 @@ async fn get_web3_client(chain_id: &u64) -> &'static Web3ClientImpl {
             HashMap::from_iter(config.chains.iter().map(|c| {
                 (
                     c.chain_id,
-                    Web3ClientImpl::new_from_endpoint(c.polling_url.clone()),
+                    Web3ClientImpl::new(c.chain_id, c.polling_url.clone()),
                 )
             }))
         })
         .await
         .get(&chain_id)
         .unwrap()
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct ChainConfig {
-    #[serde(rename = "chainId")]
-    chain_id: u64,
-    #[serde(rename = "pollingUrl")]
-    polling_url: String,
-    #[serde(rename = "txQueueUrl")]
-    tx_queue_url: String,
-    #[serde(rename = "etherscanApiKey")]
-    etherscan_api_key: String,
-    #[serde(rename = "etherscanLike")]
-    etherscan_like: String,
 }
 
 fn configure_sentry_scope(config: &Config) {
@@ -104,16 +89,12 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             .expect("Invalid SNS Message");
 
     let config = Config::new();
-    println!("Incoming blocks: {:?}", incoming_blocks);
-
     let futures = config.chains.into_iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-
         async move { sync_chain(chain_config, block_for_chain).await }
     });
 
     let result = join_all(futures).await;
-
     for res in result {
         match res {
             Ok(_) => {
@@ -132,35 +113,42 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     let sdk_config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
     let web3_client = get_web3_client(&chain_config.chain_id).await;
-    let fetcher = TransactionFetcherImpl::new_from_client(web3_client.clone());
+    let fetcher = TransactionFetcherImpl::new(web3_client.clone());
     let s3_client = aws_sdk_s3::Client::new(&sdk_config);
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
     let manifest = get_manifest().await;
     let config = Config::new();
+    let redis_client = RedisClientImpl::new().await;
+    let init_block_provider = InitBlockProviderImpl::new(
+        &manifest,
+        chain_config.clone(),
+        web3_client.clone(),
+        EtherscanContractInfoProvider::new(
+            chain_config.etherscan_api_key.clone(),
+            chain_config.etherscan_like.clone(),
+        ),
+    );
 
-    println!("Incoming block: {:?}", incoming_block);
-
-    // benchmark this
     let mut pipeline = State::load(
         config.function_id.clone(),
         chain_config.chain_id,
         config.deployment_id.clone(),
+        redis_client,
     )
     .await;
 
-    if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
+    if pipeline.has_synced(incoming_block) || pipeline.is_syncing() {
         return Ok(());
     }
 
-    if pipeline.state().eq(&shared::syncing::SyncState::SYNCING) {
-        return Ok(());
-    }
+    let start_block = match pipeline.next_block() {
+        Some(next_block) => next_block,
+        None => init_block_provider.get_init_block().await?,
+    };
 
-    let init_block: Option<u64> =
-        get_init_block(&mut pipeline, manifest, &web3_client, &chain_config).await;
-    if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
+    if incoming_block - start_block > 10000 {
         pipeline
             .update()
             .set_state(shared::syncing::SyncState::SYNCING)
@@ -172,40 +160,19 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
             chain_config.chain_id,
             &ecs_client,
             &mut pipeline,
+            start_block,
             incoming_block,
-            init_block,
             &config,
         )
         .await;
     }
 
-    let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
-    let transactions = fetcher
-        .get_transactions_in_range(&manifest, chain_config.chain_id, from_block, incoming_block)
-        .await?;
+    let syncer = ChainSyncer::new(manifest.clone(), enqueuer, fetcher);
 
-    let result = enqueuer
-        .enqueue_transactions(&mut pipeline, &transactions)
-        .await;
-
-    match result {
-        Ok(_) => {
-            pipeline
-                .update()
-                .set_last_block(incoming_block)
-                .set_state(shared::syncing::SyncState::IDLE)
-                .send()
-                .await
-        }
-        Err(_) => {
-            pipeline
-                .update()
-                .set_state(shared::syncing::SyncState::FAILED)
-                .send()
-                .await
-        }
-    }
-    .unwrap();
+    syncer
+        .sync(&mut pipeline, start_block, incoming_block)
+        .await
+        .unwrap();
 
     Ok(())
 }
@@ -254,8 +221,8 @@ async fn batch_sync<T: RedisClient>(
     chain_id: u64,
     ecs_client: &aws_sdk_ecs::Client,
     pipeline: &mut State<T>,
-    incoming_block: u64,
-    init_block: Option<u64>,
+    start_block: u64,
+    end_block: u64,
     config: &Config,
 ) -> Result<(), Error> {
     let client_result = ecs_client
@@ -264,12 +231,7 @@ async fn batch_sync<T: RedisClient>(
         .task_definition(&config.syncer_task_definition_arn)
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(get_network_configuration(config.syncer_subnets.clone()))
-        .overrides(get_task_override(
-            chain_id,
-            &config,
-            pipeline.last_block().map(|l| l + 1).or(init_block).unwrap(),
-            incoming_block,
-        ))
+        .overrides(get_task_override(chain_id, &config, start_block, end_block))
         .send()
         .await;
 
@@ -337,97 +299,4 @@ fn get_task_override(
 
 fn create_key_value_pair(name: &str, value: &String) -> KeyValuePair {
     KeyValuePair::builder().name(name).value(value).build()
-}
-
-async fn get_min_contract_creation_block(
-    web3_client: &Web3ClientImpl,
-    manifest: &Manifest,
-    chain_config: &ChainConfig,
-) -> Result<Option<u64>, Error> {
-    let etherscan_provider = contract_info::EtherscanContractInfoProvider::new(
-        chain_config.etherscan_api_key.clone(),
-        chain_config.etherscan_like.clone(),
-    );
-
-    let creation_tx_hashes: Vec<_> = etherscan_provider
-        .get_contract_creation_info(
-            manifest
-                .log_configs
-                .iter()
-                .map(|l| l.address.get_address(chain_config.chain_id))
-                .collect(),
-        )
-        .await
-        .unwrap()
-        .iter()
-        .map(|c| c.tx_hash.clone())
-        .collect();
-
-    println!("Creation tx hashes: {:?}", creation_tx_hashes);
-
-    let transactions: Result<Vec<_>, _> = join_all(
-        creation_tx_hashes
-            .iter()
-            .map(|tx_hash| web3_client.get_transaction_by_hash(tx_hash.clone())),
-    )
-    .await
-    .into_iter()
-    .collect();
-
-    println!("Transactions: {:?}", transactions);
-
-    let min_block = match transactions {
-        Ok(txs) => {
-            let mut min_block = None;
-
-            for tx in txs.iter() {
-                if let Some(receipt) = tx {
-                    let block_number = receipt.block_number.unwrap().as_u64();
-                    if min_block.is_none() || block_number < min_block.unwrap() {
-                        min_block = Some(block_number);
-                    }
-                }
-            }
-
-            min_block
-        }
-        Err(e) => {
-            println!("{:?}", e);
-            None
-        }
-    };
-
-    println!("Min block: {:?}", min_block);
-
-    Ok(min_block)
-}
-
-async fn get_init_block<T: RedisClient>(
-    pipeline: &mut State<T>,
-    manifest: &Manifest,
-    web3_client: &Web3ClientImpl,
-    chain_config: &ChainConfig,
-) -> Option<u64> {
-    println!("{:?}", pipeline.last_block());
-    match pipeline.last_block() {
-        Some(_) => None,
-        None => {
-            let manifest_min_block = manifest
-                .tx_configs
-                .iter()
-                .map(|c| c.get_start_block(chain_config.chain_id).unwrap_or(0))
-                .min();
-
-            println!("{:?}", manifest_min_block);
-            let contract_creation_min_block =
-                get_min_contract_creation_block(&web3_client, &manifest, chain_config)
-                    .await
-                    .unwrap();
-            println!("{:?}", contract_creation_min_block);
-            Some(max(
-                contract_creation_min_block.unwrap_or(0),
-                manifest_min_block.unwrap_or(0),
-            ))
-        }
-    }
 }

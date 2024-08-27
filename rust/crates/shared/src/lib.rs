@@ -18,6 +18,7 @@ pub mod resend;
 pub mod s3;
 #[cfg(feature = "pg")]
 pub mod schema;
+pub mod syncer;
 pub mod syncing;
 #[cfg(feature = "telemetry")]
 pub mod telemetry;

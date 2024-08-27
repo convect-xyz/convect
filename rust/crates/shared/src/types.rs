@@ -27,3 +27,21 @@ pub mod transactions {
         pub removed: Option<bool>,
     }
 }
+
+pub mod chains {
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize, Clone)]
+    pub struct ChainConfig {
+        #[serde(rename = "chainId")]
+        pub chain_id: u64,
+        #[serde(rename = "pollingUrl")]
+        pub polling_url: String,
+        #[serde(rename = "txQueueUrl")]
+        pub tx_queue_url: String,
+        #[serde(rename = "etherscanApiKey")]
+        pub etherscan_api_key: String,
+        #[serde(rename = "etherscanLike")]
+        pub etherscan_like: String,
+    }
+}
