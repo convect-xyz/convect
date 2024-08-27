@@ -1,11 +1,7 @@
 use config::load_config_from_env;
 use shared::{
-    enqueuer::SQSTransactionEnqueuer,
-    fetcher::TransactionFetcherImpl,
-    manifest::Manifest,
-    redis_client::RedisClientImpl,
-    syncer::ChainSyncer,
-    syncing::{self, State},
+    enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
+    redis_client::RedisClientImpl, syncer::ChainSyncer, syncing::State,
     web3_client::Web3ClientImpl,
 };
 use std::error::Error;
