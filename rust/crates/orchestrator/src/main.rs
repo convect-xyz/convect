@@ -139,6 +139,12 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     )
     .await;
 
+    println!("Pipeline state: {:?}", pipeline.state());
+    println!(
+        "Pipeline has synced: {}",
+        pipeline.has_synced(incoming_block)
+    );
+    println!("Pipeline is syncing: {}", pipeline.is_syncing());
     if pipeline.has_synced(incoming_block) || pipeline.is_syncing() {
         return Ok(());
     }
@@ -167,8 +173,11 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         .await;
     }
 
+    println!("Syncing chain");
     let syncer = ChainSyncer::new(manifest.clone(), enqueuer, fetcher);
 
+    println!("Start block: {}", start_block);
+    println!("End block: {}", incoming_block);
     syncer
         .sync(&mut pipeline, start_block, incoming_block)
         .await
