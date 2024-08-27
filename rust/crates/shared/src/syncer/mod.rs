@@ -51,6 +51,12 @@ where
             return Err(e);
         }
 
+        state
+            .update()
+            .set_state(syncing::SyncState::IDLE)
+            .send()
+            .await?;
+
         Ok(())
     }
 

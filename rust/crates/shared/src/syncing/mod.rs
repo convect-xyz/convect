@@ -48,7 +48,7 @@ impl<T: RedisClient> State<T> {
 
     pub fn has_synced(&self, incoming_block: u64) -> bool {
         self.last_block()
-            .map(|l| incoming_block <= l)
+            .map(|last_processed_block: u64| incoming_block <= last_processed_block)
             .unwrap_or(false)
     }
 
