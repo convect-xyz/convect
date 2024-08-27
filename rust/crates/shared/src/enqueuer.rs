@@ -26,7 +26,7 @@ pub trait TransactionEnqueuer {
         &self,
         pipeline: &mut State<R>,
         txs: &Vec<IngestTransaction>,
-    ) -> impl Future<Output = Result<(), web3::Error>>;
+    ) -> impl Future<Output = Result<(), errors::TransactionEnqueuerError>>;
 }
 
 pub struct SQSTransactionEnqueuer<T: S3> {
@@ -183,7 +183,7 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         &self,
         state: &mut State<R>,
         txs: &Vec<IngestTransaction>,
-    ) -> Result<(), web3::Error> {
+    ) -> Result<(), errors::TransactionEnqueuerError> {
         let serialised_txs = serde_json::to_string(&txs).unwrap();
 
         if serialised_txs.len() < 1024 * 1024 * 2 {
@@ -191,5 +191,15 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         }
 
         return Ok(self.upload_batch(state, self.queue_url.clone(), txs).await);
+    }
+}
+
+pub mod errors {
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum TransactionEnqueuerError {
+        #[error("Failed to upload transactions: {0}")]
+        Web3ClientError(#[from] crate::web3_client::errors::Web3ClientError),
     }
 }

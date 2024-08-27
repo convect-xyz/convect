@@ -1,6 +1,5 @@
 use crate::redis_client::errors::RedisClientError;
-use crate::redis_client::{RedisClient, RedisClientImpl};
-use lambda_runtime::tower::BoxError;
+use crate::redis_client::RedisClient;
 use serde::{Deserialize, Serialize};
 use tokio_retry::Retry;
 
@@ -43,6 +42,20 @@ impl<T: RedisClient> State<T> {
         })
     }
 
+    pub fn next_block(&self) -> Option<u64> {
+        self.last_block().map(|l| l + 1)
+    }
+
+    pub fn has_synced(&self, incoming_block: u64) -> bool {
+        self.last_block()
+            .map(|l| incoming_block <= l)
+            .unwrap_or(false)
+    }
+
+    pub fn is_syncing(&self) -> bool {
+        self.state().eq(&SyncState::SYNCING)
+    }
+
     pub fn update(&mut self) -> UpdateStateFluentBuilder<T> {
         let state = self.state.clone();
         let last_block = self.last_block.clone();
@@ -72,12 +85,13 @@ impl<T: RedisClient> State<T> {
         let count: u64 = redis_client.get(key).await?;
         Ok(count)
     }
-}
 
-impl State<RedisClientImpl> {
-    pub async fn load(function_id: String, chain_id: u64, deployment_id: String) -> Self {
-        let redis_client = RedisClientImpl::new().await;
-
+    pub async fn load(
+        function_id: String,
+        chain_id: u64,
+        deployment_id: String,
+        redis_client: T,
+    ) -> Self {
         let (state, last_block): (Option<String>, Option<String>) = redis_client
             .mget((
                 get_state_key(&function_id, &chain_id, &deployment_id),
@@ -86,7 +100,6 @@ impl State<RedisClientImpl> {
             .await
             .unwrap();
 
-        println!("State: {:?}", state);
         Self {
             deployment_id: deployment_id.clone(),
             function_id: function_id.clone(),
@@ -119,7 +132,7 @@ impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
         self
     }
 
-    pub async fn send(&mut self) -> Result<(), BoxError> {
+    pub async fn send(&mut self) -> Result<(), errors::StateError> {
         let redis_client = self.inner.redis_client.clone();
 
         let deployment_id = &self.inner.deployment_id;
@@ -138,13 +151,14 @@ impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
             ));
         }
 
-        let retry_strategy = tokio_retry::strategy::ExponentialBackoff::from_millis(15).take(3);
-        let func = || async {
-            println!("Sending to redis: {:?}", params);
-            redis_client.mset(&params).await?;
-            Ok::<(), RedisClientError>(())
-        };
-        Retry::spawn(retry_strategy, func).await?;
+        Retry::spawn(
+            tokio_retry::strategy::ExponentialBackoff::from_millis(15).take(3),
+            || async {
+                redis_client.mset(&params).await?;
+                Ok::<(), RedisClientError>(())
+            },
+        )
+        .await?;
 
         self.inner.last_block = self.last_block.clone();
         self.inner.state = self.state.clone();
@@ -178,4 +192,14 @@ fn get_transaction_count_key(function_id: &str, chain_id: &u64, deployment_id: &
         chain_id = chain_id,
         deployment_id = deployment_id
     )
+}
+
+pub mod errors {
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum StateError {
+        #[error("Failed to update pipeline: {0}")]
+        RedisClientError(#[from] crate::redis_client::errors::RedisClientError),
+    }
 }

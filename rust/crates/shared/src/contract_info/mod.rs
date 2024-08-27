@@ -4,7 +4,7 @@ use clients::{responses::ContractCreationInfo, EtherscanClient, EtherscanClientI
 mod clients;
 
 #[async_trait]
-pub trait ContractInfoProvider {
+pub trait ContractInfoProvider: Sync + Send {
     type Error: std::error::Error;
 
     async fn get_contract_creation_info(
@@ -13,7 +13,7 @@ pub trait ContractInfoProvider {
     ) -> Result<Vec<clients::responses::ContractCreationInfo>, Self::Error>;
 }
 
-pub struct EtherscanContractInfoProvider<T: clients::EtherscanClient + Sync> {
+pub struct EtherscanContractInfoProvider<T: clients::EtherscanClient + Sync + Send> {
     etherscan_client: T,
 }
 
@@ -26,7 +26,7 @@ impl EtherscanContractInfoProvider<EtherscanClientImpl> {
 }
 
 #[async_trait]
-impl<T: EtherscanClient + Sync> ContractInfoProvider for EtherscanContractInfoProvider<T> {
+impl<T: EtherscanClient + Sync + Send> ContractInfoProvider for EtherscanContractInfoProvider<T> {
     type Error = errors::EtherscanContractInfoProviderError;
 
     async fn get_contract_creation_info(
@@ -51,7 +51,7 @@ impl<T: EtherscanClient + Sync> ContractInfoProvider for EtherscanContractInfoPr
     }
 }
 
-mod errors {
+pub mod errors {
     use super::clients::errors::EtherscanError;
     use thiserror::Error;
 

@@ -7,6 +7,7 @@ pub struct Config {
     pub end_block: u64,
     pub tx_queue_url: String,
     pub deployment_id: String,
+    pub node_endpoint: String,
 }
 
 pub fn load_config_from_env() -> Config {
@@ -27,5 +28,6 @@ pub fn load_config_from_env() -> Config {
         tx_queue_url: env::var("TRANSACTION_QUEUE_URL")
             .expect("TRANSACTION_QUEUE_URL is not present"),
         deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not present"),
+        node_endpoint: env::var("NODE_ENDPOINT").expect("NODE_ENDPOINT is not present"),
     };
 }

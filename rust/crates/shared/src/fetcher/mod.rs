@@ -1,4 +1,3 @@
-use aws_sdk_s3::error::BoxError;
 use futures::Future;
 use std::cmp::Ordering;
 use tokio_retry::strategy::{jitter, ExponentialBackoff};
@@ -6,18 +5,19 @@ use tokio_retry::Retry;
 
 use crate::manifest::Manifest;
 use crate::types::transactions::IngestTransaction;
-use crate::web3_client::{Web3Client, Web3ClientImpl};
+use crate::web3_client::Web3Client;
 
 mod utils;
 
 pub trait TransactionFetcher {
+    fn chain_id(&self) -> u64;
+
     fn get_transactions_in_range(
         &self,
         manifest: &Manifest,
-        chain_id: u64,
         start_block: u64,
         end_block: u64,
-    ) -> impl Future<Output = Result<Vec<IngestTransaction>, BoxError>>;
+    ) -> impl Future<Output = Result<Vec<IngestTransaction>, errors::TransactionFetcherError>>;
 }
 
 pub struct TransactionFetcherImpl<T: Web3Client> {
@@ -25,27 +25,24 @@ pub struct TransactionFetcherImpl<T: Web3Client> {
 }
 
 impl<T: Web3Client> TransactionFetcherImpl<T> {
-    pub fn new_from_client(web3_client: T) -> Self {
+    pub fn new(web3_client: T) -> Self {
         Self { web3_client }
     }
 }
 
-impl TransactionFetcherImpl<Web3ClientImpl> {
-    pub fn new() -> Self {
-        Self {
-            web3_client: Web3ClientImpl::new(),
-        }
-    }
-}
-
 impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
+    fn chain_id(&self) -> u64 {
+        self.web3_client.chain_id()
+    }
+
     async fn get_transactions_in_range(
         &self,
         manifest: &Manifest,
-        chain_id: u64,
         range_start: u64,
         range_end: u64,
-    ) -> Result<Vec<IngestTransaction>, BoxError> {
+    ) -> Result<Vec<IngestTransaction>, errors::TransactionFetcherError> {
+        let chain_id = self.chain_id();
+
         let eligible_tx_cfgs: Vec<_> =
             utils::get_eligible_tx_configs(manifest, chain_id, range_start);
 
@@ -54,12 +51,19 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
 
         let fetched_logs = Retry::spawn(
             ExponentialBackoff::from_millis(15).map(jitter).take(3),
-            || async { Ok::<_, BoxError>(self.web3_client.get_logs(filter.clone()).await?) },
+            || async {
+                Ok::<_, errors::TransactionFetcherError>(
+                    self.web3_client.get_logs(filter.clone()).await?,
+                )
+            },
         )
         .await?;
 
-        let logs: Vec<_> = utils::remove_extranous_logs(manifest, chain_id, fetched_logs);
-        let mut txs = utils::group_logs_into_transactions(logs);
+        let mut txs = utils::group_logs_into_transactions(utils::remove_extranous_logs(
+            manifest,
+            chain_id,
+            fetched_logs,
+        ));
 
         txs.sort_by(|a, b| {
             let block_cmp = a.block_number.cmp(&b.block_number);
@@ -71,6 +75,16 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         });
 
         Ok(txs)
+    }
+}
+
+pub mod errors {
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum TransactionFetcherError {
+        #[error("Failed to upload transactions: {0}")]
+        Web3ClientError(#[from] crate::web3_client::errors::Web3ClientError),
     }
 }
 
@@ -96,9 +110,13 @@ mod tests {
     }
 
     impl Web3Client for MockWeb3Client {
+        fn chain_id(&self) -> u64 {
+            1
+        }
+
         async fn get_logs(
             &self,
-            filter: Filter,
+            _filter: Filter,
         ) -> Result<Vec<Log>, crate::web3_client::errors::Web3ClientError> {
             Ok(self.logs.clone())
         }
@@ -111,7 +129,7 @@ mod tests {
 
         async fn get_transaction_receipt(
             &self,
-            tx_hash: String,
+            _tx_hash: String,
         ) -> Result<
             Option<web3::types::TransactionReceipt>,
             crate::web3_client::errors::Web3ClientError,
@@ -121,7 +139,7 @@ mod tests {
 
         async fn get_transaction_by_hash(
             &self,
-            tx_hash: String,
+            _tx_hash: String,
         ) -> Result<Option<web3::types::Transaction>, crate::web3_client::errors::Web3ClientError>
         {
             todo!()
@@ -171,7 +189,7 @@ mod tests {
             };
 
             // Act.
-            let fetcher = TransactionFetcherImpl::new_from_client(MockWeb3Client::new(vec![
+            let fetcher = TransactionFetcherImpl::new(MockWeb3Client::new(vec![
                 build_log! {
                     address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
                     data = "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -199,7 +217,7 @@ mod tests {
             ]));
 
             let txs = fetcher
-                .get_transactions_in_range(&manifest, 1, 0, 1000000)
+                .get_transactions_in_range(&manifest, 0, 1000000)
                 .await
                 .unwrap();
 

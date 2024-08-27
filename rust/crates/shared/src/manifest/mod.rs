@@ -4,12 +4,6 @@ use std::{collections::HashMap, env};
 
 mod macros;
 
-#[derive(Deserialize, Debug, Clone)]
-pub struct Manifest {
-    pub log_configs: Vec<LogConfig>,
-    pub tx_configs: Vec<TransactionConfig>,
-}
-
 #[serde_as]
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct TransactionConfig {
@@ -51,11 +45,16 @@ pub struct LogConfig {
     pub tx_configs: Vec<i64>,
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct Manifest {
+    pub log_configs: Vec<LogConfig>,
+    pub tx_configs: Vec<TransactionConfig>,
+}
+
 impl Manifest {
     pub async fn from_env() -> Result<Manifest, errors::ManifestFromEnvError> {
         let config = aws_config::load_from_env().await;
         let s3_client = aws_sdk_s3::Client::new(&config);
-
         let bucket = env::var("MANIFEST_BUCKET")?;
         let prefix = env::var("MANIFEST_PREFIX")?;
         let object = s3_client
@@ -67,7 +66,7 @@ impl Manifest {
         let data = object.body.collect().await?;
         let content = String::from_utf8(data.into_bytes().to_vec())?;
 
-        serde_json::from_str(&content).map_err(|err| errors::ManifestFromEnvError::from(err))
+        Ok(serde_json::from_str(&content)?)
     }
 
     pub fn get_tx_configs_with_log_configs(&self) -> Vec<(TransactionConfig, Vec<LogConfig>)> {
@@ -107,5 +106,129 @@ mod errors {
         ByteStreamError(#[from] aws_smithy_types::byte_stream::error::Error),
         #[error("Invalid UTF-8 in Manifest: {0}")]
         InvalidUtf8(#[from] FromUtf8Error),
+    }
+}
+
+pub mod providers {
+    use async_trait::async_trait;
+    use futures::future::join_all;
+    use std::cmp::max;
+    use thiserror::Error;
+
+    use crate::contract_info;
+    use crate::manifest::Manifest;
+    use crate::types::chains::ChainConfig;
+    use crate::web3_client::Web3Client;
+
+    #[async_trait]
+    pub trait InitBlockProvider<W: Web3Client, C: contract_info::ContractInfoProvider>:
+        std::marker::Sync
+    {
+        async fn get_init_block(&self) -> Result<u64, InitBlockProviderError>;
+    }
+
+    pub struct InitBlockProviderImpl<'a, W: Web3Client, C: contract_info::ContractInfoProvider> {
+        manifest: &'a Manifest,
+        web3_client: W,
+        contract_info_provider: C,
+        chain_config: ChainConfig,
+    }
+
+    impl<'a, W: Web3Client, C: contract_info::ContractInfoProvider> InitBlockProviderImpl<'a, W, C> {
+        pub fn new(
+            manifest: &'a Manifest,
+            chain_config: ChainConfig,
+            web3_client: W,
+            contract_info_provider: C,
+        ) -> Self {
+            Self {
+                manifest,
+                web3_client,
+                contract_info_provider,
+                chain_config,
+            }
+        }
+
+        async fn get_min_contract_creation_block(
+            &self,
+        ) -> Result<Option<u64>, InitBlockProviderError> {
+            let creation_tx_hashes: Vec<_> = self
+                .contract_info_provider
+                .get_contract_creation_info(
+                    self.manifest
+                        .log_configs
+                        .iter()
+                        .map(|l| l.address.get_address(self.chain_config.chain_id))
+                        .collect(),
+                )
+                .await
+                .unwrap()
+                .iter()
+                .map(|c| c.tx_hash.clone())
+                .collect();
+
+            let transactions: Result<Vec<_>, _> = join_all(
+                creation_tx_hashes
+                    .iter()
+                    .map(|tx_hash| self.web3_client.get_transaction_by_hash(tx_hash.clone())),
+            )
+            .await
+            .into_iter()
+            .collect();
+
+            let min_block = match transactions {
+                Ok(txs) => {
+                    let mut min_block = None;
+
+                    for tx in txs.iter() {
+                        if let Some(receipt) = tx {
+                            let block_number = receipt.block_number.unwrap().as_u64();
+                            if min_block.is_none() || block_number < min_block.unwrap() {
+                                min_block = Some(block_number);
+                            }
+                        }
+                    }
+
+                    min_block
+                }
+                Err(e) => {
+                    println!("{:?}", e);
+                    None
+                }
+            };
+
+            Ok(min_block)
+        }
+    }
+
+    #[async_trait]
+    impl<W: Web3Client, C: contract_info::ContractInfoProvider> InitBlockProvider<W, C>
+        for InitBlockProviderImpl<'_, W, C>
+    {
+        async fn get_init_block(&self) -> Result<u64, InitBlockProviderError> {
+            let manifest_min_block = self
+                .manifest
+                .tx_configs
+                .iter()
+                .map(|c| c.get_start_block(self.chain_config.chain_id).unwrap_or(0))
+                .min();
+
+            let contract_creation_min_block = self.get_min_contract_creation_block().await.unwrap();
+
+            Ok(max(
+                contract_creation_min_block.unwrap_or(0),
+                manifest_min_block.unwrap_or(0),
+            ))
+        }
+    }
+
+    #[derive(Debug, Error)]
+    pub enum InitBlockProviderError {
+        #[error("Contract info provider error: {0}")]
+        ContractInfoProviderError(
+            #[from] contract_info::errors::EtherscanContractInfoProviderError,
+        ),
+        #[error("Web3 client error: {0}")]
+        Web3ClientError(#[from] crate::web3_client::errors::Web3ClientError),
     }
 }
