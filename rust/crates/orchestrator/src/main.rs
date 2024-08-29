@@ -23,7 +23,6 @@ use std::collections::BTreeMap;
 use tokio::sync::OnceCell;
 use tracing::Level;
 use tracing_subscriber::filter::LevelFilter;
-use tracing_subscriber::fmt::layer;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 
@@ -132,6 +131,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     Ok(())
 }
 
+#[tracing::instrument(skip_all, err)]
 async fn sync_chain(
     config: &Config,
     chain_config: ChainConfig,
