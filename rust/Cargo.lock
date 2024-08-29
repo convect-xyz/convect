@@ -4200,6 +4200,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "shared",
+ "thiserror",
  "tokio",
  "tracing-subscriber",
  "uuid 1.8.0",
