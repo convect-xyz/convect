@@ -10,7 +10,7 @@ async fn get_connection() -> &'static redis::aio::MultiplexedConnection {
 }).await
 }
 #[async_trait]
-pub trait RedisClient: Send + Sync + Clone {
+pub trait RedisClient: Send + Sync + Clone + std::fmt::Debug {
     async fn mget<'a, K: ToRedisArgs + Send + Sync, RV: FromRedisValue>(
         &'a self,
         keys: K,
@@ -49,7 +49,7 @@ pub trait RedisClient: Send + Sync + Clone {
     ) -> Result<RV, errors::RedisClientError>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RedisClientImpl {
     connection: redis::aio::MultiplexedConnection,
 }
@@ -64,6 +64,7 @@ impl RedisClientImpl {
 
 #[async_trait]
 impl RedisClient for RedisClientImpl {
+    #[tracing::instrument(skip_all, err)]
     async fn mget<'a, K: ToRedisArgs + Send + Sync, RV: FromRedisValue>(
         &'a self,
         keys: K,
@@ -74,6 +75,7 @@ impl RedisClient for RedisClientImpl {
         Ok(result)
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn mset<
         'a,
         K: ToRedisArgs + Send + Sync + 'a,
@@ -89,6 +91,7 @@ impl RedisClient for RedisClientImpl {
         Ok(result)
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn get<'a, K: ToRedisArgs + Send + Sync, RV: FromRedisValue>(
         &'a self,
         key: K,
@@ -99,6 +102,7 @@ impl RedisClient for RedisClientImpl {
         Ok(result)
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn set<'a, K: ToRedisArgs + Send + Sync, RV: FromRedisValue>(
         &'a self,
         key: K,
@@ -110,6 +114,7 @@ impl RedisClient for RedisClientImpl {
         Ok(result)
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn incr<
         'a,
         K: ToRedisArgs + Send + Sync,

@@ -87,6 +87,7 @@ impl<T: RedisClient> State<T> {
         Ok(count)
     }
 
+    #[tracing::instrument(err, ret)]
     pub async fn load(
         function_id: String,
         chain_id: u64,
@@ -112,19 +113,11 @@ impl<T: RedisClient> State<T> {
             redis_client,
         };
 
-        tracing::info!(
-            target: "pipeline_load",
-            last_block=pipeline.last_block(),
-            chain_id=chain_id,
-            function_id=function_id,
-            deployment_id=deployment_id,
-            state=format!("{:?}", pipeline.state())
-        );
-
         Ok(pipeline)
     }
 }
 
+#[derive(Debug)]
 pub struct UpdateStateFluentBuilder<'a, T: RedisClient> {
     inner: &'a mut State<T>,
 
@@ -143,6 +136,7 @@ impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
         self
     }
 
+    #[tracing::instrument(err)]
     pub async fn send(&mut self) -> Result<(), errors::StateError> {
         let redis_client = self.inner.redis_client.clone();
 
