@@ -51,12 +51,6 @@ where
             return Err(e);
         }
 
-        state
-            .update()
-            .set_state(syncing::SyncState::IDLE)
-            .send()
-            .await?;
-
         Ok(())
     }
 
@@ -87,6 +81,7 @@ where
 
             state
                 .update()
+                .set_state(syncing::SyncState::IDLE)
                 .set_last_block(chunk.last().unwrap().end_block)
                 .send()
                 .await
