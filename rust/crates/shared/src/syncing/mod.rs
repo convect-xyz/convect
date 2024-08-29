@@ -10,6 +10,7 @@ pub enum SyncState {
     FAILED,
 }
 
+#[derive(Debug)]
 pub struct State<T: RedisClient> {
     redis_client: T,
     deployment_id: String,
@@ -91,16 +92,15 @@ impl<T: RedisClient> State<T> {
         chain_id: u64,
         deployment_id: String,
         redis_client: T,
-    ) -> Self {
+    ) -> Result<Self, errors::StateError> {
         let (state, last_block): (Option<String>, Option<String>) = redis_client
             .mget((
                 get_state_key(&function_id, &chain_id, &deployment_id),
                 get_last_block_key(&function_id, &chain_id, &deployment_id),
             ))
-            .await
-            .unwrap();
+            .await?;
 
-        Self {
+        let pipeline = Self {
             deployment_id: deployment_id.clone(),
             function_id: function_id.clone(),
             chain_id: chain_id.clone(),
@@ -110,7 +110,18 @@ impl<T: RedisClient> State<T> {
             ),
             last_block: last_block.clone(),
             redis_client,
-        }
+        };
+
+        tracing::info!(
+            target: "pipeline_load",
+            last_block=pipeline.last_block(),
+            chain_id=chain_id,
+            function_id=function_id,
+            deployment_id=deployment_id,
+            state=format!("{:?}", pipeline.state())
+        );
+
+        Ok(pipeline)
     }
 }
 
