@@ -35,6 +35,7 @@ where
         }
     }
 
+    #[tracing::instrument(skip_all, err)]
     pub async fn sync<Rc: RedisClient>(
         &self,
         state: &mut State<Rc>,
