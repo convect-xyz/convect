@@ -1,9 +1,10 @@
-use std::{collections::HashMap, env};
+use std::collections::HashMap;
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
+use config::Config;
 use futures::future::join_all;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
@@ -19,23 +20,20 @@ use shared::{
 use std::collections::BTreeMap;
 use tokio::sync::OnceCell;
 
+mod config;
+
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
 static WEB3_CLIENTS: OnceCell<HashMap<u64, Web3ClientImpl>> = OnceCell::const_new();
 
 async fn get_manifest() -> &'static Manifest {
     MANIFEST
-        .get_or_init(|| async {
-            println!("Fetching manifest");
-            Manifest::from_env().await.unwrap()
-        })
+        .get_or_init(|| async { Manifest::from_env().await.unwrap() })
         .await
 }
 
-async fn get_web3_client(chain_id: &u64) -> &'static Web3ClientImpl {
+async fn get_web3_client(chain_id: &u64, config: &Config) -> &'static Web3ClientImpl {
     WEB3_CLIENTS
         .get_or_init(|| async {
-            let config = Config::new();
-
             HashMap::from_iter(config.chains.iter().map(|c| {
                 (
                     c.chain_id,
@@ -67,6 +65,7 @@ fn configure_sentry_scope(config: &Config) {
 fn main() -> Result<(), Error> {
     let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
       release: sentry::release_name!(),
+      traces_sample_rate: 1.0,
       ..Default::default()
   }));
 
@@ -89,37 +88,37 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
             .expect("Invalid SNS Message");
 
     let config = Config::new();
-    let futures = config.chains.into_iter().map(|chain_config| {
+    let futures = config.chains.iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-        async move { sync_chain(chain_config, block_for_chain).await }
+        let config = &config;
+        async move { sync_chain(config, chain_config.clone(), block_for_chain).await }
     });
 
-    let result = join_all(futures).await;
-    for res in result {
-        match res {
-            Ok(_) => {
-                println!("Successfully synced chain");
-            }
-            Err(e) => {
-                println!("Failed to sync chain: {:?}", e);
-            }
-        }
-    }
+    let errors: Vec<_> = join_all(futures)
+        .await
+        .into_iter()
+        .filter(|res| res.is_err())
+        .map(Result::unwrap_err)
+        .collect();
+    println!("Failed to sync with errors: {:?}", errors);
 
     Ok(())
 }
 
-async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<(), Error> {
+async fn sync_chain(
+    config: &Config,
+    chain_config: ChainConfig,
+    incoming_block: u64,
+) -> Result<(), errors::OrchestratorError> {
     let sdk_config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
-    let web3_client = get_web3_client(&chain_config.chain_id).await;
+    let web3_client = get_web3_client(&chain_config.chain_id, config).await;
     let fetcher = TransactionFetcherImpl::new(web3_client.clone());
     let s3_client = aws_sdk_s3::Client::new(&sdk_config);
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
     let manifest = get_manifest().await;
-    let config = Config::new();
     let redis_client = RedisClientImpl::new().await;
     let init_block_provider = InitBlockProviderImpl::new(
         &manifest,
@@ -139,12 +138,6 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
     )
     .await;
 
-    println!("Pipeline state: {:?}", pipeline.state());
-    println!(
-        "Pipeline has synced: {}",
-        pipeline.has_synced(incoming_block)
-    );
-    println!("Pipeline is syncing: {}", pipeline.is_syncing());
     if pipeline.has_synced(incoming_block) || pipeline.is_syncing() {
         return Ok(());
     }
@@ -162,7 +155,7 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
             .await
             .expect("Failed to update pipeline");
 
-        return batch_sync(
+        return sync_with_ecs(
             chain_config.chain_id,
             &ecs_client,
             &mut pipeline,
@@ -173,67 +166,21 @@ async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<()
         .await;
     }
 
-    println!("Syncing chain");
-    let syncer = ChainSyncer::new(manifest.clone(), enqueuer, fetcher);
-
-    println!("Start block: {}", start_block);
-    println!("End block: {}", incoming_block);
-    syncer
+    ChainSyncer::new(manifest.clone(), enqueuer, fetcher)
         .sync(&mut pipeline, start_block, incoming_block)
-        .await
-        .unwrap();
+        .await?;
 
     Ok(())
 }
 
-#[derive(Debug, Clone)]
-struct Config {
-    function_id: String,
-    manifest_bucket: String,
-    manifest_prefix: String,
-    syncer_task_definition_arn: String,
-    syncer_cluster: String,
-    syncer_subnets: Vec<String>,
-    version: String,
-    syncer_container_name: String,
-    deployment_id: String,
-    user_id: String,
-    chains: Vec<ChainConfig>,
-}
-
-impl Config {
-    fn new() -> Self {
-        Self {
-            function_id: env::var("FUNCTION_ID").expect("FUNCTION_ID not set"),
-            manifest_bucket: env::var("MANIFEST_BUCKET").expect("MANIFEST_BUCKET not set"),
-            manifest_prefix: env::var("MANIFEST_PREFIX").expect("MANIFEST_PREFIX not set"),
-            syncer_task_definition_arn: env::var("SYNCER_TASK_DEFINITION_ARN")
-                .expect("SYNCER_TASK_DEFINITION_ARN not set"),
-            syncer_cluster: env::var("SYNCER_CLUSTER").expect("SYNCER_CLUSTER not set"),
-            syncer_subnets: env::var("SYNCER_SUBNETS")
-                .expect("SYNCER_SUBNETS not set")
-                .split(",")
-                .map(|s| s.to_string())
-                .collect(),
-            version: env::var("VERSION").expect("VERSION not set"),
-            syncer_container_name: env::var("SYNCER_CONTAINER_NAME")
-                .expect("SYNCER_CONTAINER_NAME not set"),
-            deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID not set"),
-            user_id: env::var("USER_ID").expect("USER_ID not set"),
-            chains: serde_json::from_str(&env::var("CHAINS").expect("CHAINS not set"))
-                .expect("CHAINS not set"),
-        }
-    }
-}
-
-async fn batch_sync<T: RedisClient>(
+async fn sync_with_ecs<T: RedisClient>(
     chain_id: u64,
     ecs_client: &aws_sdk_ecs::Client,
     pipeline: &mut State<T>,
     start_block: u64,
     end_block: u64,
     config: &Config,
-) -> Result<(), Error> {
+) -> Result<(), errors::OrchestratorError> {
     let client_result = ecs_client
         .run_task()
         .cluster(&config.syncer_cluster)
@@ -244,18 +191,14 @@ async fn batch_sync<T: RedisClient>(
         .send()
         .await;
 
-    match client_result {
-        Ok(_) => {}
-        Err(e) => {
-            pipeline
-                .update()
-                .set_state(shared::syncing::SyncState::IDLE)
-                .send()
-                .await
-                .unwrap();
+    if let Err(e) = client_result {
+        pipeline
+            .update()
+            .set_state(shared::syncing::SyncState::IDLE)
+            .send()
+            .await?;
 
-            return Err(Box::new(e));
-        }
+        return Err(errors::OrchestratorError::SdkError(e));
     }
 
     Ok(())
@@ -308,4 +251,32 @@ fn get_task_override(
 
 fn create_key_value_pair(name: &str, value: &String) -> KeyValuePair {
     KeyValuePair::builder().name(name).value(value).build()
+}
+
+mod errors {
+    use thiserror::Error;
+
+    #[derive(Debug, Error)]
+    pub enum OrchestratorError {
+        #[error("Manifest error: {0}")]
+        ManifestError(#[from] shared::manifest::errors::ManifestFromEnvError),
+        #[error("Web3 client error: {0}")]
+        Web3ClientError(#[from] shared::web3_client::errors::Web3ClientError),
+        #[error("Contract info provider error: {0}")]
+        ContractInfoProviderError(
+            #[from] shared::contract_info::errors::EtherscanContractInfoProviderError,
+        ),
+        #[error("Redis client error: {0}")]
+        RedisClientError(#[from] shared::redis_client::errors::RedisClientError),
+        #[error("Syncer error: {0}")]
+        SyncerError(#[from] shared::syncer::errors::ChainSyncerError),
+        #[error("Init block provider error: {0}")]
+        InitBlockProviderError(#[from] shared::manifest::providers::InitBlockProviderError),
+        #[error("Sdk error: {0}")]
+        SdkError(
+            #[from] aws_sdk_ecs::error::SdkError<aws_sdk_ecs::operation::run_task::RunTaskError>,
+        ),
+        #[error("State error: {0}")]
+        StateError(#[from] shared::syncing::errors::StateError),
+    }
 }

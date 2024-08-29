@@ -87,7 +87,7 @@ impl Manifest {
     }
 }
 
-mod errors {
+pub mod errors {
     use aws_sdk_s3::error::SdkError;
     use aws_sdk_s3::operation::get_object::GetObjectError;
     use std::env::VarError;
