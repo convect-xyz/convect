@@ -72,7 +72,7 @@ fn configure_sentry_scope(config: &Config) {
 fn main() -> Result<(), Error> {
     let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
       release: sentry::release_name!(),
-      traces_sample_rate: 1.0,
+      traces_sample_rate: 0.2,
       ..Default::default()
   }));
 
