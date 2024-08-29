@@ -52,14 +52,17 @@ impl Web3Client for Web3ClientImpl {
         self.chain_id
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn get_current_block_number(&self) -> Result<u64, errors::Web3ClientError> {
         Ok(self.web3.eth().block_number().await?.as_u64())
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, errors::Web3ClientError> {
         Ok(self.web3.eth().logs(filter).await?)
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn get_transaction_receipt(
         &self,
         tx_hash: String,
@@ -71,6 +74,7 @@ impl Web3Client for Web3ClientImpl {
             .await?)
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn get_transaction_by_hash(
         &self,
         tx_hash: String,

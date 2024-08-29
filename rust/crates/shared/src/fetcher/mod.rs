@@ -35,6 +35,7 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         self.web3_client.chain_id()
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn get_transactions_in_range(
         &self,
         manifest: &Manifest,
