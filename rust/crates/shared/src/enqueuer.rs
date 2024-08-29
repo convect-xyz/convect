@@ -179,6 +179,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
 }
 
 impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
+    #[tracing::instrument(skip_all, err)]
     async fn enqueue_transactions<R: RedisClient>(
         &self,
         state: &mut State<R>,
