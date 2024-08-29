@@ -55,7 +55,7 @@ once_cell = "1.19.0"
 thiserror = "1.0.63"
 rustc-hex = "2.1.0"
 resend-rs = "0.9.1"
-
+tracing = "0.1.40"
 
 [dev-dependencies]
 mockall = "0.12.1"

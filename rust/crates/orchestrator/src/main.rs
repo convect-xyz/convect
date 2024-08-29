@@ -84,8 +84,8 @@ fn main() -> Result<(), Error> {
 
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let incoming_blocks: HashMap<u64, u64> =
-        serde_json::from_str(event.payload.records.last().unwrap().sns.message.as_str())
-            .expect("Invalid SNS Message");
+        serde_json::from_str(event.payload.records.last().unwrap().sns.message.as_str())?;
+    tracing::info!("Incoming blocks: {incoming_blocks:?}");
 
     let config = Config::new();
     let futures = config.chains.iter().map(|chain_config| {
@@ -100,7 +100,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .filter(|res| res.is_err())
         .map(Result::unwrap_err)
         .collect();
-    println!("Failed to sync with errors: {:?}", errors);
+    tracing::error!("Failed to sync with errors: {:?}", errors);
 
     Ok(())
 }
@@ -136,9 +136,14 @@ async fn sync_chain(
         config.deployment_id.clone(),
         redis_client,
     )
-    .await;
+    .await?;
 
     if pipeline.has_synced(incoming_block) || pipeline.is_syncing() {
+        tracing::info!(
+          target: "orchestrator",
+          is_syncing=pipeline.is_syncing(),
+          has_synced=pipeline.has_synced(incoming_block)
+        );
         return Ok(());
     }
 

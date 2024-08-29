@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         syncer_config.deployment_id.clone(),
         redis_client,
     )
-    .await;
+    .await?;
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
@@ -36,8 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             syncer_config.start_block,
             syncer_config.end_block,
         )
-        .await
-        .unwrap();
+        .await?;
 
     Ok(())
 }
