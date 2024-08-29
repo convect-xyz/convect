@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::env;
+use std::str::FromStr;
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
@@ -19,6 +21,11 @@ use shared::{
 };
 use std::collections::BTreeMap;
 use tokio::sync::OnceCell;
+use tracing::Level;
+use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::fmt::layer;
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::EnvFilter;
 
 mod config;
 
@@ -77,7 +84,24 @@ fn main() -> Result<(), Error> {
         .build()
         .unwrap()
         .block_on(async {
-            tracing::init_default_subscriber();
+            // let log_format = env::var("AWS_LAMBDA_LOG_FORMAT").unwrap_or_default();
+            let log_level = Level::from_str(&env::var("AWS_LAMBDA_LOG_LEVEL").unwrap_or_default())
+                .unwrap_or(Level::INFO);
+
+            tracing_subscriber::registry()
+                .with(
+                    tracing_subscriber::fmt::layer()
+                        .with_target(false)
+                        .without_time()
+                        .with_filter(
+                            EnvFilter::builder()
+                                .with_default_directive(LevelFilter::from_level(log_level).into())
+                                .from_env_lossy(),
+                        ),
+                )
+                .with(sentry_tracing::layer())
+                .init();
+
             run(service_fn(function_handler)).await
         })
 }
