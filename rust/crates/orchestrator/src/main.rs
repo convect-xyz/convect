@@ -124,7 +124,9 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
         .filter(|res| res.is_err())
         .map(Result::unwrap_err)
         .collect();
-    tracing::error!("Failed to sync with errors: {:?}", errors);
+    if !errors.is_empty() {
+        tracing::error!("Failed to sync with errors: {:?}", errors);
+    }
 
     Ok(())
 }
