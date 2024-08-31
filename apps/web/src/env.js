@@ -43,6 +43,9 @@ export const env = createEnv({
     RESEND_API_KEY: z.string(),
 
     PLAN_ENVIRONMENT: z.enum(["prod", "test"]),
+    CLOUDFRONT_PRIVATE_KEY: z.string(),
+    CLOUDFRONT_KEY_PAIR_ID: z.string(),
+    CLOUDFRONT_PLANS_URL: z.string(),
   },
   client: {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string(),
@@ -70,6 +73,9 @@ export const env = createEnv({
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     PLAN_ENVIRONMENT: process.env.PLAN_ENVIRONMENT,
+    CLOUDFRONT_PRIVATE_KEY: process.env.CLOUDFRONT_PRIVATE_KEY,
+    CLOUDFRONT_KEY_PAIR_ID: process.env.CLOUDFRONT_KEY_PAIR_ID,
+    CLOUDFRONT_PLANS_URL: process.env.CLOUDFRONT_PLANS_URL,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
