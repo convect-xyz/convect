@@ -178,7 +178,7 @@ async fn sync_chain(
     if pipeline.has_synced(incoming_block) || pipeline.is_batch_syncing() {
         tracing::info!(
           target: "orchestrator",
-          is_syncing=pipeline.is_batch_syncing(),
+          is_batch_syncing=pipeline.is_batch_syncing(),
           has_synced=pipeline.has_synced(incoming_block)
         );
         return Ok(());
