@@ -190,13 +190,6 @@ async fn sync_chain(
     };
 
     if incoming_block - start_block > 10000 {
-        pipeline
-            .update()
-            .set_state(shared::syncing::SyncState::BatchSyncing)
-            .send()
-            .await
-            .expect("Failed to update pipeline");
-
         return sync_with_ecs(
             chain_config.chain_id,
             &ecs_client,
@@ -223,6 +216,12 @@ async fn sync_with_ecs<T: RedisClient>(
     end_block: u64,
     config: &Config,
 ) -> Result<(), errors::OrchestratorError> {
+    pipeline
+        .update()
+        .set_state(shared::syncing::BatchSyncState::Syncing)
+        .send()
+        .await?;
+
     let client_result = ecs_client
         .run_task()
         .cluster(&config.syncer_cluster)
@@ -236,7 +235,7 @@ async fn sync_with_ecs<T: RedisClient>(
     if let Err(e) = client_result {
         pipeline
             .update()
-            .set_state(shared::syncing::SyncState::Idle)
+            .set_state(shared::syncing::BatchSyncState::Idle)
             .send()
             .await?;
 
