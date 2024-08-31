@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use tokio_retry::Retry;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum SyncState {
+pub enum BatchSyncState {
     Idle,
-    BatchSyncing,
+    Syncing,
     Failed,
 }
 
@@ -16,7 +16,7 @@ pub struct State<T: RedisClient> {
     deployment_id: String,
     function_id: String,
     chain_id: u64,
-    state: SyncState,
+    state: BatchSyncState,
     last_block: Option<String>,
 }
 
@@ -29,7 +29,7 @@ impl<T: RedisClient> State<T> {
         self.function_id.clone()
     }
 
-    pub fn state(&self) -> SyncState {
+    pub fn state(&self) -> BatchSyncState {
         self.state.clone()
     }
 
@@ -54,11 +54,11 @@ impl<T: RedisClient> State<T> {
     }
 
     pub fn is_batch_syncing(&self) -> bool {
-        self.state().eq(&SyncState::BatchSyncing)
+        self.state().eq(&BatchSyncState::Syncing)
     }
 
-    pub fn is_idle(&self) -> bool {
-        self.state().eq(&SyncState::Idle)
+    pub fn is_batch_idle(&self) -> bool {
+        self.state().eq(&BatchSyncState::Idle)
     }
 
     pub fn update(&mut self) -> UpdateStateFluentBuilder<T> {
@@ -110,7 +110,7 @@ impl<T: RedisClient> State<T> {
             function_id: function_id.clone(),
             chain_id: chain_id.clone(),
             state: state.map_or_else(
-                || SyncState::Idle,
+                || BatchSyncState::Idle,
                 |state| serde_json::from_str(state.as_str()).unwrap(),
             ),
             last_block: last_block.clone(),
@@ -125,12 +125,12 @@ impl<T: RedisClient> State<T> {
 pub struct UpdateStateFluentBuilder<'a, T: RedisClient> {
     inner: &'a mut State<T>,
 
-    state: SyncState,
+    state: BatchSyncState,
     last_block: Option<String>,
 }
 
 impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
-    pub fn set_state(mut self, new_state: SyncState) -> Self {
+    pub fn set_state(mut self, new_state: BatchSyncState) -> Self {
         self.state = new_state;
         self
     }

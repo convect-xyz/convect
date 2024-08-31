@@ -1,10 +1,6 @@
 use crate::{
-    enqueuer::TransactionEnqueuer,
-    fetcher::TransactionFetcher,
-    manifest::Manifest,
-    redis_client::RedisClient,
-    syncing::{self, State},
-    types::transactions::IngestTransaction,
+    enqueuer::TransactionEnqueuer, fetcher::TransactionFetcher, manifest::Manifest,
+    redis_client::RedisClient, syncing::State, types::transactions::IngestTransaction,
 };
 use futures::future::join_all;
 

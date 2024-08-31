@@ -42,14 +42,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Ok(_) => {
             pipeline
                 .update()
-                .set_state(shared::syncing::SyncState::Idle)
+                .set_state(shared::syncing::BatchSyncState::Idle)
                 .send()
                 .await?
         }
         Err(_) => {
             pipeline
                 .update()
-                .set_state(shared::syncing::SyncState::Failed)
+                .set_state(shared::syncing::BatchSyncState::Failed)
                 .send()
                 .await?
         }
