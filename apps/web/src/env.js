@@ -41,6 +41,8 @@ export const env = createEnv({
     REPORTING_DATABASE_URL: z.string(),
 
     RESEND_API_KEY: z.string(),
+
+    PLAN_ENVIRONMENT: z.enum(["prod", "test"]),
   },
   client: {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string(),
@@ -67,6 +69,7 @@ export const env = createEnv({
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    PLAN_ENVIRONMENT: process.env.PLAN_ENVIRONMENT,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

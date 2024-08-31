@@ -1,0 +1,1 @@
+ALTER TABLE "web_user" ADD COLUMN "plan_url" varchar(255);
