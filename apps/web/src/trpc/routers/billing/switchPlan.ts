@@ -4,22 +4,11 @@ import { InferSelectModel, eq } from "drizzle-orm";
 import { Stripe } from "stripe";
 import { z } from "zod";
 import { env } from "~/env";
-import { hobbyPlan, proPlan } from "~/lib/server/plan";
+import { planLoader } from "~/lib/server/products";
 import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
 
 const stripe = new Stripe(env.STRIPE_API_KEY);
-
-function getPlan(plan: schema.PlanType) {
-  switch (plan) {
-    case "HOBBY":
-      return hobbyPlan;
-    case "PRO":
-      return proPlan;
-    default:
-      throw new Error("Invalid plan");
-  }
-}
 
 export const switchPlan = protectedProcedure
   .input(
@@ -44,8 +33,8 @@ export const switchPlan = protectedProcedure
 
     const stripeCustomerId = await getStripeCustomerId(user!);
     await (activeSubscription
-      ? updateSubscription(activeSubscription, input.newPlan)
-      : createSubscription(stripeCustomerId, input.newPlan));
+      ? updateSubscription(user, activeSubscription)
+      : createSubscription(user, stripeCustomerId));
 
     await db
       .update(schema.users)
@@ -60,12 +49,12 @@ export const switchPlan = protectedProcedure
   });
 
 async function createSubscription(
+  user: InferSelectModel<typeof schema.users>,
   stripeCustomerId: string,
-  plan: schema.PlanType,
 ) {
   const subscription = await stripe.subscriptions.create({
     customer: stripeCustomerId,
-    items: getSubscriptionItemsForPlan(plan),
+    items: await getSubscriptionItemsForPlan(user),
   });
 
   await db
@@ -80,9 +69,9 @@ async function createSubscription(
   return subscription;
 }
 
-function updateSubscription(
+async function updateSubscription(
+  user: InferSelectModel<typeof schema.users>,
   activeSubscription: Stripe.Subscription,
-  newPlan: schema.PlanType,
 ) {
   const previousSubscriptionItems = () => {
     return activeSubscription.items.data.map((item) => {
@@ -96,15 +85,19 @@ function updateSubscription(
   return stripe.subscriptions.update(activeSubscription.id, {
     items: [
       ...previousSubscriptionItems(),
-      ...getSubscriptionItemsForPlan(newPlan),
+      ...(await getSubscriptionItemsForPlan(user)),
     ],
   });
 }
 
-const getSubscriptionItemsForPlan = (plan: schema.PlanType) => {
-  return getPlan(plan).products.map((product) => {
+const getSubscriptionItemsForPlan = async (
+  user: InferSelectModel<typeof schema.users>,
+) => {
+  const plan = await planLoader.loadForUser(user);
+
+  return plan.products.map((product) => {
     return {
-      price: product.getStripePriceId(plan),
+      price: product.stripePriceId,
     };
   });
 };

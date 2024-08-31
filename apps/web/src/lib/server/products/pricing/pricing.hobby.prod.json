@@ -1,0 +1,41 @@
+{
+  "id": "hobby-prod",
+  "products": [
+    {
+      "key": "processedTransactions",
+      "name": "Processed Transactions",
+      "includedFree": 100000,
+      "priceInCentsPerAdditionalUnit": 20,
+      "unitSize": 100000,
+      "unitSymbol": "Txs",
+      "stripePriceId": ""
+    },
+    {
+      "key": "gbHours",
+      "name": "GB Hours",
+      "includedFree": 100,
+      "priceInCentsPerAdditionalUnit": 18,
+      "unitSize": 1,
+      "unitSymbol": "GB-Hours",
+      "stripePriceId": ""
+    },
+    {
+      "key": "invocations",
+      "name": "Invocations",
+      "includedFree": 100000,
+      "priceInCentsPerAdditionalUnit": 60,
+      "unitSize": 1000000,
+      "unitSymbol": "",
+      "stripePriceId": ""
+    },
+    {
+      "key": "basePlan",
+      "name": "Base Plan",
+      "includedFree": 0,
+      "priceInCentsPerAdditionalUnit": 0,
+      "unitSize": 1,
+      "unitSymbol": "",
+      "stripePriceId": ""
+    }
+  ]
+}

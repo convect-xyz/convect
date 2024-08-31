@@ -33,6 +33,7 @@ export const users = createTable("user", {
     length: 255,
   }).unique(),
   planType: planEnum("plan_type").default("HOBBY").notNull(),
+  planUrl: varchar("plan_url", { length: 255 }),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({

@@ -1,10 +1,9 @@
 import { signIn } from "~/auth";
 import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
 import {
   PricingCard,
   PricingDescription,
-  PricingFeature,
-  PricingFeatures,
   PricingHeader,
   PricingPrice,
   PricingTitle,
@@ -21,14 +20,10 @@ export default function Page() {
         <div className="mt-16 grid gap-8 md:grid-cols-3 md:gap-6 lg:gap-12">
           <PricingCard>
             <PricingHeader>
-              <PricingTitle title="Free" />
+              <PricingTitle title="Hobby" />
               <PricingDescription description="Get started with our free plan." />
             </PricingHeader>
             <PricingPrice price={{ value: "$0", schedule: "MONTHLY" }} />
-            <PricingFeatures>
-              <PricingFeature feature="100k transactions per month" />
-              <PricingFeature feature="Function analytics" />
-            </PricingFeatures>
             <form
               className="mt-auto pt-5"
               action={async () => {
@@ -43,14 +38,10 @@ export default function Page() {
 
           <PricingCard>
             <PricingHeader>
-              <PricingTitle title="Startup" />
-              <PricingDescription description="Perfect for startups." />
+              <PricingTitle title="Pro" />
+              <PricingDescription description="Perfect for startups and professionals." />
             </PricingHeader>
             <PricingPrice price={{ value: "$20", schedule: "MONTHLY" }} />
-            <PricingFeatures>
-              <PricingFeature feature="2m free transactions per month" />
-              <PricingFeature feature="Function analytics" />
-            </PricingFeatures>
             <form
               className="mt-auto pt-5"
               action={async () => {
@@ -67,15 +58,10 @@ export default function Page() {
 
           <PricingCard>
             <PricingHeader>
-              <PricingTitle title="Professional" />
+              <PricingTitle title="Enterprise" />
               <PricingDescription description="Better suited for advanced use cases." />
             </PricingHeader>
             <PricingPrice price="Contact Us" />
-            <PricingFeatures>
-              <PricingFeature feature="Custom transaction processing" />
-              <PricingFeature feature="Function analytics" />
-              <PricingFeature feature="Engineering Support" />
-            </PricingFeatures>
             <form
               className="mt-auto pt-5"
               action={async () => {
@@ -89,7 +75,60 @@ export default function Page() {
             </form>
           </PricingCard>
         </div>
+
+        <MorePricing />
         <FAQ />
+      </div>
+    </div>
+  );
+}
+
+function MorePricing() {
+  return (
+    <Card className="mt-24 bg-background p-0">
+      <CardContent className="p-0">
+        <div className="flex flex-col divide-y divide-border">
+          <div className="flex divide-x divide-border">
+            <div className="flex-[2_2_0] p-4">Feature</div>
+            <div className="flex-[3_3_0] p-4">Hobby</div>
+            <div className="flex-[3_3_0] p-4">Pro</div>
+            <div className="flex-[3_3_0] p-4">Enterprise</div>
+          </div>
+          <PricingRow
+            feature="Invocations"
+            hobby="10,000 invocations included"
+            pro="100,000 invocations included then $0.60 per million"
+          />
+          <PricingRow
+            feature="Duration"
+            hobby="10 GB-hours included"
+            pro="100 GB-hours included then $0.18 per GB-Hour"
+          />
+          <PricingRow
+            feature="Processed Transactions"
+            hobby="1,000 processed transactions included."
+            pro="10,000 processed transactions included then $0.20 per 100,000"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+type PricingRowProps = {
+  feature: string;
+  hobby: string;
+  pro: string;
+};
+
+function PricingRow(props: PricingRowProps) {
+  return (
+    <div className="flex divide-x divide-border">
+      <div className="flex-[2_2_0] p-4">{props.feature}</div>
+      <div className="flex-[3_3_0] p-4">{props.hobby}</div>
+      <div className="flex-[3_3_0] p-4">{props.pro}</div>
+      <div className="flex flex-[3_3_0] items-center justify-center p-4">
+        Custom
       </div>
     </div>
   );

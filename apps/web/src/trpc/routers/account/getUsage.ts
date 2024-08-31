@@ -2,12 +2,7 @@ import { analysisSchema } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
 import { and, count, eq, gt, lt, sql } from "drizzle-orm";
 import { z } from "zod";
-import {
-  gbHoursProduct,
-  invocationsProduct,
-  processedTransactionsProduct,
-} from "~/lib/server/products";
-import { Product } from "~/lib/server/products/product";
+import { availebleProducts, planLoader, Product } from "~/lib/server/products";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
 
@@ -21,12 +16,7 @@ export const getUsage = protectedProcedure
   .output(
     z.array(
       z.object({
-        key: z.enum([
-          "processedTransactions",
-          "gbHours",
-          "invocations",
-          "basePlan",
-        ]),
+        key: z.nativeEnum(availebleProducts),
         name: z.string(),
         totalUsage: z.number(),
         includedFree: z.number(),
@@ -63,27 +53,22 @@ export const getUsage = protectedProcedure
         key: product.key,
         name: product.name,
         totalUsage,
-        includedFree: product.getIncludedFree(user.planType),
-        additionalChargeInCents: product.getAdditionalChargeInCents(
-          totalUsage,
-          user.planType,
-        ),
-        includedFreeUsageAsFraction: product.getIncludedFreeUsageAsFraction(
-          totalUsage,
-          user.planType,
-        ),
+        includedFree: product.includedFree,
+        additionalChargeInCents: product.getAdditionalChargeInCents(totalUsage),
+        includedFreeUsageAsFraction:
+          product.getIncludedFreeUsageAsFraction(totalUsage),
         unitSymbol: product.unitSymbol,
       };
     };
 
-    return [
-      getResponseForProduct(invocationsProduct, numInvocations),
-      getResponseForProduct(gbHoursProduct, gbHours),
-      getResponseForProduct(
-        processedTransactionsProduct,
-        numProcessedTransactions,
-      ),
-    ].sort((a, b) => b.additionalChargeInCents - a.additionalChargeInCents);
+    const plan = await planLoader.loadForUser(user);
+    console.log("Plan", plan);
+    return [numProcessedTransactions, gbHours, numInvocations]
+      .map((usage) => {
+        const product = plan.products.find((p) => p.key === usage.key)!;
+        return getResponseForProduct(product, usage.usage);
+      })
+      .sort((a, b) => b.additionalChargeInCents - a.additionalChargeInCents);
   });
 
 async function getProcessedTransactionCount(
@@ -107,7 +92,10 @@ async function getProcessedTransactionCount(
       ),
     );
 
-  return numProcessedTransactions.pop()!.count;
+  return {
+    key: availebleProducts.processedTransactions,
+    usage: numProcessedTransactions.pop()!.count,
+  } as const;
 }
 
 async function getGbHours(
@@ -134,7 +122,13 @@ async function getGbHours(
   const result = gbHours.pop()!;
 
   return {
-    gbHours: Number(result.gbHour),
-    numInvocations: result.numInvocations,
-  };
+    gbHours: {
+      key: availebleProducts.gbHours,
+      usage: Number(result.gbHour),
+    },
+    numInvocations: {
+      key: availebleProducts.invocations,
+      usage: result.numInvocations,
+    },
+  } as const;
 }
