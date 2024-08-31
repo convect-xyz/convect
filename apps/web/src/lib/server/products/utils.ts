@@ -1,5 +1,5 @@
 import { getSignedUrl } from "@aws-sdk/cloudfront-signer";
-import { formatDate } from "date-fns";
+import { addDays, formatDate } from "date-fns";
 import { cache } from "react";
 import { env } from "~/env";
 
@@ -12,7 +12,7 @@ export function getCloudfrontSignedUrl(path: string) {
   return getSignedUrl({
     url,
     keyPairId,
-    dateLessThan: formatDate(new Date(), "yyyy-MM-dd"),
+    dateLessThan: formatDate(addDays(new Date(), 1), "yyyy-MM-dd"),
     privateKey,
   });
 }
