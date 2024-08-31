@@ -5,9 +5,9 @@ use tokio_retry::Retry;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum SyncState {
-    IDLE,
-    SYNCING,
-    FAILED,
+    Idle,
+    BatchSyncing,
+    Failed,
 }
 
 #[derive(Debug)]
@@ -53,8 +53,12 @@ impl<T: RedisClient> State<T> {
             .unwrap_or(false)
     }
 
-    pub fn is_syncing(&self) -> bool {
-        self.state().eq(&SyncState::SYNCING)
+    pub fn is_batch_syncing(&self) -> bool {
+        self.state().eq(&SyncState::BatchSyncing)
+    }
+
+    pub fn is_idle(&self) -> bool {
+        self.state().eq(&SyncState::Idle)
     }
 
     pub fn update(&mut self) -> UpdateStateFluentBuilder<T> {
@@ -106,7 +110,7 @@ impl<T: RedisClient> State<T> {
             function_id: function_id.clone(),
             chain_id: chain_id.clone(),
             state: state.map_or_else(
-                || SyncState::IDLE,
+                || SyncState::Idle,
                 |state| serde_json::from_str(state.as_str()).unwrap(),
             ),
             last_block: last_block.clone(),

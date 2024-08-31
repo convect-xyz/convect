@@ -42,17 +42,7 @@ where
         start_block: u64,
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {
-        if let Err(e) = self._sync(state, start_block, end_block).await {
-            state
-                .update()
-                .set_state(syncing::SyncState::FAILED)
-                .send()
-                .await?;
-
-            return Err(e);
-        }
-
-        Ok(())
+        return Ok(self._sync(state, start_block, end_block).await?);
     }
 
     async fn _sync<Rc: RedisClient>(
