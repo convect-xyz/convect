@@ -8,6 +8,7 @@ import {
 
 export const processedTransactions = pgTable("processed_transactions", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
   handlerId: varchar("handler_id").notNull(),
   handlerVersion: varchar("handler_version").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
