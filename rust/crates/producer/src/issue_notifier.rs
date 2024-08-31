@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use resend_rs::types::CreateEmailBaseOptions;
@@ -23,15 +21,15 @@ pub enum ProducerModuleIssue {
 }
 
 pub struct IssueNotifierImpl<T: ResendClient> {
-    last_sent_at: Arc<Mutex<Option<DateTime<Utc>>>>,
-    resend_client: Arc<T>,
+    last_sent_at: Mutex<Option<DateTime<Utc>>>,
+    resend_client: T,
 }
 
 impl<T: ResendClient> IssueNotifierImpl<T> {
     pub fn new(resend_client: T) -> Self {
         Self {
-            resend_client: Arc::new(resend_client),
-            last_sent_at: Arc::new(Mutex::new(None)),
+            resend_client,
+            last_sent_at: Mutex::new(None),
         }
     }
 }

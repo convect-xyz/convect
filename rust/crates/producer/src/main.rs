@@ -5,7 +5,6 @@ use listener::Listener;
 use producer::{ProducerModule, ProducerModuleImpl};
 use shared::networks::get_supported_networks;
 use shared::resend::ResendClientImpl;
-use std::sync::Arc;
 use tokio_retry::strategy::jitter;
 use tokio_retry::Retry;
 use tracing::level_filters::LevelFilter;
@@ -50,15 +49,8 @@ async fn main() {
 
     let producer_modules: Vec<_> = get_supported_networks()
         .into_iter()
-        .map(|network| Arc::new(ProducerModuleImpl::new(network)) as Arc<dyn ProducerModule>)
+        .map(|network| ProducerModuleImpl::new(network))
         .collect();
-    let listener = listener::ListenerImpl::new(
-        producer_modules.clone(),
-        IssueNotifierImpl::new(ResendClientImpl::new(
-            "REDACTED",
-        )),
-        aws_sdk_sns::Client::new(&aws_config::load_defaults(BehaviorVersion::latest()).await),
-    );
 
     let producer_task_handles: Vec<_> = producer_modules
         .iter()
@@ -89,7 +81,17 @@ async fn main() {
         })
         .collect();
 
-    let listener_handle = listener.spawn();
+    let listener = listener::ListenerImpl::new(
+        producer_modules
+            .iter()
+            .map(|m| Box::new(m.clone()) as Box<dyn ProducerModule>)
+            .collect(),
+        IssueNotifierImpl::new(ResendClientImpl::new(
+            "REDACTED",
+        )),
+        aws_sdk_sns::Client::new(&aws_config::load_defaults(BehaviorVersion::latest()).await),
+    );
+    let listener_handle = tokio::spawn(async move { listener.listen().await.unwrap() });
 
     for handle in join_all(producer_task_handles).await.into_iter() {
         match handle {

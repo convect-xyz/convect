@@ -14,8 +14,14 @@ export const basePlanProduct = new Product({
   unit: "",
   priceInCentsPerAdditionalUnit: 0,
   stripePriceIds: {
-    HOBBY: "price_1PrjjN2LJct0ubJ3I4N6E7JB",
-    PRO: "price_1Prjjm2LJct0ubJ3rUXID3wG",
+    HOBBY:
+      process.env.NODE_ENV === "production"
+        ? "price_1Ptw8i2LJct0ubJ3AHcs79gA"
+        : "price_1PrjjN2LJct0ubJ3I4N6E7JB",
+    PRO:
+      process.env.NODE_ENV === "production"
+        ? "price_1Ptw8l2LJct0ubJ3Yomrdgqh"
+        : "price_1Prjjm2LJct0ubJ3rUXID3wG",
     ENTERPRISE: "",
   },
 });
@@ -32,8 +38,14 @@ export const invocationsProduct = new Product({
   unit: "",
   priceInCentsPerAdditionalUnit: 60,
   stripePriceIds: {
-    HOBBY: "price_1PrjZr2LJct0ubJ3yrnN4f8V",
-    PRO: "price_1PrjYY2LJct0ubJ30GqZ3NJ1",
+    HOBBY:
+      process.env.NODE_ENV === "production"
+        ? "price_1Ptw8W2LJct0ubJ3rTZHPlra"
+        : "price_1PrjZr2LJct0ubJ3yrnN4f8V",
+    PRO:
+      process.env.NODE_ENV === "production"
+        ? "price_1Ptw8T2LJct0ubJ3o91JSN9v"
+        : "price_1PrjYY2LJct0ubJ30GqZ3NJ1",
     ENTERPRISE: "",
   },
 });
@@ -50,8 +62,14 @@ export const gbHoursProduct = new Product({
   unit: "GB-Hours",
   priceInCentsPerAdditionalUnit: 18,
   stripePriceIds: {
-    HOBBY: "price_1PrjVN2LJct0ubJ3nAoUigkm",
-    PRO: "price_1PriFC2LJct0ubJ31Q1FAqwq",
+    HOBBY:
+      process.env.NODE_ENV === "production"
+        ? "price_1Ptw8N2LJct0ubJ3qc6Em7qC"
+        : "price_1PrjVN2LJct0ubJ3nAoUigkm",
+    PRO:
+      process.env.NODE_ENV === "production"
+        ? "price_1Ptw8P2LJct0ubJ3fS7BxjBP"
+        : "price_1PriFC2LJct0ubJ31Q1FAqwq",
     ENTERPRISE: "",
   },
 });
@@ -68,8 +86,14 @@ export const processedTransactionsProduct = new Product({
   unit: "Txs",
   priceInCentsPerAdditionalUnit: 20,
   stripePriceIds: {
-    HOBBY: "price_1Prjf42LJct0ubJ3sNI2lq9V",
-    PRO: "price_1PrjdK2LJct0ubJ33itFUXlF",
+    HOBBY:
+      process.env.NODE_ENV === "production"
+        ? "price_1Ptw8d2LJct0ubJ34TrEphjM"
+        : "price_1Prjf42LJct0ubJ3sNI2lq9V",
+    PRO:
+      process.env.NODE_ENV === "production"
+        ? "price_1Ptw8b2LJct0ubJ32O4a7DZY"
+        : "price_1PrjdK2LJct0ubJ33itFUXlF",
     ENTERPRISE: "",
   },
 });
