@@ -14,6 +14,7 @@ pub struct Config {
     pub syncer_container_name: String,
     pub deployment_id: String,
     pub user_id: String,
+    pub github_sha: String,
     pub chains: Vec<ChainConfig>,
 }
 
@@ -32,6 +33,7 @@ impl Config {
                 .map(|s| s.to_string())
                 .collect(),
             version: env::var("VERSION").expect("VERSION not set"),
+            github_sha: env::var("GITHUB_SHA").expect("GITHUB_SHA not set"),
             syncer_container_name: env::var("SYNCER_CONTAINER_NAME")
                 .expect("SYNCER_CONTAINER_NAME not set"),
             deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID not set"),
@@ -39,5 +41,11 @@ impl Config {
             chains: serde_json::from_str(&env::var("CHAINS").expect("CHAINS not set"))
                 .expect("CHAINS not set"),
         }
+    }
+
+    pub fn release_name(&self) -> String {
+        let github_sha = self.github_sha.clone();
+        let version = self.version.clone();
+        format!("orchestrator::{github_sha}::{version}")
     }
 }
