@@ -16,11 +16,9 @@ import { type AdapterAccount } from "next-auth/adapters";
 
 export const createTable = pgTableCreator((name) => `web_${name}`);
 
-export const planEnum = pgEnum("plan_type", [
-  "FREE",
-  "STARTUP",
-  "PROFESSIONAL",
-]);
+export const planEnum = pgEnum("plan_type", ["HOBBY", "PRO", "ENTERPRISE"]);
+
+export type PlanType = (typeof planEnum.enumValues)[number];
 
 export const users = createTable("user", {
   id: varchar("id").notNull().primaryKey(),
@@ -30,8 +28,11 @@ export const users = createTable("user", {
     mode: "date",
   }).default(sql`CURRENT_TIMESTAMP`),
   image: varchar("image", { length: 255 }),
-  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
-  planType: planEnum("plan_type").default("FREE"),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }).unique(),
+  stripeSubscriptionId: varchar("stripe_subscription_id", {
+    length: 255,
+  }).unique(),
+  planType: planEnum("plan_type").default("HOBBY").notNull(),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({

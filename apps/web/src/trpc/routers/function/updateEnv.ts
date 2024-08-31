@@ -12,6 +12,7 @@ export const updateEnv = protectedProcedure
       functionId: z.coerce.number(),
       id: z.number(),
       newValue: z.string(),
+      newKey: z.string(),
     }),
   )
   .output(z.object({}))
@@ -30,10 +31,12 @@ export const updateEnv = protectedProcedure
       projectId: fn.projectId,
       userId: ctx.session.user.id,
     });
+
     const encryptionResult = encryptEnvValue(input.newValue);
     await ctx.db
       .update(schema.functionEnv)
       .set({
+        key: input.newKey,
         value: encryptionResult.value,
         iv: encryptionResult.iv,
         functionId: fn.id,

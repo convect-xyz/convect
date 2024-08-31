@@ -1,64 +1,55 @@
-use std::{cmp::max, collections::HashMap, env};
+use std::collections::HashMap;
+use std::env;
+use std::str::FromStr;
 
 use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use futures::{future::join_all, TryFutureExt};
+use config::Config;
+use futures::future::join_all;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
-use serde::Deserialize;
+use shared::contract_info::EtherscanContractInfoProvider;
+use shared::manifest::providers::{InitBlockProvider, InitBlockProviderImpl};
+use shared::redis_client::RedisClientImpl;
+use shared::syncer::ChainSyncer;
+use shared::types::chains::ChainConfig;
 use shared::{
-    contract_info::{self, ContractInfoProvider},
-    enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
-    fetcher::{TransactionFetcher, TransactionFetcherImpl},
-    types::{manifest::Manifest, syncing::State},
-    web3_client::{Web3Client, Web3ClientImpl},
+    enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
+    redis_client::RedisClient, syncing::State, web3_client::Web3ClientImpl,
 };
 use std::collections::BTreeMap;
 use tokio::sync::OnceCell;
+use tracing::Level;
+use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::EnvFilter;
+
+mod config;
 
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
 static WEB3_CLIENTS: OnceCell<HashMap<u64, Web3ClientImpl>> = OnceCell::const_new();
 
 async fn get_manifest() -> &'static Manifest {
     MANIFEST
-        .get_or_init(|| async {
-            println!("Fetching manifest");
-            Manifest::from_env().await.unwrap()
-        })
+        .get_or_init(|| async { Manifest::from_env().await.unwrap() })
         .await
 }
 
-async fn get_web3_clients(chain_id: &u64) -> &'static Web3ClientImpl {
+async fn get_web3_client(chain_id: &u64, config: &Config) -> &'static Web3ClientImpl {
     WEB3_CLIENTS
         .get_or_init(|| async {
-            let config = Config::new();
-
             HashMap::from_iter(config.chains.iter().map(|c| {
                 (
                     c.chain_id,
-                    Web3ClientImpl::new_from_endpoint(c.polling_url.clone()),
+                    Web3ClientImpl::new(c.chain_id, c.polling_url.clone()),
                 )
             }))
         })
         .await
         .get(&chain_id)
         .unwrap()
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct ChainConfig {
-    #[serde(rename = "chainId")]
-    chain_id: u64,
-    #[serde(rename = "pollingUrl")]
-    polling_url: String,
-    #[serde(rename = "txQueueUrl")]
-    tx_queue_url: String,
-    #[serde(rename = "etherscanApiKey")]
-    etherscan_api_key: String,
-    #[serde(rename = "etherscanLike")]
-    etherscan_like: String,
 }
 
 fn configure_sentry_scope(config: &Config) {
@@ -80,6 +71,7 @@ fn configure_sentry_scope(config: &Config) {
 fn main() -> Result<(), Error> {
     let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
       release: sentry::release_name!(),
+      traces_sample_rate: 0.2,
       ..Default::default()
   }));
 
@@ -91,193 +83,155 @@ fn main() -> Result<(), Error> {
         .build()
         .unwrap()
         .block_on(async {
-            tracing::init_default_subscriber();
+            // let log_format = env::var("AWS_LAMBDA_LOG_FORMAT").unwrap_or_default();
+            let log_level = Level::from_str(&env::var("AWS_LAMBDA_LOG_LEVEL").unwrap_or_default())
+                .unwrap_or(Level::INFO);
+
+            tracing_subscriber::registry()
+                .with(
+                    tracing_subscriber::fmt::layer()
+                        .with_target(false)
+                        .without_time()
+                        .with_filter(
+                            EnvFilter::builder()
+                                .with_default_directive(LevelFilter::from_level(log_level).into())
+                                .from_env_lossy(),
+                        ),
+                )
+                .with(sentry_tracing::layer())
+                .init();
+
             run(service_fn(function_handler)).await
         })
 }
 
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let incoming_blocks: HashMap<u64, u64> =
-        serde_json::from_str(event.payload.records.last().unwrap().sns.message.as_str())
-            .expect("Invalid SNS Message");
+        serde_json::from_str(event.payload.records.last().unwrap().sns.message.as_str())?;
+    tracing::info!("Incoming blocks: {incoming_blocks:?}");
 
     let config = Config::new();
-    let futures = config.chains.into_iter().map(|chain_config| {
+    let futures = config.chains.iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-        println!("Incoming block: {:?}", block_for_chain);
-
-        async move { sync_chain(chain_config, block_for_chain).await }
+        let config = &config;
+        async move { sync_chain(config, chain_config.clone(), block_for_chain).await }
     });
 
-    let result = join_all(futures).await;
+    let errors: Vec<_> = join_all(futures)
+        .await
+        .into_iter()
+        .filter(|res| res.is_err())
+        .map(Result::unwrap_err)
+        .collect();
 
-    for res in result {
-        match res {
-            Ok(_) => {
-                println!("Successfully synced chain");
-            }
-            Err(e) => {
-                println!("Failed to sync chain: {:?}", e);
-            }
-        }
+    if !errors.is_empty() {
+        tracing::error!("Failed to sync with errors: {:?}", errors);
     }
 
     Ok(())
 }
 
-async fn sync_chain(chain_config: ChainConfig, incoming_block: u64) -> Result<(), Error> {
+#[tracing::instrument(skip_all, err)]
+async fn sync_chain(
+    config: &Config,
+    chain_config: ChainConfig,
+    incoming_block: u64,
+) -> Result<(), errors::OrchestratorError> {
     let sdk_config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
-    let web3_client = get_web3_clients(&chain_config.chain_id).await;
-    let fetcher = TransactionFetcherImpl::new_from_client(web3_client.clone());
+    let web3_client = get_web3_client(&chain_config.chain_id, config).await;
+    let fetcher = TransactionFetcherImpl::new(web3_client.clone());
     let s3_client = aws_sdk_s3::Client::new(&sdk_config);
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
     let enqueuer =
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
     let manifest = get_manifest().await;
-    let config = Config::new();
-
-    let incoming_block = incoming_block.min(web3_client.get_current_block_number().await?);
-    println!("Incoming block: {:?}", incoming_block);
-
-    // benchmark this
-    let mut pipeline = State::load(
-        config.function_id.clone(),
-        chain_config.chain_id.to_string(),
-        config.deployment_id.clone(),
+    let redis_client = RedisClientImpl::new().await;
+    let init_block_provider = InitBlockProviderImpl::new(
+        &manifest,
+        chain_config.clone(),
+        web3_client.clone(),
+        EtherscanContractInfoProvider::new(
+            chain_config.etherscan_api_key.clone(),
+            chain_config.etherscan_like.clone(),
+        ),
     );
 
-    println!("Pipeline Inner: {:?}", pipeline.inner());
-    if pipeline.last_block().is_some_and(|l| incoming_block <= l) {
+    let mut pipeline = State::load(
+        config.function_id.clone(),
+        chain_config.chain_id,
+        config.deployment_id.clone(),
+        redis_client,
+    )
+    .await?;
+
+    if pipeline.has_synced(incoming_block) || pipeline.is_syncing() {
+        tracing::info!(
+          target: "orchestrator",
+          is_syncing=pipeline.is_syncing(),
+          has_synced=pipeline.has_synced(incoming_block)
+        );
         return Ok(());
     }
 
-    if pipeline
-        .state()
-        .eq(&shared::types::syncing::SyncState::SYNCING)
-    {
-        return Ok(());
-    }
+    let start_block = match pipeline.next_block() {
+        Some(next_block) => next_block,
+        None => init_block_provider.get_init_block().await?,
+    };
 
-    let init_block: Option<u64> =
-        get_init_block(&mut pipeline, manifest, &web3_client, &chain_config).await;
-    if incoming_block - pipeline.last_block().or(init_block).unwrap_or(0) > 1999 {
+    if incoming_block - start_block > 10000 {
         pipeline
             .update()
-            .set_state(shared::types::syncing::SyncState::SYNCING)
+            .set_state(shared::syncing::SyncState::SYNCING)
             .send()
+            .await
             .expect("Failed to update pipeline");
 
-        return batch_sync(
+        return sync_with_ecs(
             chain_config.chain_id,
             &ecs_client,
             &mut pipeline,
+            start_block,
             incoming_block,
-            init_block,
             &config,
         )
         .await;
     }
 
-    let from_block = pipeline.last_block().map(|l| l + 1).or(init_block).unwrap();
-    let transactions = fetcher
-        .get_transactions_in_range(&manifest, chain_config.chain_id, from_block, incoming_block)
-        .inspect_err(|_| {
-            pipeline
-                .update()
-                .set_state(shared::types::syncing::SyncState::FAILED)
-                .send()
-                .unwrap();
-        })
+    ChainSyncer::new(manifest.clone(), enqueuer, fetcher)
+        .sync(&mut pipeline, start_block, incoming_block)
         .await?;
-
-    let result = enqueuer
-        .enqueue_transactions(&mut pipeline, &transactions)
-        .await;
-
-    match result {
-        Ok(_) => pipeline.update().set_last_block(incoming_block).send(),
-        Err(_) => pipeline
-            .update()
-            .set_state(shared::types::syncing::SyncState::FAILED)
-            .send(),
-    }
-    .unwrap();
 
     Ok(())
 }
 
-#[derive(Debug, Clone)]
-struct Config {
-    function_id: String,
-    manifest_bucket: String,
-    manifest_prefix: String,
-    syncer_task_definition_arn: String,
-    syncer_cluster: String,
-    syncer_subnets: Vec<String>,
-    version: String,
-    syncer_container_name: String,
-    deployment_id: String,
-    user_id: String,
-    chains: Vec<ChainConfig>,
-}
-
-impl Config {
-    fn new() -> Self {
-        Self {
-            function_id: env::var("FUNCTION_ID").expect("FUNCTION_ID not set"),
-            manifest_bucket: env::var("MANIFEST_BUCKET").expect("MANIFEST_BUCKET not set"),
-            manifest_prefix: env::var("MANIFEST_PREFIX").expect("MANIFEST_PREFIX not set"),
-            syncer_task_definition_arn: env::var("SYNCER_TASK_DEFINITION_ARN")
-                .expect("SYNCER_TASK_DEFINITION_ARN not set"),
-            syncer_cluster: env::var("SYNCER_CLUSTER").expect("SYNCER_CLUSTER not set"),
-            syncer_subnets: env::var("SYNCER_SUBNETS")
-                .expect("SYNCER_SUBNETS not set")
-                .split(",")
-                .map(|s| s.to_string())
-                .collect(),
-            version: env::var("VERSION").expect("VERSION not set"),
-            syncer_container_name: env::var("SYNCER_CONTAINER_NAME")
-                .expect("SYNCER_CONTAINER_NAME not set"),
-            deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID not set"),
-            user_id: env::var("USER_ID").expect("USER_ID not set"),
-            chains: serde_json::from_str(&env::var("CHAINS").expect("CHAINS not set"))
-                .expect("CHAINS not set"),
-        }
-    }
-}
-
-async fn batch_sync(
+async fn sync_with_ecs<T: RedisClient>(
     chain_id: u64,
     ecs_client: &aws_sdk_ecs::Client,
-    pipeline: &mut State,
-    incoming_block: u64,
-    init_block: Option<u64>,
+    pipeline: &mut State<T>,
+    start_block: u64,
+    end_block: u64,
     config: &Config,
-) -> Result<(), Error> {
-    ecs_client
+) -> Result<(), errors::OrchestratorError> {
+    let client_result = ecs_client
         .run_task()
         .cluster(&config.syncer_cluster)
         .task_definition(&config.syncer_task_definition_arn)
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(get_network_configuration(config.syncer_subnets.clone()))
-        .overrides(get_task_override(
-            chain_id,
-            &config,
-            pipeline.last_block().map(|l| l + 1).or(init_block).unwrap(),
-            incoming_block,
-        ))
+        .overrides(get_task_override(chain_id, &config, start_block, end_block))
         .send()
-        .await
-        .inspect_err(|e| {
-            println!("{:?}", e);
+        .await;
 
-            pipeline
-                .update()
-                .set_state(shared::types::syncing::SyncState::IDLE)
-                .send()
-                .unwrap();
-        })?;
+    if let Err(e) = client_result {
+        pipeline
+            .update()
+            .set_state(shared::syncing::SyncState::IDLE)
+            .send()
+            .await?;
+
+        return Err(errors::OrchestratorError::SdkError(e));
+    }
 
     Ok(())
 }
@@ -331,95 +285,30 @@ fn create_key_value_pair(name: &str, value: &String) -> KeyValuePair {
     KeyValuePair::builder().name(name).value(value).build()
 }
 
-async fn get_min_contract_creation_block(
-    web3_client: &Web3ClientImpl,
-    manifest: &Manifest,
-    chain_config: &ChainConfig,
-) -> Result<Option<u64>, Error> {
-    let etherscan_provider = contract_info::EtherscanContractInfoProvider::new(
-        chain_config.etherscan_api_key.clone(),
-        chain_config.etherscan_like.clone(),
-    );
+mod errors {
+    use thiserror::Error;
 
-    let creation_tx_hashes: Vec<_> = etherscan_provider
-        .get_contract_creation_info(
-            manifest
-                .log_configs
-                .iter()
-                .map(|l| l.address.get_address(chain_config.chain_id))
-                .collect(),
-        )
-        .await
-        .unwrap()
-        .iter()
-        .map(|c| c.tx_hash.clone())
-        .collect();
-
-    println!("Creation tx hashes: {:?}", creation_tx_hashes);
-
-    let transactions: Result<Vec<_>, _> = join_all(
-        creation_tx_hashes
-            .iter()
-            .map(|tx_hash| web3_client.get_transaction_by_hash(tx_hash.clone())),
-    )
-    .await
-    .into_iter()
-    .collect();
-
-    println!("Transactions: {:?}", transactions);
-
-    let min_block = match transactions {
-        Ok(txs) => {
-            let mut min_block = None;
-
-            for tx in txs.iter() {
-                if let Some(receipt) = tx {
-                    let block_number = receipt.block_number.unwrap().as_u64();
-                    if min_block.is_none() || block_number < min_block.unwrap() {
-                        min_block = Some(block_number);
-                    }
-                }
-            }
-
-            min_block
-        }
-        Err(e) => {
-            println!("{:?}", e);
-            None
-        }
-    };
-
-    println!("Min block: {:?}", min_block);
-
-    Ok(min_block)
-}
-
-async fn get_init_block(
-    pipeline: &mut State,
-    manifest: &Manifest,
-    web3_client: &Web3ClientImpl,
-    chain_config: &ChainConfig,
-) -> Option<u64> {
-    println!("{:?}", pipeline.last_block());
-    match pipeline.last_block() {
-        Some(_) => None,
-        None => {
-            let manifest_min_block = manifest
-                .tx_configs
-                .iter()
-                .map(|c| c.get_start_block(chain_config.chain_id).unwrap_or(0))
-                .min();
-
-            println!("{:?}", manifest_min_block);
-            let contract_creation_min_block =
-                get_min_contract_creation_block(&web3_client, &manifest, chain_config)
-                    .await
-                    .unwrap();
-            println!("{:?}", contract_creation_min_block);
-            Some(max(
-                contract_creation_min_block.unwrap_or(0),
-                manifest_min_block.unwrap_or(0),
-            ))
-        }
+    #[derive(Debug, Error)]
+    pub enum OrchestratorError {
+        #[error("Manifest error: {0}")]
+        ManifestError(#[from] shared::manifest::errors::ManifestFromEnvError),
+        #[error("Web3 client error: {0}")]
+        Web3ClientError(#[from] shared::web3_client::errors::Web3ClientError),
+        #[error("Contract info provider error: {0}")]
+        ContractInfoProviderError(
+            #[from] shared::contract_info::errors::EtherscanContractInfoProviderError,
+        ),
+        #[error("Redis client error: {0}")]
+        RedisClientError(#[from] shared::redis_client::errors::RedisClientError),
+        #[error("Syncer error: {0}")]
+        SyncerError(#[from] shared::syncer::errors::ChainSyncerError),
+        #[error("Init block provider error: {0}")]
+        InitBlockProviderError(#[from] shared::manifest::providers::InitBlockProviderError),
+        #[error("Sdk error: {0}")]
+        SdkError(
+            #[from] aws_sdk_ecs::error::SdkError<aws_sdk_ecs::operation::run_task::RunTaskError>,
+        ),
+        #[error("State error: {0}")]
+        StateError(#[from] shared::syncing::errors::StateError),
     }
 }

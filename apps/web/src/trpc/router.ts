@@ -1,5 +1,5 @@
 import { createTRPCRouter } from "~/trpc/trpc";
-import { accountsRouter } from "./routers/accounts";
+import { accountsRouter } from "./routers/account";
 import { createApiKey } from "./routers/apiKey/createApiKey";
 import { deleteApiKey } from "./routers/apiKey/deleteApiKey";
 import { getApiKeys } from "./routers/apiKey/getApiKeys";

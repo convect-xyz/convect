@@ -42,7 +42,9 @@ export const env = createEnv({
 
     RESEND_API_KEY: z.string(),
   },
-  client: {},
+  client: {
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string(),
+  },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
@@ -63,6 +65,8 @@ export const env = createEnv({
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

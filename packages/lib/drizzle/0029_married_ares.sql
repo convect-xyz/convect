@@ -1,0 +1,1 @@
+ALTER TABLE "web_user" ADD COLUMN "stripe_subscription_id" varchar(255);
