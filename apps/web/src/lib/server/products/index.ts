@@ -4,6 +4,7 @@ import { schema } from "@convect-xyz/lib";
 import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
+import { loadFromPath } from "./utils";
 
 export const availebleProducts = {
   processedTransactions: "processedTransactions",
@@ -12,17 +13,54 @@ export const availebleProducts = {
   basePlan: "basePlan",
 } as const;
 
+type ProductMetadata = {
+  key: string;
+  name: string;
+  unitSymbol: string;
+  unitSize: number;
+};
+
+export const productMetadata: Record<
+  keyof typeof availebleProducts,
+  ProductMetadata
+> = {
+  processedTransactions: {
+    key: "processedTransactions",
+    name: "Processed Transactions",
+    unitSymbol: "Txs",
+    unitSize: 100000,
+  },
+  gbHours: {
+    key: "gbHours",
+    name: "GB Hours",
+    unitSymbol: "GB-Hours",
+    unitSize: 1,
+  },
+  invocations: {
+    key: "invocations",
+    name: "Invocations",
+    unitSymbol: "",
+    unitSize: 1000000,
+  },
+  basePlan: {
+    key: "basePlan",
+    name: "Base Plan",
+    unitSymbol: "",
+    unitSize: 1,
+  },
+};
+
 const planSchema = z
   .object({
     id: z.string(),
     products: z.array(
       z.object({
         key: z.nativeEnum(availebleProducts),
-        name: z.string(),
+        name: z.string().optional(),
         includedFree: z.number(),
         priceInCentsPerAdditionalUnit: z.number(),
-        unitSize: z.number(),
-        unitSymbol: z.string(),
+        unitSize: z.number().optional(),
+        unitSymbol: z.string().optional(),
         stripePriceId: z.string(),
       }),
     ),
@@ -35,7 +73,12 @@ const planSchema = z
   .transform((data) => {
     return {
       ...data,
-      products: data.products.map((product) => {
+      products: data.products.map((jsonProduct) => {
+        const product = {
+          ...productMetadata[jsonProduct.key],
+          ...jsonProduct,
+        };
+
         const getAdditionalChargeInCents = (totalUsage: number) => {
           const includedFree = product.includedFree;
           if (totalUsage < includedFree) {
@@ -87,12 +130,6 @@ class PlanLoader {
     throw new Error("Invalid plan: " + plan);
   }
 
-  private async loadFromUrl(url: string): Promise<z.infer<typeof planSchema>> {
-    const response = await fetch(url);
-    const pricing = await response.json();
-    return planSchema.parse(pricing);
-  }
-
   async loadForUser(
     user: InferSelectModel<typeof schema.users>,
   ): Promise<z.infer<typeof planSchema>> {
@@ -104,7 +141,11 @@ class PlanLoader {
       return this.load("PRO");
     }
 
-    return this.loadFromUrl("https://convect.xyz");
+    if (!user.planUrl) {
+      throw new Error("No plan url found for user");
+    }
+
+    return planSchema.parse(await loadFromPath(user.planUrl));
   }
 }
 
