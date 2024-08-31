@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
-import { and, count, gt, lt, sql } from "drizzle-orm";
+import { and, count, eq, gt, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   gbHoursProduct,
@@ -41,8 +41,12 @@ export const getUsage = protectedProcedure
 
     const [numProcessedTransactions, { gbHours, numInvocations }] =
       await Promise.all([
-        getProcessedTransactionCount(periodStart, periodEnd),
-        getGbHours(periodStart, periodEnd),
+        getProcessedTransactionCount(
+          ctx.session.user.id,
+          periodStart,
+          periodEnd,
+        ),
+        getGbHours(ctx.session.user.id, periodStart, periodEnd),
       ]);
 
     const user = await ctx.db.query.users.findFirst({
@@ -83,6 +87,7 @@ export const getUsage = protectedProcedure
   });
 
 async function getProcessedTransactionCount(
+  userId: string,
   periodStart: number,
   periodEnd: number,
 ) {
@@ -98,13 +103,18 @@ async function getProcessedTransactionCount(
           new Date(periodStart),
         ),
         lt(analysisSchema.processedTransactions.timestamp, new Date(periodEnd)),
+        eq(analysisSchema.processedTransactions.userId, userId),
       ),
     );
 
   return numProcessedTransactions.pop()!.count;
 }
 
-async function getGbHours(periodStart: number, periodEnd: number) {
+async function getGbHours(
+  userId: string,
+  periodStart: number,
+  periodEnd: number,
+) {
   const gbHours = await analysisDb
     .select({
       gbHour:
@@ -118,6 +128,7 @@ async function getGbHours(periodStart: number, periodEnd: number) {
       and(
         gt(analysisSchema.reportedMetrics.timestamp, new Date(periodStart)),
         lt(analysisSchema.reportedMetrics.timestamp, new Date(periodEnd)),
+        eq(analysisSchema.reportedMetrics.userId, userId),
       ),
     );
   const result = gbHours.pop()!;
