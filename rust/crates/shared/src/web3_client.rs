@@ -1,72 +1,72 @@
-use aws_sdk_s3::error::BoxError;
-use std::{env, str::FromStr};
+use std::str::FromStr;
 use web3::{
     transports::Http,
     types::{Filter, Log, TransactionId, H256},
     Web3,
 };
 
-pub trait Web3Client {
+pub trait Web3Client: Sync + Send {
+    fn chain_id(&self) -> u64;
+
     fn get_current_block_number(
         &self,
-    ) -> impl std::future::Future<Output = Result<u64, BoxError>> + Send;
+    ) -> impl std::future::Future<Output = Result<u64, errors::Web3ClientError>> + Send;
 
     fn get_logs(
         &self,
         filter: Filter,
-    ) -> impl std::future::Future<Output = Result<Vec<Log>, BoxError>> + Send;
+    ) -> impl std::future::Future<Output = Result<Vec<Log>, errors::Web3ClientError>> + Send;
 
     fn get_transaction_receipt(
         &self,
         tx_hash: String,
-    ) -> impl std::future::Future<Output = Result<Option<web3::types::TransactionReceipt>, BoxError>>
-           + Send;
+    ) -> impl std::future::Future<
+        Output = Result<Option<web3::types::TransactionReceipt>, errors::Web3ClientError>,
+    > + Send;
 
     fn get_transaction_by_hash(
         &self,
         tx_hash: String,
-    ) -> impl std::future::Future<Output = Result<Option<web3::types::Transaction>, BoxError>> + Send;
+    ) -> impl std::future::Future<
+        Output = Result<Option<web3::types::Transaction>, errors::Web3ClientError>,
+    > + Send;
 }
 
 #[derive(Clone)]
 pub struct Web3ClientImpl {
     web3: Web3<Http>,
+    chain_id: u64,
 }
 
 impl Web3ClientImpl {
-    pub fn new() -> Self {
-        let transport: Http = web3::transports::Http::new(
-            env::var("NODE_ENDPOINT")
-                .expect("NODE_ENDPOINT is undefined")
-                .as_str(),
-        )
-        .unwrap();
-        let web3: Web3<Http> = web3::Web3::new(transport);
-
-        Self { web3 }
-    }
-
-    pub fn new_from_endpoint(endpoint: String) -> Self {
+    pub fn new(chain_id: u64, endpoint: String) -> Self {
         let transport: Http = web3::transports::Http::new(endpoint.as_str()).unwrap();
         let web3: Web3<Http> = web3::Web3::new(transport);
 
-        Self { web3 }
+        Self { web3, chain_id }
     }
 }
 
 impl Web3Client for Web3ClientImpl {
-    async fn get_current_block_number(&self) -> Result<u64, BoxError> {
+    fn chain_id(&self) -> u64 {
+        self.chain_id
+    }
+
+    #[tracing::instrument(skip_all, err)]
+    async fn get_current_block_number(&self) -> Result<u64, errors::Web3ClientError> {
         Ok(self.web3.eth().block_number().await?.as_u64())
     }
 
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, BoxError> {
+    #[tracing::instrument(skip_all, err)]
+    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, errors::Web3ClientError> {
         Ok(self.web3.eth().logs(filter).await?)
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn get_transaction_receipt(
         &self,
         tx_hash: String,
-    ) -> Result<Option<web3::types::TransactionReceipt>, BoxError> {
+    ) -> Result<Option<web3::types::TransactionReceipt>, errors::Web3ClientError> {
         Ok(self
             .web3
             .eth()
@@ -74,14 +74,28 @@ impl Web3Client for Web3ClientImpl {
             .await?)
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn get_transaction_by_hash(
         &self,
         tx_hash: String,
-    ) -> Result<Option<web3::types::Transaction>, BoxError> {
+    ) -> Result<Option<web3::types::Transaction>, errors::Web3ClientError> {
         Ok(self
             .web3
             .eth()
             .transaction(TransactionId::Hash(H256::from_str(&tx_hash)?))
             .await?)
+    }
+}
+
+pub mod errors {
+    use rustc_hex::FromHexError;
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum Web3ClientError {
+        #[error("Web3 error: {0}")]
+        Web3(#[from] web3::Error),
+        #[error("From hex error: {0}")]
+        FromHex(#[from] FromHexError),
     }
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "web_user" ADD CONSTRAINT "web_user_stripe_subscription_id_unique" UNIQUE("stripe_subscription_id");

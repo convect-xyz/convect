@@ -1,0 +1,43 @@
+use std::env;
+
+use shared::types::chains::ChainConfig;
+
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub function_id: String,
+    pub manifest_bucket: String,
+    pub manifest_prefix: String,
+    pub syncer_task_definition_arn: String,
+    pub syncer_cluster: String,
+    pub syncer_subnets: Vec<String>,
+    pub version: String,
+    pub syncer_container_name: String,
+    pub deployment_id: String,
+    pub user_id: String,
+    pub chains: Vec<ChainConfig>,
+}
+
+impl Config {
+    pub fn new() -> Self {
+        Self {
+            function_id: env::var("FUNCTION_ID").expect("FUNCTION_ID not set"),
+            manifest_bucket: env::var("MANIFEST_BUCKET").expect("MANIFEST_BUCKET not set"),
+            manifest_prefix: env::var("MANIFEST_PREFIX").expect("MANIFEST_PREFIX not set"),
+            syncer_task_definition_arn: env::var("SYNCER_TASK_DEFINITION_ARN")
+                .expect("SYNCER_TASK_DEFINITION_ARN not set"),
+            syncer_cluster: env::var("SYNCER_CLUSTER").expect("SYNCER_CLUSTER not set"),
+            syncer_subnets: env::var("SYNCER_SUBNETS")
+                .expect("SYNCER_SUBNETS not set")
+                .split(",")
+                .map(|s| s.to_string())
+                .collect(),
+            version: env::var("VERSION").expect("VERSION not set"),
+            syncer_container_name: env::var("SYNCER_CONTAINER_NAME")
+                .expect("SYNCER_CONTAINER_NAME not set"),
+            deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID not set"),
+            user_id: env::var("USER_ID").expect("USER_ID not set"),
+            chains: serde_json::from_str(&env::var("CHAINS").expect("CHAINS not set"))
+                .expect("CHAINS not set"),
+        }
+    }
+}

@@ -32,6 +32,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -300,6 +301,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -321,6 +323,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -342,6 +345,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -363,6 +367,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -384,6 +389,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -405,6 +411,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -426,6 +433,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -447,6 +455,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -468,6 +477,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -489,6 +499,7 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
     }
 }
 
@@ -2407,6 +2418,8 @@ diesel::table! {
         restore_duration_ms -> Nullable<Float8>,
         #[max_length = 255]
         deployment_id -> Varchar,
+        user_id -> Varchar,
+        timestamp -> Timestamptz,
     }
 }
 

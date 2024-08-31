@@ -2,22 +2,23 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use futures::lock::Mutex;
 use lambda_extension::{service_fn, tracing, Error, LambdaEvent, NextEvent};
 use sentry::protocol::Context;
 use shared::{
+    processing,
+    redis_client::RedisClientImpl,
     reporting_sdk::{ReportingSdk, SQSReportingSdk},
-    types::processing,
 };
 use std::collections::BTreeMap;
 use std::{env, sync::Arc};
+use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
 
 mod errors;
 
 #[derive(Clone)]
 struct AppState {
-    pipeline: Arc<Mutex<processing::State>>,
+    pipeline: Arc<Mutex<processing::State<RedisClientImpl>>>,
     reporting: Arc<dyn ReportingSdk + Send + Sync>,
     config: Config,
 }
@@ -34,7 +35,7 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
 struct Config {
     deployment_id: String,
     function_id: String,
-    chain_id: String,
+    chain_id: u64,
     stripe_customer_id: String,
     user_id: String,
     transaction_queue_url: String,
@@ -67,7 +68,10 @@ fn main() -> Result<(), Error> {
     let config = Config {
         deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not defined"),
         function_id: env::var("FUNCTION_ID").expect("FUNCTION_ID is not defined"),
-        chain_id: env::var("CHAIN_ID").expect("CHAIN_ID is not defined"),
+        chain_id: env::var("CHAIN_ID")
+            .expect("CHAIN_ID is not defined")
+            .parse()
+            .unwrap(),
         stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
             .expect("STRIPE_CUSTOMER_ID is not defined"),
         user_id: env::var("USER_ID").expect("USER_ID is not defined"),
@@ -86,8 +90,9 @@ fn main() -> Result<(), Error> {
             let chain_id = config.chain_id.clone();
             let deployment_id = config.deployment_id.clone();
 
-            let state = processing::State::load(function_id, chain_id, deployment_id).await;
-            let pipeline = Arc::new(Mutex::new(state));
+            let pipeline = Arc::new(Mutex::new(
+                processing::State::load(function_id, chain_id, deployment_id).await,
+            ));
             let reporting_sdk = SQSReportingSdk::new();
             let app_state = AppState {
                 pipeline,
@@ -99,6 +104,7 @@ fn main() -> Result<(), Error> {
                 .with_max_level(tracing::Level::DEBUG)
                 .with_target(false)
                 .without_time()
+                .with_ansi(false)
                 .init();
 
             let app = Router::new()
@@ -156,7 +162,7 @@ mod results {
 
         let reporting_request = reporting_sdk::Request::Results {
             function_id: app_state.config.function_id.clone(),
-            chain_id: app_state.config.chain_id.clone(),
+            chain_id: app_state.config.chain_id.to_string(),
             stripe_customer_id: app_state.config.stripe_customer_id.clone(),
             user_id: app_state.config.user_id.clone(),
             invocation_id: payload.invocation_id.clone(),
@@ -256,13 +262,29 @@ mod results {
 }
 
 mod get_pipeline {
+    use std::collections::HashMap;
+
     use axum::extract::{Json, State};
-    use shared::types::processing;
 
     use crate::AppState;
 
-    pub async fn handler(State(app_state): State<AppState>) -> Json<processing::Inner> {
+    pub async fn handler(State(app_state): State<AppState>) -> Json<HashMap<String, String>> {
         let process_state = app_state.pipeline.lock().await;
-        return Json(process_state.inner().clone());
+
+        let mut response = HashMap::new();
+
+        response.insert("FunctionId_".to_string(), process_state.function_id());
+        response.insert("ChainId_".to_string(), process_state.chain_id().to_string());
+        response.insert("DeploymentId_".to_string(), process_state.deployment_id());
+        response.insert(
+            "ErrorLabel_".to_string(),
+            process_state.error_label().unwrap_or_default(),
+        );
+        response.insert(
+            "ErrorTx_".to_string(),
+            process_state.error_tx().unwrap_or_default(),
+        );
+
+        return Json(response);
     }
 }

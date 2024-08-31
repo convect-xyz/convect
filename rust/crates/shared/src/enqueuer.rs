@@ -1,8 +1,8 @@
 use std::env;
 
-use crate::s3::S3;
-use crate::types::syncing::State;
+use crate::syncing::State;
 use crate::types::transactions::IngestTransaction;
+use crate::{redis_client::RedisClient, s3::S3};
 use futures::Future;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -22,11 +22,11 @@ struct BatchPayload {
 }
 
 pub trait TransactionEnqueuer {
-    fn enqueue_transactions(
+    fn enqueue_transactions<R: RedisClient>(
         &self,
-        pipeline: &mut State,
+        pipeline: &mut State<R>,
         txs: &Vec<IngestTransaction>,
-    ) -> impl Future<Output = Result<(), web3::Error>>;
+    ) -> impl Future<Output = Result<(), errors::TransactionEnqueuerError>>;
 }
 
 pub struct SQSTransactionEnqueuer<T: S3> {
@@ -44,9 +44,9 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         }
     }
 
-    async fn upload_raw(
+    async fn upload_raw<R: RedisClient>(
         &self,
-        pipeline: &mut State,
+        pipeline: &mut State<R>,
         queue_url: String,
         txs: &Vec<IngestTransaction>,
     ) {
@@ -96,13 +96,16 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 Err(e) => panic!("Upload Result: {:?}", e),
             }
 
-            pipeline.increment_transaction_count(group.len());
+            pipeline
+                .increment_transaction_count(group.len())
+                .await
+                .unwrap();
         }
     }
 
-    async fn upload_batch(
+    async fn upload_batch<R: RedisClient>(
         &self,
-        pipeline: &mut State,
+        pipeline: &mut State<R>,
         queue_url: String,
         txs: &Vec<IngestTransaction>,
     ) {
@@ -167,25 +170,37 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 Err(e) => panic!("Upload Result: {:?}", e),
             }
 
-            pipeline.increment_transaction_count(batch.len());
+            pipeline
+                .increment_transaction_count(batch.len())
+                .await
+                .unwrap();
         }
     }
 }
 
 impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
-    async fn enqueue_transactions(
+    #[tracing::instrument(skip_all, err)]
+    async fn enqueue_transactions<R: RedisClient>(
         &self,
-        pipeline: &mut State,
+        state: &mut State<R>,
         txs: &Vec<IngestTransaction>,
-    ) -> Result<(), web3::Error> {
+    ) -> Result<(), errors::TransactionEnqueuerError> {
         let serialised_txs = serde_json::to_string(&txs).unwrap();
 
         if serialised_txs.len() < 1024 * 1024 * 2 {
-            return Ok(self.upload_raw(pipeline, self.queue_url.clone(), txs).await);
+            return Ok(self.upload_raw(state, self.queue_url.clone(), txs).await);
         }
 
-        return Ok(self
-            .upload_batch(pipeline, self.queue_url.clone(), txs)
-            .await);
+        return Ok(self.upload_batch(state, self.queue_url.clone(), txs).await);
+    }
+}
+
+pub mod errors {
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum TransactionEnqueuerError {
+        #[error("Failed to upload transactions: {0}")]
+        Web3ClientError(#[from] crate::web3_client::errors::Web3ClientError),
     }
 }

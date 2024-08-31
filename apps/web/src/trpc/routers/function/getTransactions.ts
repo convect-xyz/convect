@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ilike, max } from "drizzle-orm";
+import { and, desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -64,6 +64,7 @@ export const getTransactions = protectedProcedure
       projectId: fn.projectId,
       userId: ctx.session.user.id,
     });
+
     const getFilter = () => {
       let baseFilter = and(
         eq(
@@ -86,59 +87,47 @@ export const getTransactions = protectedProcedure
             analysisSchema.processedTransactions.transactionHash,
             `%${input.search}%`,
           ),
-        )!;
+        );
       }
       if (input.status) {
         baseFilter = and(
           baseFilter,
           eq(analysisSchema.processedTransactions.status, input.status),
-        )!;
+        );
       }
       return baseFilter;
     };
 
-    const maxTimestamp = max(analysisSchema.processedTransactions.timestamp).as(
-      "max_timestamp",
-    );
     const distinctTransactions = analysisDb
-      .select({
-        transactionHash: analysisSchema.processedTransactions.transactionHash,
-        maxTimestamp,
-      })
+      .selectDistinctOn(
+        [analysisSchema.processedTransactions.transactionHash],
+        {
+          id: analysisSchema.processedTransactions.id,
+          status: analysisSchema.processedTransactions.status,
+          transactionHash: analysisSchema.processedTransactions.transactionHash,
+          timestamp: analysisSchema.processedTransactions.timestamp,
+        },
+      )
       .from(analysisSchema.processedTransactions)
       .where(getFilter())
-      .groupBy(analysisSchema.processedTransactions.transactionHash)
-      .orderBy(desc(maxTimestamp))
+      .orderBy(
+        desc(analysisSchema.processedTransactions.transactionHash),
+        desc(analysisSchema.processedTransactions.timestamp),
+      )
       .limit(input.limit)
       .as("distinct_transactions");
 
     const recentTransactions = await analysisDb
       .select()
-      .from(analysisSchema.processedTransactions)
-      .innerJoin(
-        distinctTransactions,
-        and(
-          eq(
-            analysisSchema.processedTransactions.transactionHash,
-            distinctTransactions.transactionHash,
-          ),
-          eq(
-            analysisSchema.processedTransactions.timestamp,
-            distinctTransactions.maxTimestamp,
-          ),
-        ),
-      )
-      .orderBy(desc(analysisSchema.processedTransactions.timestamp))
-      .limit(input.limit);
+      .from(distinctTransactions)
+      .orderBy(desc(distinctTransactions.timestamp));
 
     return {
-      transactions: recentTransactions
-        .flatMap((v) => v.processed_transactions)
-        .map((tx) => ({
-          id: tx.id,
-          transactionHash: tx.transactionHash,
-          status: tx.status as "SUCCESS" | "FAILED",
-          timestamp: tx.timestamp.getTime(),
-        })),
+      transactions: recentTransactions.map((tx) => ({
+        id: tx.id,
+        transactionHash: tx.transactionHash,
+        status: tx.status as "SUCCESS" | "FAILED",
+        timestamp: tx.timestamp.getTime(),
+      })),
     };
   });
