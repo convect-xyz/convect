@@ -19,7 +19,7 @@ export default function InvocationDialog(
     {
       transactionHash: props.transactionHash,
       chainId: chainId ?? -1,
-      functionId: functionId ?? -1,
+      functionId: functionId,
     },
     {
       enabled: !!chainId && !!functionId,
