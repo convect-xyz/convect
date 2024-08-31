@@ -41,15 +41,15 @@ macro_rules! build_log {
         };
 
         $(
-          log.address = web3::types::H160::from_str($address).expect("Invalid address format");
+          log.address = std::str::FromStr::from_str($address).expect("Invalid address format");
         )?
         $(
           log.topics = $topics.into_iter()
-            .map(|t| web3::types::H256::from_str(&t).expect("Invalid topic format"))
+            .map(|t| std::str::FromStr::from_str(&t).expect("Invalid topic format"))
             .collect();
         )?
         $(
-          log.data = Some($data.into());
+          log.data = web3::types::Bytes($data.into());
         )?
         $(
           log.block_hash = Some(web3::types::H256::from_str($block_hash).expect("Invalid block hash format"));
@@ -58,7 +58,7 @@ macro_rules! build_log {
           log.block_number = Some(web3::types::U64::from($block_number));
         )?
         $(
-          log.transaction_hash = Some(web3::types::H256::from_str($transaction_hash).expect("Invalid transaction hash format"));
+          log.transaction_hash = Some(std::str::FromStr::from_str($transaction_hash).expect("Invalid transaction hash format"));
         )?
         $(
           log.transaction_index = Some(web3::types::U64::from($transaction_index));

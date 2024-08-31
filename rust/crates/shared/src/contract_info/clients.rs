@@ -24,6 +24,7 @@ impl EtherscanClientImpl {
 
 #[async_trait]
 impl EtherscanClient for EtherscanClientImpl {
+    #[tracing::instrument(skip_all, err)]
     async fn get_contract_creation_info(
         &self,
         contract_addresses: Vec<String>,

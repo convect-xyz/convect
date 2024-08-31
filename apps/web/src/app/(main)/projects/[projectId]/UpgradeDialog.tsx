@@ -39,11 +39,10 @@ export function UpgradeDialog() {
   }
 
   const handleClick = async () => {
-    const { url } = await getCheckoutSession({
-      newPlan: plan as any,
-    });
-
-    window.location.assign(url);
+    // const { url } = await getCheckoutSession({
+    //   newPlan: plan as any,
+    // });
+    // window.location.assign(url);
   };
 
   return (
