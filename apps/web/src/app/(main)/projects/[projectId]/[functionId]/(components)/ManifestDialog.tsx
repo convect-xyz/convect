@@ -95,7 +95,7 @@ function RenderManifest(props: { manifest: Manifest }) {
                             : "-"}
                         </div>
                       </div>
-                      <div className="mt-3 flex flex-col divide-y divide-border">
+                      <div className="mt-3 flex flex-col gap-1">
                         {txConfig.logConfigs.map((logConfig) => {
                           const getAddress = (
                             address: string | Record<string, string>,
@@ -112,19 +112,21 @@ function RenderManifest(props: { manifest: Manifest }) {
                           };
 
                           return (
-                            <div
+                            <Card
                               key={logConfig.topics.join(",")}
-                              className="py-2"
+                              className="bg-background"
                             >
-                              <div className="flex flex-col gap-1">
-                                <div className="text-sm">
-                                  event {toEventSignature(logConfig.abi)}
+                              <CardContent className="p-3">
+                                <div className="flex flex-col gap-1">
+                                  <div className="text-sm">
+                                    event {toEventSignature(logConfig.abi)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {getAddress(logConfig.address)}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {getAddress(logConfig.address)}
-                                </div>
-                              </div>
-                            </div>
+                              </CardContent>
+                            </Card>
                           );
                         })}
                       </div>
