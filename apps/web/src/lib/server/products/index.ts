@@ -142,7 +142,7 @@ class PlanLoader {
     }
 
     if (!user.planUrl) {
-      throw new Error("No plan url found for user");
+      throw new Error("No plan url found for user.");
     }
 
     return planSchema.parse(await loadFromPath(user.planUrl));
