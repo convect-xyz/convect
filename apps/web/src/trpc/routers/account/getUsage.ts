@@ -118,7 +118,7 @@ async function getGbHours(
   const gbHours = await analysisDb
     .select({
       gbHour:
-        sql<string>`SUM((billed_duration_ms / 1000.0) * (memory_size_mb / 1024.0))`.as(
+        sql<string>`SUM((billed_duration_ms / 3600000.0) * (memory_size_mb / 1024.0))`.as(
           "gbHour",
         ),
       numInvocations: count(analysisSchema.reportedMetrics.id),
