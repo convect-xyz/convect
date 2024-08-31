@@ -3,13 +3,14 @@ use resend_rs::types::{CreateEmailBaseOptions, CreateEmailResponse};
 use resend_rs::{Resend, Result};
 
 #[async_trait]
-pub trait ResendClient {
+pub trait ResendClient: Send + Sync {
     async fn send_email(
         &self,
         email: CreateEmailBaseOptions,
     ) -> Result<CreateEmailResponse, errors::ResendError>;
 }
 
+#[derive(Clone)]
 pub struct ResendClientImpl {
     client: Resend,
 }

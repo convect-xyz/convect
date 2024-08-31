@@ -31,12 +31,14 @@ mod config;
 static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
 static WEB3_CLIENTS: OnceCell<HashMap<u64, Web3ClientImpl>> = OnceCell::const_new();
 
+#[tracing::instrument(skip_all)]
 async fn get_manifest() -> &'static Manifest {
     MANIFEST
         .get_or_init(|| async { Manifest::from_env().await.unwrap() })
         .await
 }
 
+#[tracing::instrument(skip_all)]
 async fn get_web3_client(chain_id: &u64, config: &Config) -> &'static Web3ClientImpl {
     WEB3_CLIENTS
         .get_or_init(|| async {
@@ -52,30 +54,38 @@ async fn get_web3_client(chain_id: &u64, config: &Config) -> &'static Web3Client
         .unwrap()
 }
 
+fn init_sentry(config: &Config) -> sentry::ClientInitGuard {
+    sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
+      release: Some(std::borrow::Cow::Owned(config.release_name())),
+      traces_sample_rate: 0.05,
+      ..Default::default()
+    }))
+}
+
 fn configure_sentry_scope(config: &Config) {
     sentry::configure_scope(|scope| {
         scope.set_user(Some(sentry::User {
             id: Some(config.user_id.clone()),
             ..Default::default()
         }));
-        let mut deployment_map = BTreeMap::new();
-        deployment_map.insert(
-            "deployment_id".to_string(),
-            config.deployment_id.clone().into(),
+
+        scope.set_context(
+            "deployment",
+            Context::Other(BTreeMap::from_iter(vec![
+                (
+                    "deployment_id".to_string(),
+                    config.deployment_id.clone().into(),
+                ),
+                ("function_id".to_string(), config.function_id.clone().into()),
+            ])),
         );
-        deployment_map.insert("function_id".to_string(), config.function_id.clone().into());
-        scope.set_context("deployment", Context::Other(deployment_map));
     });
 }
 
 fn main() -> Result<(), Error> {
-    let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
-      release: sentry::release_name!(),
-      traces_sample_rate: 0.2,
-      ..Default::default()
-  }));
-
     let config = Config::new();
+    let _guard = init_sentry(&config);
+
     configure_sentry_scope(&config);
 
     tokio::runtime::Builder::new_multi_thread()
@@ -90,6 +100,7 @@ fn main() -> Result<(), Error> {
             tracing_subscriber::registry()
                 .with(
                     tracing_subscriber::fmt::layer()
+                        .with_ansi(false)
                         .with_target(false)
                         .without_time()
                         .with_filter(
@@ -149,7 +160,6 @@ async fn sync_chain(
     let redis_client = RedisClientImpl::new().await;
     let init_block_provider = InitBlockProviderImpl::new(
         &manifest,
-        chain_config.clone(),
         web3_client.clone(),
         EtherscanContractInfoProvider::new(
             chain_config.etherscan_api_key.clone(),

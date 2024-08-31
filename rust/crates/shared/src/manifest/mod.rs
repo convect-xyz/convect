@@ -117,7 +117,6 @@ pub mod providers {
 
     use crate::contract_info;
     use crate::manifest::Manifest;
-    use crate::types::chains::ChainConfig;
     use crate::web3_client::Web3Client;
 
     #[async_trait]
@@ -131,21 +130,14 @@ pub mod providers {
         manifest: &'a Manifest,
         web3_client: W,
         contract_info_provider: C,
-        chain_config: ChainConfig,
     }
 
     impl<'a, W: Web3Client, C: contract_info::ContractInfoProvider> InitBlockProviderImpl<'a, W, C> {
-        pub fn new(
-            manifest: &'a Manifest,
-            chain_config: ChainConfig,
-            web3_client: W,
-            contract_info_provider: C,
-        ) -> Self {
+        pub fn new(manifest: &'a Manifest, web3_client: W, contract_info_provider: C) -> Self {
             Self {
                 manifest,
                 web3_client,
                 contract_info_provider,
-                chain_config,
             }
         }
 
@@ -158,7 +150,7 @@ pub mod providers {
                     self.manifest
                         .log_configs
                         .iter()
-                        .map(|l| l.address.get_address(self.chain_config.chain_id))
+                        .map(|l| l.address.get_address(self.web3_client.chain_id()))
                         .collect(),
                 )
                 .await
@@ -205,12 +197,13 @@ pub mod providers {
     impl<W: Web3Client, C: contract_info::ContractInfoProvider> InitBlockProvider<W, C>
         for InitBlockProviderImpl<'_, W, C>
     {
+        #[tracing::instrument(skip_all, ret, err)]
         async fn get_init_block(&self) -> Result<u64, InitBlockProviderError> {
             let manifest_min_block = self
                 .manifest
                 .tx_configs
                 .iter()
-                .map(|c| c.get_start_block(self.chain_config.chain_id).unwrap_or(0))
+                .map(|c| c.get_start_block(self.web3_client.chain_id()).unwrap_or(0))
                 .min();
 
             let contract_creation_min_block = self.get_min_contract_creation_block().await.unwrap();
