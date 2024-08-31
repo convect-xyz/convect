@@ -175,10 +175,10 @@ async fn sync_chain(
     )
     .await?;
 
-    if pipeline.has_synced(incoming_block) || pipeline.is_syncing() {
+    if pipeline.has_synced(incoming_block) || pipeline.is_batch_syncing() {
         tracing::info!(
           target: "orchestrator",
-          is_syncing=pipeline.is_syncing(),
+          is_syncing=pipeline.is_batch_syncing(),
           has_synced=pipeline.has_synced(incoming_block)
         );
         return Ok(());
@@ -192,7 +192,7 @@ async fn sync_chain(
     if incoming_block - start_block > 10000 {
         pipeline
             .update()
-            .set_state(shared::syncing::SyncState::SYNCING)
+            .set_state(shared::syncing::SyncState::BatchSyncing)
             .send()
             .await
             .expect("Failed to update pipeline");
@@ -236,7 +236,7 @@ async fn sync_with_ecs<T: RedisClient>(
     if let Err(e) = client_result {
         pipeline
             .update()
-            .set_state(shared::syncing::SyncState::IDLE)
+            .set_state(shared::syncing::SyncState::Idle)
             .send()
             .await?;
 

@@ -30,13 +30,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let manifest = Manifest::from_env().await.unwrap();
     let syncer = ChainSyncer::new(manifest, enqueuer, fetcher);
 
-    syncer
+    let sync_result = syncer
         .sync(
             &mut pipeline,
             syncer_config.start_block,
             syncer_config.end_block,
         )
-        .await?;
+        .await;
+
+    match &sync_result {
+        Ok(_) => {
+            pipeline
+                .update()
+                .set_state(shared::syncing::SyncState::Idle)
+                .send()
+                .await?
+        }
+        Err(_) => {
+            pipeline
+                .update()
+                .set_state(shared::syncing::SyncState::Failed)
+                .send()
+                .await?
+        }
+    }
+
+    sync_result?;
 
     Ok(())
 }
