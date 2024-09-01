@@ -62,7 +62,6 @@ export const getUsage = protectedProcedure
     };
 
     const plan = await planLoader.loadForUser(user);
-    console.log("Plan", plan);
     return [numProcessedTransactions, gbHours, numInvocations]
       .map((usage) => {
         const product = plan.products.find((p) => p.key === usage.key)!;

@@ -15,6 +15,7 @@ use shared::manifest::providers::{InitBlockProvider, InitBlockProviderImpl};
 use shared::redis_client::RedisClientImpl;
 use shared::syncer::ChainSyncer;
 use shared::types::chains::ChainConfig;
+use shared::web3_client::Web3Client;
 use shared::{
     enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
     redis_client::RedisClient, syncing::State, web3_client::Web3ClientImpl,
@@ -146,7 +147,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 async fn sync_chain(
     config: &Config,
     chain_config: ChainConfig,
-    incoming_block: u64,
+    _incoming_block: u64,
 ) -> Result<(), errors::OrchestratorError> {
     let sdk_config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
@@ -166,6 +167,7 @@ async fn sync_chain(
             chain_config.etherscan_like.clone(),
         ),
     );
+    let incoming_block = web3_client.get_current_block_number().await?;
 
     let mut pipeline = State::load(
         config.function_id.clone(),
