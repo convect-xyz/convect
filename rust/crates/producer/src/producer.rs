@@ -62,8 +62,7 @@ impl ProducerModule for ProducerModuleImpl {
                     return Err::<(), errors::ProducerError>(errors::ProducerError::EmptyBlock);
                 }
 
-                let mut interval: time::Interval = time::interval(time::Duration::from_secs(2));
-                interval.tick().await;
+                time::interval(time::Duration::from_secs(2)).tick().await;
 
                 *current.lock().await = block_number;
                 *last_updated_at.lock().await = Some(Utc::now());
