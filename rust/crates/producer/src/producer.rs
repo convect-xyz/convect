@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use shared::networks::SupportedNetwork;
 use tokio::sync::Mutex;
+use tokio::time;
 use tokio_retry::strategy::jitter;
 use tokio_retry::Retry;
 
@@ -60,6 +61,9 @@ impl ProducerModule for ProducerModuleImpl {
                     tracing::error!("[{:?}] Block number is none", network.name);
                     return Err::<(), errors::ProducerError>(errors::ProducerError::EmptyBlock);
                 }
+
+                let mut interval: time::Interval = time::interval(time::Duration::from_secs(2));
+                interval.tick().await;
 
                 *current.lock().await = block_number;
                 *last_updated_at.lock().await = Some(Utc::now());
