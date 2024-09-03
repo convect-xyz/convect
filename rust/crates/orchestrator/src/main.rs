@@ -7,7 +7,6 @@ use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
 use config::Config;
-use futures::future::join_all;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use shared::contract_info::EtherscanContractInfoProvider;
@@ -90,6 +89,7 @@ fn main() -> Result<(), Error> {
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
+        .worker_threads(10)
         .build()
         .unwrap()
         .block_on(async {
@@ -122,21 +122,17 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     tracing::info!("Incoming blocks: {incoming_blocks:?}");
 
     let config = Config::new();
-    let futures = config.chains.iter().map(|chain_config| {
+    let handles = config.chains.iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-        let config = &config;
-        async move { sync_chain(config, chain_config.clone(), block_for_chain).await }
+        let config = config.clone();
+        let chain_config = chain_config.clone();
+        tokio::spawn(async move { sync_chain(&config, chain_config, block_for_chain).await })
     });
 
-    let errors: Vec<_> = join_all(futures)
-        .await
-        .into_iter()
-        .filter(|res| res.is_err())
-        .map(Result::unwrap_err)
-        .collect();
-
-    if !errors.is_empty() {
-        tracing::error!("Failed to sync with errors: {:?}", errors);
+    for handle in handles {
+        if let Err(e) = handle.await {
+            tracing::error!("Failed to sync with error: {:?}", e);
+        }
     }
 
     Ok(())
