@@ -124,16 +124,10 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     let config = Config::new();
 
-    let current_span = tracing::Span::current();
-
     let futures = config.chains.iter().map(|chain_config| {
         let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
         let config = &config;
-        let sync_span =
-            span!(parent: &current_span, Level::INFO, "chain", chain_id = chain_config.chain_id);
-
-        async move { sync_chain(config, chain_config.clone(), block_for_chain).await }
-            .instrument(sync_span)
+        sync_chain(config, chain_config.clone(), block_for_chain)
     });
 
     let errors: Vec<_> = join_all(futures)
@@ -150,6 +144,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     Ok(())
 }
 
+#[tracing::instrument(skip_all, err)]
 async fn sync_chain(
     config: &Config,
     chain_config: ChainConfig,
