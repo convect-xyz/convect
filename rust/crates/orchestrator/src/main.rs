@@ -124,33 +124,28 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
     let config = Config::new();
 
-    let all_chains_span = span!(Level::TRACE, "all_chains");
+    let current_span = tracing::Span::current();
 
-    async move {
-        let futures = config.chains.iter().map(|chain_config| {
-            let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-            let config = &config;
-            let sync_span = span!(Level::TRACE, "chain", chain_id = chain_config.chain_id);
+    let futures = config.chains.iter().map(|chain_config| {
+        let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
+        let config = &config;
+        let sync_span =
+            span!(parent: &current_span, Level::INFO, "chain", chain_id = chain_config.chain_id);
 
-            async move { sync_chain(config, chain_config.clone(), block_for_chain).await }
-                .instrument(sync_span)
-        });
+        async move { sync_chain(config, chain_config.clone(), block_for_chain).await }
+            .instrument(sync_span)
+    });
 
-        let errors: Vec<_> = join_all(futures)
-            .await
-            .into_iter()
-            .filter(|res| res.is_err())
-            .map(Result::unwrap_err)
-            .collect();
+    let errors: Vec<_> = join_all(futures)
+        .await
+        .into_iter()
+        .filter(|res| res.is_err())
+        .map(Result::unwrap_err)
+        .collect();
 
-        if !errors.is_empty() {
-            tracing::error!("Failed to sync with errors: {:?}", errors);
-        }
-
-        Ok::<(), Error>(())
+    if !errors.is_empty() {
+        tracing::error!("Failed to sync with errors: {:?}", errors);
     }
-    .instrument(all_chains_span)
-    .await?;
 
     Ok(())
 }
