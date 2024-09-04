@@ -155,7 +155,6 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     Ok(())
 }
 
-#[tracing::instrument(skip_all, err)]
 async fn sync_chain(
     config: &Config,
     chain_config: ChainConfig,
