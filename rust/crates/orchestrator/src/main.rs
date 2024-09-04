@@ -8,6 +8,7 @@ use aws_sdk_ecs::types::{
 };
 use config::Config;
 use futures::future::join_all;
+use lambda_http::tracing::Instrument;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use shared::contract_info::EtherscanContractInfoProvider;
@@ -21,7 +22,7 @@ use shared::{
 };
 use std::collections::BTreeMap;
 use tokio::sync::OnceCell;
-use tracing::Level;
+use tracing::{span, Level};
 use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
@@ -122,22 +123,34 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     tracing::info!("Incoming blocks: {incoming_blocks:?}");
 
     let config = Config::new();
-    let futures = config.chains.iter().map(|chain_config| {
-        let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-        let config = &config;
-        async move { sync_chain(config, chain_config.clone(), block_for_chain).await }
-    });
 
-    let errors: Vec<_> = join_all(futures)
-        .await
-        .into_iter()
-        .filter(|res| res.is_err())
-        .map(Result::unwrap_err)
-        .collect();
+    let all_chains_span = span!(Level::TRACE, "all_chains");
 
-    if !errors.is_empty() {
-        tracing::error!("Failed to sync with errors: {:?}", errors);
+    async move {
+        let futures = config.chains.iter().map(|chain_config| {
+            let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
+            let config = &config;
+            let sync_span = span!(Level::TRACE, "chain", chain_id = chain_config.chain_id);
+
+            async move { sync_chain(config, chain_config.clone(), block_for_chain).await }
+                .instrument(sync_span)
+        });
+
+        let errors: Vec<_> = join_all(futures)
+            .await
+            .into_iter()
+            .filter(|res| res.is_err())
+            .map(Result::unwrap_err)
+            .collect();
+
+        if !errors.is_empty() {
+            tracing::error!("Failed to sync with errors: {:?}", errors);
+        }
+
+        Ok::<(), Error>(())
     }
+    .instrument(all_chains_span)
+    .await?;
 
     Ok(())
 }
