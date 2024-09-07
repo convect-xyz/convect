@@ -35,7 +35,7 @@ pub enum Request {
         function_id: String,
         chain_id: String,
         stripe_customer_id: String,
-        user_id: String,
+        project_id: i32,
         invocation_id: String,
         results: Vec<TransactionResult>,
         deployment_id: String,
@@ -43,7 +43,7 @@ pub enum Request {
     Metrics {
         function_id: String,
         chain_id: String,
-        user_id: String,
+        project_id: i32,
         metrics: Vec<Metric>,
         deployment_id: String,
     },

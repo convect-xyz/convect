@@ -67,7 +67,7 @@ init({
   // Set initial scope
   initialScope: (scope) => {
     scope.setUser({
-      id: process.env.USER_ID,
+      id: process.env.PROJECT_ID,
     });
 
     scope.setContext("infra", {

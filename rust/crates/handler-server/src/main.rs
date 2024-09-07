@@ -37,14 +37,14 @@ struct Config {
     function_id: String,
     chain_id: u64,
     stripe_customer_id: String,
-    user_id: String,
+    project_id: i32,
     transaction_queue_url: String,
 }
 
 fn configure_sentry_scope(config: &Config) {
     sentry::configure_scope(|scope| {
         scope.set_user(Some(sentry::User {
-            id: Some(config.user_id.clone()),
+            id: Some(config.project_id.to_string()),
             ..Default::default()
         }));
 
@@ -74,7 +74,10 @@ fn main() -> Result<(), Error> {
             .unwrap(),
         stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
             .expect("STRIPE_CUSTOMER_ID is not defined"),
-        user_id: env::var("USER_ID").expect("USER_ID is not defined"),
+        project_id: env::var("PROJECT_ID")
+            .expect("PROJECT_ID is not defined")
+            .parse()
+            .unwrap(),
         transaction_queue_url: env::var("TRANSACTION_QUEUE_URL")
             .expect("TRANSACTION_QUEUE_URL is not defined"),
     };
@@ -164,7 +167,7 @@ mod results {
             function_id: app_state.config.function_id.clone(),
             chain_id: app_state.config.chain_id.to_string(),
             stripe_customer_id: app_state.config.stripe_customer_id.clone(),
-            user_id: app_state.config.user_id.clone(),
+            project_id: app_state.config.project_id.clone(),
             invocation_id: payload.invocation_id.clone(),
             results: payload.results.clone(),
             deployment_id: app_state.config.deployment_id.clone(),

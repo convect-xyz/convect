@@ -5,20 +5,24 @@ import { protectedProcedure } from "~/trpc/trpc";
 import { getStripeCustomerId } from "../billing/switchPlan";
 
 export const getStripeSetupIntent = protectedProcedure
-  .input(z.object({}))
+  .input(
+    z.object({
+      projectId: z.number(),
+    }),
+  )
   .output(
     z.object({
       clientSecret: z.string(),
     }),
   )
   .query(async ({ ctx, input }) => {
-    const user = await ctx.db.query.users.findFirst({
+    const project = await ctx.db.query.projects.findFirst({
       where(fields, { eq }) {
-        return eq(fields.id, ctx.session.user.id);
+        return eq(fields.id, input.projectId);
       },
     });
 
-    const stripeCustomerId = await getStripeCustomerId(user!);
+    const stripeCustomerId = await getStripeCustomerId(project!);
     const existingPaymentMethods = await stripe.paymentMethods.list({
       customer: stripeCustomerId,
     });

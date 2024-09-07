@@ -10,7 +10,7 @@ type TriggerBuildOptions = {
   version: string;
   deploymentId: string;
   stripeCustomerId: string;
-  userId: string;
+  projectId: number;
   functionId: number;
   functionGlobalId: string;
   manifestBucket: string;
@@ -97,8 +97,8 @@ export async function createDeployment(options: TriggerBuildOptions) {
               value: options.stripeCustomerId,
             },
             {
-              name: "USER_ID",
-              value: options.userId,
+              name: "PROJECT_ID",
+              value: options.projectId.toString(),
             },
           ],
         },

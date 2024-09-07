@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog";
 import { env } from "~/env";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import { useParams } from "../../hooks/useParams";
 
 const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -59,7 +60,10 @@ function AddPaymentMethodDialog(props: DialogProps) {
 }
 
 function Content(props: DialogProps) {
-  const { data: setupIntent } = api.accounts.getStripeSetupIntent.useQuery({});
+  const { projectId } = useParams();
+  const { data: setupIntent } = api.project.getStripeSetupIntent.useQuery({
+    projectId,
+  });
 
   return (
     <Elements
@@ -90,9 +94,12 @@ function AddPaymentMethod(props: DialogProps) {
   const stripe = useStripe();
   const elements = useElements();
   const utils = api.useUtils();
-  const { data: setupIntent } = api.accounts.getStripeSetupIntent.useQuery({});
+  const { projectId } = useParams();
+  const { data: setupIntent } = api.project.getStripeSetupIntent.useQuery({
+    projectId,
+  });
   const { mutateAsync: setDefaultPaymentMethod } =
-    api.accounts.setDefaultPaymentMethod.useMutation();
+    api.project.setDefaultPaymentMethod.useMutation();
 
   const {
     mutateAsync: createPaymentMethod,
@@ -123,8 +130,11 @@ function AddPaymentMethod(props: DialogProps) {
         throw new Error("No payment method ID");
       }
 
-      await setDefaultPaymentMethod({ paymentMethodId: paymentMethodId });
-      await utils.accounts.getPaymentMethods.refetch();
+      await setDefaultPaymentMethod({
+        paymentMethodId: paymentMethodId,
+        projectId,
+      });
+      await utils.project.getPaymentMethods.refetch();
     },
     onSuccess: () => {
       toast.success("Payment method added successfully");
@@ -208,7 +218,10 @@ function InputWrapper({
 }
 
 function ListPaymentMethods() {
-  const { data: paymentMethods } = api.accounts.getPaymentMethods.useQuery({});
+  const { projectId } = useParams();
+  const { data: paymentMethods } = api.project.getPaymentMethods.useQuery({
+    projectId,
+  });
 
   return (
     <div className="flex flex-col divide-y">

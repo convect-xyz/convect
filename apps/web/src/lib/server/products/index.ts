@@ -130,22 +130,22 @@ class PlanLoader {
     throw new Error("Invalid plan: " + plan);
   }
 
-  async loadForUser(
-    user: InferSelectModel<typeof schema.users>,
+  async loadForProject(
+    project: InferSelectModel<typeof schema.projects>,
   ): Promise<z.infer<typeof planSchema>> {
-    if (user.planType === "HOBBY") {
+    if (project.planType === "HOBBY") {
       return this.load("HOBBY");
     }
 
-    if (user.planType === "PRO") {
+    if (project.planType === "PRO") {
       return this.load("PRO");
     }
 
-    if (!user.planUrl) {
+    if (!project.planUrl) {
       throw new Error("No plan url found for user.");
     }
 
-    return planSchema.parse(await loadFromPath(user.planUrl));
+    return planSchema.parse(await loadFromPath(project.planUrl));
   }
 }
 

@@ -5,11 +5,14 @@ import { Card, CardContent } from "~/components/ui/card";
 import { formatCurrency } from "~/lib/shared/utils/formatting";
 import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
+import { useParams } from "../../hooks/useParams";
 
-type UsageMetric = RouterOutputs["accounts"]["getUsage"][number];
+type UsageMetric = RouterOutputs["project"]["getUsage"][number];
 
 export default function Overview() {
-  const { data: usage } = api.accounts.getUsage.useQuery({
+  const { projectId } = useParams();
+  const { data: usage } = api.project.getUsage.useQuery({
+    projectId,
     periodStart: startOfMonth(new Date()).getTime(),
     periodEnd: endOfMonth(new Date()).getTime(),
   });

@@ -53,7 +53,7 @@ export const env = createEnv({
       .string()
       .optional()
       .refine(modeRequired(["init", "update"])),
-    USER_ID: z
+    PROJECT_ID: z
       .string()
       .optional()
       .refine(modeRequired(["init", "update"])),

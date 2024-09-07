@@ -56,6 +56,9 @@ function Main(props: PropsWithChildren) {
           >
             Collaborators
           </Link>
+          <Link {...getLinkProps(`/projects/${projectId}/settings/billing`)}>
+            Billing
+          </Link>
         </nav>
         <div className="grid gap-6">{props.children}</div>
       </div>

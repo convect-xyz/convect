@@ -14,63 +14,64 @@ export const switchPlan = protectedProcedure
   .input(
     z.object({
       newPlan: z.enum(schema.planEnum.enumValues),
+      projectId: z.number(),
     }),
   )
   .output(z.object({}))
   .mutation(async ({ ctx, input }) => {
-    const user = await ctx.db.query.users.findFirst({
+    const project = await ctx.db.query.projects.findFirst({
       where(fields, { eq }) {
-        return eq(fields.id, ctx.session.user.id);
+        return eq(fields.id, input.projectId);
       },
     });
-    if (!user) {
+    if (!project) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
 
-    const activeSubscription = user.stripeSubscriptionId
-      ? await stripe.subscriptions.retrieve(user.stripeSubscriptionId)
+    const activeSubscription = project.stripeSubscriptionId
+      ? await stripe.subscriptions.retrieve(project.stripeSubscriptionId)
       : null;
 
-    const stripeCustomerId = await getStripeCustomerId(user!);
+    const stripeCustomerId = await getStripeCustomerId(project);
     await (activeSubscription
-      ? updateSubscription(user, activeSubscription)
-      : createSubscription(user, stripeCustomerId));
+      ? updateSubscription(project, activeSubscription)
+      : createSubscription(project, stripeCustomerId));
 
     await db
-      .update(schema.users)
+      .update(schema.projects)
       .set({
         planType: input.newPlan,
       })
-      .where(eq(schema.users.stripeCustomerId, stripeCustomerId))
-      .returning({ stripeSubscriptionId: schema.users.stripeSubscriptionId })
+      .where(eq(schema.projects.stripeCustomerId, stripeCustomerId))
+      .returning({ stripeSubscriptionId: schema.projects.stripeSubscriptionId })
       .then((c) => c.at(0)!.stripeSubscriptionId!);
 
     return {};
   });
 
 async function createSubscription(
-  user: InferSelectModel<typeof schema.users>,
+  project: InferSelectModel<typeof schema.projects>,
   stripeCustomerId: string,
 ) {
   const subscription = await stripe.subscriptions.create({
     customer: stripeCustomerId,
-    items: await getSubscriptionItemsForPlan(user),
+    items: await getSubscriptionItemsForPlan(project),
   });
 
   await db
-    .update(schema.users)
+    .update(schema.projects)
     .set({
       stripeSubscriptionId: subscription.id,
     })
-    .where(eq(schema.users.stripeCustomerId, stripeCustomerId))
-    .returning({ stripeSubscriptionId: schema.users.stripeSubscriptionId })
+    .where(eq(schema.projects.stripeCustomerId, stripeCustomerId))
+    .returning({ stripeSubscriptionId: schema.projects.stripeSubscriptionId })
     .then((c) => c.at(0)!.stripeSubscriptionId!);
 
   return subscription;
 }
 
 async function updateSubscription(
-  user: InferSelectModel<typeof schema.users>,
+  project: InferSelectModel<typeof schema.projects>,
   activeSubscription: Stripe.Subscription,
 ) {
   const previousSubscriptionItems = () => {
@@ -85,15 +86,15 @@ async function updateSubscription(
   return stripe.subscriptions.update(activeSubscription.id, {
     items: [
       ...previousSubscriptionItems(),
-      ...(await getSubscriptionItemsForPlan(user)),
+      ...(await getSubscriptionItemsForPlan(project)),
     ],
   });
 }
 
 const getSubscriptionItemsForPlan = async (
-  user: InferSelectModel<typeof schema.users>,
+  project: InferSelectModel<typeof schema.projects>,
 ) => {
-  const plan = await planLoader.loadForUser(user);
+  const plan = await planLoader.loadForProject(project);
 
   return plan.products.map((product) => {
     return {
@@ -103,34 +104,34 @@ const getSubscriptionItemsForPlan = async (
 };
 
 export const getStripeCustomerId = async (
-  user: InferSelectModel<typeof schema.users>,
+  projects: InferSelectModel<typeof schema.projects>,
 ) => {
-  if (user.stripeCustomerId) {
-    return user.stripeCustomerId;
+  if (projects.stripeCustomerId) {
+    return projects.stripeCustomerId;
   }
 
   const createdCustomerId = await stripe.customers.create().then((c) => c.id);
 
-  return await db.transaction(async (tx) => {
-    const existingUser = await tx.query.users
+  return db.transaction(async (tx) => {
+    const existingProject = await tx.query.projects
       .findFirst({
         where(fields, { eq }) {
-          return eq(fields.id, user.id);
+          return eq(fields.id, projects.id);
         },
       })
       .then((u) => u!);
 
-    if (existingUser.stripeCustomerId) {
-      return existingUser.stripeCustomerId;
+    if (existingProject.stripeCustomerId) {
+      return existingProject.stripeCustomerId;
     }
 
     return await tx
-      .update(schema.users)
+      .update(schema.projects)
       .set({
         stripeCustomerId: createdCustomerId,
       })
-      .where(eq(schema.users.id, existingUser.id))
-      .returning({ stripeCustomerId: schema.users.stripeCustomerId })
+      .where(eq(schema.projects.id, existingProject.id))
+      .returning({ stripeCustomerId: schema.projects.stripeCustomerId })
       .then((c) => c.at(0)!.stripeCustomerId!);
   });
 };

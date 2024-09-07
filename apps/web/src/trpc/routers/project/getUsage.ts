@@ -9,6 +9,7 @@ import { protectedProcedure } from "~/trpc/trpc";
 export const getUsage = protectedProcedure
   .input(
     z.object({
+      projectId: z.number(),
       periodStart: z.number(),
       periodEnd: z.number(),
     }),
@@ -29,24 +30,20 @@ export const getUsage = protectedProcedure
   .query(async ({ ctx, input }) => {
     const { periodStart, periodEnd } = input;
 
-    const [numProcessedTransactions, { gbHours, numInvocations }] =
-      await Promise.all([
-        getProcessedTransactionCount(
-          ctx.session.user.id,
-          periodStart,
-          periodEnd,
-        ),
-        getGbHours(ctx.session.user.id, periodStart, periodEnd),
-      ]);
-
-    const user = await ctx.db.query.users.findFirst({
+    const project = await ctx.db.query.projects.findFirst({
       where(fields, { eq }) {
-        return eq(fields.id, ctx.session.user.id);
+        return eq(fields.id, input.projectId);
       },
     });
-    if (!user) {
+    if (!project) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
+
+    const [numProcessedTransactions, { gbHours, numInvocations }] =
+      await Promise.all([
+        getProcessedTransactionCount(project.id, periodStart, periodEnd),
+        getGbHours(project.id, periodStart, periodEnd),
+      ]);
 
     const getResponseForProduct = (product: Product, totalUsage: number) => {
       return {
@@ -61,7 +58,7 @@ export const getUsage = protectedProcedure
       };
     };
 
-    const plan = await planLoader.loadForUser(user);
+    const plan = await planLoader.loadForProject(project);
     return [numProcessedTransactions, gbHours, numInvocations]
       .map((usage) => {
         const product = plan.products.find((p) => p.key === usage.key)!;
@@ -71,7 +68,7 @@ export const getUsage = protectedProcedure
   });
 
 async function getProcessedTransactionCount(
-  userId: string,
+  projectId: number,
   periodStart: number,
   periodEnd: number,
 ) {
@@ -87,7 +84,7 @@ async function getProcessedTransactionCount(
           new Date(periodStart),
         ),
         lt(analysisSchema.processedTransactions.timestamp, new Date(periodEnd)),
-        eq(analysisSchema.processedTransactions.userId, userId),
+        eq(analysisSchema.processedTransactions.projectId, projectId),
       ),
     );
 
@@ -98,7 +95,7 @@ async function getProcessedTransactionCount(
 }
 
 async function getGbHours(
-  userId: string,
+  projectId: number,
   periodStart: number,
   periodEnd: number,
 ) {
@@ -115,7 +112,7 @@ async function getGbHours(
       and(
         gt(analysisSchema.reportedMetrics.timestamp, new Date(periodStart)),
         lt(analysisSchema.reportedMetrics.timestamp, new Date(periodEnd)),
-        eq(analysisSchema.reportedMetrics.userId, userId),
+        eq(analysisSchema.reportedMetrics.projectId, projectId),
       ),
     );
   const result = gbHours.pop()!;
