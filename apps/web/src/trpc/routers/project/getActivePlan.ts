@@ -4,23 +4,27 @@ import { z } from "zod";
 import { protectedProcedure } from "~/trpc/trpc";
 
 export const getActivePlan = protectedProcedure
-  .input(z.object({}))
+  .input(
+    z.object({
+      projectId: z.number(),
+    }),
+  )
   .output(
     z.object({
       name: z.enum(schema.planEnum.enumValues),
     }),
   )
-  .query(async ({ ctx }) => {
-    const user = await ctx.db.query.users.findFirst({
+  .query(async ({ input, ctx }) => {
+    const project = await ctx.db.query.projects.findFirst({
       where(fields, { eq }) {
-        return eq(fields.id, ctx.session.user.id);
+        return eq(fields.id, input.projectId);
       },
     });
-    if (!user) {
+    if (!project) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
 
     return {
-      name: user.planType,
+      name: project.planType,
     };
   });

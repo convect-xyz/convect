@@ -13,7 +13,7 @@ pub struct Config {
     pub version: String,
     pub syncer_container_name: String,
     pub deployment_id: String,
-    pub user_id: String,
+    pub project_id: String,
     pub github_sha: String,
     pub chains: Vec<ChainConfig>,
 }
@@ -37,7 +37,7 @@ impl Config {
             syncer_container_name: env::var("SYNCER_CONTAINER_NAME")
                 .expect("SYNCER_CONTAINER_NAME not set"),
             deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID not set"),
-            user_id: env::var("USER_ID").expect("USER_ID not set"),
+            project_id: env::var("PROJECT_ID").expect("PROJECT_ID not set"),
             chains: serde_json::from_str(&env::var("CHAINS").expect("CHAINS not set"))
                 .expect("CHAINS not set"),
         }

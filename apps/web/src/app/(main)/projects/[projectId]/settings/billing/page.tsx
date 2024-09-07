@@ -4,11 +4,15 @@ import ActivePlan from "./ActivePlan";
 import Overview from "./Overview";
 import PaymentMethods from "./PaymentMethods";
 
-export default async function Page() {
+export default async function Page(props: { params: { projectId: string } }) {
   const helper = await getReactQueryHelper();
   await Promise.all([
-    helper.accounts.getStripeSetupIntent.prefetch({}),
-    helper.accounts.getActivePlan.prefetch({}),
+    helper.project.getStripeSetupIntent.prefetch({
+      projectId: Number(props.params.projectId),
+    }),
+    helper.project.getActivePlan.prefetch({
+      projectId: Number(props.params.projectId),
+    }),
   ]);
 
   return (

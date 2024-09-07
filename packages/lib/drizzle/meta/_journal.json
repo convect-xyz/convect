@@ -253,6 +253,20 @@
       "when": 1725140205917,
       "tag": "0035_puzzling_secret_warriors",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1725696899866,
+      "tag": "0036_thankful_jigsaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1725697116670,
+      "tag": "0037_cloudy_the_enforcers",
+      "breakpoints": true
     }
   ]
 }

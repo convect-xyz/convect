@@ -5,7 +5,7 @@ use diesel::prelude::*;
 #[diesel(table_name = crate::schema::processed_transactions)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct ProcessedTransaction {
-    pub user_id: String,
+    pub project_id: i32,
     pub transaction_hash: String,
     pub label: String,
     pub status: String,
@@ -20,7 +20,7 @@ pub struct ProcessedTransaction {
 #[diesel(table_name = crate::schema::invocation)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Invocation {
-    pub user_id: String,
+    pub project_id: i32,
     pub invocation_id: String,
     pub timestamp: DateTime<Utc>,
     pub num_processed: i32,
@@ -31,7 +31,7 @@ pub struct Invocation {
 #[diesel(table_name = crate::schema::reported_metrics)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Metric {
-    pub user_id: String,
+    pub project_id: i32,
     pub handler_id: String,
     pub handler_version: String,
     pub duration_ms: f64,

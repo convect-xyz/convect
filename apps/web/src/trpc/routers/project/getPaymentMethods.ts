@@ -1,10 +1,15 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { stripe } from "~/lib/server/stripe";
 import { protectedProcedure } from "~/trpc/trpc";
 import { getStripeCustomerId } from "../billing/switchPlan";
 
 export const getPaymentMethods = protectedProcedure
-  .input(z.object({}))
+  .input(
+    z.object({
+      projectId: z.number(),
+    }),
+  )
   .output(
     z.array(
       z.object({
@@ -18,14 +23,17 @@ export const getPaymentMethods = protectedProcedure
       }),
     ),
   )
-  .query(async ({ ctx }) => {
-    const user = await ctx.db.query.users.findFirst({
+  .query(async ({ ctx, input }) => {
+    const project = await ctx.db.query.projects.findFirst({
       where(fields, { eq }) {
-        return eq(fields.id, ctx.session.user.id);
+        return eq(fields.id, input.projectId);
       },
     });
+    if (!project) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
 
-    const stripeCustomerId = await getStripeCustomerId(user!);
+    const stripeCustomerId = await getStripeCustomerId(project!);
 
     const [customer, paymentMethods] = await Promise.all([
       stripe.customers.retrieve(stripeCustomerId),

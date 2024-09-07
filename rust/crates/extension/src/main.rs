@@ -94,7 +94,10 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
         upload_metrics(reporting_sdk::Request::Metrics {
             function_id: function_id.clone(),
             chain_id: chain_id.clone(),
-            user_id: env::var("USER_ID").expect("USER_ID is not defined"),
+            project_id: env::var("PROJECT_ID")
+                .expect("PROJECT_DIR is not defined")
+                .parse()
+                .unwrap(),
             metrics: all_metrics,
             deployment_id: deployment_id.clone(),
         })

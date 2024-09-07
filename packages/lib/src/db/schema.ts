@@ -28,12 +28,6 @@ export const users = createTable("user", {
     mode: "date",
   }).default(sql`CURRENT_TIMESTAMP`),
   image: varchar("image", { length: 255 }),
-  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }).unique(),
-  stripeSubscriptionId: varchar("stripe_subscription_id", {
-    length: 255,
-  }).unique(),
-  planType: planEnum("plan_type").default("HOBBY").notNull(),
-  planUrl: varchar("plan_url", { length: 255 }),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -134,6 +128,12 @@ export const projects = createTable(
     userId: varchar("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    stripeCustomerId: varchar("stripe_customer_id", { length: 255 }).unique(),
+    stripeSubscriptionId: varchar("stripe_subscription_id", {
+      length: 255,
+    }).unique(),
+    planType: planEnum("plan_type").default("HOBBY").notNull(),
+    planUrl: varchar("plan_url", { length: 255 }),
   },
   (projects) => ({
     userIdIdx: index("project_userId_idx").on(projects.userId),

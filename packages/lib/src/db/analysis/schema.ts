@@ -8,7 +8,7 @@ import {
 
 export const processedTransactions = pgTable("processed_transactions", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull(),
+  projectId: integer("project_id"),
   handlerId: varchar("handler_id").notNull(),
   handlerVersion: varchar("handler_version").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
@@ -19,7 +19,7 @@ export const processedTransactions = pgTable("processed_transactions", {
 
 export const invocation = pgTable("invocation", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull(),
+  projectId: integer("project_id"),
   invocationId: varchar("invocation_id").notNull(),
   timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
   numProcessed: integer("num_processed").notNull(),
@@ -28,7 +28,7 @@ export const invocation = pgTable("invocation", {
 
 export const reportedMetrics = pgTable("reported_metrics", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull(),
+  projectId: integer("project_id"),
   handlerId: varchar("handler_id").notNull(),
   handlerVersion: varchar("handler_version").notNull(),
   durationMs: integer("duration_ms").notNull(),

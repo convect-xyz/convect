@@ -114,13 +114,13 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
             results,
             function_id,
             chain_id,
-            user_id,
+            project_id,
             invocation_id,
             deployment_id,
             ..
         } => {
             rows.push(ExtractedRequest::Invocation(Invocation {
-                user_id: user_id.clone(),
+                project_id,
                 invocation_id: invocation_id.clone(),
                 timestamp: Utc::now(),
                 num_processed: results.len().try_into().unwrap(),
@@ -138,7 +138,7 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
                         handler_version: chain_id.clone(),
                         batch_id: result.batch_id.clone(),
                         deployment_id: deployment_id.clone(),
-                        user_id: user_id.clone(),
+                        project_id,
                     }))
                 }
 
@@ -152,7 +152,7 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
                         handler_version: chain_id.clone(),
                         batch_id: result.batch_id.clone(),
                         deployment_id: deployment_id.clone(),
-                        user_id: user_id.clone(),
+                        project_id,
                     }))
                 }
             }
@@ -162,7 +162,7 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
             chain_id,
             metrics,
             deployment_id,
-            user_id,
+            project_id,
             ..
         } => {
             for metric in metrics.into_iter() {
@@ -176,7 +176,7 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
                     handler_id: function_id.clone(),
                     handler_version: chain_id.clone(),
                     deployment_id: deployment_id.clone(),
-                    user_id: user_id.clone(),
+                    project_id,
                 }))
             }
         }

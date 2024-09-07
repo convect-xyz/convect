@@ -38,7 +38,7 @@ export default async () => {
           USER_ENVS: env.FUNCTION_ENVS,
           TRANSACTION_QUEUE_URL: queue.url,
           STRIPE_CUSTOMER_ID: env.STRIPE_CUSTOMER_ID,
-          USER_ID: env.USER_ID,
+          PROJECT_ID: env.PROJECT_ID,
           REPORTING_QUEUE_URL: stackRef.getOutput("reportingQueueUrl"),
           DEPLOYMENT_ID: env.DEPLOYMENT_ID,
           FUNCTION_ID: env.FUNCTION_ID,
@@ -82,7 +82,7 @@ export default async () => {
         GITHUB_SHA: githubSha,
         FUNCTION_ID: env.FUNCTION_ID,
         DEPLOYMENT_ID: env.DEPLOYMENT_ID,
-        USER_ID: env.USER_ID,
+        PROJECT_ID: env.PROJECT_ID,
         CHAINS: txQueueUrlOutputs.apply((output) =>
           JSON.stringify(
             output.map((url, idx) => ({ ...env.CHAINS[idx], txQueueUrl: url }))

@@ -7,17 +7,18 @@ export const setDefaultPaymentMethod = protectedProcedure
   .input(
     z.object({
       paymentMethodId: z.string(),
+      projectId: z.number(),
     }),
   )
   .output(z.object({}))
   .mutation(async ({ ctx, input }) => {
-    const user = await ctx.db.query.users.findFirst({
+    const project = await ctx.db.query.projects.findFirst({
       where(fields, { eq }) {
-        return eq(fields.id, ctx.session.user.id);
+        return eq(fields.id, input.projectId);
       },
     });
 
-    const stripeCustomerId = await getStripeCustomerId(user!);
+    const stripeCustomerId = await getStripeCustomerId(project!);
 
     const setupIntent = await stripe.customers.update(stripeCustomerId, {
       invoice_settings: {

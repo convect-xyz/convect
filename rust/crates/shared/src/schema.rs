@@ -11,6 +11,7 @@ diesel::table! {
         num_processed -> Int4,
         #[max_length = 255]
         deployment_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -33,6 +34,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -302,6 +304,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -324,6 +327,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -346,6 +350,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -368,6 +373,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -390,6 +396,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -412,6 +419,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -434,6 +442,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -456,6 +465,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -478,6 +488,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -500,6 +511,7 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         user_id -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -2420,6 +2432,7 @@ diesel::table! {
         deployment_id -> Varchar,
         user_id -> Varchar,
         timestamp -> Timestamptz,
+        project_id -> Nullable<Int4>,
     }
 }
 

@@ -7,10 +7,14 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog";
 import { api } from "~/trpc/react";
+import { useParams } from "../../hooks/useParams";
 
 export default function ActivePlan() {
   const [open, setOpen] = useState(false);
-  const { data: activePlan } = api.accounts.getActivePlan.useQuery({});
+  const { projectId } = useParams();
+  const { data: activePlan } = api.project.getActivePlan.useQuery({
+    projectId,
+  });
   return (
     <>
       <div className="flex flex-col gap-4">
@@ -64,12 +68,13 @@ function ChangePlanDialog(props: DialogProps) {
 }
 
 function ChangePlanButton(props: { plan: schema.PlanType }) {
+  const { projectId } = useParams();
   const { mutateAsync: switchPlan } = api.billing.switchPlan.useMutation();
 
   return (
     <Button
       variant="outline"
-      onClick={() => switchPlan({ newPlan: props.plan })}
+      onClick={() => switchPlan({ newPlan: props.plan, projectId })}
     >
       Upgrade
     </Button>

@@ -66,7 +66,7 @@ fn init_sentry(config: &Config) -> sentry::ClientInitGuard {
 fn configure_sentry_scope(config: &Config) {
     sentry::configure_scope(|scope| {
         scope.set_user(Some(sentry::User {
-            id: Some(config.user_id.clone()),
+            id: Some(config.project_id.clone()),
             ..Default::default()
         }));
 
