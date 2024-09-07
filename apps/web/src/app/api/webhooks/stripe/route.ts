@@ -66,12 +66,12 @@ async function handleCheckoutSessionComplete(
   const planType = data.metadata!["plan"]! as any;
 
   await db
-    .update(schema.users)
+    .update(schema.projects)
     .set({
       stripeCustomerId: customerId,
       planType,
     })
-    .where(eq(schema.users.id, client_reference_id!));
+    .where(eq(schema.projects.id, Number(client_reference_id)));
 }
 
 async function setDefaultPaymentMethod(
