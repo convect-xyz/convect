@@ -29,7 +29,7 @@ type TriggerBuildOptions = {
 
 export async function createDeployment(options: TriggerBuildOptions) {
   const outputs = await getStackOutputs();
-
+  console.log(outputs);
   const hasPendingOrRunning = await db.transaction(async (tx) => {
     const hasPendingOrRunning = await tx.query.deployment.findFirst({
       where(fields, { eq, and, or }) {

@@ -28,6 +28,8 @@ async function main() {
     }
     await deploymentTask.next();
   } while (deploymentTask.currentDeployment);
+
+  process.exit(0);
 }
 
 async function deploy() {
