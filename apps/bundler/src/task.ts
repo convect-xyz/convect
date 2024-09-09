@@ -1,4 +1,4 @@
-import { eq, InferSelectModel } from "drizzle-orm";
+import { and, eq, InferSelectModel, lte, or } from "drizzle-orm";
 import path from "path";
 import { db } from "./db";
 import schema from "./db/schema";
@@ -23,7 +23,21 @@ class DeploymentTask {
         .set({
           status: "SUCCESS",
         })
-        .where(eq(schema.deployment.id, this.currentDeployment!.id))
+        .where(
+          or(
+            eq(schema.deployment.id, this.currentDeployment!.id),
+            and(
+              eq(
+                schema.deployment.functionId,
+                this.currentDeployment!.functionId
+              ),
+              lte(
+                schema.deployment.createdAt,
+                this.currentDeployment!.createdAt
+              )
+            )
+          )
+        )
         .returning()
         .then((r) => r[0]);
 
@@ -53,7 +67,18 @@ class DeploymentTask {
       .set({
         status: "FAILED",
       })
-      .where(eq(schema.deployment.id, this.currentDeployment!.id));
+      .where(
+        or(
+          eq(schema.deployment.id, this.currentDeployment!.id),
+          and(
+            eq(
+              schema.deployment.functionId,
+              this.currentDeployment!.functionId
+            ),
+            lte(schema.deployment.createdAt, this.currentDeployment!.createdAt)
+          )
+        )
+      );
   }
 
   async getDirInfo() {

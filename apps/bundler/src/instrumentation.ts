@@ -1,43 +1,12 @@
-import { getDb, schema } from "@convect-xyz/lib";
 import { init } from "@sentry/node";
-import { and, eq, inArray, lt, or } from "drizzle-orm";
-import { getCurrentDeployment } from "./task";
+import { getDeploymentTask } from "./task";
 
 process.on("uncaughtException", handleFailure);
 process.on("unhandledRejection", handleFailure);
 
 async function handleFailure() {
-  const deployment = await getCurrentDeployment();
-  if (!deployment) {
-    console.error("Deployment not found");
-    throw new Error("Deployment not found");
-  }
-
-  const db = getDbInstance();
-  await db
-    .update(schema.deployment)
-    .set({ status: "FAILED" })
-    .where(
-      or(
-        eq(schema.deployment.id, deployment.id),
-        // All previous deployments for the same handler that are pending
-        and(
-          eq(schema.deployment.functionId, deployment.functionId),
-          lt(schema.deployment.createdAt, deployment.createdAt),
-          inArray(schema.deployment.status, ["PENDING"])
-        )
-      )
-    )
-    .catch(() => {});
-}
-
-function getDbInstance() {
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) {
-    console.error("DATABASE_URL is not set");
-    throw new Error("DATABASE_URL is not set");
-  }
-  return getDb({ dbUrl });
+  const deploymentTask = await getDeploymentTask();
+  await deploymentTask.fail();
 }
 
 init({
