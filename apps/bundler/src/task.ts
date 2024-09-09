@@ -42,7 +42,7 @@ class DeploymentTask {
         .returning()
         .then((r) => r[0]);
 
-      return tx.query.deployment.findFirst({
+      const nextDeployment = await tx.query.deployment.findFirst({
         where(fields, { eq, and }) {
           return and(
             eq(fields.functionId, currentDeployment.functionId),
@@ -58,6 +58,20 @@ class DeploymentTask {
         },
         orderBy: desc(schema.deployment.createdAt),
       });
+
+      if (!nextDeployment) {
+        return;
+      }
+
+      await tx
+        .update(schema.deployment)
+        .set({
+          status: "RUNNING",
+        })
+        .where(eq(schema.deployment.id, nextDeployment.id));
+
+      nextDeployment.status = "RUNNING";
+      return nextDeployment;
     });
 
     return this.currentDeployment;
@@ -111,6 +125,10 @@ export async function getDeploymentTask() {
     const deploymentId = env.INITIAL_DEPLOYMENT_ID;
 
     const deployment = await getPendingDeployment(deploymentId);
+    await db
+      .update(schema.deployment)
+      .set({ status: "RUNNING" })
+      .where(eq(schema.deployment.id, deployment.id));
     deploymentTask = new DeploymentTask(deployment);
   }
 
