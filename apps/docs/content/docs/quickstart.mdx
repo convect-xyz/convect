@@ -3,9 +3,9 @@ title: Quickstart
 description: Quickstart
 ---
 
-import { Step, Steps } from "fumadocs-ui/components/steps";
-import { Callout } from "fumadocs-ui/components/callout";
 import Link from "fumadocs-core/link";
+import { Callout } from "fumadocs-ui/components/callout";
+import { Step, Steps } from "fumadocs-ui/components/steps";
 import { env } from "../../app/env.mjs";
 
 <Steps>
@@ -55,7 +55,6 @@ import { env } from "../../app/env.mjs";
     import { convect } from "convect-xyz";
 
     export default convect({
-      id: "<id you copied in step 1>",
       handlers: [transfer]
     });
     ```
@@ -64,12 +63,16 @@ import { env } from "../../app/env.mjs";
 
   </Step>
   <Step>
-    ### Upload a new deployment
+    ### Authenticate & Upload a new deployment
 
-    <Link href={`${env.NEXT_PUBLIC_APP_URL}/account/api-keys`}>Obtain an API Key</Link> from the Convect App and run the following command from your project root directory. The Convect CLI will look for all files in subdirectories ending with a `.convect.ts` extension. Select the file you just created.
+    Authenticate with the command below.
     ```bash title="terminal"
-    export CONVECT_API_KEY="<Your API Key>"
-    npx convect-xyz init
+    npx convect-xyz auth
+    ```
+
+    Create a new deployment with the command below.
+    ```bash title="terminal"
+    npx convect-xyz deploy -s <project name>/<function name>
     ```
 
   </Step>

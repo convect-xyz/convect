@@ -3,7 +3,7 @@
     "id": 1,
     "name": "Ethereum Mainnet",
     "polling_url": "https://eth-mainnet.g.alchemy.com/v2/REDACTED",
-    "ws_url": "wss://lb.drpc.org/ogws?network=ethereum&dkey=REDACTED",
+    "ws_url": "wss://eth-mainnet.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-mainnet",
     "etherscan_like": "https://api.etherscan.io",
     "etherscan_api_key": "REDACTED"
@@ -12,7 +12,7 @@
     "id": 11155111,
     "name": "Ethereum Sepolia",
     "polling_url": "https://sepolia-archival.rpc.grove.city/v1/c4109dfa",
-    "ws_url": "wss://lb.drpc.org/ogws?network=sepolia&dkey=REDACTED",
+    "ws_url": "wss://eth-sepolia.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia",
     "etherscan_like": "https://api-sepolia.etherscan.io",
     "etherscan_api_key": "REDACTED"
@@ -21,7 +21,7 @@
     "id": 137,
     "name": "Polygon Mainnet",
     "polling_url": "https://polygon-mainnet.g.alchemy.com/v2/REDACTED",
-    "ws_url": "wss://lb.drpc.org/ogws?network=polygon&dkey=REDACTED",
+    "ws_url": "wss://polygon-mainnet.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-mainnet",
     "etherscan_like": "https://api.polygonscan.com",
     "etherscan_api_key": "REDACTED"
@@ -30,7 +30,7 @@
     "id": 80002,
     "name": "Polygon Amoy",
     "polling_url": "https://polygon-amoy.g.alchemy.com/v2/REDACTED",
-    "ws_url": "wss://lb.drpc.org/ogws?network=polygon-amoy&dkey=REDACTED",
+    "ws_url": "wss://polygon-amoy.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-amoy",
     "etherscan_like": "https://api-amoy.polygonscan.com",
     "etherscan_api_key": "REDACTED"
@@ -48,7 +48,7 @@
     "id": 8453,
     "name": "Base Mainnet",
     "polling_url": "https://base-mainnet.g.alchemy.com/v2/REDACTED",
-    "ws_url": "wss://lb.drpc.org/ogws?network=base&dkey=REDACTED",
+    "ws_url": "wss://base-mainnet.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-mainnet",
     "etherscan_like": "https://api.basescan.org",
     "etherscan_api_key": "REDACTED"
@@ -57,7 +57,7 @@
     "id": 84532,
     "name": "Base Sepolia",
     "polling_url": "https://base-sepolia.g.alchemy.com/v2/REDACTED",
-    "ws_url": "wss://lb.drpc.org/ogws?network=base-sepolia&dkey=REDACTED",
+    "ws_url": "wss://base-sepolia.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
     "etherscan_like": "https://api-sepolia.basescan.org",
     "etherscan_api_key": "REDACTED"

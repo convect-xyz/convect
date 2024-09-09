@@ -9,7 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { getStructuredManifest, Manifest } from "~/lib/shared/manifest";
+// TODO: Add server only to lib
+import { getStructuredManifest, Manifest } from "@convect-xyz/lib";
 import { cn } from "~/lib/utils";
 
 export default function ManifestDialog(

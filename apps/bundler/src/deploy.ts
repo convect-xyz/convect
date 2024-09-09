@@ -7,32 +7,37 @@ import JSZip from "jszip";
 import path from "path";
 import { db } from "./db";
 import schema from "./db/schema";
-import { env } from "./env";
 import infraFactory from "./infra";
+import { getCurrentDeployment, getDeploymentTask } from "./task";
 
 const s3 = new S3({ region: "eu-west-1" });
 
-const HANDLER_SRC_FILE = path.join(env.CURR_DIR, env.SOURCE_PREFIX + ".js");
-const BUNDLE_SRC_DIR = path.join(env.CURR_DIR, "bundle_src");
-const BUNDLE_OUT_DIR = path.join(env.CURR_DIR, "bundle_out");
-const RUNTIME_SRC_FILE = "/scripts/runtime.js";
-const BUNDLE_OUT_FILE = path.join(BUNDLE_OUT_DIR, "index.js");
-
-main().then(async () => {
-  if (env.MODE !== "destroy") {
-    await succeedDeployment();
-  }
-  process.exit(0);
-});
+main();
 
 async function main() {
-  if (env.MODE !== "destroy") {
-    db.update(schema.deployment)
-      .set({
-        status: "RUNNING",
-      })
-      .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
-  }
+  const deploymentTask = await getDeploymentTask();
+
+  do {
+    const mode = deploymentTask.currentDeployment!.mode;
+    if (mode === "destroy") {
+      await destroy();
+    } else if (mode === "init") {
+      await deploy();
+    } else if (mode === "update") {
+      await deploy();
+    }
+    await deploymentTask.next();
+  } while (deploymentTask.currentDeployment);
+}
+
+async function deploy() {
+  const deploymentTask = await getDeploymentTask();
+
+  db.update(schema.deployment)
+    .set({
+      status: "RUNNING",
+    })
+    .where(eq(schema.deployment.id, deploymentTask.currentDeployment!.id));
 
   console.info("initialising/getting stack...");
   const stack = await getStack();
@@ -42,50 +47,49 @@ async function main() {
   await stack.setConfig("aws:region", { value: "eu-west-1" });
   console.info("aws config set.");
 
-  if (env.MODE === "destroy") {
-    console.info("destroying stack...");
-    await stack.destroy({ onOutput: console.info });
-    console.info("stack destroyed");
-
-    console.info("removing stack...");
-    await stack.workspace.removeStack(stack.name);
-    console.info("removed stack...");
-    return;
-  }
-
   await downloadFile();
   await prepareBundle();
   await zipLambda();
 
-  if (env.MODE === "init") {
-    console.info("stack up...");
-    await stack.up({ onOutput: console.info });
-    console.info("stack upped.");
-  }
+  console.info("stack up...");
+  await stack.up({ onOutput: console.info });
+  console.info("stack upped.");
+}
 
-  if (env.MODE === "update") {
-    console.info("stack up...");
-    await stack.up({ onOutput: console.info });
-    console.info("stack upped.");
-  }
+async function destroy() {
+  console.info("initialising/getting stack...");
+  const stack = await getStack();
+  console.info("succesfully intialised stack.");
+
+  console.info("destroying stack...");
+  await stack.destroy({ onOutput: console.info });
+  console.info("stack destroyed");
+
+  console.info("removing stack...");
+  await stack.workspace.removeStack(stack.name);
+  console.info("removed stack...");
+  return;
 }
 
 async function getStack() {
+  const currentDeployment = await getCurrentDeployment();
+  const mode = currentDeployment.mode;
+
   const args: InlineProgramArgs = {
-    stackName: env.FUNCTION_GLOBAL_ID,
+    stackName: currentDeployment.function.globalId,
     projectName: "convect-v1",
     program: infraFactory,
   };
 
-  if (env.MODE === "init") {
+  if (mode === "init") {
     return LocalWorkspace.createOrSelectStack(args);
   }
 
-  if (env.MODE === "update") {
+  if (mode === "update") {
     return LocalWorkspace.selectStack(args);
   }
 
-  if (env.MODE === "destroy") {
+  if (mode === "destroy") {
     return LocalWorkspace.selectStack(args);
   }
 
@@ -93,38 +97,57 @@ async function getStack() {
 }
 
 async function downloadFile() {
+  const currentDeployment = await getCurrentDeployment();
+  const task = await getDeploymentTask();
+  const dirInfo = await task.getDirInfo();
+
   const object = await s3.getObject({
-    Bucket: env.SOURCE_BUCKET,
-    Key: env.SOURCE_PREFIX,
+    Bucket: currentDeployment.sourceBucket,
+    Key: currentDeployment.sourceKey,
   });
 
-  fs.mkdirSync(HANDLER_SRC_FILE.split("/").slice(0, -1).join("/"), {
+  fs.mkdirSync(dirInfo.handlerSrcFile.split("/").slice(0, -1).join("/"), {
     recursive: true,
   });
-  fs.writeFileSync(HANDLER_SRC_FILE, await object.Body?.transformToString()!);
+  fs.writeFileSync(
+    dirInfo.handlerSrcFile,
+    await object.Body?.transformToString()!
+  );
 }
 
 async function prepareBundle() {
-  fs.mkdirSync(BUNDLE_OUT_DIR, { recursive: true });
-  fs.mkdirSync(BUNDLE_SRC_DIR, { recursive: true });
+  const task = await getDeploymentTask();
+  const dirInfo = await task.getDirInfo();
+  fs.mkdirSync(dirInfo.bundleOutDir, { recursive: true });
+  fs.mkdirSync(dirInfo.bundleSrcDir, { recursive: true });
 
-  fs.copyFileSync(HANDLER_SRC_FILE, path.join(BUNDLE_SRC_DIR, "pipeline.js"));
+  fs.copyFileSync(
+    dirInfo.handlerSrcFile,
+    path.join(dirInfo.bundleSrcDir, "pipeline.js")
+  );
 }
 
 async function zipLambda() {
-  fs.copyFileSync(RUNTIME_SRC_FILE, path.join(BUNDLE_SRC_DIR, "index.js"));
+  const currentDeployment = await getCurrentDeployment();
+  const deploymentTask = await getDeploymentTask();
+  const dirInfo = await deploymentTask.getDirInfo();
+
+  fs.copyFileSync(
+    dirInfo.runtimeSrcFile,
+    path.join(dirInfo.bundleSrcDir, "index.js")
+  );
 
   await esbuild.build({
-    entryPoints: [path.join(BUNDLE_SRC_DIR, "index.js")],
+    entryPoints: [path.join(dirInfo.bundleSrcDir, "index.js")],
     bundle: true,
     minify: false,
-    outfile: BUNDLE_OUT_FILE,
+    outfile: dirInfo.bundleOutFile,
     nodePaths: [process.env.NODE_PATH!],
     target: "node10.4",
     platform: "node",
   });
 
-  const content = fs.readFileSync(BUNDLE_OUT_FILE);
+  const content = fs.readFileSync(dirInfo.bundleOutFile);
 
   const zip = new JSZip();
   zip.file("index.js", content.toString());
@@ -132,7 +155,11 @@ async function zipLambda() {
   const zipData = await zip.generateAsync({ type: "uint8array" });
 
   const bucket = "ingest-build-outputs";
-  const key = path.join("outputs", env.FUNCTION_ID, env.DEPLOYMENT_ID + ".zip");
+  const key = path.join(
+    "outputs",
+    currentDeployment.functionId.toString(),
+    deploymentTask.currentDeployment!.id + ".zip"
+  );
 
   await s3.putObject({
     Bucket: bucket,
@@ -140,16 +167,3 @@ async function zipLambda() {
     Body: zipData,
   });
 }
-
-async function succeedDeployment() {
-  await db
-    .update(schema.deployment)
-    .set({
-      status: "SUCCESS",
-    })
-    .where(eq(schema.deployment.id, env.DEPLOYMENT_ID));
-
-  await triggerNextDeployment();
-}
-
-async function triggerNextDeployment() {}
