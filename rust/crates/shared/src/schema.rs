@@ -4,8 +4,6 @@ diesel::table! {
     invocation (id) {
         id -> Int4,
         #[max_length = 255]
-        user_id -> Nullable<Varchar>,
-        #[max_length = 255]
         invocation_id -> Varchar,
         timestamp -> Timestamptz,
         num_processed -> Int4,
@@ -33,7 +31,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -303,7 +300,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -326,7 +322,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -349,7 +344,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -372,7 +366,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -395,7 +388,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -418,7 +410,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -441,7 +432,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -464,7 +454,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -487,7 +476,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -510,7 +498,6 @@ diesel::table! {
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         project_id -> Nullable<Int4>,
     }
 }
@@ -2430,7 +2417,6 @@ diesel::table! {
         restore_duration_ms -> Nullable<Float8>,
         #[max_length = 255]
         deployment_id -> Varchar,
-        user_id -> Nullable<Varchar>,
         timestamp -> Timestamptz,
         project_id -> Nullable<Int4>,
     }

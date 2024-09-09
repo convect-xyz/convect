@@ -1,28 +1,13 @@
 import { getDb, schema } from "@convect-xyz/lib";
 import { init } from "@sentry/node";
 import { and, eq, inArray, lt, or } from "drizzle-orm";
-import { env } from "./env";
+import { getCurrentDeployment } from "./task";
 
 process.on("uncaughtException", handleFailure);
 process.on("unhandledRejection", handleFailure);
 
-const deploymentPromise = getDeployment();
-
-async function getDeployment() {
-  if (env.MODE === "destroy") return;
-
-  const db = getDbInstance();
-  return db.query.deployment.findFirst({
-    where(fields, operators) {
-      return operators.eq(fields.id, process.env.DEPLOYMENT_ID!);
-    },
-  });
-}
-
 async function handleFailure() {
-  if (env.MODE === "destroy") return;
-
-  const deployment = await deploymentPromise;
+  const deployment = await getCurrentDeployment();
   if (!deployment) {
     console.error("Deployment not found");
     throw new Error("Deployment not found");
@@ -66,25 +51,8 @@ init({
 
   // Set initial scope
   initialScope: (scope) => {
-    scope.setUser({
-      id: process.env.PROJECT_ID,
-    });
-
-    scope.setContext("infra", {
-      version: process.env.VERSION,
-    });
-
     scope.setContext("deployment", {
-      id: process.env.DEPLOYMENT_ID,
-    });
-
-    scope.setContext("function", {
-      id: process.env.FUNCTION_ID,
-      manifestBucket: process.env.MANIFEST_BUCKET,
-      manifestKey: process.env.MANIFEST_PREFIX,
-      sourceBucket: process.env.SOURCE_BUCKET,
-      sourceKey: process.env.SOURCE_PREFIX,
-      mode: process.env.MODE,
+      initialDeploymentId: process.env.INITIAL_DEPLOYMENT_ID,
     });
 
     return scope;

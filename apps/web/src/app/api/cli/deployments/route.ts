@@ -1,10 +1,10 @@
+import { parseManifest } from "@convect-xyz/lib";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { v4 } from "uuid";
 import { z } from "zod";
 import { s3 } from "~/lib/server/aws";
 import { decryptEnvValue } from "~/lib/server/security";
-import { parseManifest } from "~/lib/shared/manifest";
 import { monikerRegex } from "~/lib/shared/validation";
 import { createDeployment } from "~/server/actions/builds";
 import { db } from "~/server/db";

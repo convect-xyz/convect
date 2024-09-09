@@ -30,13 +30,36 @@ type TriggerBuildOptions = {
 export async function createDeployment(options: TriggerBuildOptions) {
   const outputs = await getStackOutputs();
 
-  await db.insert(schema.deployment).values({
-    id: options.deploymentId,
-    functionId: options.functionId,
-    ecsTaskId: "",
-    status: "PENDING",
-    manifest: options.rawManifest,
+  const hasPendingOrRunning = await db.transaction(async (tx) => {
+    const hasPendingOrRunning = await tx.query.deployment.findFirst({
+      where(fields, { eq, and, or }) {
+        return and(
+          eq(fields.functionId, options.functionId),
+          or(eq(fields.status, "PENDING"), eq(fields.status, "RUNNING")),
+        );
+      },
+    });
+
+    await db.insert(schema.deployment).values({
+      id: options.deploymentId,
+      functionId: options.functionId,
+      ecsTaskId: "",
+      status: "PENDING",
+      manifest: options.rawManifest,
+      manifestBucket: options.manifestBucket,
+      manifestKey: options.manifestPrefix,
+      mode: options.mode,
+      sourceKey: options.sourcePrefix,
+      sourceBucket: "ingest-build-outputs",
+      version: options.version,
+    });
+
+    return !!hasPendingOrRunning;
   });
+
+  if (hasPendingOrRunning) {
+    return;
+  }
 
   const command = new RunTaskCommand({
     cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
@@ -53,52 +76,14 @@ export async function createDeployment(options: TriggerBuildOptions) {
         {
           name: "builder",
           environment: [
-            { name: "VERSION", value: options.version },
-            { name: "MODE", value: options.mode },
-            {
-              name: "FUNCTION_ID",
-              value: options.functionId.toString(),
-            },
-            { name: "FUNCTION_GLOBAL_ID", value: options.functionGlobalId },
-            {
-              name: "FUNCTION_ENVS",
-              value: JSON.stringify(options.envs),
-            },
-            {
-              name: "SOURCE_BUCKET",
-              value: "ingest-build-outputs",
-            },
-            {
-              name: "SOURCE_PREFIX",
-              value: options.sourcePrefix,
-            },
-            {
-              name: "MANIFEST_BUCKET",
-              value: options.manifestBucket,
-            },
-            {
-              name: "MANIFEST_PREFIX",
-              value: options.manifestPrefix,
-            },
-            {
-              name: "CHAINS",
-              value: JSON.stringify(options.chainConfigs),
-            },
+            { name: "ENV_DECRYPTION_KEY", value: env.ENCRYPTION_KEY },
             {
               name: "DATABASE_URL",
               value: env.DATABASE_URL,
             },
             {
-              name: "DEPLOYMENT_ID",
+              name: "INITIAL_DEPLOYMENT_ID",
               value: options.deploymentId,
-            },
-            {
-              name: "STRIPE_CUSTOMER_ID",
-              value: options.stripeCustomerId,
-            },
-            {
-              name: "PROJECT_ID",
-              value: options.projectId.toString(),
             },
           ],
         },

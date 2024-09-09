@@ -282,6 +282,12 @@ export const deploymentStatus = pgEnum("deployment_status", [
   "FAILED",
 ]);
 
+export const deploymentMode = pgEnum("deployment_mode", [
+  "init",
+  "update",
+  "destroy",
+]);
+
 export const deployment = createTable(
   "deployment",
   {
@@ -292,7 +298,13 @@ export const deployment = createTable(
     status: deploymentStatus("status").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     ecsTaskId: varchar("ecsTaskId", { length: 255 }).notNull(),
-    manifest: json("manifest").notNull().default({}),
+    manifest: json("manifest").notNull(),
+    manifestBucket: varchar("manifestBucket", { length: 255 }).notNull(),
+    manifestKey: varchar("manifestKey", { length: 255 }).notNull(),
+    sourceBucket: varchar("sourceBucket", { length: 255 }).notNull(),
+    sourceKey: varchar("sourceKey", { length: 255 }).notNull(),
+    version: varchar("version", { length: 255 }).notNull(),
+    mode: deploymentMode("mode").notNull(),
   },
   (deployment) => ({
     functionIdIdx: index("deployment_functionId_idx").on(deployment.functionId),
