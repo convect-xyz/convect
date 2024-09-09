@@ -34,7 +34,8 @@ class DeploymentTask {
               lte(
                 schema.deployment.createdAt,
                 this.currentDeployment!.createdAt
-              )
+              ),
+              eq(schema.deployment.status, "PENDING")
             )
           )
         )
@@ -75,7 +76,8 @@ class DeploymentTask {
               schema.deployment.functionId,
               this.currentDeployment!.functionId
             ),
-            lte(schema.deployment.createdAt, this.currentDeployment!.createdAt)
+            lte(schema.deployment.createdAt, this.currentDeployment!.createdAt),
+            eq(schema.deployment.status, "PENDING")
           )
         )
       );
