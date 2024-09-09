@@ -1,4 +1,4 @@
-import { and, eq, InferSelectModel, lte, or } from "drizzle-orm";
+import { and, desc, eq, InferSelectModel, lte, or } from "drizzle-orm";
 import path from "path";
 import { db } from "./db";
 import schema from "./db/schema";
@@ -18,7 +18,7 @@ class DeploymentTask {
 
   async next() {
     this.currentDeployment = await db.transaction(async (tx) => {
-      const currentDeployment = await db
+      const currentDeployment = await tx
         .update(schema.deployment)
         .set({
           status: "SUCCESS",
@@ -56,6 +56,7 @@ class DeploymentTask {
             },
           },
         },
+        orderBy: desc(schema.deployment.createdAt),
       });
     });
 
@@ -106,15 +107,14 @@ class DeploymentTask {
 var deploymentTask: DeploymentTask;
 
 export async function getDeploymentTask() {
-  if (deploymentTask) {
-    return deploymentTask;
+  if (!deploymentTask) {
+    const deploymentId = env.INITIAL_DEPLOYMENT_ID;
+
+    const deployment = await getPendingDeployment(deploymentId);
+    deploymentTask = new DeploymentTask(deployment);
   }
 
-  const deploymentId = env.INITIAL_DEPLOYMENT_ID;
-
-  const deployment = await getPendingDeployment(deploymentId);
-
-  return new DeploymentTask(deployment);
+  return deploymentTask;
 }
 
 export async function getCurrentDeployment() {
