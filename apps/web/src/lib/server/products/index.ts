@@ -1,6 +1,6 @@
 import "server-only";
 
-import { schema } from "@convect-xyz/lib";
+import { schema } from "@convect-xyz/server";
 import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";

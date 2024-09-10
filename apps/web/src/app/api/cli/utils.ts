@@ -1,4 +1,4 @@
-import { schema } from "@convect-xyz/lib";
+import { schema } from "@convect-xyz/server";
 import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";

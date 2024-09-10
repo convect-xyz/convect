@@ -1,3 +1,3 @@
-import { schema } from "@convect-xyz/lib";
+import { schema } from "@convect-xyz/server";
 
 export default schema;
