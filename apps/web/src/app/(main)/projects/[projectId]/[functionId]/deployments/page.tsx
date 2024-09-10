@@ -1,5 +1,6 @@
 "use client";
 
+import { Manifest } from "@convect-xyz/lib";
 import { DialogProps } from "@radix-ui/react-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
@@ -10,7 +11,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/sheet";
-import { Manifest } from "~/lib/shared/manifest";
 import { RouterOutputs } from "~/trpc/shared";
 import ManifestDialog from "../(components)/ManifestDialog";
 import { useDeployments } from "./hooks/useDeployments";
