@@ -1,5 +1,3 @@
-import "server-only";
-
 type GetHandlerArnOptions = {
   handlerId: string;
   region: "eu-west-1";
