@@ -1,7 +1,9 @@
-import { decryptEnvValue, parseManifest } from "@convect-xyz/lib";
+import { parseManifest } from "@convect-xyz/lib";
+import { decryptEnvValue } from "@convect-xyz/server";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import path from "path";
+import { db } from "./db";
 import { env } from "./env";
 import { getCurrentDeployment } from "./task";
 
@@ -22,6 +24,14 @@ export default async () => {
 
   const txQueueUrls: Array<pulumi.Output<string>> = [];
   const manifest = parseManifest(currentDeployment.manifest);
+  const producers = await db.query.producers.findMany({
+    where(fields, { inArray }) {
+      return inArray(
+        fields.chainId,
+        manifest.chains.map((chain) => chain.chainId)
+      );
+    },
+  });
 
   for (const chain of manifest.chains) {
     const queue = new aws.sqs.Queue(
@@ -37,6 +47,7 @@ export default async () => {
     const chainConfig = manifest.chains.find(
       (c) => c.chainId === chain.chainId
     )!;
+
     const handler = new aws.lambda.Function(`handler-${chain.chainId}`, {
       role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
       s3Bucket: "ingest-build-outputs",
@@ -108,10 +119,20 @@ export default async () => {
         PROJECT_ID: currentDeployment.function.projectId.toString(),
         CHAINS: txQueueUrlOutputs.apply((output) =>
           JSON.stringify(
-            output.map((url, idx) => ({
-              ...manifest.chains[idx],
-              txQueueUrl: url,
-            }))
+            output.map((url, idx) => {
+              const manifestChain = manifest.chains[idx];
+              const producer = producers.find(
+                (p) => p.chainId === manifestChain.chainId
+              )!;
+
+              return {
+                chainId: manifestChain.chainId,
+                pollingUrl: producer.pollingUrl,
+                etherscanApiKey: producer.etherscanApiKey,
+                etherscanLike: producer.etherscanLike,
+                txQueueUrl: url,
+              };
+            })
           )
         ),
       },

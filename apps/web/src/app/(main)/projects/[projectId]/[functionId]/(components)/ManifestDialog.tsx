@@ -1,3 +1,4 @@
+import { getStructuredManifest, Manifest } from "@convect-xyz/lib";
 import { DialogProps } from "@radix-ui/react-dialog";
 import { useState } from "react";
 import { toEventSignature } from "viem";
@@ -9,8 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-// TODO: Add server only to lib
-import { getStructuredManifest, Manifest } from "@convect-xyz/lib";
 import { cn } from "~/lib/utils";
 
 export default function ManifestDialog(

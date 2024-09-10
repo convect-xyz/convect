@@ -1,4 +1,4 @@
-import { analysisSchema } from "@convect-xyz/lib";
+import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import { and, count, eq, gt, lt, sql } from "drizzle-orm";
 import { z } from "zod";
