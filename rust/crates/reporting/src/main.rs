@@ -1,7 +1,7 @@
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use futures::try_join;
+use futures::{join, try_join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
@@ -84,7 +84,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .await?
         .transaction::<_, Error, _>(|conn| {
             async move {
-                try_join!(
+                join!(
                     diesel::insert_into(invocation::table)
                         .values(invocations)
                         .execute(conn),

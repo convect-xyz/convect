@@ -36,7 +36,6 @@ struct Config {
     deployment_id: String,
     function_id: String,
     chain_id: u64,
-    stripe_customer_id: String,
     project_id: i32,
     transaction_queue_url: String,
 }
@@ -72,8 +71,6 @@ fn main() -> Result<(), Error> {
             .expect("CHAIN_ID is not defined")
             .parse()
             .unwrap(),
-        stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
-            .expect("STRIPE_CUSTOMER_ID is not defined"),
         project_id: env::var("PROJECT_ID")
             .expect("PROJECT_ID is not defined")
             .parse()
@@ -166,7 +163,6 @@ mod results {
         let reporting_request = reporting_sdk::Request::Results {
             function_id: app_state.config.function_id.clone(),
             chain_id: app_state.config.chain_id.to_string(),
-            stripe_customer_id: app_state.config.stripe_customer_id.clone(),
             project_id: app_state.config.project_id.clone(),
             invocation_id: payload.invocation_id.clone(),
             results: payload.results.clone(),
