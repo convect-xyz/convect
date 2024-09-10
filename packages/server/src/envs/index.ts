@@ -1,5 +1,4 @@
 import crypto, { randomBytes } from "crypto";
-import "server-only";
 
 export const encryptEnvValue = (encryptionKey: string, value: string) => {
   const iv = randomBytes(16);

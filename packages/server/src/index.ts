@@ -1,5 +1,3 @@
-import "server-only";
-
 export * from "./aws/index";
 export { getAnalysisDb } from "./db/analysis/db";
 export * as analysisSchema from "./db/analysis/schema";
