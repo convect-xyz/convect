@@ -84,7 +84,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .await?
         .transaction::<_, Error, _>(|conn| {
             async move {
-                let (invocations, transactions, metrics) = try_join!(
+                let (invocations, transactions, metrics) = join!(
                     diesel::insert_into(invocation::table)
                         .values(invocations)
                         .execute(conn),
