@@ -2,8 +2,8 @@
   {
     "id": 1,
     "name": "Ethereum Mainnet",
-    "polling_url": "https://eth-mainnet.g.alchemy.com/v2/xlCz0CxtG7gSJxrjG-YMvjQVfUfRQhKI",
-    "ws_url": "wss://eth-mainnet.g.alchemy.com/v2/xlCz0CxtG7gSJxrjG-YMvjQVfUfRQhKI",
+    "polling_url": "http://eth-mainnet.rpc.convect.xyz",
+    "ws_url": "wss://lb.drpc.org/ogws?network=ethereum&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-mainnet",
     "etherscan_like": "https://api.etherscan.io",
     "etherscan_api_key": "8KM3GY51K8PDT3TM62CVQ6PPKBPSGI86SR"
@@ -11,8 +11,8 @@
   {
     "id": 11155111,
     "name": "Ethereum Sepolia",
-    "polling_url": "https://sepolia-archival.rpc.grove.city/v1/c4109dfa",
-    "ws_url": "wss://eth-sepolia.g.alchemy.com/v2/xlCz0CxtG7gSJxrjG-YMvjQVfUfRQhKI",
+    "polling_url": "http://eth-sepolia.rpc.convect.xyz",
+    "ws_url": "wss://lb.drpc.org/ogws?network=sepolia&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia",
     "etherscan_like": "https://api-sepolia.etherscan.io",
     "etherscan_api_key": "8KM3GY51K8PDT3TM62CVQ6PPKBPSGI86SR"
@@ -20,7 +20,7 @@
   {
     "id": 137,
     "name": "Polygon Mainnet",
-    "polling_url": "https://polygon-mainnet.g.alchemy.com/v2/QKIyPDcPF5dodVNttDxSmbPBPxUmteQc",
+    "polling_url": "http://polygon-mainnet.rpc.convect.xyz",
     "ws_url": "wss://polygon-mainnet.g.alchemy.com/v2/QKIyPDcPF5dodVNttDxSmbPBPxUmteQc",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-mainnet",
     "etherscan_like": "https://api.polygonscan.com",
@@ -29,7 +29,7 @@
   {
     "id": 80002,
     "name": "Polygon Amoy",
-    "polling_url": "https://polygon-amoy.g.alchemy.com/v2/QKIyPDcPF5dodVNttDxSmbPBPxUmteQc",
+    "polling_url": "http://polygon-amoy.rpc.convect.xyz",
     "ws_url": "wss://polygon-amoy.g.alchemy.com/v2/QKIyPDcPF5dodVNttDxSmbPBPxUmteQc",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-amoy",
     "etherscan_like": "https://api-amoy.polygonscan.com",
@@ -38,7 +38,7 @@
   {
     "id": 81457,
     "name": "Blast Mainnet",
-    "polling_url": "https://blast-mainnet.core.chainstack.com/e3d98827eaf7db81390ae1326429eda7",
+    "polling_url": "http://blast-mainnet.rpc.convect.xyz",
     "ws_url": "wss://lb.drpc.org/ogws?network=blast&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast",
     "etherscan_like": "https://api.blastscan.io",
@@ -47,7 +47,7 @@
   {
     "id": 8453,
     "name": "Base Mainnet",
-    "polling_url": "https://base-mainnet.g.alchemy.com/v2/Oqs6RK2wmknw_xrTY8wNy50ocMc5nA6l",
+    "polling_url": "http://base-mainnet.rpc.convect.xyz",
     "ws_url": "wss://base-mainnet.g.alchemy.com/v2/Oqs6RK2wmknw_xrTY8wNy50ocMc5nA6l",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-mainnet",
     "etherscan_like": "https://api.basescan.org",
@@ -56,7 +56,7 @@
   {
     "id": 84532,
     "name": "Base Sepolia",
-    "polling_url": "https://base-sepolia.g.alchemy.com/v2/Oqs6RK2wmknw_xrTY8wNy50ocMc5nA6l",
+    "polling_url": "http://base-sepolia.rpc.convect.xyz",
     "ws_url": "wss://base-sepolia.g.alchemy.com/v2/Oqs6RK2wmknw_xrTY8wNy50ocMc5nA6l",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
     "etherscan_like": "https://api-sepolia.basescan.org",
