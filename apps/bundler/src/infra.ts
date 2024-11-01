@@ -3,7 +3,6 @@ import { decryptEnvValue } from "@convect-xyz/server";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import path from "path";
-import { db } from "./db";
 import { env } from "./env";
 import { getCurrentDeployment } from "./task";
 
@@ -24,14 +23,6 @@ export default async () => {
 
   const txQueueUrls: Array<pulumi.Output<string>> = [];
   const manifest = parseManifest(currentDeployment.manifest);
-  const producers = await db.query.producers.findMany({
-    where(fields, { inArray }) {
-      return inArray(
-        fields.chainId,
-        manifest.chains.map((chain) => chain.chainId)
-      );
-    },
-  });
 
   for (const chain of manifest.chains) {
     const queue = new aws.sqs.Queue(
