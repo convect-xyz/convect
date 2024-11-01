@@ -6,16 +6,16 @@ use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use config::Config;
+use config::{ChainConfig, Config};
 use futures::future::join_all;
 use lambda_http::tracing::Instrument;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use shared::contract_info::EtherscanContractInfoProvider;
 use shared::manifest::providers::{InitBlockProvider, InitBlockProviderImpl};
+use shared::networks::{get_supported_network, SupportedNetwork};
 use shared::redis_client::RedisClientImpl;
 use shared::syncer::ChainSyncer;
-use shared::types::chains::ChainConfig;
 use shared::{
     enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
     redis_client::RedisClient, syncing::State, web3_client::Web3ClientImpl,
@@ -43,10 +43,12 @@ async fn get_manifest() -> &'static Manifest {
 async fn get_web3_client(chain_id: &u64, config: &Config) -> &'static Web3ClientImpl {
     WEB3_CLIENTS
         .get_or_init(|| async {
+            let supported_network = get_supported_network(*chain_id).unwrap();
+
             HashMap::from_iter(config.chains.iter().map(|c| {
                 (
                     c.chain_id,
-                    Web3ClientImpl::new(c.chain_id, c.polling_url.clone()),
+                    Web3ClientImpl::new(c.chain_id, supported_network.polling_urls.clone()),
                 )
             }))
         })
@@ -160,14 +162,7 @@ async fn sync_chain(
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
     let manifest = get_manifest().await;
     let redis_client = RedisClientImpl::new().await;
-    let init_block_provider = InitBlockProviderImpl::new(
-        &manifest,
-        web3_client.clone(),
-        EtherscanContractInfoProvider::new(
-            chain_config.etherscan_api_key.clone(),
-            chain_config.etherscan_like.clone(),
-        ),
-    );
+    let init_block_provider = InitBlockProviderImpl::new(&manifest, web3_client.clone());
 
     let mut pipeline = State::load(
         config.function_id.clone(),
@@ -279,8 +274,7 @@ fn get_task_override(
                     create_key_value_pair("START_BLOCK", &start_block.to_string()),
                     create_key_value_pair("END_BLOCK", &end_block.to_string()),
                     create_key_value_pair("TRANSACTION_QUEUE_URL", &chain_config.tx_queue_url),
-                    create_key_value_pair("NODE_ENDPOINT", &chain_config.polling_url),
-                    create_key_value_pair("CHAIN_ID", &chain_id.to_string()),
+                    create_key_value_pair("CHAIN_ID", &chain_config.chain_id.to_string()),
                     create_key_value_pair("FUNCTION_ID", &config.function_id),
                     create_key_value_pair("VERSION", &config.version),
                     create_key_value_pair("MANIFEST_BUCKET", &config.manifest_bucket),

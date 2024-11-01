@@ -13,6 +13,10 @@
     "scripts:sync-chains": "npx tsx ./src/scripts/chains.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts"
+  },
   "author": "",
   "license": "ISC",
   "devDependencies": {

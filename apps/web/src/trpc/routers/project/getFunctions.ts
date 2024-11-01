@@ -1,6 +1,6 @@
+import { parseManifest } from "@convect-xyz/lib";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { parseManifest } from "~/lib/shared/manifest";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
 import { throwIfNotProjectCollaborator } from "../permissions";

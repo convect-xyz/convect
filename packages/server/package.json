@@ -1,0 +1,35 @@
+{
+  "name": "@convect-xyz/server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:push": "drizzle-kit push:pg",
+    "db:migrate": "drizzle-kit generate --dialect=postgresql",
+    "db:deploy": "npx tsx ./src/db/migrate.ts",
+    "db:studio": "drizzle-kit studio",
+    "scripts:sync-chains": "npx tsx ./src/scripts/chains.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "drizzle-kit": "0.22.7",
+    "drizzle-orm": "0.31.2",
+    "postgres": "3.4.3",
+    "ts-node": "10.9.2",
+    "typescript": "5.5.2",
+    "pg": "8.12.0",
+    "server-only": "0.0.1",
+    "@convect-xyz/lib": "*",
+    "@aws-sdk/client-ecs": "3.542.0"
+  },
+  "dependencies": {
+    "dotenv": "16.4.5"
+  }
+}

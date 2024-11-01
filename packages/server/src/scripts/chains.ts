@@ -44,7 +44,7 @@ async function main() {
       db
         .update(producers)
         .set({
-          pollingUrl: p.polling_url,
+          pollingUrls: p.polling_urls,
           wsUrl: p.ws_url,
           topicArn: p.sns_topic,
           name: p.name,

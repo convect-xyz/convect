@@ -1,6 +1,6 @@
+import { manifestSchema, parseManifest } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { manifestSchema, parseManifest } from "~/lib/shared/manifest";
 import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
 import { throwIfNotProjectCollaborator } from "../permissions";
