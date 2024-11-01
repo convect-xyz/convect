@@ -99,5 +99,8 @@ export async function getConvectFn({
         eq(schema.projects.name, project),
         eq(schema.projects.userId, userId),
       ),
-    );
+    )
+    .then((fns) => {
+      return fns.at(0);
+    });
 }

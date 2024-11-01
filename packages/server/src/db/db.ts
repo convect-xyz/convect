@@ -9,3 +9,5 @@ export const getDb = (opts: { dbUrl: string | ReturnType<typeof postgres> }) =>
     typeof opts.dbUrl === "string" ? getConnection(opts.dbUrl) : opts.dbUrl,
     { schema }
   );
+
+export type Db = ReturnType<typeof getDb>;

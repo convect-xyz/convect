@@ -9,4 +9,4 @@ export PULUMI_SKIP_CHECKPOINTS=true
 export PULUMI_EXPERIMENTAL=true
 export PULUMI_SKIP_UPDATE_CHECK=true
 
-node --import /scripts/instrumentation.js /scripts/deploy.js
+node --conditions=react-server --import /scripts/instrumentation.js /scripts/deploy.js
