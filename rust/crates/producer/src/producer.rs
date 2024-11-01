@@ -62,8 +62,6 @@ impl ProducerModule for ProducerModuleImpl {
                     return Err::<(), errors::ProducerError>(errors::ProducerError::EmptyBlock);
                 }
 
-                time::interval(time::Duration::from_secs(4)).tick().await;
-
                 *current.lock().await = block_number;
                 *last_updated_at.lock().await = Some(Utc::now());
             }

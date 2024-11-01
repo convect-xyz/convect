@@ -112,7 +112,6 @@ pub mod errors {
 pub mod providers {
     use async_trait::async_trait;
     use futures::future::join_all;
-    use std::cmp::max;
     use thiserror::Error;
 
     use crate::contract_info;
@@ -120,83 +119,77 @@ pub mod providers {
     use crate::web3_client::Web3Client;
 
     #[async_trait]
-    pub trait InitBlockProvider<W: Web3Client, C: contract_info::ContractInfoProvider>:
-        std::marker::Sync
-    {
+    pub trait InitBlockProvider<W: Web3Client>: std::marker::Sync {
         async fn get_init_block(&self) -> Result<u64, InitBlockProviderError>;
     }
 
-    pub struct InitBlockProviderImpl<'a, W: Web3Client, C: contract_info::ContractInfoProvider> {
+    pub struct InitBlockProviderImpl<'a, W: Web3Client> {
         manifest: &'a Manifest,
         web3_client: W,
-        contract_info_provider: C,
     }
 
-    impl<'a, W: Web3Client, C: contract_info::ContractInfoProvider> InitBlockProviderImpl<'a, W, C> {
-        pub fn new(manifest: &'a Manifest, web3_client: W, contract_info_provider: C) -> Self {
+    impl<'a, W: Web3Client> InitBlockProviderImpl<'a, W> {
+        pub fn new(manifest: &'a Manifest, web3_client: W) -> Self {
             Self {
                 manifest,
                 web3_client,
-                contract_info_provider,
             }
         }
 
-        async fn get_min_contract_creation_block(
-            &self,
-        ) -> Result<Option<u64>, InitBlockProviderError> {
-            let creation_tx_hashes: Vec<_> = self
-                .contract_info_provider
-                .get_contract_creation_info(
-                    self.manifest
-                        .log_configs
-                        .iter()
-                        .map(|l| l.address.get_address(self.web3_client.chain_id()))
-                        .collect(),
-                )
-                .await
-                .unwrap()
-                .iter()
-                .map(|c| c.tx_hash.clone())
-                .collect();
+        //     async fn get_min_contract_creation_block(
+        //         &self,
+        //     ) -> Result<Option<u64>, InitBlockProviderError> {
+        //         let creation_tx_hashes: Vec<_> = self
+        //             .contract_info_provider
+        //             .get_contract_creation_info(
+        //                 self.manifest
+        //                     .log_configs
+        //                     .iter()
+        //                     .map(|l| l.address.get_address(self.web3_client.chain_id()))
+        //                     .collect(),
+        //             )
+        //             .await
+        //             .unwrap()
+        //             .iter()
+        //             .map(|c| c.tx_hash.clone())
+        //             .collect();
 
-            let transactions: Result<Vec<_>, _> = join_all(
-                creation_tx_hashes
-                    .iter()
-                    .map(|tx_hash| self.web3_client.get_transaction_by_hash(tx_hash.clone())),
-            )
-            .await
-            .into_iter()
-            .collect();
+        //         let transactions: Result<Vec<_>, _> = join_all(
+        //             creation_tx_hashes
+        //                 .iter()
+        //                 .map(|tx_hash| self.web3_client.get_transaction_by_hash(tx_hash.clone())),
+        //         )
+        //         .await
+        //         .into_iter()
+        //         .collect();
 
-            let min_block = match transactions {
-                Ok(txs) => {
-                    let mut min_block = None;
+        //         let min_block = match transactions {
+        //             Ok(txs) => {
+        //                 let mut min_block = None;
 
-                    for tx in txs.iter() {
-                        if let Some(receipt) = tx {
-                            let block_number = receipt.block_number.unwrap().as_u64();
-                            if min_block.is_none() || block_number < min_block.unwrap() {
-                                min_block = Some(block_number);
-                            }
-                        }
-                    }
+        //                 for tx in txs.iter() {
+        //                     if let Some(receipt) = tx {
+        //                         let block_number = receipt.block_number.unwrap().as_u64();
+        //                         if min_block.is_none() || block_number < min_block.unwrap() {
+        //                             min_block = Some(block_number);
+        //                         }
+        //                     }
+        //                 }
 
-                    min_block
-                }
-                Err(e) => {
-                    println!("{:?}", e);
-                    None
-                }
-            };
+        //                 min_block
+        //             }
+        //             Err(e) => {
+        //                 println!("{:?}", e);
+        //                 None
+        //             }
+        //         };
 
-            Ok(min_block)
-        }
+        //         Ok(min_block)
+        //     }
     }
 
     #[async_trait]
-    impl<W: Web3Client, C: contract_info::ContractInfoProvider> InitBlockProvider<W, C>
-        for InitBlockProviderImpl<'_, W, C>
-    {
+    impl<W: Web3Client> InitBlockProvider<W> for InitBlockProviderImpl<'_, W> {
         #[tracing::instrument(skip_all, ret, err)]
         async fn get_init_block(&self) -> Result<u64, InitBlockProviderError> {
             let manifest_min_block = self
@@ -206,12 +199,7 @@ pub mod providers {
                 .map(|c| c.get_start_block(self.web3_client.chain_id()).unwrap_or(0))
                 .min();
 
-            let contract_creation_min_block = self.get_min_contract_creation_block().await.unwrap();
-
-            Ok(max(
-                contract_creation_min_block.unwrap_or(0),
-                manifest_min_block.unwrap_or(0),
-            ))
+            Ok(manifest_min_block.unwrap())
         }
     }
 

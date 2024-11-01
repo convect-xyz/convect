@@ -1,4 +1,4 @@
-import { schema } from "@convect-xyz/lib";
+import { schema } from "@convect-xyz/server";
 import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -99,5 +99,8 @@ export async function getConvectFn({
         eq(schema.projects.name, project),
         eq(schema.projects.userId, userId),
       ),
-    );
+    )
+    .then((fns) => {
+      return fns.at(0);
+    });
 }

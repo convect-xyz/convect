@@ -1,3 +1,3 @@
-import { analysisSchema } from "@convect-xyz/lib";
+import { analysisSchema } from "@convect-xyz/server";
 
 export default analysisSchema;

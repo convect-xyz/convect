@@ -1,4 +1,4 @@
 {
-  "title": "API",
+  "title": "API Reference",
   "pages": ["transaction", "log", "handler", "convect"]
 }

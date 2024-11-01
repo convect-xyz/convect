@@ -1,4 +1,4 @@
-import { schema } from "@convect-xyz/lib";
+import { schema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import { InferSelectModel, eq } from "drizzle-orm";
 import { Stripe } from "stripe";
