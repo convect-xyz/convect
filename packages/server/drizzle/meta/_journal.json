@@ -288,6 +288,13 @@
       "when": 1725916884640,
       "tag": "0040_unusual_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1730498205697,
+      "tag": "0041_numerous_meteorite",
+      "breakpoints": true
     }
   ]
 }

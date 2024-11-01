@@ -323,7 +323,9 @@ export const producers = createTable(
   {
     id: serial("id").notNull().primaryKey(),
     chainId: integer("chain_id").notNull().unique(),
-    pollingUrl: varchar("pollingUrl", { length: 255 }).notNull(),
+    pollingUrls: varchar("pollingUrls", { length: 255 })
+      .array()
+      .default(sql`ARRAY[]::varchar[]`),
     wsUrl: varchar("wsUrl", { length: 255 }).notNull(),
     userId: varchar("userId").references(() => users.id),
     serviceArn: varchar("serviceArn", { length: 255 }),
