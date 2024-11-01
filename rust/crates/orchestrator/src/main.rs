@@ -6,7 +6,7 @@ use aws_lambda_events::event::sns::SnsEvent;
 use aws_sdk_ecs::types::{
     AwsVpcConfiguration, ContainerOverride, KeyValuePair, NetworkConfiguration, TaskOverride,
 };
-use config::Config;
+use config::{ChainConfig, Config};
 use futures::future::join_all;
 use lambda_http::tracing::Instrument;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
@@ -149,7 +149,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 #[tracing::instrument(skip_all, err)]
 async fn sync_chain(
     config: &Config,
-    chain_config: SupportedNetwork,
+    chain_config: ChainConfig,
     incoming_block: u64,
 ) -> Result<(), errors::OrchestratorError> {
     let sdk_config = aws_config::load_from_env().await;
@@ -162,14 +162,7 @@ async fn sync_chain(
         SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
     let manifest = get_manifest().await;
     let redis_client = RedisClientImpl::new().await;
-    let init_block_provider = InitBlockProviderImpl::new(
-        &manifest,
-        web3_client.clone(),
-        EtherscanContractInfoProvider::new(
-            chain_config.etherscan_api_key.clone(),
-            chain_config.etherscan_like.clone(),
-        ),
-    );
+    let init_block_provider = InitBlockProviderImpl::new(&manifest, web3_client.clone());
 
     let mut pipeline = State::load(
         config.function_id.clone(),
