@@ -13,7 +13,7 @@ use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use shared::contract_info::EtherscanContractInfoProvider;
 use shared::manifest::providers::{InitBlockProvider, InitBlockProviderImpl};
-use shared::networks::SupportedNetwork;
+use shared::networks::{get_supported_network, SupportedNetwork};
 use shared::redis_client::RedisClientImpl;
 use shared::syncer::ChainSyncer;
 use shared::{
@@ -279,8 +279,7 @@ fn get_task_override(
                     create_key_value_pair("START_BLOCK", &start_block.to_string()),
                     create_key_value_pair("END_BLOCK", &end_block.to_string()),
                     create_key_value_pair("TRANSACTION_QUEUE_URL", &chain_config.tx_queue_url),
-                    create_key_value_pair("NODE_ENDPOINT", &chain_config.polling_url),
-                    create_key_value_pair("CHAIN_ID", &chain_id.to_string()),
+                    create_key_value_pair("CHAIN_ID", &chain_config.chain_id.to_string()),
                     create_key_value_pair("FUNCTION_ID", &config.function_id),
                     create_key_value_pair("VERSION", &config.version),
                     create_key_value_pair("MANIFEST_BUCKET", &config.manifest_bucket),

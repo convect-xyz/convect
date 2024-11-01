@@ -3,6 +3,7 @@ import { decryptEnvValue } from "@convect-xyz/server";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import path from "path";
+import { db } from "./db";
 import { env } from "./env";
 import { getCurrentDeployment } from "./task";
 
@@ -15,12 +16,22 @@ const ALL_CHAINS_SNS_TOPIC = "arn:aws:sns:eu-west-1:730335604495:all-chains";
 
 export default async () => {
   const currentDeployment = await getCurrentDeployment();
+
   const stackRef = new pulumi.StackReference(
     `${org}/infra/${currentDeployment.version}`
   );
   const githubSha = stackRef.getOutput("githubSha");
+
   const txQueueUrls: Array<pulumi.Output<string>> = [];
   const manifest = parseManifest(currentDeployment.manifest);
+  const producers = await db.query.producers.findMany({
+    where(fields, { inArray }) {
+      return inArray(
+        fields.chainId,
+        manifest.chains.map((chain) => chain.chainId)
+      );
+    },
+  });
 
   for (const chain of manifest.chains) {
     const queue = new aws.sqs.Queue(
@@ -33,6 +44,10 @@ export default async () => {
 
     txQueueUrls.push(queue.url);
 
+    const chainConfig = manifest.chains.find(
+      (c) => c.chainId === chain.chainId
+    )!;
+
     const handler = new aws.lambda.Function(`handler-${chain.chainId}`, {
       role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
       s3Bucket: "ingest-build-outputs",
@@ -43,7 +58,7 @@ export default async () => {
       ),
       environment: {
         variables: {
-          CHAIN_ID: chain.chainId.toString(),
+          CHAIN_ID: chainConfig.chainId.toString(),
           USER_ENVS: JSON.stringify(
             currentDeployment.function.envs.map((functionEnv) => ({
               key: functionEnv.key,
@@ -102,7 +117,17 @@ export default async () => {
         FUNCTION_ID: currentDeployment.functionId.toString(),
         DEPLOYMENT_ID: currentDeployment.id,
         PROJECT_ID: currentDeployment.function.projectId.toString(),
-        CHAIN_IDS: manifest.chains.map((c) => c.chainId.toString()).join(","),
+        CHAINS: txQueueUrlOutputs.apply((output) =>
+          JSON.stringify(
+            output.map((url, idx) => {
+              const manifestChain = manifest.chains[idx];
+              return {
+                chainId: manifestChain.chainId,
+                txQueueUrl: url,
+              };
+            })
+          )
+        ),
       },
     },
     timeout: 200,
