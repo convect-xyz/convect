@@ -19,6 +19,7 @@ export class EtherscanProvider {
   }
 
   async getContractCreationTxHashes(_addresses: string[]) {
+    console.log("_addresses", _addresses);
     const schema = z.object({
       result: z.array(
         z.object({
@@ -28,6 +29,7 @@ export class EtherscanProvider {
       ),
     });
     const addresses = new Set(_addresses.map((a) => a.toLowerCase()));
+    console.log("addresses", addresses);
     const batches = chunk([...addresses], 5);
     const results: Array<z.infer<typeof schema>> = [];
 
