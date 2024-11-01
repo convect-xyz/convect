@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use shared::types::chains::ChainConfig;
 use std::env;
 
 #[derive(Debug, Clone)]
