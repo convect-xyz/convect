@@ -30,9 +30,3 @@ sudo sysctl -p
 
 # Making a catchall rule for routing and masking the private IP
 sudo iptables -t nat -A POSTROUTING -o ens5 -s 0.0.0.0/0 -j MASQUERADE
-
-
-
-
-<!-- 5IYHNVh-ZjgQKFM_UzTtQ -->
-<!-- wnJmpWX--1wtD8fbuzSnS -->
