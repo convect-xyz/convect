@@ -48,7 +48,7 @@ impl Web3ClientImpl {
         Self {
             chain_id,
             endpoints,
-            endpoint_index: 0,
+            endpoint_index: 0.into(),
         }
     }
 
