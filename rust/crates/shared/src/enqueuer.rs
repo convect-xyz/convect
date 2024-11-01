@@ -61,7 +61,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
 
                 // check that tx size will not make this entry over 256kb
                 let tx_size = serde_json::to_string(current_tx).unwrap().len();
-                if tx_size + group_byte_size > 230000 {
+                if tx_size + group_byte_size > 20000 {
                     break;
                 }
 
@@ -114,7 +114,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             let mut batch = Vec::new();
 
             // Max transactions per batch: 60
-            while i < txs.len() && batch.len() < 30 {
+            while i < txs.len() && batch.len() < 10 {
                 let s3_result = &txs[i];
                 batch.push(s3_result);
                 i += 1;
@@ -187,7 +187,7 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let serialised_txs = serde_json::to_string(&txs).unwrap();
 
-        if serialised_txs.len() < 1024 * 1024 * 2 {
+        if serialised_txs.len() < 100000 {
             return Ok(self.upload_raw(state, self.queue_url.clone(), txs).await);
         }
 
