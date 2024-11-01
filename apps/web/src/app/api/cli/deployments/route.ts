@@ -94,31 +94,39 @@ async function updateStartBlocks(manifest: Manifest) {
   manifest = { ...manifest };
 
   for (const chain of manifest.chains) {
+    const allAddresses = manifest.log_configs.map((logConfig) =>
+      getAddress(chain.chainId, logConfig),
+    );
+    const etherscanProvider = new EtherscanProvider(chain.chainId);
+    const addressToTxHash =
+      await etherscanProvider.getContractCreationTxHashes(allAddresses);
+    const addressToTxReceipt = new Map();
+    const client = getPublicClient(chain.chainId);
+
+    await Promise.all(
+      Array.from(addressToTxHash.entries()).map(([address, txHash]) =>
+        client
+          .getTransactionReceipt({
+            hash: txHash as Hex,
+          })
+          .then((receipt) => {
+            addressToTxReceipt.set(address.toLowerCase(), receipt);
+          }),
+      ),
+    );
+
     for (var i = 0; i < manifest.tx_configs.length; i++) {
       const txConfig = manifest.tx_configs[i]!;
       const logConfigs = manifest.log_configs.filter((logConfig) =>
         logConfig.tx_configs.includes(i),
       );
-      console.log("logConfigs", logConfigs);
-      const contractAddresses = logConfigs.map((logConfig) => {
-        return getAddress(chain.chainId, logConfig);
-      });
-
-      const etherscanProvider = new EtherscanProvider(chain.chainId);
-      const txHashes =
-        await etherscanProvider.getContractCreationTxHashes(contractAddresses);
-      const client = getPublicClient(chain.chainId);
-
-      const receipts = await Promise.all(
-        txHashes.map((txHash) =>
-          client.getTransactionReceipt({
-            hash: txHash as Hex,
-          }),
-        ),
+      const addresses = logConfigs.map((logConfig) =>
+        getAddress(chain.chainId, logConfig),
       );
-
       const minBlock = Number(
-        receipts.map((r) => r.blockNumber).reduce((m, e) => (e > m ? e : m)),
+        addresses
+          .map((r) => addressToTxReceipt.get(r.toLowerCase())!.blockNumber)
+          .reduce((m, e) => (e > m ? e : m)),
       );
       txConfig.start_block[chain.chainId.toString()] = Math.max(
         minBlock,

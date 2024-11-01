@@ -31,7 +31,8 @@ export class EtherscanProvider {
     const addresses = new Set(_addresses.map((a) => a.toLowerCase()));
     console.log("addresses", addresses);
     const batches = chunk([...addresses], 5);
-    const results: Array<z.infer<typeof schema>> = [];
+    const results: CaseInsensitiveMap<string, string> =
+      new CaseInsensitiveMap();
 
     for (const batch of batches) {
       const producer = await getProducer(this.chainId);
@@ -47,9 +48,36 @@ export class EtherscanProvider {
       });
       console.log(response.data);
 
-      results.push(schema.parse(await response.data));
+      for (const result of schema.parse(await response.data).result) {
+        results.set(result.contractAddress, result.txHash);
+      }
     }
 
-    return results.flatMap((r) => r.result).map((r) => r.txHash);
+    return results;
+  }
+}
+
+class CaseInsensitiveMap<T, U> extends Map<T, U> {
+  set(key: T, value: U): this {
+    if (typeof key === "string") {
+      key = key.toLowerCase() as any as T;
+    }
+    return super.set(key, value);
+  }
+
+  get(key: T): U | undefined {
+    if (typeof key === "string") {
+      key = key.toLowerCase() as any as T;
+    }
+
+    return super.get(key);
+  }
+
+  has(key: T): boolean {
+    if (typeof key === "string") {
+      key = key.toLowerCase() as any as T;
+    }
+
+    return super.has(key);
   }
 }
