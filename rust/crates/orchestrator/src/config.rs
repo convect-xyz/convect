@@ -1,3 +1,5 @@
+use serde::Deserialize;
+use shared::types::chains::ChainConfig;
 use std::env;
 
 #[derive(Debug, Clone)]
@@ -13,7 +15,7 @@ pub struct Config {
     pub deployment_id: String,
     pub project_id: String,
     pub github_sha: String,
-    pub chain_ids: Vec<u64>,
+    pub chains: Vec<ChainConfig>,
 }
 
 impl Config {
@@ -36,11 +38,8 @@ impl Config {
                 .expect("SYNCER_CONTAINER_NAME not set"),
             deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID not set"),
             project_id: env::var("PROJECT_ID").expect("PROJECT_ID not set"),
-            chain_ids: env::var("CHAIN_IDS")
-                .expect("CHAIN_IDS not set")
-                .split(',')
-                .map(|s| s.parse().unwrap())
-                .collect(),
+            chains: serde_json::from_str(&env::var("CHAINS").expect("CHAINS not set"))
+                .expect("CHAINS not set"),
         }
     }
 
@@ -49,4 +48,12 @@ impl Config {
         let version = self.version.clone();
         format!("orchestrator::{github_sha}::{version}")
     }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ChainConfig {
+    #[serde(rename = "chainId")]
+    pub chain_id: u64,
+    #[serde(rename = "txQueueUrl")]
+    pub tx_queue_url: String,
 }
