@@ -1,6 +1,6 @@
 "use client";
 
-import { schema } from "@convect-xyz/lib";
+import { schema } from "@convect-xyz/server";
 import { DialogProps } from "@radix-ui/react-dialog";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";

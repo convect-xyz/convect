@@ -1,4 +1,4 @@
-import { schema } from "@convect-xyz/lib";
+import { schema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

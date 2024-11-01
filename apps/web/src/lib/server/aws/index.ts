@@ -12,6 +12,7 @@ export const sns = new SNS({
     secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
   },
 });
+
 export const s3 = new S3({
   region: env.AWS_REGION,
   credentials: {
@@ -19,6 +20,7 @@ export const s3 = new S3({
     secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
   },
 });
+
 export const ecs = new ECS({
   region: env.AWS_REGION,
   credentials: {
@@ -26,6 +28,7 @@ export const ecs = new ECS({
     secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
   },
 });
+
 export const lambda = new Lambda({
   region: env.AWS_REGION,
   credentials: {
@@ -33,6 +36,7 @@ export const lambda = new Lambda({
     secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
   },
 });
+
 export const sqs = new SQS({
   region: env.AWS_REGION,
   credentials: {

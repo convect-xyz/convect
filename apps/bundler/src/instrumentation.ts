@@ -1,58 +1,12 @@
-import { getDb, schema } from "@convect-xyz/lib";
 import { init } from "@sentry/node";
-import { and, eq, inArray, lt, or } from "drizzle-orm";
-import { env } from "./env";
+import { getDeploymentTask } from "./task";
 
 process.on("uncaughtException", handleFailure);
 process.on("unhandledRejection", handleFailure);
 
-const deploymentPromise = getDeployment();
-
-async function getDeployment() {
-  if (env.MODE === "destroy") return;
-
-  const db = getDbInstance();
-  return db.query.deployment.findFirst({
-    where(fields, operators) {
-      return operators.eq(fields.id, process.env.DEPLOYMENT_ID!);
-    },
-  });
-}
-
 async function handleFailure() {
-  if (env.MODE === "destroy") return;
-
-  const deployment = await deploymentPromise;
-  if (!deployment) {
-    console.error("Deployment not found");
-    throw new Error("Deployment not found");
-  }
-
-  const db = getDbInstance();
-  await db
-    .update(schema.deployment)
-    .set({ status: "FAILED" })
-    .where(
-      or(
-        eq(schema.deployment.id, deployment.id),
-        // All previous deployments for the same handler that are pending
-        and(
-          eq(schema.deployment.functionId, deployment.functionId),
-          lt(schema.deployment.createdAt, deployment.createdAt),
-          inArray(schema.deployment.status, ["PENDING"])
-        )
-      )
-    )
-    .catch(() => {});
-}
-
-function getDbInstance() {
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) {
-    console.error("DATABASE_URL is not set");
-    throw new Error("DATABASE_URL is not set");
-  }
-  return getDb({ dbUrl });
+  const deploymentTask = await getDeploymentTask();
+  await deploymentTask.fail();
 }
 
 init({
@@ -66,25 +20,8 @@ init({
 
   // Set initial scope
   initialScope: (scope) => {
-    scope.setUser({
-      id: process.env.PROJECT_ID,
-    });
-
-    scope.setContext("infra", {
-      version: process.env.VERSION,
-    });
-
     scope.setContext("deployment", {
-      id: process.env.DEPLOYMENT_ID,
-    });
-
-    scope.setContext("function", {
-      id: process.env.FUNCTION_ID,
-      manifestBucket: process.env.MANIFEST_BUCKET,
-      manifestKey: process.env.MANIFEST_PREFIX,
-      sourceBucket: process.env.SOURCE_BUCKET,
-      sourceKey: process.env.SOURCE_PREFIX,
-      mode: process.env.MODE,
+      initialDeploymentId: process.env.INITIAL_DEPLOYMENT_ID,
     });
 
     return scope;

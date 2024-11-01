@@ -23,7 +23,7 @@ export async function createProducer(params: CreateProducerParams) {
     .values({
       wsUrl: params.wsUrl,
       chainId: 0,
-      pollingUrl: params.pollingUrl,
+      pollingUrls: [params.pollingUrl],
       userId: params.session.user.id,
       name: "",
     })

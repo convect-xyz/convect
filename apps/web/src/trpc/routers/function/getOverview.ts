@@ -36,7 +36,6 @@ export const getOverview = protectedProcedure
       transactionCount: z.number(),
       processedTransactionsCount: z.number(),
       avgDuration: z.number(),
-      version: z.number(),
       internalId: z.string(),
     }),
   )
@@ -120,7 +119,6 @@ export const getOverview = protectedProcedure
       processedTransactionsCount: successfulTx,
       lastFetchedBlock: fetchState?.lastBlock ?? 0,
       avgDuration: avgDuration,
-      version: 0,
       internalId: "handler.internalId",
     };
   });

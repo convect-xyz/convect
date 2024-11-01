@@ -1,6 +1,7 @@
 import { isNull, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  abstractTestnet,
   base,
   baseSepolia,
   blast,
@@ -42,6 +43,7 @@ export const POST = async (req: NextRequest) => {
         "polygon-amoy": polygonAmoy.id,
         "base-mainnet": base.id,
         "base-sepolia": baseSepolia.id,
+        "abstract-testnet": abstractTestnet.id,
       };
 
       for (const id of data.ids) {

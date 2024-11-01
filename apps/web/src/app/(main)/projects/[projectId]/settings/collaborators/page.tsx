@@ -1,8 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { PropsWithChildren } from "react";
+import { ComponentProps, PropsWithChildren } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -18,6 +17,7 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useParams } from "../../hooks/useParams";
 
@@ -26,13 +26,13 @@ export default function Page() {
     <div>
       <div className="flex flex-col gap-4">
         <InviteUser />
-        <Tabs>
+        <Tabs defaultValue="collaborators">
           <TabsList className="w-full justify-start">
             <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
             <TabsTrigger value="pending-invites">Pending Invites</TabsTrigger>
           </TabsList>
           <TabsContent value="pending-invites">
-            <Section>
+            <Section className="p-4">
               <PendingInvites />
             </Section>
           </TabsContent>
@@ -81,7 +81,7 @@ function InviteUser() {
           }),
         )}
       >
-        <Section>
+        <Section className="p-4">
           <div className="flex flex-col gap-4">
             <div>
               <FormField
@@ -117,7 +117,6 @@ function InviteUser() {
 
 function PendingInvites() {
   const { projectId } = useParams();
-  const router = useRouter();
   const { data: pendingInvites } = api.project.getPendingInvites.useQuery({
     projectId: projectId,
   });
@@ -138,14 +137,24 @@ function Collaborators() {
   });
 
   return (
-    <div>
+    <div className="flex flex-col divide-y divide-border">
       {collaborators?.map((collaborator) => (
-        <div key={collaborator.user.id}>{collaborator.user.email}</div>
+        <div key={collaborator.user.id} className="p-4">
+          {collaborator.user.email}
+        </div>
       ))}
     </div>
   );
 }
 
-function Section(props: PropsWithChildren) {
-  return <div className="rounded-md border bg-muted p-4">{props.children}</div>;
+function Section({
+  children,
+  className,
+  ...rest
+}: PropsWithChildren<ComponentProps<"div">>) {
+  return (
+    <div className={cn("rounded-md border bg-muted", className)}>
+      {children}
+    </div>
+  );
 }

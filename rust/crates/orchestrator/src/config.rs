@@ -1,6 +1,5 @@
+use serde::Deserialize;
 use std::env;
-
-use shared::types::chains::ChainConfig;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -48,4 +47,12 @@ impl Config {
         let version = self.version.clone();
         format!("orchestrator::{github_sha}::{version}")
     }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ChainConfig {
+    #[serde(rename = "chainId")]
+    pub chain_id: u64,
+    #[serde(rename = "txQueueUrl")]
+    pub tx_queue_url: String,
 }

@@ -1,4 +1,4 @@
-import { schema } from "@convect-xyz/lib";
+import { schema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import InviteSentTemplate from "~/components/emails/InviteSentTemplate";
