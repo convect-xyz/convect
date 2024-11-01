@@ -149,18 +149,15 @@ export default async () => {
     maximumRetryAttempts: 0,
   });
 
-  const snsOrchestratorPermission = new aws.lambda.Permission(
-    `allow_sns_invoke_orchestrator`,
-    {
-      statementId: `${currentDeployment.functionId.toString()}`,
-      action: "lambda:InvokeFunction",
-      principal: "sns.amazonaws.com",
-      sourceArn: ALL_CHAINS_SNS_TOPIC,
-      function: orchestrator.arn,
-    }
-  );
+  new aws.lambda.Permission(`allow_sns_invoke_orchestrator`, {
+    statementId: `${currentDeployment.functionId.toString()}`,
+    action: "lambda:InvokeFunction",
+    principal: "sns.amazonaws.com",
+    sourceArn: ALL_CHAINS_SNS_TOPIC,
+    function: orchestrator.arn,
+  });
 
-  const snsSub = new aws.sns.TopicSubscription(`orchestrator_sns_sub`, {
+  new aws.sns.TopicSubscription(`orchestrator_sns_sub`, {
     topic: ALL_CHAINS_SNS_TOPIC,
     protocol: "lambda",
     endpoint: orchestrator.arn,
