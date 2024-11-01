@@ -1,5 +1,6 @@
-use std::future::Future;
+use std::rc::Rc;
 use std::str::FromStr;
+use std::{future::Future, sync::Arc};
 use tokio::sync::Mutex;
 use tokio_retry::strategy::jitter;
 use tokio_retry::Retry;
@@ -40,7 +41,7 @@ pub trait Web3Client: Sync + Send {
 pub struct Web3ClientImpl {
     chain_id: u64,
     endpoints: Vec<String>,
-    endpoint_index: Mutex<usize>,
+    endpoint_index: Arc<Mutex<usize>>,
 }
 
 impl Web3ClientImpl {
@@ -48,7 +49,7 @@ impl Web3ClientImpl {
         Self {
             chain_id,
             endpoints,
-            endpoint_index: 0.into(),
+            endpoint_index: Arc::new(0.into()),
         }
     }
 
