@@ -1,7 +1,12 @@
 use config::load_config_from_env;
 use shared::{
-    enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
-    redis_client::RedisClientImpl, syncer::ChainSyncer, syncing::State,
+    enqueuer::SQSTransactionEnqueuer,
+    fetcher::TransactionFetcherImpl,
+    manifest::Manifest,
+    networks::get_supported_network,
+    redis_client::RedisClientImpl,
+    syncer::{self, ChainSyncer},
+    syncing::State,
     web3_client::Web3ClientImpl,
 };
 use std::error::Error;
@@ -19,13 +24,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         redis_client,
     )
     .await?;
+    let network = get_supported_network(syncer_config.chain_id).unwrap();
+
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
-    let fetcher = TransactionFetcherImpl::new(Web3ClientImpl::new(
-        syncer_config.chain_id,
-        syncer_config.node_endpoint,
-    ));
+    let fetcher =
+        TransactionFetcherImpl::new(Web3ClientImpl::new(network.id, network.polling_urls));
     let enqueuer = SQSTransactionEnqueuer::new(s3_client, syncer_config.tx_queue_url, sqs_client);
     let manifest = Manifest::from_env().await.unwrap();
     let syncer = ChainSyncer::new(manifest, enqueuer, fetcher);

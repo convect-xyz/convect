@@ -13,9 +13,9 @@ use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use shared::contract_info::EtherscanContractInfoProvider;
 use shared::manifest::providers::{InitBlockProvider, InitBlockProviderImpl};
+use shared::networks::SupportedNetwork;
 use shared::redis_client::RedisClientImpl;
 use shared::syncer::ChainSyncer;
-use shared::types::chains::ChainConfig;
 use shared::{
     enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
     redis_client::RedisClient, syncing::State, web3_client::Web3ClientImpl,
@@ -147,7 +147,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 #[tracing::instrument(skip_all, err)]
 async fn sync_chain(
     config: &Config,
-    chain_config: ChainConfig,
+    chain_config: SupportedNetwork,
     incoming_block: u64,
 ) -> Result<(), errors::OrchestratorError> {
     let sdk_config = aws_config::load_from_env().await;

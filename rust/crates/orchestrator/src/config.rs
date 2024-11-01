@@ -1,7 +1,5 @@
 use std::env;
 
-use shared::types::chains::ChainConfig;
-
 #[derive(Debug, Clone)]
 pub struct Config {
     pub function_id: String,
@@ -15,7 +13,7 @@ pub struct Config {
     pub deployment_id: String,
     pub project_id: String,
     pub github_sha: String,
-    pub chains: Vec<ChainConfig>,
+    pub chain_ids: Vec<u64>,
 }
 
 impl Config {
@@ -38,8 +36,11 @@ impl Config {
                 .expect("SYNCER_CONTAINER_NAME not set"),
             deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID not set"),
             project_id: env::var("PROJECT_ID").expect("PROJECT_ID not set"),
-            chains: serde_json::from_str(&env::var("CHAINS").expect("CHAINS not set"))
-                .expect("CHAINS not set"),
+            chain_ids: env::var("CHAIN_IDS")
+                .expect("CHAIN_IDS not set")
+                .split(',')
+                .map(|s| s.parse().unwrap())
+                .collect(),
         }
     }
 
