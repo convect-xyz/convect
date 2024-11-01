@@ -99,6 +99,7 @@ async function updateStartBlocks(manifest: Manifest) {
       const logConfigs = manifest.log_configs.filter((logConfig) =>
         logConfig.tx_configs.includes(i),
       );
+      console.log("logConfigs", logConfigs);
       const contractAddresses = logConfigs.map((logConfig) => {
         return getAddress(chain.chainId, logConfig);
       });
