@@ -40,11 +40,10 @@ export class EtherscanProvider {
           module: "contract",
           action: "getcontractcreation",
           contractaddresses: batch.join(","),
-          apikey: producer?.etherscanApiKey
-            ? producer?.etherscanApiKey
-            : undefined,
+          apikey: producer?.etherscanApiKey ?? undefined,
         },
       });
+      console.log(response.data);
 
       results.push(schema.parse(await response.data));
     }
