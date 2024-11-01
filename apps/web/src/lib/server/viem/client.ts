@@ -30,6 +30,6 @@ export function getPublicClient(chainId: number) {
         },
       },
     }),
-    transport: http(chain.polling_url),
+    transport: http(chain.polling_urls[0]),
   });
 }
