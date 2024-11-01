@@ -81,3 +81,21 @@ export function getStructuredManifest(manifest: Manifest) {
     })),
   };
 }
+
+export function getAddress(
+  chainId: number,
+  logConfig: Manifest["log_configs"][number]
+) {
+  if (typeof logConfig.address === "string") {
+    return logConfig.address;
+  }
+
+  return logConfig.address[chainId]!;
+}
+
+export function getStartBlock(
+  chainId: number,
+  txConfig: Manifest["tx_configs"][number]
+) {
+  return txConfig.start_block[chainId.toString()] ?? 0;
+}

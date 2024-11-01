@@ -112,7 +112,6 @@ pub mod errors {
 pub mod providers {
     use async_trait::async_trait;
     use futures::future::join_all;
-    use std::cmp::max;
     use thiserror::Error;
 
     use crate::contract_info;
@@ -206,12 +205,7 @@ pub mod providers {
                 .map(|c| c.get_start_block(self.web3_client.chain_id()).unwrap_or(0))
                 .min();
 
-            let contract_creation_min_block = self.get_min_contract_creation_block().await.unwrap();
-
-            Ok(max(
-                contract_creation_min_block.unwrap_or(0),
-                manifest_min_block.unwrap_or(0),
-            ))
+            Ok(manifest_min_block.unwrap())
         }
     }
 

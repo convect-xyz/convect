@@ -1,17 +1,22 @@
-import { parseManifest } from "@convect-xyz/lib";
+import {
+  getAddress,
+  getStartBlock,
+  Manifest,
+  parseManifest,
+} from "@convect-xyz/lib";
+import { ConvectFunctionFacade } from "@convect-xyz/server";
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 import { v4 } from "uuid";
+import { Hex } from "viem";
 import { z } from "zod";
-import { s3 } from "~/lib/server/aws";
-import { decryptEnvValue } from "~/lib/server/security";
+import { env } from "~/env";
+import { ecs, s3 } from "~/lib/server/aws";
+import { EtherscanProvider } from "~/lib/server/etherscan";
+import { getPublicClient } from "~/lib/server/viem/client";
 import { monikerRegex } from "~/lib/shared/validation";
-import { createDeployment } from "~/server/actions/builds";
+import { getStackOutputs } from "~/server/actions/pulumi/getStackOutputs";
 import { db } from "~/server/db";
-import { getStripeCustomerId } from "~/trpc/routers/billing/switchPlan";
 import { getConvectFn, getFormData, getUserContext } from "../utils";
-
-const MANIFEST_BUCKET = "ingest-fetch-logs";
 
 const zodId = z
   .string()
@@ -44,8 +49,7 @@ export const POST = async (req: NextRequest) => {
     convectFn: data.id.convectFn,
     project: data.id.project,
     userId: user.id,
-  }).then((v) => v.at(0));
-
+  });
   if (!fn) {
     return NextResponse.json(
       { message: `Could not find function.` },
@@ -53,76 +57,74 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
+  const convectFn = new ConvectFunctionFacade(fn.convectFunction.id, {
+    s3,
+    db,
+    ecs,
+  });
+
+  const manifest = await updateStartBlocks(
+    parseManifest(await data.manifest.text()),
+  );
+
   const deploymentId = v4();
-
-  const bundledHandler = data.handler;
-  const sourcePrefix = `code/${fn.convectFunction.id}/${deploymentId}.zip`;
-  const promises: Promise<any>[] = [
-    s3.putObject({
-      Bucket: "ingest-build-outputs",
-      Key: sourcePrefix,
-      Body: await bundledHandler.text(),
+  await Promise.all([
+    convectFn.writeCode({
+      deploymentId,
+      bundledCode: await data.handler.text(),
     }),
-  ];
+    convectFn.writeManifest(manifest, deploymentId),
+  ]);
 
-  const manifestPrefix = path.join(
-    "manifests",
-    fn.convectFunction.id.toString(),
-    deploymentId + ".json",
-  );
-
-  const manifest = data.manifest;
-  const rawManifest = await manifest.text();
-  const parsedManifest = parseManifest(rawManifest);
-
-  promises.push(
-    s3.putObject({
-      Bucket: MANIFEST_BUCKET,
-      Key: manifestPrefix,
-      Body: rawManifest,
-    }),
-  );
-
-  await Promise.all(promises);
-
-  const envs = await db.query.functionEnv.findMany({
-    where(fields, { eq }) {
-      return eq(fields.functionId, fn.convectFunction.id);
-    },
-  });
-
-  const producers = await db.query.producers.findMany({
-    where(fields, { inArray }) {
-      return inArray(
-        fields.chainId,
-        parsedManifest.chains.map((chain) => chain.chainId),
-      );
-    },
-  });
-
-  await createDeployment({
-    version: fn.convectFunction.infraVersion!,
-    sourcePrefix,
-    manifestBucket: MANIFEST_BUCKET,
-    manifestPrefix,
-    rawManifest,
+  const stackOutputs = await getStackOutputs();
+  await convectFn.createDeployment({
     deploymentId,
-    stripeCustomerId: await getStripeCustomerId(fn.project),
-    projectId: fn.project.id,
-    functionId: fn.convectFunction.id,
-    functionGlobalId: fn.convectFunction.globalId,
+    version: fn.convectFunction.infraVersion!,
+    manifest: manifest,
     mode: data.mode,
-    envs: envs.map((env) => ({
-      ...env,
-      value: decryptEnvValue(env.value, env.iv),
-    })),
-    chainConfigs: producers.map((p) => ({
-      chainId: p.chainId,
-      pollingUrl: p.pollingUrl,
-      etherscanApiKey: p.etherscanApiKey,
-      etherscanLike: p.etherscanLike,
-    })),
+    builderTaskDefinition: stackOutputs.builderTaskDefinition,
+    dbUrl: env.DATABASE_URL,
+    encryptionKey: env.ENCRYPTION_KEY,
   });
 
   return NextResponse.json({});
 };
+
+async function updateStartBlocks(manifest: Manifest) {
+  manifest = { ...manifest };
+
+  for (const chain of manifest.chains) {
+    for (var i = 0; i < manifest.tx_configs.length; i++) {
+      const txConfig = manifest.tx_configs[i]!;
+      const logConfigs = manifest.log_configs.filter((logConfig) =>
+        logConfig.tx_configs.includes(i),
+      );
+      const contractAddresses = logConfigs.map((logConfig) => {
+        return getAddress(chain.chainId, logConfig);
+      });
+
+      const etherscanProvider = new EtherscanProvider(chain.chainId);
+      const txHashes =
+        await etherscanProvider.getContractCreationTxHashes(contractAddresses);
+      const client = getPublicClient(chain.chainId);
+
+      const receipts = await Promise.all(
+        txHashes.map((txHash) =>
+          client.getTransactionReceipt({
+            hash: txHash as Hex,
+          }),
+        ),
+      );
+
+      const minBlock = Number(
+        receipts.map((r) => r.blockNumber).reduce((m, e) => (e > m ? e : m)),
+      );
+      txConfig.start_block[chain.chainId.toString()] = Math.max(
+        minBlock,
+        getStartBlock(chain.chainId, txConfig),
+      );
+    }
+  }
+
+  return manifest;
+}
