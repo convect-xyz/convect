@@ -43,10 +43,12 @@ async fn get_manifest() -> &'static Manifest {
 async fn get_web3_client(chain_id: &u64, config: &Config) -> &'static Web3ClientImpl {
     WEB3_CLIENTS
         .get_or_init(|| async {
+            let supported_network = get_supported_network(*chain_id).unwrap();
+
             HashMap::from_iter(config.chains.iter().map(|c| {
                 (
                     c.chain_id,
-                    Web3ClientImpl::new(c.chain_id, c.polling_url.clone()),
+                    Web3ClientImpl::new(c.chain_id, supported_network.polling_urls.clone()),
                 )
             }))
         })
