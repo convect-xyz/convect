@@ -1,10 +1,9 @@
 "use client";
 
 import { Manifest } from "@convect-xyz/lib";
-import { DialogProps } from "@radix-ui/react-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { capitalize } from "lodash";
-import { MoreHorizontalIcon } from "lucide-react";
+import { LoaderIcon, MoreHorizontalIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
@@ -13,17 +12,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "~/components/ui/sheet";
 import { RouterOutputs } from "~/trpc/shared";
 import ManifestDialog from "../(components)/ManifestDialog";
 import { useDeployments } from "./hooks/useDeployments";
 
-type LogRow = RouterOutputs["functions"]["getLogs"][0];
+type Deployment = RouterOutputs["functions"]["getDeployments"][0];
 
 export default function Page() {
   return <Content />;
@@ -59,6 +52,7 @@ function DeploymentsTable() {
               <div className="flex items-center gap-2">
                 <div className="flex flex-1 items-center gap-2">
                   <div className="basis-96 truncate">{deployment.id}</div>
+                  <RenderStatusIcon status={deployment.status} />
                   <div className="basis-56 truncate">
                     {capitalize(deployment.status)}
                   </div>
@@ -104,22 +98,17 @@ function DeploymentsTable() {
   );
 }
 
-type LogsDetailProps = {
-  log: LogRow;
-};
-
-function LogsDetail(props: LogsDetailProps & DialogProps) {
-  const { log, ...rest } = props;
-  return (
-    <Sheet {...rest}>
-      <SheetContent className="w-[400px] sm:max-w-[700px]">
-        <SheetHeader>
-          <SheetTitle>Log</SheetTitle>
-        </SheetHeader>
-        <div className="max-h-[500px] overflow-y-auto rounded-sm border p-1">
-          <code className="break-all text-xs">{log.log_message}</code>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
+function RenderStatusIcon(props: { status: Deployment["status"] }) {
+  switch (props.status) {
+    case "PENDING":
+      return (
+        <LoaderIcon className="h-2 w-2 animate-spin text-muted-foreground" />
+      );
+    case "RUNNING":
+      return <div className="h-2 w-2 rounded-full bg-amber-400"></div>;
+    case "SUCCESS":
+      return <div className="h-2 w-2 rounded-full bg-green-400"></div>;
+    case "FAILED":
+      return <div className="h-2 w-2 rounded-full bg-red-400"></div>;
+  }
 }
