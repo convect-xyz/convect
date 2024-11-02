@@ -204,9 +204,7 @@ function RecentTransactions() {
 
   return (
     <div>
-      <div className="mb-2 mt-4 text-muted-foreground">
-        Processed Transactions
-      </div>
+      <div className="mb-2 mt-4 text-muted-foreground">Transactions</div>
       <div className="rounded-md border border-[#191B1F] bg-muted p-4">
         <div className="my-2">
           <div className="flex gap-2">

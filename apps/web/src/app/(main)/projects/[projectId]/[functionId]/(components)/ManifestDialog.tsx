@@ -126,7 +126,7 @@ function RenderTransactionConfigs(props: {
                   return (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button className="w-auto rounded-full bg-[#080808] px-3 py-1 text-xs text-muted-foreground">
+                        <button className="w-auto rounded-full border px-3 py-1 text-xs text-muted-foreground">
                           {logConfig.abi.name}
                         </button>
                       </TooltipTrigger>
