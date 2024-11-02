@@ -2,7 +2,7 @@
 
 import { Manifest } from "@convect-xyz/lib";
 import { formatDistanceToNow } from "date-fns";
-import { capitalize } from "lodash";
+import { capitalize, times } from "lodash";
 import { LoaderIcon, MoreHorizontalIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { Skeleton } from "~/components/ui/skeleton";
 import { RouterOutputs } from "~/trpc/shared";
 import ManifestDialog from "../(components)/ManifestDialog";
 import { useDeployments } from "./hooks/useDeployments";
@@ -23,12 +24,10 @@ export default function Page() {
 }
 
 function Content() {
-  const { data } = useDeployments();
-
   return (
     <div className="flex flex-col gap-2 overflow-hidden p-1">
       <div className="overflow-hidden rounded-md border">
-        {data && <DeploymentsTable />}
+        <DeploymentsTable />
       </div>
     </div>
   );
@@ -41,14 +40,27 @@ function DeploymentsTable() {
   return (
     <>
       <div className="w-full border-spacing-x-2">
-        {deployments!.length === 0 && (
+        {deployments?.length === 0 && (
           <div className="align-center flex justify-center p-12">
             Nothing to see here
           </div>
         )}
         <div className="flex flex-col divide-y">
+          {!deployments &&
+            times(20).map((v) => (
+              <div key={v} className="p-4 py-5 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-1 items-center gap-2">
+                    <Skeleton className="h-6 basis-96" />
+                    <Skeleton className="h-2 w-2" />
+                    <Skeleton className="h-6 basis-24" />
+                  </div>
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </div>
+            ))}
           {deployments?.map((deployment) => (
-            <div key={deployment.id} className=" bg-muted p-4  text-sm">
+            <div key={deployment.id} className=" p-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="flex flex-1 items-center gap-2">
                   <div className="basis-96 truncate">{deployment.id}</div>
