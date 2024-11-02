@@ -3,8 +3,16 @@
 import { Manifest } from "@convect-xyz/lib";
 import { DialogProps } from "@radix-ui/react-dialog";
 import { formatDistanceToNow } from "date-fns";
+import { capitalize } from "lodash";
+import { MoreHorizontalIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -51,17 +59,32 @@ function DeploymentsTable() {
               <div className="flex items-center gap-2">
                 <div className="flex flex-1 items-center gap-2">
                   <div className="basis-96 truncate">{deployment.id}</div>
-                  <div className="basis-56 truncate">{deployment.status}</div>
+                  <div className="basis-56 truncate">
+                    {capitalize(deployment.status)}
+                  </div>
                 </div>
                 <div className="truncate">
                   {formatDistanceToNow(deployment.createdAt, {
                     addSuffix: true,
                   })}
                 </div>
+                <div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger>
+                      <Button variant="ghost">
+                        <MoreHorizontalIcon size={14} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => setCurrentManifest(deployment.manifest)}
+                      >
+                        View Manifest
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-              <Button onClick={() => setCurrentManifest(deployment.manifest)}>
-                View Manifest
-              </Button>
             </div>
           ))}
         </div>

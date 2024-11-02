@@ -47,11 +47,11 @@ function RenderManifest(props: { manifest: Manifest }) {
     <div className="flex flex-col gap-2">
       <div className="mt-2 flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <div className="text-sm uppercase text-muted-foreground">
+          <div className="text-sm text-muted-foreground">
             Transaction Configurations
           </div>
           <Tabs onValueChange={setSelectedChainId} value={selectedChainId}>
-            <TabsList className="h-auto rounded-full">
+            <TabsList className="h-auto rounded-full border">
               {structuredManifest.chains.map((chain) => (
                 <TabsTrigger
                   key={chain.chainId}
@@ -125,8 +125,8 @@ export function RenderTransactionConfigs(props: {
 
                   return (
                     <Tooltip>
-                      <TooltipTrigger>
-                        <button className="w-auto rounded-full border bg-muted px-2 py-1 text-xs text-muted-foreground">
+                      <TooltipTrigger asChild>
+                        <button className="w-auto rounded-full bg-[#080808] px-3 py-1 text-xs text-muted-foreground">
                           {logConfig.abi.name}
                         </button>
                       </TooltipTrigger>
