@@ -47,12 +47,12 @@ function RenderManifest(props: { manifest: Manifest }) {
             Transaction Configurations
           </div>
           <Tabs onValueChange={setSelectedChainId} value={selectedChainId}>
-            <TabsList className="rounded-full">
+            <TabsList className="h-auto rounded-full">
               {structuredManifest.chains.map((chain) => (
                 <TabsTrigger
                   key={chain.chainId}
                   value={chain.chainId.toString()}
-                  className="gap-2 rounded-full"
+                  className="gap-2 rounded-full text-xs"
                 >
                   <ChainIcon chainId={chain.chainId} />
                   {isChainSelected(chain.chainId) ? <>{chain.name}</> : <></>}
