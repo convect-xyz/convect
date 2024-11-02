@@ -142,13 +142,11 @@ export default function Main() {
           </>
         )}
       </div>
-      {overview && (
-        <div className="mt-2">
-          <TransactionFilters>
-            <RecentTransactions />
-          </TransactionFilters>
-        </div>
-      )}
+      <div className="mt-2">
+        <TransactionFilters>
+          <RecentTransactions />
+        </TransactionFilters>
+      </div>
     </div>
   );
 }
