@@ -93,7 +93,7 @@ export default function Main() {
       </div>
       <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
         {!overview &&
-          times(3).map((v) => <Skeleton key={v} className="h-20 bg-muted" />)}
+          times(3).map((v) => <Skeleton key={v} className="h-20" />)}
 
         {overview && (
           <>
@@ -166,7 +166,7 @@ function LastUpdatedAt() {
   );
 
   if (!overview) {
-    return <Skeleton className="h-6 w-[200px] bg-muted" />;
+    return <Skeleton className="h-6 w-[200px]" />;
   }
 
   return (
@@ -220,9 +220,9 @@ function RecentTransactions() {
         {!maybeTransactions &&
           times(25).map((v) => (
             <div className="flex items-center gap-2 py-4" key={v}>
-              <Skeleton className="h-2 w-2 rounded-full bg-background" />
-              <Skeleton className="h-6 flex-1 bg-background" />
-              <Skeleton className="h-6 w-24 bg-background" />
+              <Skeleton className="h-2 w-2 rounded-full" />
+              <Skeleton className="h-6 flex-1" />
+              <Skeleton className="h-6 w-24" />
             </div>
           ))}
         {maybeTransactions?.transactions.map((tx) => (
