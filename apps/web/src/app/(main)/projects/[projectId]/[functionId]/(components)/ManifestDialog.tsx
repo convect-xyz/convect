@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { cn } from "~/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 export default function ManifestDialog(
   props: DialogProps & {
@@ -31,43 +31,35 @@ export default function ManifestDialog(
 
 function RenderManifest(props: { manifest: Manifest }) {
   const structuredManifest = getStructuredManifest(props.manifest);
-  const [selectedChainId, setSelectedChainId] = useState<number | undefined>(
-    structuredManifest.chains[0]?.chainId,
+  const [selectedChainId, setSelectedChainId] = useState<string | undefined>(
+    structuredManifest.chains[0]?.chainId.toString(),
   );
 
   const isChainSelected = (chainId: number) => {
-    return selectedChainId === chainId;
+    return selectedChainId === chainId.toString();
   };
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-2">
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-1">
-            {structuredManifest.chains.map((c) => (
-              <button
-                onClick={() => setSelectedChainId(c.chainId)}
-                key={c.chainId}
-              >
-                <Card
-                  className={cn(
-                    "w-auto rounded-full text-muted-foreground",
-                    isChainSelected(c.chainId) && "border-white text-white",
-                  )}
-                >
-                  <CardContent className="flex items-center gap-2 px-2 py-1">
-                    <ChainIcon chainId={c.chainId} />
-                    <div className="text-xs">{c.name}</div>
-                  </CardContent>
-                </Card>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
       <div className="mt-2 flex flex-col gap-2">
-        <div className="text-sm uppercase text-muted-foreground">
-          Transaction Configurations
+        <div className="flex items-center justify-between">
+          <div className="text-sm uppercase text-muted-foreground">
+            Transaction Configurations
+          </div>
+          <Tabs onValueChange={setSelectedChainId} value={selectedChainId}>
+            <TabsList className="rounded-full">
+              {structuredManifest.chains.map((chain) => (
+                <TabsTrigger
+                  key={chain.chainId}
+                  value={chain.chainId.toString()}
+                  className="rounded-full"
+                >
+                  <ChainIcon chainId={chain.chainId} />
+                  {isChainSelected(chain.chainId) ? <>{chain.name}</> : <></>}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
         <div>
           <div className="flex flex-col gap-2">
