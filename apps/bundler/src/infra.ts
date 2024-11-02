@@ -1,8 +1,11 @@
 import { parseManifest } from "@convect-xyz/lib";
-import { decryptEnvValue } from "@convect-xyz/server";
+import {
+  decryptEnvValue,
+  getCodeBucket,
+  getCodePrefix,
+} from "@convect-xyz/server";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import path from "path";
 import { env } from "./env";
 import { getCurrentDeployment } from "./task";
 
@@ -35,21 +38,17 @@ export default async () => {
 
     txQueueUrls.push(queue.url);
 
-    const chainConfig = manifest.chains.find(
+    const manifestChain = manifest.chains.find(
       (c) => c.chainId === chain.chainId
     )!;
 
     const handler = new aws.lambda.Function(`handler-${chain.chainId}`, {
       role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-      s3Bucket: "ingest-build-outputs",
-      s3Key: path.join(
-        "outputs",
-        currentDeployment.functionId.toString(),
-        currentDeployment.id + ".zip"
-      ),
+      s3Bucket: getCodeBucket(),
+      s3Key: getCodePrefix(currentDeployment.functionId, currentDeployment.id),
       environment: {
         variables: {
-          CHAIN_ID: chainConfig.chainId.toString(),
+          CHAIN_ID: manifestChain.chainId.toString(),
           USER_ENVS: JSON.stringify(
             currentDeployment.function.envs.map((functionEnv) => ({
               key: functionEnv.key,
