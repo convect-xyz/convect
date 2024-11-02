@@ -4,7 +4,6 @@ import { formatDistanceToNow, millisecondsToMinutes } from "date-fns";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
 import { useState } from "react";
-import { Button } from "~/components/ui/button";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
 import {
@@ -25,7 +24,7 @@ import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
 import { Chain } from "./(components)/Chain";
 import InvocationDialog from "./(components)/InvocationDialog";
-import ManifestDialog from "./(components)/ManifestDialog";
+import { RenderTransactionConfigs } from "./(components)/ManifestDialog";
 import TransactionRow from "./(components)/TransactionRow";
 import TransactionFilters, { useTransactionFilters } from "./filters";
 import { useParams } from "./hooks/useParams";
@@ -203,55 +202,55 @@ function RecentTransactions() {
         enabled: !!chainId && !!functionId,
       },
     );
-  console.log("error", error);
-  console.log("maybeTransactions", maybeTransactions);
 
   return (
-    <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-      <div className="flex items-center gap-2 text-sm">
-        <span className="uppercase text-muted-foreground">TRANSACTIONS</span>
+    <div>
+      <div className="mb-2 mt-4 text-muted-foreground">
+        Processed Transactions
       </div>
-      <div className="my-2">
-        <div className="flex gap-2">
-          <Input
-            className="flex-1 bg-background"
-            placeholder="Search transactions by hash"
-            value={filters.search}
-            onChange={(e) => filters.setSearch(e.target.value)}
-          />
-          <StatusFilter />
+      <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+        <div className="my-2">
+          <div className="flex gap-2">
+            <Input
+              className="flex-1 bg-background"
+              placeholder="Search transactions by hash"
+              value={filters.search}
+              onChange={(e) => filters.setSearch(e.target.value)}
+            />
+            <StatusFilter />
+          </div>
         </div>
-      </div>
-      <div className="flex flex-col divide-y">
-        {!maybeTransactions &&
-          times(25).map((v) => (
-            <div className="flex items-center gap-2 py-4" key={v}>
-              <Skeleton className="h-2 w-2 rounded-full bg-background" />
-              <Skeleton className="h-6 flex-1 bg-background" />
-              <Skeleton className="h-6 w-24 bg-background" />
-            </div>
-          ))}
-        {maybeTransactions?.transactions.map((tx) => (
-          <TransactionRow
-            tx={tx}
-            key={tx.id.toString()}
-            onRowSelected={(tx) =>
-              setSelectedTransactionHash(tx.transactionHash)
-            }
-          />
-        ))}
-
-        {selectedTransactionHash && (
-          <InvocationDialog
-            open
-            onOpenChange={(open) => {
-              if (!open) {
-                setSelectedTransactionHash(undefined);
+        <div className="flex flex-col divide-y">
+          {!maybeTransactions &&
+            times(25).map((v) => (
+              <div className="flex items-center gap-2 py-4" key={v}>
+                <Skeleton className="h-2 w-2 rounded-full bg-background" />
+                <Skeleton className="h-6 flex-1 bg-background" />
+                <Skeleton className="h-6 w-24 bg-background" />
+              </div>
+            ))}
+          {maybeTransactions?.transactions.map((tx) => (
+            <TransactionRow
+              tx={tx}
+              key={tx.id.toString()}
+              onRowSelected={(tx) =>
+                setSelectedTransactionHash(tx.transactionHash)
               }
-            }}
-            transactionHash={selectedTransactionHash}
-          />
-        )}
+            />
+          ))}
+
+          {selectedTransactionHash && (
+            <InvocationDialog
+              open
+              onOpenChange={(open) => {
+                if (!open) {
+                  setSelectedTransactionHash(undefined);
+                }
+              }}
+              transactionHash={selectedTransactionHash}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -314,7 +313,7 @@ function StatusFilter() {
 
 function ManifestSection() {
   const [isOpen, setIsOpen] = useState(false);
-  const { functionId, projectId } = useParams();
+  const { functionId, projectId, chainId } = useParams();
   const { data: fn } = api.functions.get.useQuery({
     projectId: projectId,
     functionId: functionId,
@@ -326,18 +325,12 @@ function ManifestSection() {
 
   return (
     <>
-      <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="flex-1 uppercase text-muted-foreground">
-            View Manifest
-          </span>
-          <Button onClick={() => setIsOpen(true)}>View</Button>
-        </div>
+      <div className="mb-2 mt-4 text-muted-foreground">
+        Transaction Configurations
       </div>
-      <ManifestDialog
-        open={isOpen}
-        onOpenChange={setIsOpen}
+      <RenderTransactionConfigs
         manifest={fn?.currentDeployment?.manifest}
+        selectedChainId={chainId?.toString()}
       />
     </>
   );
