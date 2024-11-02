@@ -1,12 +1,12 @@
 import { createPublicClient, defineChain, http } from "viem";
-import chains from "../../../../../../config/chains.json";
+import chains from "../../../../config/chains.json";
 
 export function getPublicClient(chainId: number) {
   const chain = chains.find((c) => c.id === chainId)!;
   return createPublicClient({
     chain: defineChain({
       id: chainId,
-      name: "",
+      name: chain.name,
       nativeCurrency: {
         name: "",
         symbol: "",
@@ -14,7 +14,7 @@ export function getPublicClient(chainId: number) {
       },
       rpcUrls: {
         default: {
-          http: [],
+          http: chain.polling_urls,
           webSocket: undefined,
         },
       },
