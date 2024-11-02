@@ -26,7 +26,7 @@ export const manifestSchema = z.object({
   ),
   tx_configs: z.array(
     z.object({
-      name: z.string(),
+      name: z.string().default("default"),
       start_block: z.record(z.number()),
     })
   ),
@@ -73,6 +73,7 @@ export function getStructuredManifest(manifest: Manifest) {
   return {
     chains: manifest.chains,
     txConfigs: manifest.tx_configs.map((txConfig, idx) => ({
+      name: txConfig.name,
       startBlock: txConfig.start_block,
       logConfigs: logConfigsByTxConfig
         .get(idx)!

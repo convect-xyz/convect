@@ -1,7 +1,7 @@
 import { getStructuredManifest, Manifest } from "@convect-xyz/lib";
 import { DialogProps } from "@radix-ui/react-dialog";
+import { formatAbiItem } from "abitype";
 import { useState } from "react";
-import { toEventSignature } from "viem";
 import ChainIcon from "~/components/icons/ChainIcon";
 import { Card, CardContent } from "~/components/ui/card";
 import {
@@ -86,6 +86,11 @@ function RenderManifest(props: { manifest: Manifest }) {
                   <CardContent className="p-4">
                     <div>
                       <div className="flex items-center gap-2">
+                        <div className="rounded-full border bg-white px-2 py-1 text-xs">
+                          <span className="text-background">
+                            {txConfig.name}
+                          </span>
+                        </div>
                         <div className="rounded-full border px-2 py-1 text-xs">
                           <span className="text-muted-foreground">
                             Start Block /{" "}
@@ -119,7 +124,7 @@ function RenderManifest(props: { manifest: Manifest }) {
                               <CardContent className="p-3">
                                 <div className="flex flex-col gap-1">
                                   <div className="text-sm">
-                                    event {toEventSignature(logConfig.abi)}
+                                    {formatAbiItem(logConfig.abi)}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
                                     {getAddress(logConfig.address)}

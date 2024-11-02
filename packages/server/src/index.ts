@@ -7,4 +7,5 @@ export * from "./envs/index";
 export * from "./error";
 export * from "./etherscan";
 export * from "./fn";
+export * from "./fn/utils";
 export * from "./manifest/validation";
