@@ -4,6 +4,7 @@ import { formatDistanceToNow, millisecondsToMinutes } from "date-fns";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
 import { useState } from "react";
+import { Button } from "~/components/ui/button";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
 import {
@@ -24,7 +25,7 @@ import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
 import { Chain } from "./(components)/Chain";
 import InvocationDialog from "./(components)/InvocationDialog";
-import { RenderTransactionConfigs } from "./(components)/ManifestDialog";
+import ManifestDialog from "./(components)/ManifestDialog";
 import TransactionRow from "./(components)/TransactionRow";
 import TransactionFilters, { useTransactionFilters } from "./filters";
 import { useParams } from "./hooks/useParams";
@@ -86,6 +87,7 @@ export default function Main() {
       <div className="flex items-center justify-between">
         <div className="flex items-stretch gap-2">
           <Chain />
+          <ManifestSection />
         </div>
         <LastUpdatedAt />
       </div>
@@ -139,9 +141,6 @@ export default function Main() {
             </div>
           </>
         )}
-      </div>
-      <div className="mt-2">
-        <ManifestSection />
       </div>
       {overview && (
         <div className="mt-2">
@@ -325,12 +324,13 @@ function ManifestSection() {
 
   return (
     <>
-      <div className="mb-2 mt-4 text-muted-foreground">
-        Transaction Configurations
-      </div>
-      <RenderTransactionConfigs
+      <Button variant="outline" onClick={() => setIsOpen(true)}>
+        View Manifest
+      </Button>
+      <ManifestDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
         manifest={fn?.currentDeployment?.manifest}
-        selectedChainId={chainId?.toString()}
       />
     </>
   );
