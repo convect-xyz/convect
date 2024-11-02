@@ -30,6 +30,7 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ message: dataError.message }, { status: 401 });
   }
 
+  console.log(data);
   const producers = await db.query.producers.findMany({
     where(fields, { eq, and }) {
       var filter = and();
@@ -62,6 +63,7 @@ export const POST = async (req: NextRequest) => {
     },
   });
 
+  console.log(producers);
   return NextResponse.json({
     producers: producers.map((producer) => ({
       id: producer.id,
