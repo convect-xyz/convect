@@ -56,7 +56,7 @@ function RenderManifest(props: { manifest: Manifest }) {
                 <TabsTrigger
                   key={chain.chainId}
                   value={chain.chainId.toString()}
-                  className="gap-2 rounded-full text-xs"
+                  className="gap-1 rounded-full text-xs"
                 >
                   <ChainIcon chainId={chain.chainId} />
                   {isChainSelected(chain.chainId) ? <>{chain.name}</> : <></>}
