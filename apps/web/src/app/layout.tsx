@@ -4,6 +4,7 @@ import { Manrope } from "next/font/google";
 
 import { ThemeProvider } from "~/components/theme/ThemeProvider";
 import { Toaster } from "~/components/ui/sonner";
+import { TooltipProvider } from "~/components/ui/tooltip";
 import { TRPCReactProvider } from "~/trpc/react";
 
 const manrope = Manrope({
@@ -30,8 +31,10 @@ export default function RootLayout({
           defaultTheme="dark"
           disableTransitionOnChange
         >
-          <Toaster toastOptions={{ className: manrope.className }} />
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+          <TooltipProvider>
+            <Toaster toastOptions={{ className: manrope.className }} />
+            <TRPCReactProvider>{children}</TRPCReactProvider>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
