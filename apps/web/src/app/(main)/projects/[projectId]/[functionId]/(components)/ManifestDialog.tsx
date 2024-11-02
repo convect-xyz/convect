@@ -1,5 +1,5 @@
 import { getStructuredManifest, Manifest } from "@convect-xyz/lib";
-import { DialogProps } from "@radix-ui/react-dialog";
+import { DialogProps, Portal } from "@radix-ui/react-dialog";
 import { formatAbiItem } from "abitype";
 import { useState } from "react";
 import ChainIcon from "~/components/icons/ChainIcon";
@@ -23,7 +23,7 @@ export default function ManifestDialog(
 ) {
   return (
     <Dialog {...props}>
-      <DialogContent className="flex h-full max-h-[84%] max-w-screen-lg flex-col gap-6 overflow-y-auto">
+      <DialogContent className="flex h-full max-h-[84%] max-w-lg flex-col gap-6 overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Manifest</DialogTitle>
         </DialogHeader>
@@ -74,7 +74,7 @@ function RenderManifest(props: { manifest: Manifest }) {
   );
 }
 
-export function RenderTransactionConfigs(props: {
+function RenderTransactionConfigs(props: {
   manifest: Manifest;
   selectedChainId: string | undefined;
 }) {
@@ -130,14 +130,16 @@ export function RenderTransactionConfigs(props: {
                           {logConfig.abi.name}
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="text-xs text-muted-foreground">
-                          {getAddress(logConfig.address)}
-                        </div>
-                        <div className="text-md mt-1">
-                          {formatAbiItem(logConfig.abi)}
-                        </div>
-                      </TooltipContent>
+                      <Portal>
+                        <TooltipContent>
+                          <div className="text-xs text-muted-foreground">
+                            {getAddress(logConfig.address)}
+                          </div>
+                          <div className="text-md mt-1">
+                            {formatAbiItem(logConfig.abi)}
+                          </div>
+                        </TooltipContent>
+                      </Portal>
                     </Tooltip>
                   );
                 })}
