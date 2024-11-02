@@ -205,49 +205,47 @@ function RecentTransactions() {
   return (
     <div>
       <div className="mb-2 mt-4 text-muted-foreground">Transactions</div>
-      <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-        <div className="my-2">
-          <div className="flex gap-2">
-            <Input
-              className="flex-1 bg-background"
-              placeholder="Search transactions by hash"
-              value={filters.search}
-              onChange={(e) => filters.setSearch(e.target.value)}
-            />
-            <StatusFilter />
-          </div>
+      <div className="my-2">
+        <div className="flex gap-2">
+          <Input
+            className="flex-1 bg-background"
+            placeholder="Search transactions by hash"
+            value={filters.search}
+            onChange={(e) => filters.setSearch(e.target.value)}
+          />
+          <StatusFilter />
         </div>
-        <div className="flex flex-col divide-y">
-          {!maybeTransactions &&
-            times(25).map((v) => (
-              <div className="flex items-center gap-2 py-4" key={v}>
-                <Skeleton className="h-2 w-2 rounded-full bg-background" />
-                <Skeleton className="h-6 flex-1 bg-background" />
-                <Skeleton className="h-6 w-24 bg-background" />
-              </div>
-            ))}
-          {maybeTransactions?.transactions.map((tx) => (
-            <TransactionRow
-              tx={tx}
-              key={tx.id.toString()}
-              onRowSelected={(tx) =>
-                setSelectedTransactionHash(tx.transactionHash)
-              }
-            />
+      </div>
+      <div className="flex flex-col divide-y rounded-md border px-4">
+        {!maybeTransactions &&
+          times(25).map((v) => (
+            <div className="flex items-center gap-2 py-4" key={v}>
+              <Skeleton className="h-2 w-2 rounded-full bg-background" />
+              <Skeleton className="h-6 flex-1 bg-background" />
+              <Skeleton className="h-6 w-24 bg-background" />
+            </div>
           ))}
+        {maybeTransactions?.transactions.map((tx) => (
+          <TransactionRow
+            tx={tx}
+            key={tx.id.toString()}
+            onRowSelected={(tx) =>
+              setSelectedTransactionHash(tx.transactionHash)
+            }
+          />
+        ))}
 
-          {selectedTransactionHash && (
-            <InvocationDialog
-              open
-              onOpenChange={(open) => {
-                if (!open) {
-                  setSelectedTransactionHash(undefined);
-                }
-              }}
-              transactionHash={selectedTransactionHash}
-            />
-          )}
-        </div>
+        {selectedTransactionHash && (
+          <InvocationDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) {
+                setSelectedTransactionHash(undefined);
+              }
+            }}
+            transactionHash={selectedTransactionHash}
+          />
+        )}
       </div>
     </div>
   );
