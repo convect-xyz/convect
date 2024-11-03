@@ -49,8 +49,8 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     Ok(())
 }
 
-async fn upload_metrics(request: reporting_sdk::Request) -> Result<(), Error> {
-    let reporting_sdk = SQSReportingSdk::new();
+async fn report_metrics(request: reporting_sdk::Report) -> Result<(), Error> {
+    let reporting_sdk = SQSReportingSdk::new_with_defaults();
 
     reporting_sdk.handle(&request).await?;
 
@@ -91,7 +91,7 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
 
     let _ = join!(
         upload_logs(logs),
-        upload_metrics(reporting_sdk::Request::Metrics {
+        report_metrics(reporting_sdk::Report::Metrics {
             function_id: function_id.clone(),
             chain_id: chain_id.clone(),
             project_id: env::var("PROJECT_ID")
