@@ -128,7 +128,8 @@ impl<S: S3 + Sync + Send> ReportingSdk for SQSReportingSdk<S> {
                 key.as_str(),
                 serde_json::to_string(report)?,
             )
-            .await?;
+            .await
+            .unwrap();
 
         self.sqs
             .send_message()
