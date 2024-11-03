@@ -74,6 +74,21 @@ pub struct WrittenRequest {
     pub key: String,
 }
 
+impl WrittenRequest {
+    pub async fn delete(&self) {
+        let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+        let s3_client = aws_sdk_s3::Client::new(&config);
+
+        s3_client
+            .delete_object()
+            .bucket(&self.bucket)
+            .key(&self.key)
+            .send()
+            .await
+            .unwrap();
+    }
+}
+
 #[async_trait]
 pub trait ReportingSdk {
     async fn handle(&self, request: &Request) -> Result<(), BoxError>;

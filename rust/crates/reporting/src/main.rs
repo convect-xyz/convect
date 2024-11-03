@@ -46,8 +46,8 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
 
     let requests: Vec<_> = join_all(
         written_requests
-            .into_iter()
-            .map(|r| reporting_sdk::Request::from_written_request(r)),
+            .iter()
+            .map(|r| reporting_sdk::Request::from_written_request(r.clone())),
     );
 
     let extracted: Vec<_> = requests
@@ -112,6 +112,8 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         })
         .await
         .unwrap();
+
+    join_all(written_requests.iter().map(|r| r.delete())).await;
 
     Ok(())
 }
