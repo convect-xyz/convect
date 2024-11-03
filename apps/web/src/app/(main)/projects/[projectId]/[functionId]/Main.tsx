@@ -182,23 +182,27 @@ function LastUpdatedAt() {
 
 function RecentTransactions() {
   const filters = useTransactionFilters();
-  const { functionId, chainId } = useParams();
+  const { projectId, functionId, chainId } = useParams();
   const [selectedTransactionHash, setSelectedTransactionHash] =
     useState<string>();
 
-  const { data: maybeTransactions, error } =
-    api.functions.getTransactions.useQuery(
-      {
-        functionId: functionId ?? -1,
-        chainId: chainId ?? -1,
-        search: filters.debouncedSearch,
-        status: filters.status,
-      },
-      {
-        refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-        enabled: !!chainId && !!functionId,
-      },
-    );
+  const { data: fn } = api.functions.get.useQuery({
+    projectId: projectId,
+    functionId: functionId,
+  });
+
+  const { data: maybeTransactions } = api.functions.getTransactions.useQuery(
+    {
+      functionId: functionId ?? -1,
+      chainId: chainId ?? -1,
+      search: filters.debouncedSearch,
+      status: filters.status,
+    },
+    {
+      refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+      enabled: !!chainId && !!functionId,
+    },
+  );
 
   return (
     <div>
@@ -246,6 +250,7 @@ function RecentTransactions() {
                 setSelectedTransactionHash(undefined);
               }
             }}
+            manifest={fn!.currentDeployment!.manifest}
             transactionHash={selectedTransactionHash}
           />
         )}
