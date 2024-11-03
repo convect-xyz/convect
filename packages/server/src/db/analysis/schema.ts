@@ -13,6 +13,7 @@ export const processedTransactions = pgTable("processed_transactions", {
   handlerVersion: varchar("handler_version").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
   deploymentId: varchar("deployment_id").notNull(),
+  label: varchar("label").notNull(),
   status: varchar("status", { length: 256 }).notNull(),
   timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
 });
