@@ -223,7 +223,7 @@ function RecentTransactions() {
               <Skeleton className="h-6 w-24" />
             </div>
           ))}
-        {maybeTransactions?.transactions.map((tx) => (
+        {maybeTransactions?.transactions.map((tx, idx) => (
           <TransactionRow
             tx={tx}
             key={tx.id.toString()}
@@ -232,6 +232,11 @@ function RecentTransactions() {
             }
           />
         ))}
+        {maybeTransactions?.transactions.length === 0 && (
+          <div className="py-10 text-center">
+            <p>No transactions processed</p>
+          </div>
+        )}
 
         {selectedTransactionHash && (
           <InvocationDialog
