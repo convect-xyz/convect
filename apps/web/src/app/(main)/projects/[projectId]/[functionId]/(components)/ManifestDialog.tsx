@@ -19,6 +19,7 @@ import {
 export default function ManifestDialog(
   props: DialogProps & {
     manifest: Manifest;
+    initialChainId?: number;
   },
 ) {
   return (
@@ -27,16 +28,23 @@ export default function ManifestDialog(
         <DialogHeader>
           <DialogTitle>Manifest</DialogTitle>
         </DialogHeader>
-        <RenderManifest manifest={props.manifest} />
+        <RenderManifest
+          manifest={props.manifest}
+          initialChainId={props.initialChainId}
+        />
       </DialogContent>
     </Dialog>
   );
 }
 
-function RenderManifest(props: { manifest: Manifest }) {
+function RenderManifest(props: {
+  manifest: Manifest;
+  initialChainId?: number;
+}) {
   const structuredManifest = getStructuredManifest(props.manifest);
   const [selectedChainId, setSelectedChainId] = useState<string | undefined>(
-    structuredManifest.chains[0]?.chainId.toString(),
+    props.initialChainId?.toString() ??
+      structuredManifest.chains[0]?.chainId.toString(),
   );
 
   const isChainSelected = (chainId: number) => {

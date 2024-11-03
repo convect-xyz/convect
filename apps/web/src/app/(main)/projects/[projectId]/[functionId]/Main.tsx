@@ -334,6 +334,7 @@ function ManifestSection() {
       <ManifestDialog
         open={isOpen}
         onOpenChange={setIsOpen}
+        initialChainId={chainId}
         manifest={fn?.currentDeployment?.manifest}
       />
     </>
