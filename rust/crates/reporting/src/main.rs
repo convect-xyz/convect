@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     let pool = establish_connection_pool().await;
 
-    let written_requests: Vec<reporting_sdk::WrittenRequest> = event
+    let written_requests: Vec<reporting_sdk::StoredReport> = event
         .payload
         .records
         .into_iter()
@@ -47,7 +47,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     let requests: Vec<_> = join_all(
         written_requests
             .iter()
-            .map(|r| reporting_sdk::Request::from_written_request(r.clone())),
+            .map(|r| reporting_sdk::Report::from_stored_report(r.clone())),
     )
     .await;
 
@@ -119,11 +119,11 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     Ok(())
 }
 
-fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
+fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
     let mut rows = Vec::new();
 
     match r {
-        reporting_sdk::Request::Results {
+        reporting_sdk::Report::Results {
             results,
             function_id,
             chain_id,
@@ -170,7 +170,7 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
                 }
             }
         }
-        reporting_sdk::Request::Metrics {
+        reporting_sdk::Report::Metrics {
             function_id,
             chain_id,
             metrics,
