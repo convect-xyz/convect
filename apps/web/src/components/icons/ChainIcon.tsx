@@ -1,5 +1,6 @@
 import { ComponentProps } from "react";
 import {
+  abstractTestnet,
   base,
   baseSepolia,
   blast,
@@ -29,6 +30,8 @@ export default function ChainIcon(props: ChainIconProps) {
     case base.id:
     case baseSepolia.id:
       return <BaseIcon width={14} height={14} {...rest} />;
+    case abstractTestnet.id:
+      return <AbstractIcon width={14} height={14} {...rest} />;
     default:
       return (
         <svg
@@ -122,6 +125,32 @@ function BaseIcon(props: Omit<ChainIconProps, "chainId">) {
       <path
         fill="#fff"
         d="M73.323 123.729c28.294 0 51.23-22.897 51.23-51.141 0-28.245-22.936-51.142-51.23-51.142-26.843 0-48.865 20.61-51.052 46.843h67.715v8.597H22.27c2.187 26.233 24.209 46.843 51.052 46.843Z"
+      />
+    </svg>
+  );
+}
+
+function AbstractIcon(props: Omit<ChainIconProps, "chainId">) {
+  return (
+    <svg
+      width="37"
+      height="34"
+      viewBox="0 0 37 34"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M31.5666 30.2685L24.195 22.8534H12.5543L5.18258 30.2685L8.64147 33.7478L16.0131 26.3327C16.6452 25.697 17.4783 25.3502 18.3746 25.3502C19.2709 25.3502 20.1041 25.697 20.7361 26.3327L28.1077 33.7478L31.5666 30.2685Z"
+        fill="#23E066"
+      />
+      <path
+        d="M25.4245 20.715L35.4909 23.4256L36.755 18.6691L26.6886 15.9585C25.8267 15.7273 25.1085 15.1725 24.6603 14.3922C24.2122 13.6178 24.0973 12.7104 24.3271 11.8435L27.0218 1.71778L22.2931 0.446289L19.5984 10.572L25.4188 20.7092L25.4245 20.715Z"
+        fill="#23E066"
+      />
+      <path
+        d="M1.26404 23.4256L11.3304 20.715L11.3362 20.7092L17.1565 10.572L14.4618 0.446289L9.73314 1.71778L12.4279 11.8435C12.6577 12.7104 12.5428 13.6178 12.0946 14.3922C11.6464 15.1725 10.9282 15.7273 10.0664 15.9585L0 18.6691L1.26404 23.4256Z"
+        fill="#23E066"
       />
     </svg>
   );

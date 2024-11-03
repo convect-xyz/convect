@@ -1,18 +1,8 @@
 import { isNull, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  abstractTestnet,
-  base,
-  baseSepolia,
-  blast,
-  blastSepolia,
-  mainnet,
-  polygon,
-  polygonAmoy,
-  sepolia,
-} from "viem/chains";
 import { z } from "zod";
 import { db } from "~/server/db";
+import chains from "../../../../../../../config/chains.json";
 import { getJsonData, getUserContext } from "../utils";
 
 const requestSchema = z.object({
@@ -34,20 +24,8 @@ export const POST = async (req: NextRequest) => {
     where(fields, { eq, and }) {
       var filter = and();
 
-      const nameToId: Record<string, number> = {
-        "blast-mainnet": blast.id,
-        "blast-testnet": blastSepolia.id,
-        "eth-mainnet": mainnet.id,
-        "eth-sepolia": sepolia.id,
-        "polygon-mainnet": polygon.id,
-        "polygon-amoy": polygonAmoy.id,
-        "base-mainnet": base.id,
-        "base-sepolia": baseSepolia.id,
-        "abstract-testnet": abstractTestnet.id,
-      };
-
       for (const id of data.ids) {
-        const chainId = nameToId[id];
+        const chainId = chains.find((c) => c.slug === id)?.id;
         if (chainId) {
           filter = or(
             filter,

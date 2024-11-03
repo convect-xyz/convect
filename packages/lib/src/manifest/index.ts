@@ -26,6 +26,7 @@ export const manifestSchema = z.object({
   ),
   tx_configs: z.array(
     z.object({
+      name: z.string().default("default"),
       start_block: z.record(z.number()),
     })
   ),
@@ -45,8 +46,6 @@ export const manifestSchema = z.object({
 });
 
 export function parseManifest(manifest: string | any): Manifest {
-  console.log(manifest);
-
   if (typeof manifest === "string") {
     return manifestSchema.parse(JSON.parse(manifest));
   }
@@ -74,6 +73,7 @@ export function getStructuredManifest(manifest: Manifest) {
   return {
     chains: manifest.chains,
     txConfigs: manifest.tx_configs.map((txConfig, idx) => ({
+      name: txConfig.name,
       startBlock: txConfig.start_block,
       logConfigs: logConfigsByTxConfig
         .get(idx)!
@@ -85,12 +85,12 @@ export function getStructuredManifest(manifest: Manifest) {
 export function getAddress(
   chainId: number,
   logConfig: Manifest["log_configs"][number]
-) {
+): string | undefined {
   if (typeof logConfig.address === "string") {
     return logConfig.address;
   }
 
-  return logConfig.address[chainId]!;
+  return logConfig.address[chainId];
 }
 
 export function getStartBlock(
@@ -98,4 +98,13 @@ export function getStartBlock(
   txConfig: Manifest["tx_configs"][number]
 ) {
   return txConfig.start_block[chainId.toString()] ?? 0;
+}
+
+export function getLogConfigsForTxConfig(
+  manifest: Manifest,
+  txConfigIdx: number
+) {
+  return manifest.log_configs.filter((logConfig) =>
+    logConfig.tx_configs.includes(txConfigIdx)
+  );
 }

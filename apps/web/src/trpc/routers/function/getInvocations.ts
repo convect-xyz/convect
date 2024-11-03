@@ -26,6 +26,7 @@ export const getInvocations = protectedProcedure
           transactionHash: z.string(),
           status: z.enum(["SUCCESS", "FAILED"]),
           timestamp: z.number(),
+          label: z.string(),
         }),
       ),
     }),
@@ -64,6 +65,7 @@ export const getInvocations = protectedProcedure
       projectId: fn.projectId,
       userId: ctx.session.user.id,
     });
+
     const getFilter = () => {
       let baseFilter = and(
         eq(
@@ -112,6 +114,7 @@ export const getInvocations = protectedProcedure
         transactionHash: tx.transactionHash,
         status: tx.status as "SUCCESS" | "FAILED",
         timestamp: tx.timestamp.getTime(),
+        label: tx.label,
       })),
     };
   });

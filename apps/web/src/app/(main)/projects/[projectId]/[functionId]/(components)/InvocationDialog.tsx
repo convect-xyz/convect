@@ -1,3 +1,4 @@
+import { Manifest } from "@convect-xyz/lib";
 import { DialogProps } from "@radix-ui/react-dialog";
 import {
   Dialog,
@@ -12,6 +13,7 @@ import InvocationRow from "./InvocationRow";
 export default function InvocationDialog(
   props: DialogProps & {
     transactionHash: string;
+    manifest: Manifest;
   },
 ) {
   const { chainId, functionId } = useParams();
@@ -28,14 +30,24 @@ export default function InvocationDialog(
 
   return (
     <Dialog {...props}>
-      <DialogContent className="max-w-screen-lg">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Invocations</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-2">
-          {response?.invocations.map((invocation) => (
-            <InvocationRow tx={invocation} key={invocation.id.toString()} />
-          ))}
+        <div className="text-sm text-muted-foreground">
+          Transaction Hash: {props.transactionHash.substring(0, 10)}...
+          {props.transactionHash.substring(props.transactionHash.length - 10)}
+        </div>
+        <div>
+          <div className="flex flex-col rounded-md border px-3 py-1">
+            {response?.invocations.map((invocation) => (
+              <InvocationRow
+                tx={invocation}
+                key={invocation.id.toString()}
+                manifest={props.manifest}
+              />
+            ))}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

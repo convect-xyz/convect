@@ -1,18 +1,14 @@
+import { parseManifest } from "@convect-xyz/lib";
 import {
-  getAddress,
-  getStartBlock,
-  Manifest,
-  parseManifest,
-} from "@convect-xyz/lib";
-import { ConvectFunctionFacade } from "@convect-xyz/server";
+  AppError,
+  ConvectFunctionFacade,
+  ManifestValidationService,
+} from "@convect-xyz/server";
 import { NextRequest, NextResponse } from "next/server";
 import { v4 } from "uuid";
-import { Hex } from "viem";
 import { z } from "zod";
 import { env } from "~/env";
 import { ecs, s3 } from "~/lib/server/aws";
-import { EtherscanProvider } from "~/lib/server/etherscan";
-import { getPublicClient } from "~/lib/server/viem/client";
 import { monikerRegex } from "~/lib/shared/validation";
 import { getStackOutputs } from "~/server/actions/pulumi/getStackOutputs";
 import { db } from "~/server/db";
@@ -57,15 +53,27 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
+  const manifest = parseManifest(await data.manifest.text());
+  const validator = new ManifestValidationService(db);
+
+  try {
+    await validator.validate(manifest);
+  } catch (e) {
+    if (e instanceof AppError) {
+      return NextResponse.json({ message: e.message }, { status: 400 });
+    }
+
+    return NextResponse.json(
+      { message: "An unexpected error occurred" },
+      { status: 500 },
+    );
+  }
+
   const convectFn = new ConvectFunctionFacade(fn.convectFunction.id, {
     s3,
     db,
     ecs,
   });
-
-  const manifest = await updateStartBlocks(
-    parseManifest(await data.manifest.text()),
-  );
 
   const deploymentId = v4();
   await Promise.all([
@@ -89,42 +97,3 @@ export const POST = async (req: NextRequest) => {
 
   return NextResponse.json({});
 };
-
-async function updateStartBlocks(manifest: Manifest) {
-  manifest = { ...manifest };
-
-  for (const chain of manifest.chains) {
-    for (var i = 0; i < manifest.tx_configs.length; i++) {
-      const txConfig = manifest.tx_configs[i]!;
-      const logConfigs = manifest.log_configs.filter((logConfig) =>
-        logConfig.tx_configs.includes(i),
-      );
-      const contractAddresses = logConfigs.map((logConfig) => {
-        return getAddress(chain.chainId, logConfig);
-      });
-
-      const etherscanProvider = new EtherscanProvider(chain.chainId);
-      const txHashes =
-        await etherscanProvider.getContractCreationTxHashes(contractAddresses);
-      const client = getPublicClient(chain.chainId);
-
-      const receipts = await Promise.all(
-        txHashes.map((txHash) =>
-          client.getTransactionReceipt({
-            hash: txHash as Hex,
-          }),
-        ),
-      );
-
-      const minBlock = Number(
-        receipts.map((r) => r.blockNumber).reduce((m, e) => (e > m ? e : m)),
-      );
-      txConfig.start_block[chain.chainId.toString()] = Math.max(
-        minBlock,
-        getStartBlock(chain.chainId, txConfig),
-      );
-    }
-  }
-
-  return manifest;
-}
