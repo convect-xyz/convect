@@ -3,6 +3,8 @@ use std::env;
 use async_trait::async_trait;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::error::BoxError;
+use aws_smithy_types::body::SdkBody;
+use aws_smithy_types::byte_stream::ByteStream;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -119,7 +121,9 @@ impl ReportingSdk for SQSReportingSdk {
             .put_object()
             .bucket(bucket)
             .key(key)
-            .body(serde_json::to_string(request).unwrap())
+            .body(ByteStream::new(SdkBody::from(
+                serde_json::to_string(request).unwrap(),
+            )))
             .send()
             .await?;
 
