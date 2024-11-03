@@ -7,7 +7,7 @@ export function PricingCard(props: PropsWithChildren<ComponentProps<"div">>) {
     <div
       {...rest}
       className={cn(
-        "flex flex-col gap-3 rounded-lg bg-muted p-6 shadow-sm",
+        "flex flex-col gap-3 rounded-lg border bg-muted p-6 shadow-sm",
         className,
       )}
     >
@@ -37,6 +37,7 @@ export function PricingPrice(
       | {
           value: string;
           schedule: "MONTHLY";
+          additionalFeesApply: boolean;
         }
       | string;
   }>,
@@ -48,7 +49,8 @@ export function PricingPrice(
       </span>
       {typeof props.price !== "string" && (
         <span className="text-sm text-gray-500 dark:text-gray-400">
-          per month
+          {" "}
+          per month{props.price.additionalFeesApply && "*"}
         </span>
       )}
     </div>
