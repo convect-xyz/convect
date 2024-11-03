@@ -126,11 +126,11 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
     <div className="flex flex-col gap-2 p-4">
       <div className="flex items-center justify-between gap-4">
         <div className="px-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-muted-foreground">
-            <Code2 size={20} className="text-muted-foreground" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-muted-foreground">
+            <Code2 size={14} className="text-muted-foreground" />
           </div>
         </div>
-        <div className="basis-[200px] truncate">{env.key}</div>
+        <div className="max-w-[200px] flex-1 truncate">{env.key}</div>
         <div className="flex min-w-0 flex-1 items-center justify-start gap-2">
           <Button
             className="h-7 basis-7 p-0"
@@ -163,7 +163,7 @@ function EnvRow({ env }: { env: RouterOutputs["functions"]["getEnvs"][0] }) {
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              "•••••••••••••"
+              <div className="truncate text-clip">•••••••••••••</div>
             )}
           </div>
         </div>
