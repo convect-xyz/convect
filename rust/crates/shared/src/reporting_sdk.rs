@@ -119,8 +119,8 @@ impl ReportingSdk for SQSReportingSdk {
         let key = format!("convect-results/{}.json", format!("{}", Uuid::new_v4()));
         s3_client
             .put_object()
-            .bucket(bucket)
-            .key(key)
+            .bucket(&bucket)
+            .key(&key)
             .body(ByteStream::new(SdkBody::from(
                 serde_json::to_string(request).unwrap(),
             )))
