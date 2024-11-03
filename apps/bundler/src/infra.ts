@@ -1,7 +1,8 @@
 import { parseManifest } from "@convect-xyz/lib";
-import { decryptEnvValue } from "@convect-xyz/server";
+import { decryptEnvValue, getCodeBucket } from "@convect-xyz/server";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import path from "path";
 import { env } from "./env";
 import { getCurrentDeployment } from "./task";
 
@@ -40,8 +41,12 @@ export default async () => {
 
     const handler = new aws.lambda.Function(`handler-${chain.chainId}`, {
       role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-      s3Bucket: currentDeployment.sourceBucket,
-      s3Key: currentDeployment.sourceKey,
+      s3Bucket: getCodeBucket(),
+      s3Key: path.join(
+        "outputs",
+        currentDeployment.functionId.toString(),
+        currentDeployment.id + ".zip"
+      ),
       environment: {
         variables: {
           CHAIN_ID: manifestChain.chainId.toString(),
