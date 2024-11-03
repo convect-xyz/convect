@@ -114,7 +114,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             let mut batch = Vec::new();
 
             // Max transactions per batch: 60
-            while i < txs.len() && batch.len() < 10 {
+            while i < txs.len() && batch.len() < 60 {
                 let s3_result = &txs[i];
                 batch.push(s3_result);
                 i += 1;

@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::error::BoxError;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TransactionResultLabel {
@@ -48,6 +49,31 @@ pub enum Request {
     },
 }
 
+impl Request {
+    pub async fn from_written_request(written_request: WrittenRequest) -> Request {
+        let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+        let s3_client = aws_sdk_s3::Client::new(&config);
+
+        let object = s3_client
+            .get_object()
+            .bucket(&written_request.bucket)
+            .key(&written_request.key)
+            .send()
+            .await
+            .unwrap();
+
+        let data = object.body.collect().await.unwrap();
+        let content = String::from_utf8(data.into_bytes().to_vec()).unwrap();
+        serde_json::from_str(&content).unwrap()
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WrittenRequest {
+    pub bucket: String,
+    pub key: String,
+}
+
 #[async_trait]
 pub trait ReportingSdk {
     async fn handle(&self, request: &Request) -> Result<(), BoxError>;
@@ -70,11 +96,23 @@ impl SQSReportingSdk {
 impl ReportingSdk for SQSReportingSdk {
     async fn handle(&self, request: &Request) -> Result<(), BoxError> {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+        let s3_client = aws_sdk_s3::Client::new(&config);
+
+        let bucket = String::from("ingest-fetch-logs");
+        let key = format!("convect-results/{}.json", format!("{}", Uuid::new_v4()));
+        s3_client
+            .put_object()
+            .bucket(bucket)
+            .key(key)
+            .body(serde_json::to_string(request).unwrap())
+            .send()
+            .await?;
+
         let sqs_client = aws_sdk_sqs::Client::new(&config);
 
         sqs_client
             .send_message()
-            .message_body(serde_json::to_string(request).unwrap())
+            .message_body(serde_json::to_string(&WrittenRequest { bucket, key }).unwrap())
             .queue_url(&self.queue_url)
             .send()
             .await?;

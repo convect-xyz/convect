@@ -1,7 +1,7 @@
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use futures::{join, try_join};
+use futures::{future::join_all, join, try_join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
@@ -37,12 +37,18 @@ fn main() -> Result<(), Error> {
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     let pool = establish_connection_pool().await;
 
-    let requests: Vec<reporting_sdk::Request> = event
+    let written_requests: Vec<reporting_sdk::WrittenRequest> = event
         .payload
         .records
         .into_iter()
         .map(|r| serde_json::from_str(r.body.unwrap().as_str()).unwrap())
         .collect();
+
+    let requests: Vec<_> = join_all(
+        written_requests
+            .into_iter()
+            .map(|r| reporting_sdk::Request::from_written_request(r)),
+    );
 
     let extracted: Vec<_> = requests
         .into_iter()
