@@ -60,7 +60,7 @@ function FnRow(props: {
 
   return (
     <div
-      className="flex h-32 cursor-pointer flex-col rounded-sm border bg-muted p-3 transition-all hover:border-muted-foreground/25"
+      className="flex h-32 cursor-pointer flex-col rounded-md border bg-muted p-3 transition-all hover:border-muted-foreground/25"
       onClick={() =>
         router.push(`/projects/${projectId}/${props.fn.id.toString()}`)
       }

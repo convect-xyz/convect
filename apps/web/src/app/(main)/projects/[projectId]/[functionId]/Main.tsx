@@ -87,12 +87,13 @@ export default function Main() {
       <div className="flex items-center justify-between">
         <div className="flex items-stretch gap-2">
           <Chain />
+          <ManifestSection />
         </div>
         <LastUpdatedAt />
       </div>
       <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
         {!overview &&
-          times(3).map((v) => <Skeleton key={v} className="h-20 bg-muted" />)}
+          times(3).map((v) => <Skeleton key={v} className="h-20" />)}
 
         {overview && (
           <>
@@ -142,15 +143,10 @@ export default function Main() {
         )}
       </div>
       <div className="mt-2">
-        <ManifestSection />
+        <TransactionFilters>
+          <RecentTransactions />
+        </TransactionFilters>
       </div>
-      {overview && (
-        <div className="mt-2">
-          <TransactionFilters>
-            <RecentTransactions />
-          </TransactionFilters>
-        </div>
-      )}
     </div>
   );
 }
@@ -168,7 +164,7 @@ function LastUpdatedAt() {
   );
 
   if (!overview) {
-    return <Skeleton className="h-6 w-[200px] bg-muted" />;
+    return <Skeleton className="h-6 w-[200px]" />;
   }
 
   return (
@@ -186,31 +182,31 @@ function LastUpdatedAt() {
 
 function RecentTransactions() {
   const filters = useTransactionFilters();
-  const { functionId, chainId } = useParams();
+  const { projectId, functionId, chainId } = useParams();
   const [selectedTransactionHash, setSelectedTransactionHash] =
     useState<string>();
 
-  const { data: maybeTransactions, error } =
-    api.functions.getTransactions.useQuery(
-      {
-        functionId: functionId ?? -1,
-        chainId: chainId ?? -1,
-        search: filters.debouncedSearch,
-        status: filters.status,
-      },
-      {
-        refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-        enabled: !!chainId && !!functionId,
-      },
-    );
-  console.log("error", error);
-  console.log("maybeTransactions", maybeTransactions);
+  const { data: fn } = api.functions.get.useQuery({
+    projectId: projectId,
+    functionId: functionId,
+  });
+
+  const { data: maybeTransactions } = api.functions.getTransactions.useQuery(
+    {
+      functionId: functionId ?? -1,
+      chainId: chainId ?? -1,
+      search: filters.debouncedSearch,
+      status: filters.status,
+    },
+    {
+      refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+      enabled: !!chainId && !!functionId,
+    },
+  );
 
   return (
-    <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-      <div className="flex items-center gap-2 text-sm">
-        <span className="uppercase text-muted-foreground">TRANSACTIONS</span>
-      </div>
+    <div>
+      <div className="mb-2 mt-4 text-muted-foreground">Transactions</div>
       <div className="my-2">
         <div className="flex gap-2">
           <Input
@@ -222,16 +218,16 @@ function RecentTransactions() {
           <StatusFilter />
         </div>
       </div>
-      <div className="flex flex-col divide-y">
+      <div className="flex flex-col divide-y rounded-md border px-4">
         {!maybeTransactions &&
           times(25).map((v) => (
             <div className="flex items-center gap-2 py-4" key={v}>
-              <Skeleton className="h-2 w-2 rounded-full bg-background" />
-              <Skeleton className="h-6 flex-1 bg-background" />
-              <Skeleton className="h-6 w-24 bg-background" />
+              <Skeleton className="h-2 w-2 rounded-full" />
+              <Skeleton className="h-6 flex-1" />
+              <Skeleton className="h-6 w-24" />
             </div>
           ))}
-        {maybeTransactions?.transactions.map((tx) => (
+        {maybeTransactions?.transactions.map((tx, idx) => (
           <TransactionRow
             tx={tx}
             key={tx.id.toString()}
@@ -240,6 +236,11 @@ function RecentTransactions() {
             }
           />
         ))}
+        {maybeTransactions?.transactions.length === 0 && (
+          <div className="py-10 text-center">
+            <p>No transactions processed</p>
+          </div>
+        )}
 
         {selectedTransactionHash && (
           <InvocationDialog
@@ -249,6 +250,7 @@ function RecentTransactions() {
                 setSelectedTransactionHash(undefined);
               }
             }}
+            manifest={fn!.currentDeployment!.manifest}
             transactionHash={selectedTransactionHash}
           />
         )}
@@ -314,7 +316,7 @@ function StatusFilter() {
 
 function ManifestSection() {
   const [isOpen, setIsOpen] = useState(false);
-  const { functionId, projectId } = useParams();
+  const { functionId, projectId, chainId } = useParams();
   const { data: fn } = api.functions.get.useQuery({
     projectId: projectId,
     functionId: functionId,
@@ -326,17 +328,13 @@ function ManifestSection() {
 
   return (
     <>
-      <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="flex-1 uppercase text-muted-foreground">
-            View Manifest
-          </span>
-          <Button onClick={() => setIsOpen(true)}>View</Button>
-        </div>
-      </div>
+      <Button variant="outline" onClick={() => setIsOpen(true)}>
+        View Manifest
+      </Button>
       <ManifestDialog
         open={isOpen}
         onOpenChange={setIsOpen}
+        initialChainId={chainId ?? undefined}
         manifest={fn?.currentDeployment?.manifest}
       />
     </>

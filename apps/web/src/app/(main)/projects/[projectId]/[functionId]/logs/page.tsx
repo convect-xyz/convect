@@ -67,11 +67,13 @@ function LogsTable() {
           <div className="basis-16">Level</div>
           <div className="flex-1">Message</div>
         </div>
-        {logs!.length === 0 && (
+
+        {logs?.length === 0 && (
           <div className="align-center flex justify-center p-12">
             Nothing to see here
           </div>
         )}
+
         <div className="flex flex-col divide-y">
           {!logs &&
             times(20).map((v) => (

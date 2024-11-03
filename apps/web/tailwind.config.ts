@@ -38,7 +38,7 @@ const config = {
           foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: "#121417",
+          DEFAULT: "#0d0d0d",
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
@@ -50,7 +50,7 @@ const config = {
           foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: "#121417",
+          DEFAULT: "#0d0d0d",
           foreground: "hsl(var(--card-foreground))",
         },
       },
