@@ -2,6 +2,7 @@
 
 import { DialogProps } from "@radix-ui/react-dialog";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { times } from "lodash";
 import { useState } from "react";
 import {
   Sheet,
@@ -9,6 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/sheet";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { RouterOutputs } from "~/trpc/shared";
 import { Chain } from "../(components)/Chain";
@@ -49,7 +51,7 @@ function Content() {
         </Tabs>
       </div>
       <div className="overflow-hidden rounded-md border">
-        {data && <LogsTable />}
+        <LogsTable />
       </div>
     </div>
   );
@@ -60,7 +62,7 @@ function LogsTable() {
   const [selectedLog, setSelectedLog] = useState<LogRow>();
 
   const table = useReactTable({
-    data: logs!,
+    data: logs ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
     defaultColumn: {
@@ -70,6 +72,7 @@ function LogsTable() {
     },
   });
 
+  const rows = table.getRowModel().rows;
   return (
     <>
       <div className="w-full border-spacing-x-2">
@@ -79,13 +82,26 @@ function LogsTable() {
           <div className="basis-16">Level</div>
           <div className="flex-1">Message</div>
         </div>
-        {logs!.length === 0 && (
+
+        {logs?.length === 0 && (
           <div className="align-center flex justify-center p-12">
             Nothing to see here
           </div>
         )}
+
         <div className="flex flex-col divide-y">
-          {table.getRowModel().rows.map((row) => (
+          {!logs &&
+            times(20).map((v) => (
+              <div key={v} className="p-4 py-5 text-sm">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 basis-36" />
+                  <Skeleton className="h-4 basis-56" />
+                  <Skeleton className="h-4 basis-14" />
+                  <Skeleton className="h-4 flex-1" />
+                </div>
+              </div>
+            ))}
+          {rows.map((row) => (
             <div
               key={row.id}
               className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted"
