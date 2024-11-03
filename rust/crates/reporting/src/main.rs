@@ -48,7 +48,8 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         written_requests
             .iter()
             .map(|r| reporting_sdk::Request::from_written_request(r.clone())),
-    );
+    )
+    .await;
 
     let extracted: Vec<_> = requests
         .into_iter()
