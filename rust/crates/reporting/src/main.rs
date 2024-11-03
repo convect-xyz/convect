@@ -1,3 +1,4 @@
+use aws_config::BehaviorVersion;
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
@@ -35,23 +36,29 @@ fn main() -> Result<(), Error> {
 }
 
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
+    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    let s3_client = aws_sdk_s3::Client::new(&config);
+
     let pool = establish_connection_pool().await;
 
-    let written_requests: Vec<reporting_sdk::StoredReport> = event
+    let stored_reports: Vec<reporting_sdk::StoredReport> = event
         .payload
         .records
         .into_iter()
         .map(|r| serde_json::from_str(r.body.unwrap().as_str()).unwrap())
         .collect();
 
-    let requests: Vec<_> = join_all(
-        written_requests
+    let stored_report_service = reporting_sdk::StoredReportService::new(s3_client);
+    let reports = join_all(
+        stored_reports
             .iter()
-            .map(|r| reporting_sdk::Report::from_stored_report(r.clone())),
+            .map(|stored_report| stored_report_service.get_report(stored_report)),
     )
-    .await;
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()?;
 
-    let extracted: Vec<_> = requests
+    let extracted: Vec<_> = reports
         .into_iter()
         .map(extract_transactions)
         .flatten()
@@ -114,7 +121,12 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .await
         .unwrap();
 
-    join_all(written_requests.iter().map(|r| r.delete())).await;
+    join_all(
+        stored_reports
+            .iter()
+            .map(|stored_report| stored_report_service.delete_stored_report(stored_report)),
+    )
+    .await;
 
     Ok(())
 }
