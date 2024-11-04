@@ -5,21 +5,22 @@ use tokio::join;
 use lambda_extension::{
     service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
 };
-use reqwest::blocking::Client;
 use serde_json::json;
-use shared::reporting_sdk::{self, ReportingSdk, SQSReportingSdk};
-
-const TINYBIRD_API_KEY: &'static str = env!("TINYBIRD_API_KEY");
+use shared::{
+    events::EventService,
+    reporting_sdk::{self, ReportingSdk, SQSReportingSdk},
+};
 
 async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     let function_id = env::var("FUNCTION_ID").expect("Function ID is undefined");
     let chain_id = env::var("CHAIN_ID").expect("Chain ID is undefined");
     let deployment_id = env::var("DEPLOYMENT_ID").expect("Deployment ID is undefined");
+    let events_service = EventService::new_with_defaults();
 
-    let records: Vec<String> = logs.into_iter().map(|record|{
+    let records: Vec<serde_json::Value> = logs.into_iter().map(|record|{
       let re = Regex::new(r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$").unwrap();
 
-      re.captures(&record).map(|result| serde_json::to_string(&json!({
+      re.captures(&record).map(|result| json!({
         "function_id": function_id,
         "chain_id": chain_id,
         "deployment_id": deployment_id,
@@ -27,24 +28,14 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
         "invocation_id": result["uuid"].to_string(),
         "log_level": result["log_level"].to_string(),
         "log_message": result["log_message"].to_string(),
-      })).unwrap())
+      }))
     }).filter(Option::is_some).map(Option::unwrap).collect();
 
     if records.is_empty() {
         return Ok(());
     }
 
-    let client = Client::new();
-    let res = client
-        .post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_logs")
-        .header("Authorization", format!("Bearer {TINYBIRD_API_KEY}"))
-        .body(records.join("\n"))
-        .send();
-
-    match res {
-        Ok(res) => println!("Successfully uploaded: {:?}", res.text()),
-        Err(e) => println!("Error: {:?}", e),
-    }
+    events_service.report_events("ingest_logs", records).await?;
 
     Ok(())
 }
