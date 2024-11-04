@@ -93,7 +93,7 @@ fn main() -> Result<(), Error> {
             let pipeline = Arc::new(Mutex::new(
                 processing::State::load(function_id, chain_id, deployment_id).await,
             ));
-            let reporting_sdk = SQSReportingSdk::new_with_defaults();
+            let reporting_sdk = SQSReportingSdk::new_with_defaults().await;
             let app_state = AppState {
                 pipeline,
                 reporting: Arc::new(reporting_sdk),
