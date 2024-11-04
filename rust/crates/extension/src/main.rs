@@ -1,33 +1,28 @@
-use regex::{Captures, Regex};
-use std::env;
-use tokio::join;
-
 use lambda_extension::{
     service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
 };
+use regex::{Captures, Regex};
 use serde_json::json;
 use shared::{
     events::EventService,
     reporting_sdk::{self, ReportingSdk, SQSReportingSdk},
 };
+use std::env;
+use tokio::join;
+
+pub mod config;
 
 const LOG_REGEX_PATTERN: &str = r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$";
 const LOG_TABLE: &str = "ingest_logs";
 
 fn record_to_json(record: String) -> Option<serde_json::Value> {
-    let function_id = env::var("FUNCTION_ID").expect("Function ID is undefined");
-    let chain_id = env::var("CHAIN_ID").expect("Chain ID is undefined");
-    let deployment_id = env::var("DEPLOYMENT_ID").expect("Deployment ID is undefined");
-
     let re = Regex::new(LOG_REGEX_PATTERN).unwrap();
-    let captures = re
-        .captures(record.as_str())
-        .map_or(Err("Failed to parse log record"), Ok)?;
+    let captures = re.captures(record.as_str())?;
 
     Some(json!({
-      "function_id": function_id,
-      "chain_id": chain_id,
-      "deployment_id": deployment_id,
+      "function_id": config::config.function_id.clone(),
+      "chain_id": config::config.chain_id.to_string(),
+      "deployment_id": config::config.deployment_id.clone(),
       "time": captures["time"].to_string(),
       "invocation_id": captures["uuid"].to_string(),
       "log_level": captures["log_level"].to_string(),
@@ -66,10 +61,6 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
     let mut logs = Vec::new();
     let mut all_metrics: Vec<reporting_sdk::Metric> = Vec::new();
 
-    let function_id = env::var("FUNCTION_ID").expect("Function ID is undefined");
-    let chain_id = env::var("CHAIN_ID").expect("Chain ID is undefined");
-    let deployment_id = env::var("DEPLOYMENT_ID").expect("Deployment ID is undefined");
-
     for event in events {
         match event.record {
             LambdaTelemetryRecord::Function(record) => {
@@ -97,14 +88,11 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
     let _ = join!(
         upload_logs(logs),
         report_metrics(reporting_sdk::Report::Metrics {
-            function_id: function_id.clone(),
-            chain_id: chain_id.clone(),
-            project_id: env::var("PROJECT_ID")
-                .expect("PROJECT_ID is not defined")
-                .parse()
-                .unwrap(),
+            function_id: config::config.function_id.clone(),
+            chain_id: config::config.chain_id.to_string(),
+            project_id: config::config.project_id,
             metrics: all_metrics,
-            deployment_id: deployment_id.clone(),
+            deployment_id: config::config.deployment_id.clone(),
         })
     );
 
