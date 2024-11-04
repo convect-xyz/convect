@@ -1,6 +1,7 @@
-use std::{env, future::Future, sync::Arc};
+use std::{env, sync::Arc};
 
 use crate::s3::S3;
+use async_trait::async_trait;
 use aws_config::BehaviorVersion;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
@@ -109,11 +110,9 @@ impl<S: S3> StoredReportService<S> {
     }
 }
 
+#[async_trait]
 pub trait ReportingSdk {
-    fn handle(
-        &self,
-        request: &Report,
-    ) -> impl Future<Output = Result<(), errors::ReportingSdkError>>;
+    async fn handle(&self, request: &Report) -> Result<(), errors::ReportingSdkError>;
 }
 
 #[derive(Clone)]
@@ -123,7 +122,7 @@ pub struct SQSReportingSdk<S: S3> {
     sqs: Arc<Mutex<aws_sdk_sqs::Client>>,
 }
 
-impl<S: S3> SQSReportingSdk<S> {
+impl SQSReportingSdk<aws_sdk_s3::Client> {
     pub async fn new_with_defaults() -> SQSReportingSdk<aws_sdk_s3::Client> {
         let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
         let s3_client = aws_sdk_s3::Client::new(&config);
@@ -137,6 +136,7 @@ impl<S: S3> SQSReportingSdk<S> {
     }
 }
 
+#[async_trait]
 impl<S: S3> ReportingSdk for SQSReportingSdk<S> {
     async fn handle(&self, report: &Report) -> Result<(), errors::ReportingSdkError> {
         let stored_report = self.stored_report_service.store_report(report).await?;
