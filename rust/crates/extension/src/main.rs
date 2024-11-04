@@ -1,13 +1,12 @@
 use lambda_extension::{
     service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
 };
-use regex::{Captures, Regex};
+use regex::Regex;
 use serde_json::json;
 use shared::{
     events::EventService,
     reporting_sdk::{self, ReportingSdk, SQSReportingSdk},
 };
-use std::env;
 use tokio::join;
 
 pub mod config;
@@ -48,11 +47,22 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
 }
 
 async fn report_metrics(
-    request: reporting_sdk::Report,
+    metrics: Vec<reporting_sdk::Metric>,
 ) -> Result<(), reporting_sdk::errors::ReportingSdkError> {
-    let reporting_sdk = SQSReportingSdk::new_with_defaults().await;
+    if metrics.is_empty() {
+        return Ok(());
+    }
 
-    reporting_sdk.handle(&request).await?;
+    let reporting_sdk = SQSReportingSdk::new_with_defaults().await;
+    reporting_sdk
+        .handle(&reporting_sdk::Report::Metrics {
+            function_id: config::config.function_id.clone(),
+            chain_id: config::config.chain_id.to_string(),
+            project_id: config::config.project_id,
+            deployment_id: config::config.deployment_id.clone(),
+            metrics,
+        })
+        .await?;
 
     Ok(())
 }
@@ -85,16 +95,10 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
         }
     }
 
-    let _ = join!(
-        upload_logs(logs),
-        report_metrics(reporting_sdk::Report::Metrics {
-            function_id: config::config.function_id.clone(),
-            chain_id: config::config.chain_id.to_string(),
-            project_id: config::config.project_id,
-            metrics: all_metrics,
-            deployment_id: config::config.deployment_id.clone(),
-        })
-    );
+    let (logs_result, metrics_result) = join!(upload_logs(logs), report_metrics(all_metrics));
+
+    logs_result?;
+    metrics_result?;
 
     Ok(())
 }
