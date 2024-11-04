@@ -31,7 +31,10 @@ impl TinybirdService for TinybirdServiceImpl {
         events: Vec<String>,
     ) -> Result<(), errors::TinybirdServiceError> {
         self.client
-            .post(format!("https://api.tinybird.co/v1/events?name={}", name))
+            .post(format!(
+                "https://api.eu-central-1.aws.tinybird.co/v0/events?name={}",
+                name
+            ))
             .header("Authorization", format!("Bearer {TINYBIRD_API_KEY}"))
             .body(events.join("\n"))
             .send()
