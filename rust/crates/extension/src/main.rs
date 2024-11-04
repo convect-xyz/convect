@@ -49,8 +49,10 @@ async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
     Ok(())
 }
 
-async fn report_metrics(request: reporting_sdk::Report) -> Result<(), Error> {
-    let reporting_sdk = SQSReportingSdk::new_with_defaults();
+async fn report_metrics(
+    request: reporting_sdk::Report,
+) -> Result<(), reporting_sdk::errors::ReportingSdkError> {
+    let reporting_sdk = SQSReportingSdk::new_with_defaults().await;
 
     reporting_sdk.handle(&request).await?;
 
