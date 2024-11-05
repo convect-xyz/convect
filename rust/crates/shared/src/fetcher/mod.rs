@@ -50,9 +50,16 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         let filter =
             utils::get_web3_client_filter(&eligible_tx_cfgs, chain_id, range_start, range_end);
 
+        println!(
+            "[{:?}] Fetching logs with filter {:?}",
+            self.web3_client.chain_id(),
+            filter.clone(),
+        );
+
         let fetched_logs = Retry::spawn(
             ExponentialBackoff::from_millis(15).map(jitter).take(3),
             || async {
+                println!("[{:?}] Fetching logs", self.web3_client.chain_id());
                 Ok::<_, errors::TransactionFetcherError>(
                     self.web3_client.get_logs(filter.clone()).await?,
                 )
