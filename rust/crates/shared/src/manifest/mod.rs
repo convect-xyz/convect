@@ -8,6 +8,7 @@ mod macros;
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct TransactionConfig {
     pub start_block: HashMap<String, u64>,
+    pub chains: Option<Vec<i64>>,
 }
 
 impl TransactionConfig {

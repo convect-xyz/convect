@@ -28,6 +28,7 @@ export const manifestSchema = z.object({
     z.object({
       name: z.string().default("default"),
       start_block: z.record(z.number()),
+      chains: z.array(z.number()).optional(),
     })
   ),
   log_configs: z.array(
