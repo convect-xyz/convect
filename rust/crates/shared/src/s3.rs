@@ -1,22 +1,29 @@
 use aws_sdk_s3 as s3;
 
-use futures::Future;
+use async_trait::async_trait;
 use s3::primitives::{ByteStream, SdkBody};
 
-pub trait S3 {
-    fn get_s3_object(
+#[async_trait]
+pub trait S3: Send + Sync {
+    async fn get_s3_object(
         &self,
         bucket: &str,
         prefix: &str,
-    ) -> impl Future<Output = Result<String, errors::GetS3ObjectError>>;
-    fn put_s3_object(
+    ) -> Result<String, errors::GetS3ObjectError>;
+    async fn put_s3_object(
         &self,
         bucket: &str,
         prefix: &str,
         content: String,
-    ) -> impl Future<Output = Result<(), errors::PutS3ObjectError>>;
+    ) -> Result<(), errors::PutS3ObjectError>;
+    async fn delete_s3_object(
+        &self,
+        bucket: &str,
+        prefix: &str,
+    ) -> Result<(), errors::DeleteS3ObjectError>;
 }
 
+#[async_trait]
 impl S3 for aws_sdk_s3::Client {
     async fn get_s3_object(
         &self,
@@ -45,48 +52,53 @@ impl S3 for aws_sdk_s3::Client {
 
         Ok(())
     }
+
+    async fn delete_s3_object(
+        &self,
+        bucket: &str,
+        prefix: &str,
+    ) -> Result<(), errors::DeleteS3ObjectError> {
+        self.delete_object()
+            .bucket(bucket)
+            .key(prefix)
+            .send()
+            .await?;
+
+        Ok(())
+    }
 }
 
 pub mod errors {
     use aws_sdk_s3::{
         error::SdkError,
-        operation::{get_object::GetObjectError, put_object::PutObjectError},
+        operation::{
+            delete_object::DeleteObjectError, get_object::GetObjectError,
+            put_object::PutObjectError,
+        },
     };
     use aws_smithy_types::byte_stream;
     use std::string::FromUtf8Error;
+    use thiserror::Error;
 
-    #[derive(Debug)]
+    #[derive(Error, Debug)]
     pub enum GetS3ObjectError {
-        S3ClientError(SdkError<GetObjectError>),
-        ParseError(String),
+        #[error("SDK error {0}")]
+        TransportError(#[from] SdkError<GetObjectError>),
+        #[error("Parse error {0}")]
+        Utf8Error(#[from] FromUtf8Error),
+        #[error("Parse error {0}")]
+        ByteStreamError(#[from] byte_stream::error::Error),
     }
 
-    impl From<SdkError<GetObjectError>> for GetS3ObjectError {
-        fn from(e: SdkError<GetObjectError>) -> Self {
-            Self::S3ClientError(e)
-        }
-    }
-
-    impl From<byte_stream::error::Error> for GetS3ObjectError {
-        fn from(e: byte_stream::error::Error) -> Self {
-            Self::ParseError(format!("{:?}", e))
-        }
-    }
-
-    impl From<FromUtf8Error> for GetS3ObjectError {
-        fn from(e: FromUtf8Error) -> Self {
-            Self::ParseError(format!("Invalid UTF-8: {:?}", e))
-        }
-    }
-
-    #[derive(Debug)]
+    #[derive(Error, Debug)]
     pub enum PutS3ObjectError {
-        S3ClientError(SdkError<PutObjectError>),
+        #[error("SDK error {0}")]
+        TransportError(#[from] SdkError<PutObjectError>),
     }
 
-    impl From<SdkError<PutObjectError>> for PutS3ObjectError {
-        fn from(e: SdkError<PutObjectError>) -> Self {
-            Self::S3ClientError(e)
-        }
+    #[derive(Error, Debug)]
+    pub enum DeleteS3ObjectError {
+        #[error("SDK error {0}")]
+        TransportError(#[from] SdkError<DeleteObjectError>),
     }
 }

@@ -1,7 +1,8 @@
+use aws_config::BehaviorVersion;
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use futures::{join, try_join};
+use futures::{future::join_all, join, try_join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
@@ -35,16 +36,29 @@ fn main() -> Result<(), Error> {
 }
 
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
+    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    let s3_client = aws_sdk_s3::Client::new(&config);
+
     let pool = establish_connection_pool().await;
 
-    let requests: Vec<reporting_sdk::Request> = event
+    let stored_reports: Vec<reporting_sdk::StoredReport> = event
         .payload
         .records
         .into_iter()
         .map(|r| serde_json::from_str(r.body.unwrap().as_str()).unwrap())
         .collect();
 
-    let extracted: Vec<_> = requests
+    let stored_report_service = reporting_sdk::StoredReportService::new(s3_client);
+    let reports = join_all(
+        stored_reports
+            .iter()
+            .map(|stored_report| stored_report_service.get_report(stored_report)),
+    )
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()?;
+
+    let extracted: Vec<_> = reports
         .into_iter()
         .map(extract_transactions)
         .flatten()
@@ -107,14 +121,21 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .await
         .unwrap();
 
+    join_all(
+        stored_reports
+            .iter()
+            .map(|stored_report| stored_report_service.delete_stored_report(stored_report)),
+    )
+    .await;
+
     Ok(())
 }
 
-fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
+fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
     let mut rows = Vec::new();
 
     match r {
-        reporting_sdk::Request::Results {
+        reporting_sdk::Report::Results {
             results,
             function_id,
             chain_id,
@@ -161,7 +182,7 @@ fn extract_transactions(r: reporting_sdk::Request) -> Vec<ExtractedRequest> {
                 }
             }
         }
-        reporting_sdk::Request::Metrics {
+        reporting_sdk::Report::Metrics {
             function_id,
             chain_id,
             metrics,

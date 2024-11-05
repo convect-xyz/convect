@@ -1,10 +1,10 @@
 "use client";
 
 import { Manifest } from "@convect-xyz/lib";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceStrict, formatDistanceToNow } from "date-fns";
 import { capitalize, times } from "lodash";
 import { LoaderIcon, MoreHorizontalIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -67,6 +67,12 @@ function DeploymentsTable() {
                   <RenderStatusIcon status={deployment.status} />
                   <div className="basis-56 truncate">
                     {capitalize(deployment.status)}
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      <RunningLabel
+                        runningAt={deployment.runningAt}
+                        finishedAt={deployment.finishedAt}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="truncate">
@@ -108,6 +114,35 @@ function DeploymentsTable() {
       )}
     </>
   );
+}
+
+function RunningLabel(props: {
+  runningAt?: number | null;
+  finishedAt?: number | null;
+}) {
+  const [_, setValue] = useState(0); // integer state
+
+  console.log(props);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setValue((prevValue) => prevValue + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  var { runningAt, finishedAt } = props;
+
+  if (!runningAt && !finishedAt) return "-";
+  if (!runningAt) {
+    return "-";
+  }
+
+  if (!finishedAt) {
+    finishedAt = new Date().getTime();
+  }
+
+  return formatDistanceStrict(finishedAt, runningAt);
 }
 
 function RenderStatusIcon(props: { status: Deployment["status"] }) {

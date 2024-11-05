@@ -1,13 +1,10 @@
 import { parseManifest } from "@convect-xyz/lib";
-import {
-  decryptEnvValue,
-  getCodeBucket,
-  getCodePrefix,
-} from "@convect-xyz/server";
+import { decryptEnvValue, getCodeBucket } from "@convect-xyz/server";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import path from "path";
 import { env } from "./env";
-import { getCurrentDeployment } from "./task";
+import { DeploymentManager } from "./manager";
 
 const org = "kayakthedev";
 
@@ -17,19 +14,20 @@ const SYNCER_CONTAINER_NAME = "syncer";
 const ALL_CHAINS_SNS_TOPIC = "arn:aws:sns:eu-west-1:730335604495:all-chains";
 
 export default async () => {
-  const currentDeployment = await getCurrentDeployment();
+  const current = await DeploymentManager.getOrCreate().then((r) => r.current);
+  if (!current) throw new Error("No current deployment.");
 
   const stackRef = new pulumi.StackReference(
-    `${org}/infra/${currentDeployment.version}`
+    `${org}/infra/${current.deployment.version}`
   );
   const githubSha = stackRef.getOutput("githubSha");
 
   const txQueueUrls: Array<pulumi.Output<string>> = [];
-  const manifest = parseManifest(currentDeployment.manifest);
+  const manifest = parseManifest(current.deployment.manifest);
 
   for (const chain of manifest.chains) {
     const queue = new aws.sqs.Queue(
-      `tx-queue-${chain.chainId}-${currentDeployment.id}`,
+      `tx-queue-${chain.chainId}-${current.deployment.id}`,
       {
         visibilityTimeoutSeconds: 900,
         fifoQueue: true,
@@ -45,12 +43,16 @@ export default async () => {
     const handler = new aws.lambda.Function(`handler-${chain.chainId}`, {
       role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
       s3Bucket: getCodeBucket(),
-      s3Key: getCodePrefix(currentDeployment.functionId, currentDeployment.id),
+      s3Key: path.join(
+        "outputs",
+        current.deployment.functionId.toString(),
+        current.deployment.id + ".zip"
+      ),
       environment: {
         variables: {
           CHAIN_ID: manifestChain.chainId.toString(),
           USER_ENVS: JSON.stringify(
-            currentDeployment.function.envs.map((functionEnv) => ({
+            current.deployment.function.envs.map((functionEnv) => ({
               key: functionEnv.key,
               value: decryptEnvValue(
                 env.ENV_DECRYPTION_KEY,
@@ -60,10 +62,10 @@ export default async () => {
             }))
           ),
           TRANSACTION_QUEUE_URL: queue.url,
-          PROJECT_ID: currentDeployment.function.projectId.toString(),
+          PROJECT_ID: current.deployment.function.projectId.toString(),
           REPORTING_QUEUE_URL: stackRef.getOutput("reportingQueueUrl"),
-          DEPLOYMENT_ID: currentDeployment.id,
-          FUNCTION_ID: currentDeployment.functionId.toString(),
+          DEPLOYMENT_ID: current.deployment.id,
+          FUNCTION_ID: current.deployment.functionId.toString(),
         },
       },
       layers: [
@@ -78,7 +80,7 @@ export default async () => {
     });
 
     new aws.lambda.EventSourceMapping(
-      currentDeployment.functionId.toString() +
+      current.deployment.functionId.toString() +
         chain.chainId.toString() +
         "-source-mapping",
       {
@@ -96,17 +98,17 @@ export default async () => {
     s3Key: pulumi.interpolate`orchestrator/${githubSha}.zip`,
     environment: {
       variables: {
-        MANIFEST_BUCKET: currentDeployment.manifestBucket,
-        MANIFEST_PREFIX: currentDeployment.manifestKey,
-        VERSION: currentDeployment.version,
+        MANIFEST_BUCKET: current.deployment.manifestBucket,
+        MANIFEST_PREFIX: current.deployment.manifestKey,
+        VERSION: current.deployment.version,
         SYNCER_TASK_DEFINITION_ARN: stackRef.getOutput("syncerTaskDefinition"),
         SYNCER_CLUSTER,
         SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
         SYNCER_CONTAINER_NAME,
         GITHUB_SHA: githubSha,
-        FUNCTION_ID: currentDeployment.functionId.toString(),
-        DEPLOYMENT_ID: currentDeployment.id,
-        PROJECT_ID: currentDeployment.function.projectId.toString(),
+        FUNCTION_ID: current.deployment.functionId.toString(),
+        DEPLOYMENT_ID: current.deployment.id,
+        PROJECT_ID: current.deployment.function.projectId.toString(),
         CHAINS: txQueueUrlOutputs.apply((output) =>
           JSON.stringify(
             output.map((url, idx) => {
@@ -133,7 +135,7 @@ export default async () => {
   });
 
   new aws.lambda.Permission(`allow_sns_invoke_orchestrator`, {
-    statementId: `${currentDeployment.functionId.toString()}`,
+    statementId: `${current.deployment.functionId.toString()}`,
     action: "lambda:InvokeFunction",
     principal: "sns.amazonaws.com",
     sourceArn: ALL_CHAINS_SNS_TOPIC,

@@ -23,9 +23,15 @@ export default function Page() {
               <PricingTitle title="Hobby" />
               <PricingDescription description="Get started with our free plan." />
             </PricingHeader>
-            <PricingPrice price={{ value: "$0", schedule: "MONTHLY" }} />
+            <PricingPrice
+              price={{
+                value: "$5",
+                schedule: "MONTHLY",
+                additionalFeesApply: false,
+              }}
+            />
             <form
-              className="mt-auto pt-5"
+              className="mt-auto pt-12"
               action={async () => {
                 "use server";
 
@@ -41,7 +47,13 @@ export default function Page() {
               <PricingTitle title="Pro" />
               <PricingDescription description="Perfect for startups and professionals." />
             </PricingHeader>
-            <PricingPrice price={{ value: "$20", schedule: "MONTHLY" }} />
+            <PricingPrice
+              price={{
+                value: "$20",
+                schedule: "MONTHLY",
+                additionalFeesApply: true,
+              }}
+            />
             <form
               className="mt-auto pt-5"
               action={async () => {
@@ -76,6 +88,9 @@ export default function Page() {
           </PricingCard>
         </div>
 
+        <div className="mt-8 text-center text-xs text-gray-400">
+          *Additional fees apply for usage outside of the included limits.
+        </div>
         <MorePricing />
         <FAQ />
       </div>
@@ -85,33 +100,36 @@ export default function Page() {
 
 function MorePricing() {
   return (
-    <Card className="mt-24 bg-background p-0">
-      <CardContent className="p-0">
-        <div className="flex flex-col divide-y divide-border">
-          <div className="flex divide-x divide-border">
-            <div className="flex-[2_2_0] p-4">Feature</div>
-            <div className="flex-[3_3_0] p-4">Hobby</div>
-            <div className="flex-[3_3_0] p-4">Pro</div>
-            <div className="flex-[3_3_0] p-4">Enterprise</div>
+    <div className="mt-24">
+      <h2 className="text-center text-xl font-bold">Additional Pricing</h2>
+      <Card className="mt-4 rounded-none bg-background p-0">
+        <CardContent className="rounded-none p-0">
+          <div className="flex flex-col divide-y divide-border">
+            <div className="flex divide-x divide-border">
+              <div className="flex-[2_2_0] p-4"></div>
+              <div className="flex-[3_3_0] p-4">Hobby</div>
+              <div className="flex-[3_3_0] p-4">Pro</div>
+              <div className="flex-[3_3_0] p-4">Enterprise</div>
+            </div>
+            <PricingRow
+              feature="Invocations"
+              hobby="10,000 invocations included"
+              pro="100,000 invocations included then $0.60 per million"
+            />
+            <PricingRow
+              feature="Duration"
+              hobby="10 GB-hours included"
+              pro="100 GB-hours included then $0.18 per GB-Hour"
+            />
+            <PricingRow
+              feature="Processed Transactions"
+              hobby="1,000 processed transactions included."
+              pro="10,000 processed transactions included then $0.20 per 100,000"
+            />
           </div>
-          <PricingRow
-            feature="Invocations"
-            hobby="10,000 invocations included"
-            pro="100,000 invocations included then $0.60 per million"
-          />
-          <PricingRow
-            feature="Duration"
-            hobby="10 GB-hours included"
-            pro="100 GB-hours included then $0.18 per GB-Hour"
-          />
-          <PricingRow
-            feature="Processed Transactions"
-            hobby="1,000 processed transactions included."
-            pro="10,000 processed transactions included then $0.20 per 100,000"
-          />
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -123,10 +141,16 @@ type PricingRowProps = {
 
 function PricingRow(props: PricingRowProps) {
   return (
-    <div className="flex divide-x divide-border">
-      <div className="flex-[2_2_0] p-4">{props.feature}</div>
-      <div className="flex-[3_3_0] p-4">{props.hobby}</div>
-      <div className="flex-[3_3_0] p-4">{props.pro}</div>
+    <div className="flex divide-x divide-border text-sm">
+      <div className="flex-[2_2_0] p-4">
+        <div className="flex h-full items-center">{props.feature}</div>
+      </div>
+      <div className="flex-[3_3_0] p-4">
+        <div className="flex h-full items-center">{props.hobby}</div>
+      </div>
+      <div className="flex-[3_3_0] p-4">
+        <div className="flex h-full items-center">{props.pro}</div>
+      </div>
       <div className="flex flex-[3_3_0] items-center justify-center p-4">
         Custom
       </div>

@@ -1,58 +1,68 @@
-use regex::Regex;
-use std::env;
-use tokio::join;
-
 use lambda_extension::{
     service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
 };
-use reqwest::blocking::Client;
+use regex::Regex;
 use serde_json::json;
-use shared::reporting_sdk::{self, ReportingSdk, SQSReportingSdk};
+use shared::{
+    events::EventService,
+    reporting_sdk::{self, ReportingSdk, SQSReportingSdk},
+};
+use tokio::join;
 
-const TINYBIRD_API_KEY: &'static str = env!("TINYBIRD_API_KEY");
+pub mod config;
+
+const LOG_REGEX_PATTERN: &str = r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$";
+const LOG_TABLE: &str = "ingest_logs";
+
+fn record_to_json(record: String) -> Option<serde_json::Value> {
+    let re = Regex::new(LOG_REGEX_PATTERN).unwrap();
+    let captures = re.captures(record.as_str())?;
+
+    Some(json!({
+      "function_id": config::config.function_id.clone(),
+      "chain_id": config::config.chain_id.to_string(),
+      "deployment_id": config::config.deployment_id.clone(),
+      "time": captures["time"].to_string(),
+      "invocation_id": captures["uuid"].to_string(),
+      "log_level": captures["log_level"].to_string(),
+      "log_message": captures["log_message"].to_string(),
+    }))
+}
 
 async fn upload_logs(logs: Vec<String>) -> Result<(), Error> {
-    let function_id = env::var("FUNCTION_ID").expect("Function ID is undefined");
-    let chain_id = env::var("CHAIN_ID").expect("Chain ID is undefined");
-    let deployment_id = env::var("DEPLOYMENT_ID").expect("Deployment ID is undefined");
+    let events_service = EventService::new_with_defaults();
 
-    let records: Vec<String> = logs.into_iter().map(|record|{
-      let re = Regex::new(r"(?x)^(?P<time>[\d\-T:.Z]+)\s+(?P<uuid>[a-f0-9\-]+)\s+(?P<log_level>[A-Z]+)\s+(?P<log_message>[\s\S]+)$").unwrap();
-
-      re.captures(&record).map(|result| serde_json::to_string(&json!({
-        "function_id": function_id,
-        "chain_id": chain_id,
-        "deployment_id": deployment_id,
-        "time": result["time"].to_string(),
-        "invocation_id": result["uuid"].to_string(),
-        "log_level": result["log_level"].to_string(),
-        "log_message": result["log_message"].to_string(),
-      })).unwrap())
-    }).filter(Option::is_some).map(Option::unwrap).collect();
+    let records: Vec<serde_json::Value> = logs
+        .into_iter()
+        .map(record_to_json)
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .collect();
 
     if records.is_empty() {
         return Ok(());
     }
 
-    let client = Client::new();
-    let res = client
-        .post("https://api.eu-central-1.aws.tinybird.co/v0/events?name=ingest_logs")
-        .header("Authorization", format!("Bearer {TINYBIRD_API_KEY}"))
-        .body(records.join("\n"))
-        .send();
-
-    match res {
-        Ok(res) => println!("Successfully uploaded: {:?}", res.text()),
-        Err(e) => println!("Error: {:?}", e),
-    }
-
-    Ok(())
+    Ok(events_service.report_events(LOG_TABLE, records).await?)
 }
 
-async fn upload_metrics(request: reporting_sdk::Request) -> Result<(), Error> {
-    let reporting_sdk = SQSReportingSdk::new();
+async fn report_metrics(
+    metrics: Vec<reporting_sdk::Metric>,
+) -> Result<(), reporting_sdk::errors::ReportingSdkError> {
+    if metrics.is_empty() {
+        return Ok(());
+    }
 
-    reporting_sdk.handle(&request).await?;
+    let reporting_sdk = SQSReportingSdk::new_with_defaults().await;
+    reporting_sdk
+        .handle(&reporting_sdk::Report::Metrics {
+            function_id: config::config.function_id.clone(),
+            chain_id: config::config.chain_id.to_string(),
+            project_id: config::config.project_id,
+            deployment_id: config::config.deployment_id.clone(),
+            metrics,
+        })
+        .await?;
 
     Ok(())
 }
@@ -60,10 +70,6 @@ async fn upload_metrics(request: reporting_sdk::Request) -> Result<(), Error> {
 async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
     let mut logs = Vec::new();
     let mut all_metrics: Vec<reporting_sdk::Metric> = Vec::new();
-
-    let function_id = env::var("FUNCTION_ID").expect("Function ID is undefined");
-    let chain_id = env::var("CHAIN_ID").expect("Chain ID is undefined");
-    let deployment_id = env::var("DEPLOYMENT_ID").expect("Deployment ID is undefined");
 
     for event in events {
         match event.record {
@@ -89,19 +95,10 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
         }
     }
 
-    let _ = join!(
-        upload_logs(logs),
-        upload_metrics(reporting_sdk::Request::Metrics {
-            function_id: function_id.clone(),
-            chain_id: chain_id.clone(),
-            project_id: env::var("PROJECT_ID")
-                .expect("PROJECT_DIR is not defined")
-                .parse()
-                .unwrap(),
-            metrics: all_metrics,
-            deployment_id: deployment_id.clone(),
-        })
-    );
+    let (logs_result, metrics_result) = join!(upload_logs(logs), report_metrics(all_metrics));
+
+    logs_result?;
+    metrics_result?;
 
     Ok(())
 }
