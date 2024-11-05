@@ -198,6 +198,7 @@ pub mod providers {
                 .iter()
                 .filter(|c| {
                     c.chains
+                        .as_ref()
                         .is_none_or(|chains| chains.contains(&(self.web3_client.chain_id() as i64)))
                 })
                 .map(|c| c.get_start_block(self.web3_client.chain_id()).unwrap_or(0))
