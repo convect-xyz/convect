@@ -45,6 +45,7 @@ export const POST = async (req: NextRequest) => {
       id: producer.id,
       name: producer.name,
       chainId: producer.chainId,
+      slug: chains.find((c) => c.id === producer.chainId)!.slug,
     })),
   });
 };

@@ -17,10 +17,15 @@ pub fn get_eligible_tx_configs<'a>(
             None => true,
         };
 
+    let should_run_on_chain = |tx_config: &TransactionConfig| match &tx_config.chains {
+        Some(chains) => chains.contains(&(chain_id as i64)),
+        None => true,
+    };
+
     manifest
         .get_tx_configs_with_log_configs()
         .into_iter()
-        .filter(|(tx_cfg, _)| is_tx_config_after_start(tx_cfg))
+        .filter(|(tx_cfg, _)| is_tx_config_after_start(tx_cfg) && should_run_on_chain(tx_cfg))
         .collect()
 }
 
@@ -157,12 +162,15 @@ mod tests {
             let manifest = Manifest {
                 tx_configs: vec![
                     TransactionConfig {
+                        chains: None,
                         start_block: HashMap::from([("1".to_string(), 150)]),
                     },
                     TransactionConfig {
+                        chains: None,
                         start_block: HashMap::from([("1".to_string(), 180)]),
                     },
                     TransactionConfig {
+                        chains: None,
                         start_block: HashMap::from([("1".to_string(), 5)]),
                     },
                 ],
@@ -208,12 +216,15 @@ mod tests {
             let manifest = Manifest {
                 tx_configs: vec![
                     TransactionConfig {
+                        chains: None,
                         start_block: HashMap::from([("1".to_string(), 150)]),
                     },
                     TransactionConfig {
+                        chains: None,
                         start_block: HashMap::from([("1".to_string(), 180)]),
                     },
                     TransactionConfig {
+                        chains: None,
                         start_block: HashMap::from([("1".to_string(), 5)]),
                     },
                 ],

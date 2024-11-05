@@ -89,7 +89,9 @@ export async function handler(event: SQSEvent, context: Context) {
     let txConfig = pipeline.handlers[i];
     const batch = groupedTxs[i]!.map((tx) => decodeTx(tx, txConfig));
 
-    if (batch.length === 0) continue;
+    if (batch.length === 0) {
+      continue;
+    }
 
     try {
       await txConfig._handler(batch, getContext());
@@ -252,8 +254,15 @@ export function groupTransactions(
 
     for (var txCfgIdx = 0; txCfgIdx < allTxConfigs.length; txCfgIdx++) {
       const txConfig = allTxConfigs[txCfgIdx];
+
+      const isInChain = () =>
+        !txConfig._chains ||
+        txConfig._chains.map((c: any) => c.chainId).includes(Number(CHAIN_ID));
+
       const canProcessTx = txConfig._logs.every((logConfig: any) =>
-        txLogIdentifiers.some((log) => logConfigMatches(logConfig, log))
+        txLogIdentifiers.some(
+          (log) => logConfigMatches(logConfig, log) && isInChain()
+        )
       );
 
       if (canProcessTx) {
