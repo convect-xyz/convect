@@ -1,7 +1,7 @@
 "use client";
 
 import { Manifest } from "@convect-xyz/lib";
-import { formatDistance, formatDistanceToNow } from "date-fns";
+import { formatDistanceStrict, formatDistanceToNow } from "date-fns";
 import { capitalize, times } from "lodash";
 import { LoaderIcon, MoreHorizontalIcon } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -142,7 +142,7 @@ function RunningLabel(props: {
     finishedAt = new Date().getTime();
   }
 
-  return formatDistance(finishedAt, runningAt);
+  return formatDistanceStrict(finishedAt, runningAt);
 }
 
 function RenderStatusIcon(props: { status: Deployment["status"] }) {
