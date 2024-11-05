@@ -255,13 +255,13 @@ export function groupTransactions(
     for (var txCfgIdx = 0; txCfgIdx < allTxConfigs.length; txCfgIdx++) {
       const txConfig = allTxConfigs[txCfgIdx];
 
-      const is_in_chain = () =>
+      const isInChain = () =>
         !txConfig._chains ||
         txConfig._chains.map((c: any) => c.chainId).includes(Number(CHAIN_ID));
 
       const canProcessTx = txConfig._logs.every((logConfig: any) =>
         txLogIdentifiers.some(
-          (log) => logConfigMatches(logConfig, log) && is_in_chain()
+          (log) => logConfigMatches(logConfig, log) && isInChain()
         )
       );
 
