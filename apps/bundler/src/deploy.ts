@@ -18,7 +18,7 @@ async function main() {
     const current = manager.current;
     if (!current) throw new Error("No current deployment.");
 
-    await current.startRunning();
+    await current.start();
 
     const mode = current.deployment.mode;
     if (mode === "destroy") {
