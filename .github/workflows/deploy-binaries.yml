@@ -144,8 +144,6 @@ jobs:
     steps:
       - name: Install soci
         uses: lerentis/soci-installer@v1.1.0
-        with:
-          soci-release: "v0.4.0"
       - name: Check install!
         run: soci --version
       - name: Set up containerd
