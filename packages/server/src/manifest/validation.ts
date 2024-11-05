@@ -91,6 +91,10 @@ export class ManifestValidationService {
 
       for (var i = 0; i < manifest.tx_configs.length; i++) {
         const txConfig = manifest.tx_configs[i]!;
+        if (txConfig.chains && !txConfig.chains.includes(chain.chainId)) {
+          continue;
+        }
+
         const addresses = getLogConfigsForTxConfig(manifest, i).map(
           (logConfig) => getAddress(chain.chainId, logConfig)!
         );
