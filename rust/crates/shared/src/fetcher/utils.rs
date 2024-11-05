@@ -17,7 +17,7 @@ pub fn get_eligible_tx_configs<'a>(
             None => true,
         };
 
-    let is_in_chain = |tx_config: &TransactionConfig| match tx_config.chains {
+    let should_run_on_chain = |tx_config: &TransactionConfig| match &tx_config.chains {
         Some(chains) => chains.contains(&(chain_id as i64)),
         None => true,
     };
@@ -25,7 +25,7 @@ pub fn get_eligible_tx_configs<'a>(
     manifest
         .get_tx_configs_with_log_configs()
         .into_iter()
-        .filter(|(tx_cfg, _)| is_tx_config_after_start(tx_cfg) && is_in_chain(tx_cfg))
+        .filter(|(tx_cfg, _)| is_tx_config_after_start(tx_cfg) && should_run_on_chain(tx_cfg))
         .collect()
 }
 
