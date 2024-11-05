@@ -7,11 +7,15 @@ export = async () => {
   const GITHUB_SHA = process.env.GITHUB_SHA!;
 
   const config = await getConfigForStack();
-  const reportingQueue = new aws.sqs.Queue(`reporting-queue`, {
-    visibilityTimeoutSeconds: 300,
-  }, {
-    deleteBeforeReplace: false
-  });
+  const reportingQueue = new aws.sqs.Queue(
+    `reporting-queue`,
+    {
+      visibilityTimeoutSeconds: 300,
+    },
+    {
+      deleteBeforeReplace: false,
+    }
+  );
 
   const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
     role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
@@ -20,7 +24,7 @@ export = async () => {
     environment: {
       variables: {
         DATABASE_URL: config.reportingDbUrl,
-        STRIPE_API_KEY: config.stripeApiKey
+        STRIPE_API_KEY: config.stripeApiKey,
       },
     },
     timeout: 300,
@@ -176,8 +180,8 @@ export = async () => {
           systemControls: [],
         },
       ]),
-      cpu: "512",
-      memory: "1024",
+      cpu: "1024",
+      memory: "2048",
       volumes: [],
       placementConstraints: [],
       requiresCompatibilities: ["FARGATE"],
