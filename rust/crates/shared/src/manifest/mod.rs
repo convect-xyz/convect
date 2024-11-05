@@ -196,6 +196,7 @@ pub mod providers {
                 .manifest
                 .tx_configs
                 .iter()
+                .filter(|c| c.chains.contains(&self.web3_client.chain_id()))
                 .map(|c| c.get_start_block(self.web3_client.chain_id()).unwrap_or(0))
                 .min();
 
