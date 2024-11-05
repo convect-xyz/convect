@@ -169,13 +169,14 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.binary }}
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
           file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
+          outputs: type=oci,dest=/tmp/image.tar
 
-      - name: Create SOCI index
+      - name: Create and push SOCI index
         env:
           REGISTRY_URL: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
         run: |
+          PASSWORD=$(aws ecr get-login-password --region eu-west-1)
           sudo soci create $REGISTRY_URL
-          PASSWORD=$(aws ecr get-login-password --region us-east-1)
           sudo soci push --user AWS:$PASSWORD $REGISTRY_URL
 
   deploy_pulumi:
