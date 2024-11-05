@@ -4,7 +4,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import path from "path";
 import { env } from "./env";
-import { DeploymentManager } from "./task";
+import { DeploymentManager } from "./manager";
 
 const org = "kayakthedev";
 

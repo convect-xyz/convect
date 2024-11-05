@@ -5,7 +5,7 @@ import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
 import infraFactory from "./infra";
-import { DeploymentManager } from "./task";
+import { DeploymentManager } from "./manager";
 
 const s3 = new S3({ region: "eu-west-1" });
 

@@ -1,5 +1,5 @@
 import { init } from "@sentry/node";
-import { DeploymentManager } from "./task";
+import { DeploymentManager } from "./manager";
 
 process.on("uncaughtException", handleFailure);
 process.on("unhandledRejection", handleFailure);
