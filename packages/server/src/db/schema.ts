@@ -297,6 +297,8 @@ export const deployment = createTable(
       .references(() => convectFunctions.id, { onDelete: "cascade" }),
     status: deploymentStatus("status").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
+    runningAt: timestamp("runningAt"),
+    finishedAt: timestamp("finishedAt"),
     ecsTaskId: varchar("ecsTaskId", { length: 255 }).notNull(),
     manifest: json("manifest").notNull(),
     manifestBucket: varchar("manifestBucket", { length: 255 }).notNull(),

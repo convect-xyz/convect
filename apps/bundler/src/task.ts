@@ -22,6 +22,7 @@ class DeploymentTask {
         .update(schema.deployment)
         .set({
           status: "SUCCESS",
+          finishedAt: new Date(),
         })
         .where(
           or(
@@ -67,6 +68,7 @@ class DeploymentTask {
         .update(schema.deployment)
         .set({
           status: "RUNNING",
+          runningAt: new Date(),
         })
         .where(eq(schema.deployment.id, nextDeployment.id));
 
@@ -82,6 +84,7 @@ class DeploymentTask {
       .update(schema.deployment)
       .set({
         status: "FAILED",
+        finishedAt: new Date(),
       })
       .where(
         or(

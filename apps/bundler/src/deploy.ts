@@ -38,6 +38,7 @@ async function deploy() {
   db.update(schema.deployment)
     .set({
       status: "RUNNING",
+      runningAt: new Date(),
     })
     .where(eq(schema.deployment.id, deploymentTask.currentDeployment!.id));
 
