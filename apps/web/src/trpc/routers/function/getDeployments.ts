@@ -18,6 +18,8 @@ export const getDeployments = protectedProcedure
         status: z.enum(["PENDING", "RUNNING", "SUCCESS", "FAILED"]),
         createdAt: z.number(),
         manifest: manifestSchema,
+        runningAt: z.number().nullish(),
+        finishedAt: z.number().nullish(),
       }),
     ),
   )
@@ -49,5 +51,7 @@ export const getDeployments = protectedProcedure
       status: deployment.status,
       createdAt: deployment.createdAt.getTime(),
       manifest: parseManifest(deployment.manifest),
+      runningAt: deployment.runningAt?.getTime(),
+      finishedAt: deployment.finishedAt?.getTime(),
     }));
   });

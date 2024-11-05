@@ -128,7 +128,7 @@ export async function getDeploymentTask() {
     const deployment = await getPendingDeployment(env.INITIAL_DEPLOYMENT_ID);
     await db
       .update(schema.deployment)
-      .set({ status: "RUNNING" })
+      .set({ status: "RUNNING", runningAt: new Date() })
       .where(eq(schema.deployment.id, deployment.id));
     deploymentTask = new DeploymentTask(deployment);
   }
