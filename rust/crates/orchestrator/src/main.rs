@@ -127,7 +127,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let config = Config::new();
 
     let futures = config.chains.iter().map(|chain_config| {
-        let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone() - 1;
+        let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone() - 10;
         let config = &config;
         sync_chain(config, chain_config.clone(), block_for_chain)
     });
