@@ -142,6 +142,14 @@ jobs:
       matrix:
         binary: ["builder", "syncer"]
     steps:
+      - name: Install soci
+        uses: lerentis/soci-installer@v1.1.0
+        with:
+          soci-release: "v0.4.0"
+      - name: Check install!
+        run: soci --version
+      - name: Set up containerd
+        uses: crazy-max/ghaction-setup-containerd@v2
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -156,19 +164,19 @@ jobs:
       - name: Build, tag, and push docker image to Amazon ECR
         uses: docker/build-push-action@v5
         with:
-          push: true
+          push: false
           tags: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
           cache-from: type=gha,scope=${{ matrix.binary }}
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
           file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
+
       - name: Create SOCI index
         env:
           REGISTRY_URL: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
         run: |
-          version="0.8.0"
-          wget https://github.com/awslabs/soci-snapshotter/releases/download/v${version}/soci-snapshotter-${version}-linux-amd64.tar.gz
-          tar -C /usr/local/bin -xvf soci-snapshotter-${version}-linux-amd64.tar.gz soci soci-snapshotter-grpc
           soci create $REGISTRY_URL
+          PASSWORD=$(aws ecr get-login-password --region us-east-1)
+          soci push --user AWS:$PASSWORD $REGISTRY_URL
 
   deploy_pulumi:
     needs: [build_lambdas, build_extensions, build_images]
