@@ -92,12 +92,6 @@ export async function handler(event: SQSEvent, context: Context) {
     if (batch.length === 0) {
       continue;
     }
-    if (
-      txConfig._chains &&
-      !txConfig._chains.map((c: any) => c.chainId).includes(Number(CHAIN_ID))
-    ) {
-      continue;
-    }
 
     try {
       await txConfig._handler(batch, getContext());
@@ -260,8 +254,15 @@ export function groupTransactions(
 
     for (var txCfgIdx = 0; txCfgIdx < allTxConfigs.length; txCfgIdx++) {
       const txConfig = allTxConfigs[txCfgIdx];
+
+      const is_in_chain = () =>
+        !txConfig._chains ||
+        txConfig._chains.map((c: any) => c.chainId).includes(Number(CHAIN_ID));
+
       const canProcessTx = txConfig._logs.every((logConfig: any) =>
-        txLogIdentifiers.some((log) => logConfigMatches(logConfig, log))
+        txLogIdentifiers.some(
+          (log) => logConfigMatches(logConfig, log) && is_in_chain()
+        )
       );
 
       if (canProcessTx) {
