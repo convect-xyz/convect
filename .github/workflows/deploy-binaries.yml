@@ -144,6 +144,8 @@ jobs:
     steps:
       - name: Install soci
         uses: lerentis/soci-installer@v1.1.0
+        with:
+          install-dir: /usr/local/bin
       - name: Check install!
         run: soci --version
       - name: Set up containerd
@@ -168,7 +170,6 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
           file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
           outputs: type=oci,dest=/tmp/image.tar
-
       - name: Create and push SOCI index
         env:
           REGISTRY_URL: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
