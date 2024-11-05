@@ -161,6 +161,14 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.binary }}
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
           file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
+      - name: Create SOCI index
+        env:
+          REGISTRY_URL: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
+        run: |
+          version="0.8.0"
+          wget https://github.com/awslabs/soci-snapshotter/releases/download/v${version}/soci-snapshotter-${version}-linux-amd64.tar.gz
+          tar -C /usr/local/bin -xvf soci-snapshotter-${version}-linux-amd64.tar.gz soci soci-snapshotter-grpc
+          soci create $REGISTRY_URL
 
   deploy_pulumi:
     needs: [build_lambdas, build_extensions, build_images]

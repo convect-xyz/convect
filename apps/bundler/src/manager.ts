@@ -44,8 +44,9 @@ export class DeploymentManager {
 
   static async getOrCreate() {
     if (!deploymentTask) {
-      const deployment = await getPendingDeployment(env.INITIAL_DEPLOYMENT_ID);
-      deploymentTask = new DeploymentManager(deployment);
+      deploymentTask = new DeploymentManager(
+        await getPendingDeployment(env.INITIAL_DEPLOYMENT_ID)
+      );
     }
 
     return deploymentTask;
