@@ -161,12 +161,15 @@ mod tests {
             let manifest = Manifest {
                 tx_configs: vec![
                     TransactionConfig {
+                        chains: None,
                         start_block: HashMap::from([("1".to_string(), 150)]),
                     },
                     TransactionConfig {
+                        chains: None,
                         start_block: HashMap::from([("1".to_string(), 180)]),
                     },
                     TransactionConfig {
+                        chains: None,
                         start_block: HashMap::from([("1".to_string(), 5)]),
                     },
                 ],
