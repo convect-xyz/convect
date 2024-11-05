@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export type Manifest = z.infer<typeof manifestSchema>;
+export type StructuredManifest = ReturnType<typeof getStructuredManifest>;
 
 type AbiParameter = z.infer<typeof baseAbiParameter> & {
   components?: AbiParameter[];
@@ -28,6 +29,7 @@ export const manifestSchema = z.object({
     z.object({
       name: z.string().default("default"),
       start_block: z.record(z.number()),
+      chains: z.array(z.number()).optional(),
     })
   ),
   log_configs: z.array(
@@ -75,6 +77,7 @@ export function getStructuredManifest(manifest: Manifest) {
     txConfigs: manifest.tx_configs.map((txConfig, idx) => ({
       name: txConfig.name,
       startBlock: txConfig.start_block,
+      chains: txConfig.chains,
       logConfigs: logConfigsByTxConfig
         .get(idx)!
         .map((logConfigIdx) => manifest.log_configs[logConfigIdx]!),
