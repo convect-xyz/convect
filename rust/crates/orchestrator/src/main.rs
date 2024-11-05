@@ -198,6 +198,9 @@ async fn sync_chain(
         .await;
     }
 
+    println("Start block: {}", start_block);
+    println("End block: {}", incoming_block);
+
     ChainSyncer::new(manifest.clone(), enqueuer, fetcher)
         .sync(&mut pipeline, start_block, incoming_block)
         .await?;

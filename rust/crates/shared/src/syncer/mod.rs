@@ -61,6 +61,8 @@ where
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?;
 
+            println!("Transactions: {:?}", transactions);
+
             let flattened: Vec<IngestTransaction> = transactions.into_iter().flatten().collect();
             self.enqueuer
                 .enqueue_transactions(state, &flattened)
