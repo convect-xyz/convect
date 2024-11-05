@@ -164,7 +164,7 @@ jobs:
       - name: Build, tag, and push docker image to Amazon ECR
         uses: docker/build-push-action@v5
         with:
-          push: false
+          push: true
           tags: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
           cache-from: type=gha,scope=${{ matrix.binary }}
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
@@ -174,9 +174,9 @@ jobs:
         env:
           REGISTRY_URL: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
         run: |
-          soci create $REGISTRY_URL
+          sudo soci create $REGISTRY_URL
           PASSWORD=$(aws ecr get-login-password --region us-east-1)
-          soci push --user AWS:$PASSWORD $REGISTRY_URL
+          sudo soci push --user AWS:$PASSWORD $REGISTRY_URL
 
   deploy_pulumi:
     needs: [build_lambdas, build_extensions, build_images]
