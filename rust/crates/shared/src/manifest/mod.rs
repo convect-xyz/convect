@@ -201,7 +201,9 @@ pub mod providers {
                         .as_ref()
                         .is_none_or(|chains| chains.contains(&(self.web3_client.chain_id() as i64)))
                 })
-                .map(|c| c.get_start_block(self.web3_client.chain_id()).unwrap_or(0))
+                .map(|c| c.get_start_block(self.web3_client.chain_id()))
+                .filter(Option::is_some)
+                .map(Option::unwrap)
                 .min();
 
             Ok(manifest_min_block.unwrap())
