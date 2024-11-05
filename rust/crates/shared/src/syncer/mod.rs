@@ -6,7 +6,7 @@ use futures::future::join_all;
 
 mod utils;
 
-const BATCH_SIZE: u64 = 1500;
+const BATCH_SIZE: u64 = 3000;
 
 pub struct ChainSyncer<En, Fe>
 where

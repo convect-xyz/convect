@@ -26,3 +26,8 @@ pub mod telemetry;
 pub mod testing;
 pub mod types;
 pub mod web3_client;
+
+#[cfg(feature = "events")]
+pub mod events;
+#[cfg(feature = "events")]
+pub mod tinybird;

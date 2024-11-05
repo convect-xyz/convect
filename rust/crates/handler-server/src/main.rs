@@ -93,7 +93,7 @@ fn main() -> Result<(), Error> {
             let pipeline = Arc::new(Mutex::new(
                 processing::State::load(function_id, chain_id, deployment_id).await,
             ));
-            let reporting_sdk = SQSReportingSdk::new();
+            let reporting_sdk = SQSReportingSdk::new_with_defaults().await;
             let app_state = AppState {
                 pipeline,
                 reporting: Arc::new(reporting_sdk),
@@ -160,7 +160,7 @@ mod results {
             .find(|v| v.failed_label.is_some())
             .map(|v| v.clone());
 
-        let reporting_request = reporting_sdk::Request::Results {
+        let reporting_request = reporting_sdk::Report::Results {
             function_id: app_state.config.function_id.clone(),
             chain_id: app_state.config.chain_id.to_string(),
             project_id: app_state.config.project_id.clone(),

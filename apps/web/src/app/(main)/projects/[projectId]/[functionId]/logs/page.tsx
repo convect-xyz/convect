@@ -1,7 +1,6 @@
 "use client";
 
 import { DialogProps } from "@radix-ui/react-dialog";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { times } from "lodash";
 import { useState } from "react";
 import {
@@ -14,7 +13,6 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { RouterOutputs } from "~/trpc/shared";
 import { Chain } from "../(components)/Chain";
-import { columns } from "./columns";
 import LogFilters, { useFilters } from "./filters";
 import { useLogs } from "./hooks/useLogs";
 
@@ -29,7 +27,6 @@ export default function Page() {
 }
 
 function Content() {
-  const { data } = useLogs();
   const { logLevel, setLogLevel } = useFilters();
 
   return (
@@ -58,21 +55,9 @@ function Content() {
 }
 
 function LogsTable() {
-  const { data: logs } = useLogs();
   const [selectedLog, setSelectedLog] = useState<LogRow>();
+  const { data: logs } = useLogs();
 
-  const table = useReactTable({
-    data: logs ?? [],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    defaultColumn: {
-      minSize: 0,
-      size: Number.MAX_SAFE_INTEGER,
-      maxSize: Number.MAX_SAFE_INTEGER,
-    },
-  });
-
-  const rows = table.getRowModel().rows;
   return (
     <>
       <div className="w-full border-spacing-x-2">
@@ -101,23 +86,17 @@ function LogsTable() {
                 </div>
               </div>
             ))}
-          {rows.map((row) => (
+          {logs?.map((row) => (
             <div
-              key={row.id}
+              key={row.time + row.log_level}
               className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted"
-              onClick={() => setSelectedLog(row.original)}
+              onClick={() => setSelectedLog(row)}
             >
-              <div className="basis-36 truncate">
-                {row.renderValue("invocation_id")}
-              </div>
-              <div className="basis-56 truncate">{row.renderValue("time")}</div>
-              <div className="basis-16 truncate">
-                {row.renderValue("log_level")}
-              </div>
+              <div className="basis-36 truncate">{row.invocation_id}</div>
+              <div className="basis-56 truncate">{row.time}</div>
+              <div className="basis-16 truncate">{row.log_level}</div>
               <div className="min-w-0 flex-1 overflow-hidden">
-                <div className="min-w-0 truncate">
-                  {row.renderValue("log_message")}
-                </div>
+                <div className="min-w-0 truncate">{row.log_message}</div>
               </div>
             </div>
           ))}

@@ -142,6 +142,14 @@ jobs:
       matrix:
         binary: ["builder", "syncer"]
     steps:
+      - name: Install soci
+        uses: lerentis/soci-installer@v1.1.0
+        with:
+          install-dir: /usr/local/bin
+      - name: Check install!
+        run: soci --version
+      - name: Set up containerd
+        uses: crazy-max/ghaction-setup-containerd@v2
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -156,11 +164,34 @@ jobs:
       - name: Build, tag, and push docker image to Amazon ECR
         uses: docker/build-push-action@v5
         with:
-          push: true
+          push: false
           tags: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
           cache-from: type=gha,scope=${{ matrix.binary }}
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
           file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
+          outputs: type=oci,dest=/tmp/image.tar
+
+      - name: Import image in containerd
+        env:
+          REGISTRY_URL: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
+          BASE_NAME: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}"
+        run: |
+          sudo ctr i import --base-name $BASE_NAME --digests --all-platforms /tmp/image.tar
+
+      - name: Push image with containerd
+        env:
+          REGISTRY_URL: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
+        run: |
+          PASSWORD=$(aws ecr get-login-password --region eu-west-1)
+          sudo ctr i push --user "AWS:$PASSWORD" $REGISTRY_URL
+
+      - name: Create and push SOCI index
+        env:
+          REGISTRY_URL: "${{ steps.login-ecr.outputs.registry }}/${{ matrix.binary }}:${{ github.sha }}"
+        run: |
+          PASSWORD=$(aws ecr get-login-password --region eu-west-1)
+          sudo soci create $REGISTRY_URL
+          sudo soci push --user AWS:$PASSWORD $REGISTRY_URL
 
   deploy_pulumi:
     needs: [build_lambdas, build_extensions, build_images]

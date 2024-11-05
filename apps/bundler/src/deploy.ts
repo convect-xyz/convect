@@ -1,24 +1,26 @@
 import { S3 } from "@aws-sdk/client-s3";
 import { InlineProgramArgs, LocalWorkspace } from "@pulumi/pulumi/automation";
-import { eq } from "drizzle-orm";
 import esbuild from "esbuild";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
-import { db } from "./db";
-import schema from "./db/schema";
 import infraFactory from "./infra";
-import { getCurrentDeployment, getDeploymentTask } from "./task";
+import { DeploymentManager } from "./manager";
 
 const s3 = new S3({ region: "eu-west-1" });
 
 main();
 
 async function main() {
-  const deploymentTask = await getDeploymentTask();
+  const manager = await DeploymentManager.getOrCreate();
 
-  do {
-    const mode = deploymentTask.currentDeployment!.mode;
+  while (manager.current) {
+    const current = manager.current;
+    if (!current) throw new Error("No current deployment.");
+
+    await current.start();
+
+    const mode = current.deployment.mode;
     if (mode === "destroy") {
       await destroy();
     } else if (mode === "init") {
@@ -26,21 +28,14 @@ async function main() {
     } else if (mode === "update") {
       await deploy();
     }
-    await deploymentTask.next();
-  } while (deploymentTask.currentDeployment);
+
+    await manager.next();
+  }
 
   process.exit(0);
 }
 
 async function deploy() {
-  const deploymentTask = await getDeploymentTask();
-
-  db.update(schema.deployment)
-    .set({
-      status: "RUNNING",
-    })
-    .where(eq(schema.deployment.id, deploymentTask.currentDeployment!.id));
-
   console.info("initialising/getting stack...");
   const stack = await getStack();
   console.info("succesfully intialised stack.");
@@ -74,11 +69,13 @@ async function destroy() {
 }
 
 async function getStack() {
-  const currentDeployment = await getCurrentDeployment();
-  const mode = currentDeployment.mode;
+  const current = await DeploymentManager.getOrCreate().then((r) => r.current);
+  if (!current) throw new Error("No current deployment.");
+
+  const mode = current.deployment.mode;
 
   const args: InlineProgramArgs = {
-    stackName: currentDeployment.function.globalId,
+    stackName: current.deployment.function.globalId,
     projectName: "convect-v1",
     program: infraFactory,
   };
@@ -99,13 +96,14 @@ async function getStack() {
 }
 
 async function downloadFile() {
-  const currentDeployment = await getCurrentDeployment();
-  const task = await getDeploymentTask();
-  const dirInfo = await task.getDirInfo();
+  const current = await DeploymentManager.getOrCreate().then((r) => r.current);
+  if (!current) throw new Error("No current deployment.");
+
+  const dirInfo = await current.getDirInfo();
 
   const object = await s3.getObject({
-    Bucket: currentDeployment.sourceBucket,
-    Key: currentDeployment.sourceKey,
+    Bucket: current.deployment.sourceBucket,
+    Key: current.deployment.sourceKey,
   });
 
   fs.mkdirSync(dirInfo.handlerSrcFile.split("/").slice(0, -1).join("/"), {
@@ -118,8 +116,10 @@ async function downloadFile() {
 }
 
 async function prepareBundle() {
-  const task = await getDeploymentTask();
-  const dirInfo = await task.getDirInfo();
+  const current = await DeploymentManager.getOrCreate().then((r) => r.current);
+  if (!current) throw new Error("No current deployment.");
+
+  const dirInfo = await current.getDirInfo();
   fs.mkdirSync(dirInfo.bundleOutDir, { recursive: true });
   fs.mkdirSync(dirInfo.bundleSrcDir, { recursive: true });
 
@@ -130,9 +130,10 @@ async function prepareBundle() {
 }
 
 async function zipLambda() {
-  const currentDeployment = await getCurrentDeployment();
-  const deploymentTask = await getDeploymentTask();
-  const dirInfo = await deploymentTask.getDirInfo();
+  const current = await DeploymentManager.getOrCreate().then((r) => r.current);
+  if (!current) throw new Error("No current deployment.");
+
+  const dirInfo = await current.getDirInfo();
 
   fs.copyFileSync(
     dirInfo.runtimeSrcFile,
@@ -159,8 +160,8 @@ async function zipLambda() {
   const bucket = "ingest-build-outputs";
   const key = path.join(
     "outputs",
-    currentDeployment.functionId.toString(),
-    deploymentTask.currentDeployment!.id + ".zip"
+    current.deployment.functionId.toString(),
+    current.deployment.id + ".zip"
   );
 
   await s3.putObject({

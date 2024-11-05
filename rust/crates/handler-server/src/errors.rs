@@ -1,12 +1,19 @@
-use aws_sdk_sqs::error::BoxError;
+use axum::BoxError;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
 
+use shared::reporting_sdk::errors::ReportingSdkError;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
 pub enum ServerError {
-    BoxError(BoxError),
+    #[error("Box error")]
+    BoxError(#[from] BoxError),
+    #[error("Reporting SDK error")]
+    ReportingSdkError(#[from] ReportingSdkError),
 }
 
 impl IntoResponse for ServerError {
@@ -22,14 +29,12 @@ impl IntoResponse for ServerError {
                 println!("{:?}", e);
                 (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e))
             }
+            ServerError::ReportingSdkError(e) => {
+                // tracing::error!(%err, "s3 error");
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e))
+            }
         };
 
         (status, axum::Json(ErrorResponse { message })).into_response()
-    }
-}
-
-impl From<BoxError> for ServerError {
-    fn from(error: BoxError) -> Self {
-        Self::BoxError(error)
     }
 }
