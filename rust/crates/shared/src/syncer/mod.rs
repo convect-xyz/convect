@@ -61,7 +61,11 @@ where
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?;
 
-            println!("Transactions: {:?}", transactions);
+            println!(
+                "[{:?}] Transactions: {:?}",
+                self.fetcher.chain_id(),
+                transactions
+            );
 
             let flattened: Vec<IngestTransaction> = transactions.into_iter().flatten().collect();
             self.enqueuer
