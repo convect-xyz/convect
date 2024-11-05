@@ -89,7 +89,7 @@ class DeploymentTask {
       .update(schema.deployment)
       .set({
         status: "RUNNING",
-        finishedAt: new Date(),
+        runningAt: new Date(),
       })
       .where(eq(schema.deployment.id, this.deployment.id));
     await this.refresh();
