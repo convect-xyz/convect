@@ -1,149 +1,16 @@
-import { and, desc, eq, InferSelectModel, lte, or } from "drizzle-orm";
+import { desc, eq, InferSelectModel } from "drizzle-orm";
 import path from "path";
 import { db } from "./db";
 import schema from "./db/schema";
 import { env } from "./env";
 
-type CurrentDeployment = InferSelectModel<typeof schema.deployment> & {
+type Deployment = InferSelectModel<typeof schema.deployment> & {
   function: InferSelectModel<typeof schema.convectFunctions> & {
     envs: Array<InferSelectModel<typeof schema.functionEnv>>;
   };
 };
-class DeploymentTask {
-  currentDeployment: CurrentDeployment | undefined;
 
-  constructor(currentDeployment: CurrentDeployment) {
-    this.currentDeployment = currentDeployment;
-  }
-
-  async next() {
-    this.currentDeployment = await db.transaction(async (tx) => {
-      const currentDeployment = await tx
-        .update(schema.deployment)
-        .set({
-          status: "SUCCESS",
-          finishedAt: new Date(),
-        })
-        .where(
-          or(
-            eq(schema.deployment.id, this.currentDeployment!.id),
-            and(
-              eq(
-                schema.deployment.functionId,
-                this.currentDeployment!.functionId
-              ),
-              lte(
-                schema.deployment.createdAt,
-                this.currentDeployment!.createdAt
-              ),
-              eq(schema.deployment.status, "PENDING")
-            )
-          )
-        )
-        .returning()
-        .then((r) => r[0]);
-
-      const nextDeployment = await tx.query.deployment.findFirst({
-        where(fields, { eq, and }) {
-          return and(
-            eq(fields.functionId, currentDeployment.functionId),
-            eq(fields.status, "PENDING")
-          );
-        },
-        with: {
-          function: {
-            with: {
-              envs: true,
-            },
-          },
-        },
-        orderBy: desc(schema.deployment.createdAt),
-      });
-
-      if (!nextDeployment) {
-        return;
-      }
-
-      await tx
-        .update(schema.deployment)
-        .set({
-          status: "RUNNING",
-          runningAt: new Date(),
-        })
-        .where(eq(schema.deployment.id, nextDeployment.id));
-
-      nextDeployment.status = "RUNNING";
-      return nextDeployment;
-    });
-
-    return this.currentDeployment;
-  }
-
-  async fail() {
-    await db
-      .update(schema.deployment)
-      .set({
-        status: "FAILED",
-        finishedAt: new Date(),
-      })
-      .where(
-        or(
-          eq(schema.deployment.id, this.currentDeployment!.id),
-          and(
-            eq(
-              schema.deployment.functionId,
-              this.currentDeployment!.functionId
-            ),
-            lte(schema.deployment.createdAt, this.currentDeployment!.createdAt),
-            eq(schema.deployment.status, "PENDING")
-          )
-        )
-      );
-  }
-
-  async getDirInfo() {
-    const handlerSrcFile = path.join(
-      env.CURR_DIR,
-      this.currentDeployment!.sourceKey + ".js"
-    );
-    const bundleSrcDir = path.join(env.CURR_DIR, "bundle_src");
-    const bundleOutDir = path.join(env.CURR_DIR, "bundle_out");
-    const runtimeSrcFile = "/scripts/runtime.js";
-    const bundleOutFile = path.join(bundleOutDir, "index.js");
-
-    return {
-      handlerSrcFile,
-      bundleSrcDir,
-      bundleOutDir,
-      runtimeSrcFile,
-      bundleOutFile,
-    };
-  }
-}
-
-var deploymentTask: DeploymentTask;
-
-export async function getDeploymentTask() {
-  if (!deploymentTask) {
-    const deployment = await getPendingDeployment(env.INITIAL_DEPLOYMENT_ID);
-    await db
-      .update(schema.deployment)
-      .set({ status: "RUNNING", runningAt: new Date() })
-      .where(eq(schema.deployment.id, deployment.id));
-    deploymentTask = new DeploymentTask(deployment);
-  }
-
-  return deploymentTask;
-}
-
-export async function getCurrentDeployment() {
-  const deploymentTask = await getDeploymentTask();
-  if (!deploymentTask.currentDeployment) {
-    throw new Error("Deployment not found");
-  }
-
-  return deploymentTask.currentDeployment!;
-}
+var deploymentTask: DeploymentManager;
 
 async function getPendingDeployment(deploymentId: string) {
   const deployment = await db.query.deployment.findFirst({
@@ -164,4 +31,127 @@ async function getPendingDeployment(deploymentId: string) {
   }
 
   return deployment;
+}
+
+export class DeploymentManager {
+  functionId: number;
+  current: DeploymentTask | undefined;
+
+  constructor(currentDeployment: Deployment) {
+    this.current = new DeploymentTask(currentDeployment);
+    this.functionId = currentDeployment.functionId;
+  }
+
+  static async getOrCreate() {
+    if (!deploymentTask) {
+      const deployment = await getPendingDeployment(env.INITIAL_DEPLOYMENT_ID);
+      deploymentTask = new DeploymentManager(deployment);
+    }
+
+    return deploymentTask;
+  }
+
+  async next() {
+    const nextDeployment = await db.transaction(async (tx) => {
+      await this.current?.done(tx);
+
+      return await tx.query.deployment.findFirst({
+        where: (fields, { eq, and }) => {
+          return and(
+            eq(fields.functionId, this.functionId),
+            eq(fields.status, "PENDING")
+          );
+        },
+        with: {
+          function: {
+            with: {
+              envs: true,
+            },
+          },
+        },
+        orderBy: desc(schema.deployment.createdAt),
+      });
+    });
+
+    this.current = nextDeployment
+      ? new DeploymentTask(nextDeployment)
+      : undefined;
+
+    return this.current;
+  }
+}
+
+class DeploymentTask {
+  constructor(public deployment: Deployment) {}
+
+  async startRunning(executor?: typeof db) {
+    await (executor ?? db)
+      .update(schema.deployment)
+      .set({
+        status: "RUNNING",
+        finishedAt: new Date(),
+      })
+      .where(eq(schema.deployment.id, this.deployment.id));
+    await this.refresh();
+  }
+
+  async fail(executor?: typeof db) {
+    await (executor ?? db)
+      .update(schema.deployment)
+      .set({
+        status: "FAILED",
+        finishedAt: new Date(),
+      })
+      .where(eq(schema.deployment.id, this.deployment.id));
+    await this.refresh();
+  }
+
+  async done(executor?: typeof db) {
+    await (executor ?? db)
+      .update(schema.deployment)
+      .set({
+        status: "SUCCESS",
+        finishedAt: new Date(),
+      })
+      .where(eq(schema.deployment.id, this.deployment.id))
+      .returning()
+      .then((r) => r[0]);
+    await this.refresh();
+  }
+
+  async refresh() {
+    this.deployment = await db.query.deployment
+      .findFirst({
+        where: (fields, { eq }) => {
+          return eq(fields.id, this.deployment.id);
+        },
+        with: {
+          function: {
+            with: {
+              envs: true,
+            },
+          },
+        },
+      })
+      .then((r) => r!);
+  }
+
+  async getDirInfo() {
+    const handlerSrcFile = path.join(
+      env.CURR_DIR,
+      this.deployment!.sourceKey + ".js"
+    );
+    const bundleSrcDir = path.join(env.CURR_DIR, "bundle_src");
+    const bundleOutDir = path.join(env.CURR_DIR, "bundle_out");
+    const runtimeSrcFile = "/scripts/runtime.js";
+    const bundleOutFile = path.join(bundleOutDir, "index.js");
+
+    return {
+      handlerSrcFile,
+      bundleSrcDir,
+      bundleOutDir,
+      runtimeSrcFile,
+      bundleOutFile,
+    };
+  }
 }

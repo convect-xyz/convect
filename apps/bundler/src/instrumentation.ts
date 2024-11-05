@@ -1,12 +1,16 @@
 import { init } from "@sentry/node";
-import { getDeploymentTask } from "./task";
+import { DeploymentManager } from "./task";
 
 process.on("uncaughtException", handleFailure);
 process.on("unhandledRejection", handleFailure);
 
 async function handleFailure() {
-  const deploymentTask = await getDeploymentTask();
-  await deploymentTask.fail();
+  try {
+    const manager = await DeploymentManager.getOrCreate();
+    await manager.current?.fail();
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 init({
