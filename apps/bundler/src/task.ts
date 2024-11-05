@@ -84,7 +84,7 @@ export class DeploymentManager {
 class DeploymentTask {
   constructor(public deployment: Deployment) {}
 
-  async startRunning(executor?: typeof db) {
+  async start(executor?: typeof db) {
     await (executor ?? db)
       .update(schema.deployment)
       .set({
