@@ -54,6 +54,7 @@ export const POST = async (req: NextRequest) => {
   }
 
   const manifest = parseManifest(await data.manifest.text());
+
   const validator = new ManifestValidationService(db);
 
   try {

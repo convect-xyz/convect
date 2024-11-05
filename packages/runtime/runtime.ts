@@ -89,7 +89,15 @@ export async function handler(event: SQSEvent, context: Context) {
     let txConfig = pipeline.handlers[i];
     const batch = groupedTxs[i]!.map((tx) => decodeTx(tx, txConfig));
 
-    if (batch.length === 0) continue;
+    if (batch.length === 0) {
+      continue;
+    }
+    if (
+      txConfig._chains &&
+      !txConfig._chains.map((c: any) => c.chainId).includes(Number(CHAIN_ID))
+    ) {
+      continue;
+    }
 
     try {
       await txConfig._handler(batch, getContext());
