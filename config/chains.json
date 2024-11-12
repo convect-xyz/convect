@@ -14,7 +14,9 @@
   {
     "id": 11155111,
     "name": "Ethereum Sepolia",
-    "polling_urls": ["http://eth-sepolia.rpc.convect.xyz"],
+    "polling_urls": [
+      "https://eth-sepolia.g.alchemy.com/v2/xlCz0CxtG7gSJxrjG-YMvjQVfUfRQhKI"
+    ],
     "ws_url": "wss://lb.drpc.org/ogws?network=sepolia&dkey=AhCyIHXOVU5VgtWSRCMgq27FbSzcQrQR76sAUgWAgP__",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia",
     "etherscan_like": "https://api-sepolia.etherscan.io",
