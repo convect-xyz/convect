@@ -111,8 +111,8 @@ export const getTransactions = protectedProcedure
       .from(analysisSchema.processedTransactions)
       .where(getFilter())
       .orderBy(
-        desc(analysisSchema.processedTransactions.timestamp),
         desc(analysisSchema.processedTransactions.transactionHash),
+        desc(analysisSchema.processedTransactions.timestamp),
       )
       .limit(input.limit)
       .as("distinct_transactions");
