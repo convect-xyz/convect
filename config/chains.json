@@ -2,9 +2,7 @@
   {
     "id": 1,
     "name": "Ethereum Mainnet",
-    "polling_urls": [
-      "https://eth-mainnet.g.alchemy.com/v2/REDACTED"
-    ],
+    "polling_urls": ["http://eth-mainnet.rpc.convect.xyz"],
     "ws_url": "wss://lb.drpc.org/ogws?network=ethereum&dkey=REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-mainnet",
     "etherscan_like": "https://api.etherscan.io",
@@ -14,9 +12,7 @@
   {
     "id": 11155111,
     "name": "Ethereum Sepolia",
-    "polling_urls": [
-      "https://eth-sepolia.g.alchemy.com/v2/REDACTED"
-    ],
+    "polling_urls": ["http://eth-sepolia.rpc.convect.xyz"],
     "ws_url": "wss://lb.drpc.org/ogws?network=sepolia&dkey=REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia",
     "etherscan_like": "https://api-sepolia.etherscan.io",
@@ -26,9 +22,7 @@
   {
     "id": 137,
     "name": "Polygon Mainnet",
-    "polling_urls": [
-      "https://polygon-mainnet.g.alchemy.com/v2/REDACTED"
-    ],
+    "polling_urls": ["http://polygon-mainnet.rpc.convect.xyz"],
     "ws_url": "wss://polygon-mainnet.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-mainnet",
     "etherscan_like": "https://api.polygonscan.com",
@@ -38,9 +32,7 @@
   {
     "id": 80002,
     "name": "Polygon Amoy",
-    "polling_urls": [
-      "https://polygon-amoy.g.alchemy.com/v2/REDACTED"
-    ],
+    "polling_urls": ["http://polygon-amoy.rpc.convect.xyz"],
     "ws_url": "wss://polygon-amoy.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:polygon-amoy",
     "etherscan_like": "https://api-amoy.polygonscan.com",
@@ -70,9 +62,7 @@
   {
     "id": 8453,
     "name": "Base Mainnet",
-    "polling_urls": [
-      "https://base-mainnet.g.alchemy.com/v2/REDACTED"
-    ],
+    "polling_urls": ["http://base-mainnet.rpc.convect.xyz"],
     "ws_url": "wss://base-mainnet.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-mainnet",
     "etherscan_like": "https://api.basescan.org",
@@ -82,9 +72,7 @@
   {
     "id": 84532,
     "name": "Base Sepolia",
-    "polling_urls": [
-      "https://base-sepolia.g.alchemy.com/v2/REDACTED"
-    ],
+    "polling_urls": ["http://base-sepolia.rpc.convect.xyz"],
     "ws_url": "wss://base-sepolia.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
     "etherscan_like": "https://api-sepolia.basescan.org",
