@@ -67,11 +67,23 @@ impl<T: Web3Client> TransactionFetcher for TransactionFetcherImpl<T> {
         )
         .await?;
 
+        println!(
+            "[{:?}] Fetched {} logs",
+            self.web3_client.chain_id(),
+            fetched_logs.len()
+        );
+
         let mut txs = utils::group_logs_into_transactions(utils::remove_extranous_logs(
             manifest,
             chain_id,
             fetched_logs,
         ));
+
+        println!(
+            "[{:?}] Txs after filtering: {:?}",
+            self.web3_client.chain_id(),
+            txs
+        );
 
         txs.sort_by(|a, b| {
             let block_cmp = a.block_number.cmp(&b.block_number);
