@@ -110,7 +110,7 @@ pub fn remove_extranous_logs(
   * taking the smallest start block of all the tx_configs as the start block that are relevant to the current range.
 
   After a response is returned from the web3 client, any extraneous logs that are not relevant to the Manifest should be removed with
-  the remove_extranous_logs method.
+  the remove_extranous_logs function.
 */
 pub fn get_web3_client_filter(
     tx_configs: &Vec<(TransactionConfig, Vec<LogConfig>)>,

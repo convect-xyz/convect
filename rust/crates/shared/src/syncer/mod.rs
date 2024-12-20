@@ -49,7 +49,7 @@ where
     ) -> Result<(), errors::ChainSyncerError> {
         let configs = utils::get_block_configs(start_block, end_block, BATCH_SIZE);
 
-        for chunk in configs.chunks(70) {
+        for chunk in configs.chunks(100) {
             let transactions: Vec<Vec<IngestTransaction>> = join_all(chunk.iter().map(|range| {
                 self.fetcher.get_transactions_in_range(
                     &self.manifest,
@@ -60,6 +60,12 @@ where
             .await
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?;
+
+            println!(
+                "[{:?}] Transactions: {:?}",
+                self.fetcher.chain_id(),
+                transactions
+            );
 
             let flattened: Vec<IngestTransaction> = transactions.into_iter().flatten().collect();
             self.enqueuer

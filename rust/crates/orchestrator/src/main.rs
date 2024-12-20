@@ -43,9 +43,9 @@ async fn get_manifest() -> &'static Manifest {
 async fn get_web3_client(chain_id: &u64, config: &Config) -> &'static Web3ClientImpl {
     WEB3_CLIENTS
         .get_or_init(|| async {
-            let supported_network = get_supported_network(*chain_id).unwrap();
-
             HashMap::from_iter(config.chains.iter().map(|c| {
+                let supported_network = get_supported_network(c.chain_id).unwrap();
+
                 (
                     c.chain_id,
                     Web3ClientImpl::new(c.chain_id, supported_network.polling_urls.clone()),
@@ -127,7 +127,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let config = Config::new();
 
     let futures = config.chains.iter().map(|chain_config| {
-        let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
+        let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone() - 10;
         let config = &config;
         sync_chain(config, chain_config.clone(), block_for_chain)
     });
@@ -197,6 +197,9 @@ async fn sync_chain(
         )
         .await;
     }
+
+    println!("Start block: {}", start_block);
+    println!("End block: {}", incoming_block);
 
     ChainSyncer::new(manifest.clone(), enqueuer, fetcher)
         .sync(&mut pipeline, start_block, incoming_block)
