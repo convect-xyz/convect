@@ -44,6 +44,8 @@ impl GethGraphqlClient for GethGraphqlClientImpl {
 
         let client = reqwest::Client::new();
 
+        println!("{}", request_body);
+        println!("{}", self.base_url);
         let res = client
             .post(format!("{}/graphql", self.base_url))
             .json(&request_body)
