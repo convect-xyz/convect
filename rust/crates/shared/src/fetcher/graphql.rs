@@ -31,8 +31,10 @@ impl GethGraphqlClientImpl {
     pub fn new() -> Self {
         Self {}
     }
+}
 
-    pub async fn get_logs(
+impl GethGraphqlClient for GethGraphqlClientImpl {
+    async fn get_logs(
         &self,
         variables: example_query::Variables,
     ) -> Result<example_query::ResponseData, errors::GethGraphqlClientError> {
