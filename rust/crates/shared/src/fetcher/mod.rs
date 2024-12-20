@@ -69,12 +69,6 @@ impl<T: GethGraphqlClient> TransactionFetcher for TransactionFetcherImpl<T> {
         )
         .await?;
 
-        println!(
-            "[{:?}] Fetched {} logs",
-            self.web3_client.chain_id(),
-            fetched_logs.len()
-        );
-
         let mut txs = utils::group_logs_into_transactions(utils::remove_extranous_logs(
             manifest,
             chain_id,
