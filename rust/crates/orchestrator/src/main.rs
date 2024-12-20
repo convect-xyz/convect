@@ -12,6 +12,7 @@ use lambda_http::tracing::Instrument;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use shared::contract_info::EtherscanContractInfoProvider;
+use shared::fetcher::graphql::GethGraphqlClientImpl;
 use shared::manifest::providers::{InitBlockProvider, InitBlockProviderImpl};
 use shared::networks::{get_supported_network, SupportedNetwork};
 use shared::redis_client::RedisClientImpl;
@@ -155,7 +156,7 @@ async fn sync_chain(
     let sdk_config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
     let web3_client = get_web3_client(&chain_config.chain_id, config).await;
-    let fetcher = TransactionFetcherImpl::new(web3_client.clone());
+    let fetcher = TransactionFetcherImpl::new(GethGraphqlClientImpl::new(), chain_config.chain_id);
     let s3_client = aws_sdk_s3::Client::new(&sdk_config);
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
     let enqueuer =
