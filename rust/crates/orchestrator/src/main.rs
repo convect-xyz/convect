@@ -156,7 +156,16 @@ async fn sync_chain(
     let sdk_config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
     let web3_client = get_web3_client(&chain_config.chain_id, config).await;
-    let fetcher = TransactionFetcherImpl::new(GethGraphqlClientImpl::new(), chain_config.chain_id);
+    let fetcher = TransactionFetcherImpl::new(
+        GethGraphqlClientImpl::new(
+            get_supported_network(chain_config.chain_id)
+                .unwrap()
+                .polling_urls
+                .first()
+                .unwrap(),
+        ),
+        chain_config.chain_id,
+    );
     let s3_client = aws_sdk_s3::Client::new(&sdk_config);
     let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
     let enqueuer =

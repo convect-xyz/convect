@@ -25,11 +25,13 @@ pub trait GethGraphqlClient: Sync + Send {
     ) -> impl Future<Output = Result<example_query::ResponseData, errors::GethGraphqlClientError>> + Send;
 }
 
-pub struct GethGraphqlClientImpl {}
+pub struct GethGraphqlClientImpl {
+    base_url: String,
+}
 
 impl GethGraphqlClientImpl {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(base_url: String) -> Self {
+        Self { base_url }
     }
 }
 
@@ -41,7 +43,12 @@ impl GethGraphqlClient for GethGraphqlClientImpl {
         let request_body = ExampleQuery::build_query(variables);
 
         let client = reqwest::Client::new();
-        let res = client.post("/graphql").json(&request_body).send().await?;
+
+        let res = client
+            .post(format!("{}/graphql", self.base_url))
+            .json(&request_body)
+            .send()
+            .await?;
         Ok(res.json().await?)
     }
 }
