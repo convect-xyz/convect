@@ -1,6 +1,7 @@
 use config::load_config_from_env;
 use shared::{
     enqueuer::SQSTransactionEnqueuer,
+    fetcher::graphql::GethGraphqlClientImpl,
     fetcher::TransactionFetcherImpl,
     manifest::Manifest,
     networks::get_supported_network,
@@ -29,8 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
-    let fetcher =
-        TransactionFetcherImpl::new(Web3ClientImpl::new(network.id, network.polling_urls));
+    let fetcher = TransactionFetcherImpl::new(GethGraphqlClientImpl::new(), network.id);
     let enqueuer = SQSTransactionEnqueuer::new(s3_client, syncer_config.tx_queue_url, sqs_client);
     let manifest = Manifest::from_env().await.unwrap();
     let syncer = ChainSyncer::new(manifest, enqueuer, fetcher);
