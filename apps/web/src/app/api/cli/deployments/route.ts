@@ -54,11 +54,13 @@ export const POST = async (req: NextRequest) => {
   }
 
   const manifest = parseManifest(await data.manifest.text());
+  console.log(manifest);
 
   const validator = new ManifestValidationService(db);
 
   try {
     await validator.validate(manifest);
+    console.log("manifest validated");
   } catch (e) {
     if (e instanceof AppError) {
       return NextResponse.json({ message: e.message }, { status: 400 });
@@ -77,6 +79,8 @@ export const POST = async (req: NextRequest) => {
   });
 
   const deploymentId = v4();
+
+  console.log("writing code and manifest");
   await Promise.all([
     convectFn.writeCode({
       deploymentId,
@@ -84,8 +88,10 @@ export const POST = async (req: NextRequest) => {
     }),
     convectFn.writeManifest(manifest, deploymentId),
   ]);
+  console.log("code and manifest written");
 
   const stackOutputs = await getStackOutputs();
+  console.log("stack outputs", stackOutputs);
   await convectFn.createDeployment({
     deploymentId,
     version: fn.convectFunction.infraVersion!,
@@ -95,6 +101,7 @@ export const POST = async (req: NextRequest) => {
     dbUrl: env.DATABASE_URL,
     encryptionKey: env.ENCRYPTION_KEY,
   });
+  console.log("deployment created");
 
   return NextResponse.json({});
 };

@@ -100,7 +100,10 @@ export const getTransactions = protectedProcedure
 
     const distinctTransactions = analysisDb
       .selectDistinctOn(
-        [analysisSchema.processedTransactions.transactionHash],
+        [
+          analysisSchema.processedTransactions.timestamp,
+          analysisSchema.processedTransactions.transactionHash,
+        ],
         {
           id: analysisSchema.processedTransactions.id,
           status: analysisSchema.processedTransactions.status,
@@ -111,8 +114,8 @@ export const getTransactions = protectedProcedure
       .from(analysisSchema.processedTransactions)
       .where(getFilter())
       .orderBy(
-        desc(analysisSchema.processedTransactions.transactionHash),
         desc(analysisSchema.processedTransactions.timestamp),
+        desc(analysisSchema.processedTransactions.transactionHash),
       )
       .limit(input.limit)
       .as("distinct_transactions");
