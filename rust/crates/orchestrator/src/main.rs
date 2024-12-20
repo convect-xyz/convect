@@ -162,7 +162,8 @@ async fn sync_chain(
                 .unwrap()
                 .polling_urls
                 .first()
-                .unwrap(),
+                .unwrap()
+                .to_string(),
         ),
         chain_config.chain_id,
     );

@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
     let fetcher = TransactionFetcherImpl::new(
-        GethGraphqlClientImpl::new(network.polling_urls.first().unwrap()),
+        GethGraphqlClientImpl::new(network.polling_urls.first().unwrap().to_string()),
         network.id,
     );
     let enqueuer = SQSTransactionEnqueuer::new(s3_client, syncer_config.tx_queue_url, sqs_client);
