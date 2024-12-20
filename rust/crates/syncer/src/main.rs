@@ -30,7 +30,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
-    let fetcher = TransactionFetcherImpl::new(GethGraphqlClientImpl::new(), network.id);
+    let fetcher = TransactionFetcherImpl::new(
+        GethGraphqlClientImpl::new(network.polling_urls.first().unwrap()),
+        network.id,
+    );
     let enqueuer = SQSTransactionEnqueuer::new(s3_client, syncer_config.tx_queue_url, sqs_client);
     let manifest = Manifest::from_env().await.unwrap();
     let syncer = ChainSyncer::new(manifest, enqueuer, fetcher);
