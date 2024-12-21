@@ -14,6 +14,9 @@ pub mod transactions {
         pub transaction_hash: String,
         #[serde(rename = "batchId")]
         pub batch_id: String,
+        pub from: String,
+        pub to: String,
+        pub value: String,
         pub logs: Vec<IngestLog>,
     }
 
