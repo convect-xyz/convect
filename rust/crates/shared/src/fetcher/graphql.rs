@@ -51,8 +51,7 @@ impl GethGraphqlClient for GethGraphqlClientImpl {
             .json(&request_body)
             .send()
             .await?;
-        println!("{:?}", res.text().await?);
-        Ok(example_query::ResponseData { logs: vec![] })
+        Ok(res.json().await?)
     }
 }
 

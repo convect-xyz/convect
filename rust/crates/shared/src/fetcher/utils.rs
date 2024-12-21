@@ -154,23 +154,6 @@ pub fn get_web3_client_filter(
         range_start,
     );
 
-    println!(
-        "Addresses: {:?}",
-        addresses
-            .iter()
-            .map(|v| format!("{:#x}", v))
-            .collect::<Vec<_>>(),
-    );
-    println!(
-        "Topics: {:?}",
-        topics
-            .iter()
-            .map(|v| format!("{:#x}", v))
-            .collect::<Vec<_>>(),
-    );
-    println!("Start block: {:#x}", start_block);
-    println!("End block: {:#x}", range_end);
-
     graphql::example_query::Variables {
         filter: FilterCriteria {
             addresses: Some(addresses.into_iter().map(|v| format!("{:#x}", v)).collect()),
