@@ -156,11 +156,17 @@ pub fn get_web3_client_filter(
 
     println!(
         "Addresses: {:?}",
-        addresses.iter().map(|v| format!("{:#x}", v)).collect(),
+        addresses
+            .iter()
+            .map(|v| format!("{:#x}", v))
+            .collect::<Vec<_>>(),
     );
     println!(
         "Topics: {:?}",
-        topics.iter().map(|v| format!("{:#x}", v)).collect()
+        topics
+            .iter()
+            .map(|v| format!("{:#x}", v))
+            .collect::<Vec<_>>(),
     );
     println!("Start block: {:#x}", start_block);
     println!("End block: {:#x}", range_end);
