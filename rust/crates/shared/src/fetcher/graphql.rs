@@ -1,3 +1,4 @@
+use example_query::ResponseData;
 use graphql_client::GraphQLQuery;
 use reqwest;
 use std::future::Future;
@@ -52,7 +53,7 @@ impl GethGraphqlClient for GethGraphqlClientImpl {
             .send()
             .await?;
         println!("{:?}", res.text().await?);
-        Ok(res.json().await?)
+        Ok(example_query::ResponseData { logs: vec![] })
     }
 }
 
