@@ -1,9 +1,8 @@
-use example_query::ResponseData;
 use graphql_client::GraphQLQuery;
 use reqwest;
 use std::future::Future;
 
-type Long = u64;
+type Long = String;
 type Bytes32 = String;
 type Address = String;
 type Bytes = String;
