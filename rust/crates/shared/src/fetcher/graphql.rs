@@ -51,6 +51,7 @@ impl GethGraphqlClient for GethGraphqlClientImpl {
             .json(&request_body)
             .send()
             .await?;
+        println!("{:?}", res);
         Ok(res.json().await?)
     }
 }
