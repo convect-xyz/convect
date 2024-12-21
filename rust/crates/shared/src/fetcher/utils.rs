@@ -44,9 +44,12 @@ pub fn group_logs_into_transactions(logs: Vec<ExampleQueryLogs>) -> Vec<IngestTr
             tx_indices.insert(tx_hash.clone(), txs.len());
 
             txs.push(IngestTransaction {
-                block_number: log.transaction.block.as_ref().unwrap().number,
+                block_number: u64::from_str_radix(
+                    &log.transaction.block.as_ref().unwrap().number,
+                    16,
+                ),
                 block_hash: log.transaction.block.as_ref().unwrap().hash.clone(),
-                transaction_index: log.transaction.index.unwrap(),
+                transaction_index: u64::from_str_radix(&log.transaction.index.unwrap(), 16),
                 batch_id: id.to_string(),
                 transaction_hash: log.transaction.hash.clone(),
                 logs: Vec::new(),
@@ -63,7 +66,7 @@ pub fn group_logs_into_transactions(logs: Vec<ExampleQueryLogs>) -> Vec<IngestTr
             address: log.account.address,
             topics: log.topics.clone(),
             data: log.data.into(),
-            log_index: Some(log.index.into()),
+            log_index: Some(format!("{:x}", log.index)),
             removed: Some(false),
         });
     }
