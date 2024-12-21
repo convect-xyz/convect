@@ -1,7 +1,7 @@
 use std::cmp::max;
 use std::collections::HashMap;
 use std::str::FromStr;
-use web3::types::{H160, H256};
+use web3::types::{H160, H256, U256};
 
 use crate::fetcher::graphql;
 use crate::manifest::{LogConfig, Manifest, TransactionConfig};
@@ -47,9 +47,11 @@ pub fn group_logs_into_transactions(logs: Vec<ExampleQueryLogs>) -> Vec<IngestTr
                 block_number: u64::from_str_radix(
                     &log.transaction.block.as_ref().unwrap().number,
                     16,
-                ),
+                )
+                .unwrap(),
                 block_hash: log.transaction.block.as_ref().unwrap().hash.clone(),
-                transaction_index: u64::from_str_radix(&log.transaction.index.unwrap(), 16),
+                transaction_index: u64::from_str_radix(&log.transaction.index.unwrap(), 16)
+                    .unwrap(),
                 batch_id: id.to_string(),
                 transaction_hash: log.transaction.hash.clone(),
                 logs: Vec::new(),
@@ -66,7 +68,7 @@ pub fn group_logs_into_transactions(logs: Vec<ExampleQueryLogs>) -> Vec<IngestTr
             address: log.account.address,
             topics: log.topics.clone(),
             data: log.data.into(),
-            log_index: Some(format!("{:x}", log.index)),
+            log_index: Some(U256::from_str(log.index.as_str()).unwrap()),
             removed: Some(false),
         });
     }
