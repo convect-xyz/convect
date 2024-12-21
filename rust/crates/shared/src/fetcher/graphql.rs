@@ -1,5 +1,5 @@
-use graphql_client::GraphQLQuery;
-use reqwest;
+use graphql_client::{GraphQLQuery, Response};
+use reqwest::{self};
 use std::future::Future;
 
 type Long = String;
@@ -46,13 +46,14 @@ impl GethGraphqlClient for GethGraphqlClientImpl {
 
         println!("{:?}", request_body.query);
         println!("{}", self.base_url);
-        let res = client
+        let raw_response = client
             .post(format!("{}/graphql", self.base_url))
             .json(&request_body)
             .send()
             .await?;
-        println!("{:?}", res.text().await?);
-        Ok(example_query::ResponseData { logs: vec![] })
+
+        let graphql_response: Response<example_query::ResponseData> = raw_response.json().await?;
+        Ok(graphql_response.data.unwrap())
     }
 }
 
