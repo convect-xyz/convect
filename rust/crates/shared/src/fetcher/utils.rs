@@ -63,6 +63,9 @@ pub fn group_logs_into_transactions(logs: Vec<ExampleQueryLogs>) -> Vec<IngestTr
                 .unwrap(),
                 batch_id: id.to_string(),
                 transaction_hash: log.transaction.hash.clone(),
+                from: log.transaction.from.address.clone(),
+                to: log.transaction.to.unwrap().address.clone(),
+                value: log.transaction.value.to_string(),
                 logs: Vec::new(),
             });
         }
