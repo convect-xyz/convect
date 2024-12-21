@@ -153,8 +153,8 @@ pub fn get_web3_client_filter(
         filter: FilterCriteria {
             addresses: Some(addresses.into_iter().map(|v| v.to_string()).collect()),
             topics: Some(vec![topics.into_iter().map(|v| v.to_string()).collect()]),
-            from_block: Some(start_block.into()),
-            to_block: Some(range_end.into()),
+            from_block: Some(format!("{:x}", start_block)),
+            to_block: Some(format!("{:x}", range_end)),
         },
     }
 }
