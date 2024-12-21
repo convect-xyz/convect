@@ -45,13 +45,22 @@ pub fn group_logs_into_transactions(logs: Vec<ExampleQueryLogs>) -> Vec<IngestTr
 
             txs.push(IngestTransaction {
                 block_number: u64::from_str_radix(
-                    &log.transaction.block.as_ref().unwrap().number,
+                    log.transaction
+                        .block
+                        .as_ref()
+                        .unwrap()
+                        .number
+                        .strip_prefix("0x")
+                        .unwrap(),
                     16,
                 )
                 .unwrap(),
                 block_hash: log.transaction.block.as_ref().unwrap().hash.clone(),
-                transaction_index: u64::from_str_radix(&log.transaction.index.unwrap(), 16)
-                    .unwrap(),
+                transaction_index: u64::from_str_radix(
+                    log.transaction.index.unwrap().strip_prefix("0x").unwrap(),
+                    16,
+                )
+                .unwrap(),
                 batch_id: id.to_string(),
                 transaction_hash: log.transaction.hash.clone(),
                 logs: Vec::new(),
