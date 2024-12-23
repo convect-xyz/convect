@@ -3,7 +3,7 @@ use std::env;
 use crate::syncing::State;
 use crate::types::transactions::IngestTransaction;
 use crate::{redis_client::RedisClient, s3::S3};
-use futures::Future;
+use futures::{Future, TryFutureExt};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -47,9 +47,8 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
     async fn upload_raw<R: RedisClient>(
         &self,
         pipeline: &mut State<R>,
-        queue_url: String,
         txs: &Vec<IngestTransaction>,
-    ) {
+    ) -> Result<(), errors::TransactionEnqueuerError> {
         let mut i = 0;
         while i < txs.len() {
             let mut group = Vec::new();
@@ -73,42 +72,41 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 i += 1;
             }
 
-            let id = Uuid::new_v4();
+            self.upload_sqs(group.clone()).await?;
 
-            let sqs_res = self
-                .sqs_client
-                .send_message()
-                .queue_url(queue_url.to_owned())
-                .message_body(
-                    serde_json::to_string(&TxPayload {
-                        _type: String::from("non-batch"),
-                        data: group.clone(),
-                    })
-                    .unwrap(),
-                )
-                .message_group_id("main")
-                .message_deduplication_id(id)
-                .send()
-                .await;
-
-            match sqs_res {
-                Ok(_) => {}
-                Err(e) => panic!("Upload Result: {:?}", e),
-            }
-
-            pipeline
-                .increment_transaction_count(group.len())
-                .await
-                .unwrap();
+            pipeline.increment_transaction_count(group.len()).await?;
         }
+
+        Ok(())
     }
 
-    async fn upload_batch<R: RedisClient>(
+    async fn upload_sqs(
+        &self,
+        group: Vec<IngestTransaction>,
+    ) -> Result<(), errors::TransactionEnqueuerError> {
+        Ok(self
+            .sqs_client
+            .send_message()
+            .queue_url(self.queue_url.to_owned())
+            .message_body(
+                serde_json::to_string(&TxPayload {
+                    _type: String::from("non-batch"),
+                    data: group,
+                })
+                .unwrap(),
+            )
+            .message_group_id("main")
+            .message_deduplication_id(Uuid::new_v4())
+            .send()
+            .map_ok(|_| ())
+            .await?)
+    }
+
+    async fn upload_s3<R: RedisClient>(
         &self,
         pipeline: &mut State<R>,
-        queue_url: String,
         txs: &Vec<IngestTransaction>,
-    ) {
+    ) -> Result<(), errors::TransactionEnqueuerError> {
         let mut i = 0;
         while i < txs.len() {
             let mut batch = Vec::new();
@@ -128,19 +126,13 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 function_id = env::var("FUNCTION_ID").expect("FUNCTION ID not defined"),
             );
 
-            let response = self
-                .s3_client
+            self.s3_client
                 .put_s3_object(
                     "ingest-fetch-logs",
                     key.as_str(),
                     serde_json::to_string(&batch).unwrap(),
                 )
-                .await;
-
-            match response {
-                Ok(_) => {}
-                Err(e) => panic!("Error uploading response: {:?}", e),
-            }
+                .await?;
 
             let download_url = format!(
                 "https://{bucket}.s3.{region}.amazonaws.com/{key}",
@@ -149,10 +141,9 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 key = key
             );
 
-            let sqs_res = self
-                .sqs_client
+            self.sqs_client
                 .send_message()
-                .queue_url(queue_url.to_owned())
+                .queue_url(self.queue_url.to_owned())
                 .message_body(
                     serde_json::to_string(&BatchPayload {
                         _type: String::from("batch"),
@@ -163,18 +154,12 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 .message_group_id("main")
                 .message_deduplication_id(key)
                 .send()
-                .await;
+                .await?;
 
-            match sqs_res {
-                Ok(_) => {}
-                Err(e) => panic!("Upload Result: {:?}", e),
-            }
-
-            pipeline
-                .increment_transaction_count(batch.len())
-                .await
-                .unwrap();
+            pipeline.increment_transaction_count(batch.len()).await?;
         }
+
+        Ok(())
     }
 }
 
@@ -186,21 +171,29 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let serialised_txs = serde_json::to_string(&txs).unwrap();
-
-        if serialised_txs.len() < 100000 {
-            return Ok(self.upload_raw(state, self.queue_url.clone(), txs).await);
+        if serialised_txs.len() < 200000 {
+            return self.upload_raw(state, txs).await;
         }
 
-        return Ok(self.upload_batch(state, self.queue_url.clone(), txs).await);
+        return self.upload_s3(state, txs).await;
     }
 }
 
 pub mod errors {
+    use aws_sdk_sqs::{error::SdkError, operation::send_message::SendMessageError};
     use thiserror::Error;
+
+    use crate::s3::errors::PutS3ObjectError;
 
     #[derive(Error, Debug)]
     pub enum TransactionEnqueuerError {
         #[error("Failed to upload transactions: {0}")]
         Web3ClientError(#[from] crate::web3_client::errors::Web3ClientError),
+        #[error("Failed to upload transactions: {0}")]
+        SQSError(#[from] SdkError<SendMessageError>),
+        #[error("Redis error: {0}")]
+        RedisError(#[from] crate::redis_client::errors::RedisClientError),
+        #[error("S3 error: {0}")]
+        S3Error(#[from] PutS3ObjectError),
     }
 }
