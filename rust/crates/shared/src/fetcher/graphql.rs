@@ -1,3 +1,4 @@
+use futures::FutureExt;
 use graphql_client::{GraphQLQuery, Response};
 use reqwest::{self};
 use std::future::Future;
@@ -8,8 +9,6 @@ type Address = String;
 type Bytes = String;
 type BigInt = String;
 
-// The paths are relative to the directory where your `Cargo.toml` is located.
-// Both json and the GraphQL schema language are supported as sources for the schema
 #[derive(GraphQLQuery)]
 #[graphql(
     schema_path = "schemas/schema.graphql",
@@ -27,11 +26,15 @@ pub trait GethGraphqlClient: Sync + Send {
 
 pub struct GethGraphqlClientImpl {
     base_url: String,
+    client: reqwest::Client,
 }
 
 impl GethGraphqlClientImpl {
     pub fn new(base_url: String) -> Self {
-        Self { base_url }
+        Self {
+            base_url,
+            client: reqwest::Client::new(),
+        }
     }
 }
 
@@ -42,16 +45,17 @@ impl GethGraphqlClient for GethGraphqlClientImpl {
     ) -> Result<example_query::ResponseData, errors::GethGraphqlClientError> {
         let request_body = ExampleQuery::build_query(variables);
 
-        let client = reqwest::Client::new();
-
-        let raw_response = client
+        let response = self
+            .client
             .post(format!("{}/graphql", self.base_url))
             .json(&request_body)
             .send()
             .await?;
 
-        let graphql_response: Response<example_query::ResponseData> = raw_response.json().await?;
-        Ok(graphql_response.data.unwrap())
+        Ok(response
+            .json::<Response<example_query::ResponseData>>()
+            .map(|f| f?.data.ok_or(errors::GethGraphqlClientError::MissingData))
+            .await?)
     }
 }
 
@@ -64,5 +68,7 @@ pub mod errors {
         BoxError(#[from] Box<dyn std::error::Error>),
         #[error("Reqwest error: {0}")]
         ReqwestError(#[from] reqwest::Error),
+        #[error("Missing data")]
+        MissingData,
     }
 }
