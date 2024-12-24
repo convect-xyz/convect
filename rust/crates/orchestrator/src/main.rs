@@ -128,7 +128,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
     let config = Config::new();
 
     let futures = config.chains.iter().map(|chain_config| {
-        let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone() - 10;
+        let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
         let config = &config;
         sync_chain(config, chain_config.clone(), block_for_chain)
     });
@@ -153,6 +153,9 @@ async fn sync_chain(
     chain_config: ChainConfig,
     incoming_block: u64,
 ) -> Result<(), errors::OrchestratorError> {
+    let chain_id = chain_config.chain_id;
+    tracing::info!("Attempting to sync chain {:?}", chain_id);
+
     let sdk_config = aws_config::load_from_env().await;
     let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
     let web3_client = get_web3_client(&chain_config.chain_id, config).await;
@@ -208,9 +211,6 @@ async fn sync_chain(
         )
         .await;
     }
-
-    println!("Start block: {}", start_block);
-    println!("End block: {}", incoming_block);
 
     ChainSyncer::new(manifest.clone(), enqueuer, fetcher)
         .sync(&mut pipeline, start_block, incoming_block)
