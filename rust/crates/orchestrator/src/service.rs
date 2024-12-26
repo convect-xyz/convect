@@ -15,11 +15,13 @@ use shared::{
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::OnceCell;
 
 use crate::config::{ChainConfig, Config};
 
 static WEB3_CLIENTS: OnceCell<HashMap<u64, Web3ClientImpl>> = OnceCell::const_new();
+
 #[tracing::instrument(skip_all)]
 async fn get_web3_client(chain_id: &u64, config: &Config) -> &'static Web3ClientImpl {
     WEB3_CLIENTS
@@ -71,28 +73,16 @@ impl AppService {
     }
 }
 
-pub struct ChainService<
-    Rc: RedisClient,
-    Te: TransactionEnqueuer,
-    Wc: Web3Client,
-    Ip: InitBlockProvider<Wc>,
-> {
+pub struct ChainService<Wc: Web3Client, Ip: InitBlockProvider<Wc>> {
     pub config: ChainConfig,
     pub web3_client: Wc,
     pub transaction_fetcher: Box<dyn TransactionFetcher>,
-    pub transaction_enqueuer: Te,
+    pub transaction_enqueuer: Box<dyn TransactionEnqueuer>,
     pub init_block_provider: Ip,
-    pub redis_client: Rc,
+    pub redis_client: Arc<dyn RedisClient>,
 }
 
-impl
-    ChainService<
-        RedisClientImpl,
-        SQSTransactionEnqueuer<aws_sdk_s3::Client>,
-        Web3ClientImpl,
-        InitBlockProviderImpl<'_, Web3ClientImpl>,
-    >
-{
+impl ChainService<Web3ClientImpl, InitBlockProviderImpl<Web3ClientImpl>> {
     pub async fn with_defaults(app_service: &AppService, config: ChainConfig) -> Self {
         let web3_client = get_web3_client(&config.chain_id, &app_service.config).await;
         let fetcher = TransactionFetcherImpl::new(
@@ -112,16 +102,15 @@ impl
             app_service.sqs_client.clone(),
         );
         let redis_client = RedisClientImpl::new().await;
-        let init_block_provider =
-            InitBlockProviderImpl::new(&app_service.manifest, web3_client.clone());
+        let init_block_provider = InitBlockProviderImpl::new(web3_client.clone());
 
         Self {
             config,
             web3_client: web3_client.clone(),
             transaction_fetcher: Box::new(fetcher),
-            transaction_enqueuer: enqueuer,
+            transaction_enqueuer: Box::new(enqueuer),
             init_block_provider,
-            redis_client,
+            redis_client: Arc::new(redis_client),
         }
     }
 }

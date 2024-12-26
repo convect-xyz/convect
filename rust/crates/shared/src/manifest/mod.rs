@@ -120,20 +120,16 @@ pub mod providers {
 
     #[async_trait]
     pub trait InitBlockProvider<W: Web3Client>: std::marker::Sync {
-        async fn get_init_block(&self) -> Result<u64, InitBlockProviderError>;
+        async fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError>;
     }
 
-    pub struct InitBlockProviderImpl<'a, W: Web3Client> {
-        manifest: &'a Manifest,
+    pub struct InitBlockProviderImpl<W: Web3Client> {
         web3_client: W,
     }
 
-    impl<'a, W: Web3Client> InitBlockProviderImpl<'a, W> {
-        pub fn new(manifest: &'a Manifest, web3_client: W) -> Self {
-            Self {
-                manifest,
-                web3_client,
-            }
+    impl<W: Web3Client> InitBlockProviderImpl<W> {
+        pub fn new(web3_client: W) -> Self {
+            Self { web3_client }
         }
 
         //     async fn get_min_contract_creation_block(
@@ -189,11 +185,10 @@ pub mod providers {
     }
 
     #[async_trait]
-    impl<W: Web3Client> InitBlockProvider<W> for InitBlockProviderImpl<'_, W> {
+    impl<W: Web3Client> InitBlockProvider<W> for InitBlockProviderImpl<W> {
         #[tracing::instrument(skip_all, ret, err)]
-        async fn get_init_block(&self) -> Result<u64, InitBlockProviderError> {
-            let manifest_min_block = self
-                .manifest
+        async fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError> {
+            let manifest_min_block = manifest
                 .tx_configs
                 .iter()
                 .filter(|c| {

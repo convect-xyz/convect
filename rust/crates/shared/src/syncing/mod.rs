@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::redis_client::{errors::RedisClientError, ConvectRedisValue};
 use crate::redis_client::{IntoOriginalValue, RedisClient};
 use serde::{Deserialize, Serialize};
@@ -12,7 +14,7 @@ pub enum BatchSyncState {
 
 #[derive(Debug)]
 pub struct State {
-    redis_client: Box<dyn RedisClient>,
+    redis_client: Arc<dyn RedisClient>,
     deployment_id: String,
     function_id: String,
     chain_id: u64,
@@ -99,7 +101,7 @@ impl State {
         function_id: String,
         chain_id: u64,
         deployment_id: String,
-        redis_client: Box<dyn RedisClient>,
+        redis_client: Arc<dyn RedisClient>,
     ) -> Result<Self, errors::StateError> {
         let (state, last_block): (Option<String>, Option<String>) = redis_client
             .mget(vec![

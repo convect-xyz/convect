@@ -8,22 +8,18 @@ mod utils;
 
 const BATCH_SIZE: u64 = 3000;
 
-pub struct ChainSyncer<'a, En, Fe>
-where
-    En: TransactionEnqueuer,
-    Fe: TransactionFetcher,
-{
+pub struct ChainSyncer<'a> {
     manifest: &'a Manifest,
-    enqueuer: &'a En,
-    fetcher: &'a Fe,
+    enqueuer: &'a dyn TransactionEnqueuer,
+    fetcher: &'a dyn TransactionFetcher,
 }
 
-impl<'a, En, Fe> ChainSyncer<'a, En, Fe>
-where
-    En: TransactionEnqueuer,
-    Fe: TransactionFetcher,
-{
-    pub fn new(manifest: &'a Manifest, enqueuer: &'a En, fetcher: &'a Fe) -> Self {
+impl<'a> ChainSyncer<'a> {
+    pub fn new(
+        manifest: &'a Manifest,
+        enqueuer: &'a dyn TransactionEnqueuer,
+        fetcher: &'a dyn TransactionFetcher,
+    ) -> Self {
         Self {
             manifest,
             enqueuer,

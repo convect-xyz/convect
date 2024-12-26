@@ -3,7 +3,8 @@ use std::env;
 use crate::s3::S3;
 use crate::syncing::State;
 use crate::types::transactions::IngestTransaction;
-use futures::{Future, TryFutureExt};
+use async_trait::async_trait;
+use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -21,12 +22,13 @@ struct BatchPayload {
     download_url: String,
 }
 
+#[async_trait]
 pub trait TransactionEnqueuer {
-    fn enqueue_transactions(
+    async fn enqueue_transactions(
         &self,
         pipeline: &mut State,
         txs: &Vec<IngestTransaction>,
-    ) -> impl Future<Output = Result<(), errors::TransactionEnqueuerError>>;
+    ) -> Result<(), errors::TransactionEnqueuerError>;
 }
 
 pub struct SQSTransactionEnqueuer<T: S3> {
@@ -163,6 +165,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
     }
 }
 
+#[async_trait]
 impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
     #[tracing::instrument(skip_all, err)]
     async fn enqueue_transactions(
