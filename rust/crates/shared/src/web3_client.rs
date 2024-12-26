@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::str::FromStr;
 use std::{future::Future, sync::Arc};
 use tokio::sync::Mutex;
@@ -9,31 +10,23 @@ use web3::{
     Web3,
 };
 
+#[async_trait]
 pub trait Web3Client: Sync + Send {
     fn chain_id(&self) -> u64;
 
-    fn get_current_block_number(
-        &self,
-    ) -> impl std::future::Future<Output = Result<u64, errors::Web3ClientError>> + Send;
+    async fn get_current_block_number(&self) -> Result<u64, errors::Web3ClientError>;
 
-    fn get_logs(
-        &self,
-        filter: Filter,
-    ) -> impl std::future::Future<Output = Result<Vec<Log>, errors::Web3ClientError>> + Send;
+    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, errors::Web3ClientError>;
 
-    fn get_transaction_receipt(
+    async fn get_transaction_receipt(
         &self,
         tx_hash: String,
-    ) -> impl std::future::Future<
-        Output = Result<Option<web3::types::TransactionReceipt>, errors::Web3ClientError>,
-    > + Send;
+    ) -> Result<Option<web3::types::TransactionReceipt>, errors::Web3ClientError>;
 
-    fn get_transaction_by_hash(
+    async fn get_transaction_by_hash(
         &self,
         tx_hash: String,
-    ) -> impl std::future::Future<
-        Output = Result<Option<web3::types::Transaction>, errors::Web3ClientError>,
-    > + Send;
+    ) -> Result<Option<web3::types::Transaction>, errors::Web3ClientError>;
 }
 
 #[derive(Clone)]
@@ -82,6 +75,7 @@ impl Web3ClientImpl {
     }
 }
 
+#[async_trait]
 impl Web3Client for Web3ClientImpl {
     fn chain_id(&self) -> u64 {
         self.chain_id

@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     let enqueuer = SQSTransactionEnqueuer::new(s3_client, syncer_config.tx_queue_url, sqs_client);
     let manifest = Manifest::from_env().await.unwrap();
-    let syncer = ChainSyncer::new(manifest, enqueuer, fetcher);
+    let syncer = ChainSyncer::new(&manifest, &enqueuer, &fetcher);
 
     let sync_result = syncer
         .sync(

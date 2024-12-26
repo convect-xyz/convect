@@ -1,7 +1,7 @@
+use async_trait::async_trait;
 use futures::FutureExt;
 use graphql_client::{GraphQLQuery, Response};
 use reqwest::{self};
-use std::future::Future;
 
 type Long = String;
 type Bytes32 = String;
@@ -17,11 +17,12 @@ type BigInt = String;
 )]
 pub struct ExampleQuery;
 
+#[async_trait]
 pub trait GethGraphqlClient: Sync + Send {
-    fn get_logs(
+    async fn get_logs(
         &self,
         variables: example_query::Variables,
-    ) -> impl Future<Output = Result<example_query::ResponseData, errors::GethGraphqlClientError>> + Send;
+    ) -> Result<example_query::ResponseData, errors::GethGraphqlClientError>;
 }
 
 pub struct GethGraphqlClientImpl {
@@ -38,6 +39,7 @@ impl GethGraphqlClientImpl {
     }
 }
 
+#[async_trait]
 impl GethGraphqlClient for GethGraphqlClientImpl {
     async fn get_logs(
         &self,

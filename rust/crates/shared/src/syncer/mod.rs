@@ -1,6 +1,6 @@
 use crate::{
-    enqueuer::TransactionEnqueuer, fetcher::TransactionFetcher, manifest::Manifest,
-    redis_client::RedisClient, syncing::State, types::transactions::IngestTransaction,
+    enqueuer::TransactionEnqueuer, fetcher::TransactionFetcher, manifest::Manifest, syncing::State,
+    types::transactions::IngestTransaction,
 };
 use futures::future::join_all;
 
@@ -8,22 +8,22 @@ mod utils;
 
 const BATCH_SIZE: u64 = 3000;
 
-pub struct ChainSyncer<En, Fe>
+pub struct ChainSyncer<'a, En, Fe>
 where
     En: TransactionEnqueuer,
     Fe: TransactionFetcher,
 {
-    manifest: Manifest,
-    enqueuer: En,
-    fetcher: Fe,
+    manifest: &'a Manifest,
+    enqueuer: &'a En,
+    fetcher: &'a Fe,
 }
 
-impl<En, Fe> ChainSyncer<En, Fe>
+impl<'a, En, Fe> ChainSyncer<'a, En, Fe>
 where
     En: TransactionEnqueuer,
     Fe: TransactionFetcher,
 {
-    pub fn new(manifest: Manifest, enqueuer: En, fetcher: Fe) -> Self {
+    pub fn new(manifest: &'a Manifest, enqueuer: &'a En, fetcher: &'a Fe) -> Self {
         Self {
             manifest,
             enqueuer,
@@ -32,18 +32,18 @@ where
     }
 
     #[tracing::instrument(skip_all, err)]
-    pub async fn sync<Rc: RedisClient>(
+    pub async fn sync(
         &self,
-        state: &mut State<Rc>,
+        state: &mut State,
         start_block: u64,
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {
         return Ok(self._sync(state, start_block, end_block).await?);
     }
 
-    async fn _sync<Rc: RedisClient>(
+    async fn _sync(
         &self,
-        state: &mut State<Rc>,
+        state: &mut State,
         start_block: u64,
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {

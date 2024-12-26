@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
@@ -29,34 +30,7 @@ use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 
 mod config;
-
-static MANIFEST: OnceCell<Manifest> = OnceCell::const_new();
-static WEB3_CLIENTS: OnceCell<HashMap<u64, Web3ClientImpl>> = OnceCell::const_new();
-
-#[tracing::instrument(skip_all)]
-async fn get_manifest() -> &'static Manifest {
-    MANIFEST
-        .get_or_init(|| async { Manifest::from_env().await.unwrap() })
-        .await
-}
-
-#[tracing::instrument(skip_all)]
-async fn get_web3_client(chain_id: &u64, config: &Config) -> &'static Web3ClientImpl {
-    WEB3_CLIENTS
-        .get_or_init(|| async {
-            HashMap::from_iter(config.chains.iter().map(|c| {
-                let supported_network = get_supported_network(c.chain_id).unwrap();
-
-                (
-                    c.chain_id,
-                    Web3ClientImpl::new(c.chain_id, supported_network.polling_urls.clone()),
-                )
-            }))
-        })
-        .await
-        .get(&chain_id)
-        .unwrap()
-}
+mod service;
 
 fn init_sentry(config: &Config) -> sentry::ClientInitGuard {
     sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
@@ -120,17 +94,33 @@ fn main() -> Result<(), Error> {
         })
 }
 
+fn parse_blocks(event: &LambdaEvent<SnsEvent>) -> Result<HashMap<u64, u64>, Error> {
+    let incoming_blocks: HashMap<u64, u64> = serde_json::from_str(
+        event
+            .payload
+            .records
+            .last()
+            .ok_or(errors::OrchestratorError::MissingPayload)?
+            .sns
+            .message
+            .as_str(),
+    )?;
+    Ok(incoming_blocks)
+}
+
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
-    let incoming_blocks: HashMap<u64, u64> =
-        serde_json::from_str(event.payload.records.last().unwrap().sns.message.as_str())?;
+    let app_service = service::AppService::with_defaults().await;
+    let incoming_blocks = parse_blocks(&event)?;
     tracing::info!("Incoming blocks: {incoming_blocks:?}");
 
-    let config = Config::new();
+    let futures = app_service.config.chains.iter().map(|chain_config| async {
+        let chain_id = chain_config.chain_id;
+        let latest_block_for_chain = match incoming_blocks.get(&chain_id) {
+            Some(block) => Ok(block.clone()),
+            None => Err(errors::OrchestratorError::MissingBlockForChain(chain_id)),
+        }?;
 
-    let futures = config.chains.iter().map(|chain_config| {
-        let block_for_chain = incoming_blocks.get(&chain_config.chain_id).unwrap().clone();
-        let config = &config;
-        sync_chain(config, chain_config.clone(), block_for_chain)
+        sync_chain(&app_service, chain_config.clone(), latest_block_for_chain).await
     });
 
     let errors: Vec<_> = join_all(futures)
@@ -149,72 +139,57 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 
 #[tracing::instrument(skip_all, err)]
 async fn sync_chain(
-    config: &Config,
-    chain_config: ChainConfig,
-    incoming_block: u64,
+    app_service: &service::AppService,
+    chain_config: service::ChainConfig,
+    latest_block: u64,
 ) -> Result<(), errors::OrchestratorError> {
-    let chain_id = chain_config.chain_id;
+    let chain_service =
+        service::ChainService::with_defaults(&app_service, chain_config.clone()).await;
+
+    let chain_id = chain_service.config.chain_id;
     tracing::info!("Attempting to sync chain {:?}", chain_id);
 
-    let sdk_config = aws_config::load_from_env().await;
-    let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
-    let web3_client = get_web3_client(&chain_config.chain_id, config).await;
-    let fetcher = TransactionFetcherImpl::new(
-        GethGraphqlClientImpl::new(
-            get_supported_network(chain_config.chain_id)
-                .unwrap()
-                .polling_urls
-                .first()
-                .unwrap()
-                .to_string(),
-        ),
-        chain_config.chain_id,
-    );
-    let s3_client = aws_sdk_s3::Client::new(&sdk_config);
-    let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
-    let enqueuer =
-        SQSTransactionEnqueuer::new(s3_client, chain_config.tx_queue_url.clone(), sqs_client);
-    let manifest = get_manifest().await;
-    let redis_client = RedisClientImpl::new().await;
-    let init_block_provider = InitBlockProviderImpl::new(&manifest, web3_client.clone());
-
     let mut pipeline = State::load(
-        config.function_id.clone(),
-        chain_config.chain_id,
-        config.deployment_id.clone(),
-        redis_client,
+        app_service.config.function_id.clone(),
+        chain_id,
+        app_service.config.deployment_id.clone(),
+        chain_service.redis_client,
     )
     .await?;
 
-    if pipeline.has_synced(incoming_block) || pipeline.is_batch_syncing() {
+    if pipeline.has_synced(latest_block) || pipeline.is_batch_syncing() {
         tracing::info!(
           target: "orchestrator",
           is_batch_syncing=pipeline.is_batch_syncing(),
-          has_synced=pipeline.has_synced(incoming_block)
+          has_synced=pipeline.has_synced(latest_block)
         );
         return Ok(());
     }
 
     let start_block = match pipeline.next_block() {
         Some(next_block) => next_block,
-        None => init_block_provider.get_init_block().await?,
+        None => chain_service.init_block_provider.get_init_block().await?,
     };
 
-    if incoming_block - start_block > 10000 {
+    if latest_block - start_block > 10000 {
         return sync_with_ecs(
-            chain_config.chain_id,
-            &ecs_client,
+            chain_service.config.chain_id,
+            &app_service.ecs_client,
             &mut pipeline,
             start_block,
-            incoming_block,
-            &config,
+            latest_block,
+            &app_service.config,
         )
         .await;
     }
 
-    ChainSyncer::new(manifest.clone(), enqueuer, fetcher)
-        .sync(&mut pipeline, start_block, incoming_block)
-        .await?;
+    ChainSyncer::new(
+        &app_service.manifest,
+        &chain_service.transaction_enqueuer,
+        chain_service.transaction_fetcher.borrow(),
+    )
+    .sync(&mut pipeline, start_block, latest_block)
+    .await?;
 
     Ok(())
 }
@@ -329,5 +304,9 @@ mod errors {
         ),
         #[error("State error: {0}")]
         StateError(#[from] shared::syncing::errors::StateError),
+        #[error("Missing block for chain {0}")]
+        MissingBlockForChain(u64),
+        #[error("Missing payload")]
+        MissingPayload,
     }
 }

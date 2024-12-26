@@ -1,4 +1,3 @@
-use futures::Future;
 use graphql::GethGraphqlClient;
 use std::cmp::Ordering;
 use tokio_retry::strategy::{jitter, ExponentialBackoff};
@@ -6,19 +5,21 @@ use tokio_retry::Retry;
 
 use crate::manifest::Manifest;
 use crate::types::transactions::IngestTransaction;
+use async_trait::async_trait;
 
 pub mod graphql;
 mod utils;
 
+#[async_trait]
 pub trait TransactionFetcher {
     fn chain_id(&self) -> u64;
 
-    fn get_transactions_in_range(
+    async fn get_transactions_in_range(
         &self,
         manifest: &Manifest,
         start_block: u64,
         end_block: u64,
-    ) -> impl Future<Output = Result<Vec<IngestTransaction>, errors::TransactionFetcherError>>;
+    ) -> Result<Vec<IngestTransaction>, errors::TransactionFetcherError>;
 }
 
 pub struct TransactionFetcherImpl<T: GethGraphqlClient> {
@@ -35,6 +36,7 @@ impl<T: GethGraphqlClient> TransactionFetcherImpl<T> {
     }
 }
 
+#[async_trait]
 impl<T: GethGraphqlClient> TransactionFetcher for TransactionFetcherImpl<T> {
     fn chain_id(&self) -> u64 {
         self.chain_id
