@@ -1,8 +1,8 @@
 use std::env;
 
+use crate::s3::S3;
 use crate::syncing::State;
 use crate::types::transactions::IngestTransaction;
-use crate::{redis_client::RedisClient, s3::S3};
 use futures::{Future, TryFutureExt};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -22,9 +22,9 @@ struct BatchPayload {
 }
 
 pub trait TransactionEnqueuer {
-    fn enqueue_transactions<R: RedisClient>(
+    fn enqueue_transactions(
         &self,
-        pipeline: &mut State<R>,
+        pipeline: &mut State,
         txs: &Vec<IngestTransaction>,
     ) -> impl Future<Output = Result<(), errors::TransactionEnqueuerError>>;
 }
@@ -44,9 +44,9 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         }
     }
 
-    async fn upload_raw<R: RedisClient>(
+    async fn upload_raw(
         &self,
-        pipeline: &mut State<R>,
+        pipeline: &mut State,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let mut i = 0;
@@ -102,9 +102,9 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             .await?)
     }
 
-    async fn upload_s3<R: RedisClient>(
+    async fn upload_s3(
         &self,
-        pipeline: &mut State<R>,
+        pipeline: &mut State,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let mut i = 0;
@@ -165,9 +165,9 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
 
 impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
     #[tracing::instrument(skip_all, err)]
-    async fn enqueue_transactions<R: RedisClient>(
+    async fn enqueue_transactions(
         &self,
-        state: &mut State<R>,
+        state: &mut State,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let serialised_txs = serde_json::to_string(&txs).unwrap();

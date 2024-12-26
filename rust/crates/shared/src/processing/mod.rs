@@ -1,10 +1,13 @@
-use crate::redis_client::{errors::RedisClientError, RedisClient, RedisClientImpl};
+use std::sync::Arc;
+
+use crate::redis_client::{
+    errors::RedisClientError, IntoOriginalValue as _, RedisClient, RedisClientImpl,
+};
 use backoff::{exponential::ExponentialBackoff, SystemClock};
 
 #[derive(Clone)]
-pub struct State<T: RedisClient + Send + Sync> {
-    redis_client: T,
-
+pub struct State {
+    redis_client: Arc<dyn RedisClient>,
     deployment_id: String,
     function_id: String,
     chain_id: u64,
@@ -12,7 +15,7 @@ pub struct State<T: RedisClient + Send + Sync> {
     error_label: Option<String>,
 }
 
-impl<T: RedisClient> State<T> {
+impl State {
     pub fn function_id(&self) -> String {
         self.function_id.clone()
     }
@@ -33,16 +36,14 @@ impl<T: RedisClient> State<T> {
         self.error_label.clone()
     }
 
-    pub fn update(&mut self) -> UpdateStateFluentBuilder<T> {
+    pub fn update(&mut self) -> UpdateStateFluentBuilder {
         UpdateStateFluentBuilder {
             error_tx: self.error_tx.clone(),
             error_label: self.error_label.clone(),
             state: self,
         }
     }
-}
 
-impl State<RedisClientImpl> {
     pub async fn load(function_id: String, chain_id: u64, deployment_id: String) -> Self {
         let client = RedisClientImpl::new().await;
 
@@ -52,10 +53,11 @@ impl State<RedisClientImpl> {
                 format!("process-state-{function_id}-{chain_id}-{deployment_id}-error-label"),
             ])
             .await
-            .unwrap();
+            .unwrap()
+            .into_original_value();
 
         Self {
-            redis_client: client,
+            redis_client: Arc::new(client),
             deployment_id,
             function_id,
             chain_id,
@@ -64,13 +66,14 @@ impl State<RedisClientImpl> {
         }
     }
 }
-pub struct UpdateStateFluentBuilder<'a, T: RedisClient> {
-    state: &'a mut State<T>,
+
+pub struct UpdateStateFluentBuilder<'a> {
+    state: &'a mut State,
     error_tx: Option<String>,
     error_label: Option<String>,
 }
 
-impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
+impl<'a> UpdateStateFluentBuilder<'a> {
     pub fn set_error_tx(mut self, error_tx: Option<String>) -> Self {
         self.error_tx = error_tx;
         self
@@ -85,7 +88,7 @@ impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
         let function_id = &self.state.function_id;
         let chain_id = &self.state.chain_id;
         let deployment_id = &self.state.deployment_id;
-        let redis_client = self.state.redis_client.clone();
+        let redis_client = &self.state.redis_client;
 
         backoff::future::retry::<(), RedisClientError, _, _, ExponentialBackoff<SystemClock>>(
             ExponentialBackoff::default(),
@@ -94,11 +97,11 @@ impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
                     .mset(&[
                         (
                             get_error_tx_key(function_id, chain_id, deployment_id),
-                            self.error_tx.clone().unwrap_or_default(),
+                            self.error_tx.clone().unwrap_or_default().into(),
                         ),
                         (
                             get_error_label_key(function_id, chain_id, deployment_id),
-                            self.error_label.clone().unwrap_or_default(),
+                            self.error_label.clone().unwrap_or_default().into(),
                         ),
                     ])
                     .await?;
