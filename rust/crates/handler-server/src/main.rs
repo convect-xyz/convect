@@ -18,7 +18,7 @@ mod errors;
 
 #[derive(Clone)]
 struct AppState {
-    pipeline: Arc<Mutex<processing::State<RedisClientImpl>>>,
+    pipeline: Arc<Mutex<processing::State>>,
     reporting: Arc<dyn ReportingSdk + Send + Sync>,
     config: Config,
 }

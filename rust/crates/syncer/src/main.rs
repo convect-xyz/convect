@@ -10,7 +10,7 @@ use shared::{
     syncing::State,
     web3_client::Web3ClientImpl,
 };
-use std::error::Error;
+use std::{error::Error, sync::Arc};
 
 mod config;
 
@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         syncer_config.function_id.clone(),
         syncer_config.chain_id.clone(),
         syncer_config.deployment_id.clone(),
-        redis_client,
+        Arc::new(redis_client),
     )
     .await?;
     let network = get_supported_network(syncer_config.chain_id).unwrap();

@@ -94,7 +94,9 @@ fn main() -> Result<(), Error> {
         })
 }
 
-fn parse_blocks(event: &LambdaEvent<SnsEvent>) -> Result<HashMap<u64, u64>, Error> {
+fn parse_blocks(
+    event: &LambdaEvent<SnsEvent>,
+) -> Result<HashMap<u64, u64>, errors::OrchestratorError> {
     let incoming_blocks: HashMap<u64, u64> = serde_json::from_str(
         event
             .payload
@@ -108,7 +110,7 @@ fn parse_blocks(event: &LambdaEvent<SnsEvent>) -> Result<HashMap<u64, u64>, Erro
     Ok(incoming_blocks)
 }
 
-async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
+async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), errors::OrchestratorError> {
     let app_service = service::AppService::with_defaults().await;
     let incoming_blocks = parse_blocks(&event)?;
     tracing::info!("Incoming blocks: {incoming_blocks:?}");
@@ -140,7 +142,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), Error> {
 #[tracing::instrument(skip_all, err)]
 async fn sync_chain(
     app_service: &service::AppService,
-    chain_config: service::ChainConfig,
+    chain_config: ChainConfig,
     latest_block: u64,
 ) -> Result<(), errors::OrchestratorError> {
     let chain_service =
@@ -153,7 +155,7 @@ async fn sync_chain(
         app_service.config.function_id.clone(),
         chain_id,
         app_service.config.deployment_id.clone(),
-        chain_service.redis_client,
+        chain_service.redis_client.clone(),
     )
     .await?;
 
@@ -168,7 +170,12 @@ async fn sync_chain(
 
     let start_block = match pipeline.next_block() {
         Some(next_block) => next_block,
-        None => chain_service.init_block_provider.get_init_block().await?,
+        None => {
+            chain_service
+                .init_block_provider
+                .get_init_block(&app_service.manifest)
+                .await?
+        }
     };
 
     if latest_block - start_block > 10000 {
@@ -183,21 +190,21 @@ async fn sync_chain(
         .await;
     }
 
-    ChainSyncer::new(
+    let a = ChainSyncer::new(
         &app_service.manifest,
-        &chain_service.transaction_enqueuer,
-        chain_service.transaction_fetcher.borrow(),
-    )
-    .sync(&mut pipeline, start_block, latest_block)
-    .await?;
+        chain_service.transaction_enqueuer.as_ref(),
+        chain_service.transaction_fetcher.as_ref(),
+    );
+
+    a.sync(&mut pipeline, start_block, latest_block).await?;
 
     Ok(())
 }
 
-async fn sync_with_ecs<T: RedisClient>(
+async fn sync_with_ecs(
     chain_id: u64,
     ecs_client: &aws_sdk_ecs::Client,
-    pipeline: &mut State<T>,
+    pipeline: &mut State,
     start_block: u64,
     end_block: u64,
     config: &Config,
@@ -308,5 +315,7 @@ mod errors {
         MissingBlockForChain(u64),
         #[error("Missing payload")]
         MissingPayload,
+        #[error("Serde error: {0}")]
+        SerdeError(#[from] serde_json::Error),
     }
 }
