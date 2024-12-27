@@ -80,7 +80,7 @@ impl State {
     ) -> Result<(), RedisClientError> {
         let key = get_transaction_count_key(&self.function_id, &self.chain_id, &self.deployment_id);
 
-        let _: u64 = self
+        let _: i64 = self
             .redis_client
             .incr(key, tx_count.try_into().unwrap())
             .await?
@@ -92,8 +92,9 @@ impl State {
     pub async fn get_transaction_count(&mut self) -> Result<u64, RedisClientError> {
         let key = get_transaction_count_key(&self.function_id, &self.chain_id, &self.deployment_id);
 
-        let count: u64 = self.redis_client.get(key).await?.into_original_value();
-        Ok(count)
+        let count: i64 = self.redis_client.get(key).await?.into_original_value();
+
+        Ok(count as u64)
     }
 
     #[tracing::instrument(err, ret)]
