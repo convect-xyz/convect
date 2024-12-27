@@ -16,7 +16,6 @@ async fn get_connection() -> &'static redis::aio::MultiplexedConnection {
 pub enum ConvectRedisValue {
     String(String),
     I64(i64),
-    U64(u64),
     USize(usize),
     List(Vec<ConvectRedisValue>),
     Tuple2(Box<(ConvectRedisValue, ConvectRedisValue)>),
@@ -50,12 +49,6 @@ impl From<i64> for ConvectRedisValue {
     }
 }
 
-impl From<u64> for ConvectRedisValue {
-    fn from(value: u64) -> Self {
-        ConvectRedisValue::U64(value)
-    }
-}
-
 impl FromConvectRedisValue for String {
     fn from_convect_redis_value(value: ConvectRedisValue) -> Self {
         match value {
@@ -70,15 +63,6 @@ impl FromConvectRedisValue for i64 {
         match value {
             ConvectRedisValue::I64(value) => value,
             value => panic!("Cannot convert {:?} to i64", value),
-        }
-    }
-}
-
-impl FromConvectRedisValue for u64 {
-    fn from_convect_redis_value(value: ConvectRedisValue) -> Self {
-        match value {
-            ConvectRedisValue::U64(value) => value,
-            value => panic!("Cannot convert {:?} to u64", value),
         }
     }
 }
@@ -127,7 +111,6 @@ impl ToRedisArgs for ConvectRedisValue {
         match self {
             ConvectRedisValue::String(value) => value.write_redis_args(out),
             ConvectRedisValue::I64(value) => value.write_redis_args(out),
-            ConvectRedisValue::U64(value) => value.write_redis_args(out),
             ConvectRedisValue::USize(value) => value.write_redis_args(out),
             ConvectRedisValue::List(value) => value.write_redis_args(out),
             ConvectRedisValue::Tuple2(value) => {
