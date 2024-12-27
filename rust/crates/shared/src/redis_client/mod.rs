@@ -97,6 +97,13 @@ where
                     T2::from_convect_redis_value(v2),
                 )
             }
+            ConvectRedisValue::List(values) => {
+                let mut values = values.into_iter();
+                (
+                    T1::from_convect_redis_value(values.next().unwrap()),
+                    T2::from_convect_redis_value(values.next().unwrap()),
+                )
+            }
             value => panic!("Cannot convert {:?} to (T1, T2)", value),
         }
     }
