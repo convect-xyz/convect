@@ -119,73 +119,22 @@ pub mod providers {
     use crate::web3_client::Web3Client;
 
     #[async_trait]
-    pub trait InitBlockProvider<W: Web3Client>: std::marker::Sync {
+    pub trait InitBlockProvider: std::marker::Sync {
         async fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError>;
     }
 
-    pub struct InitBlockProviderImpl<W: Web3Client> {
-        web3_client: W,
+    pub struct InitBlockProviderImpl {
+        web3_client: Box<dyn Web3Client>,
     }
 
-    impl<W: Web3Client> InitBlockProviderImpl<W> {
-        pub fn new(web3_client: W) -> Self {
+    impl InitBlockProviderImpl {
+        pub fn new(web3_client: Box<dyn Web3Client>) -> Self {
             Self { web3_client }
         }
-
-        //     async fn get_min_contract_creation_block(
-        //         &self,
-        //     ) -> Result<Option<u64>, InitBlockProviderError> {
-        //         let creation_tx_hashes: Vec<_> = self
-        //             .contract_info_provider
-        //             .get_contract_creation_info(
-        //                 self.manifest
-        //                     .log_configs
-        //                     .iter()
-        //                     .map(|l| l.address.get_address(self.web3_client.chain_id()))
-        //                     .collect(),
-        //             )
-        //             .await
-        //             .unwrap()
-        //             .iter()
-        //             .map(|c| c.tx_hash.clone())
-        //             .collect();
-
-        //         let transactions: Result<Vec<_>, _> = join_all(
-        //             creation_tx_hashes
-        //                 .iter()
-        //                 .map(|tx_hash| self.web3_client.get_transaction_by_hash(tx_hash.clone())),
-        //         )
-        //         .await
-        //         .into_iter()
-        //         .collect();
-
-        //         let min_block = match transactions {
-        //             Ok(txs) => {
-        //                 let mut min_block = None;
-
-        //                 for tx in txs.iter() {
-        //                     if let Some(receipt) = tx {
-        //                         let block_number = receipt.block_number.unwrap().as_u64();
-        //                         if min_block.is_none() || block_number < min_block.unwrap() {
-        //                             min_block = Some(block_number);
-        //                         }
-        //                     }
-        //                 }
-
-        //                 min_block
-        //             }
-        //             Err(e) => {
-        //                 println!("{:?}", e);
-        //                 None
-        //             }
-        //         };
-
-        //         Ok(min_block)
-        //     }
     }
 
     #[async_trait]
-    impl<W: Web3Client> InitBlockProvider<W> for InitBlockProviderImpl<W> {
+    impl InitBlockProvider for InitBlockProviderImpl {
         #[tracing::instrument(skip_all, ret, err)]
         async fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError> {
             let manifest_min_block = manifest

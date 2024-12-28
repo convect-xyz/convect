@@ -180,7 +180,7 @@ async fn sync_chain(
 
     if latest_block - start_block > 10000 {
         return sync_with_ecs(
-            chain_service.config.chain_id,
+            chain_id,
             &app_service.ecs_client,
             &mut pipeline,
             start_block,
@@ -190,13 +190,13 @@ async fn sync_chain(
         .await;
     }
 
-    let a = ChainSyncer::new(
+    ChainSyncer::new(
         &app_service.manifest,
         chain_service.transaction_enqueuer.as_ref(),
         chain_service.transaction_fetcher.as_ref(),
-    );
-
-    a.sync(&mut pipeline, start_block, latest_block).await?;
+    )
+    .sync(&mut pipeline, start_block, latest_block)
+    .await?;
 
     Ok(())
 }
