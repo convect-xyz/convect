@@ -73,16 +73,16 @@ impl AppService {
     }
 }
 
-pub struct ChainService<Wc: Web3Client, Ip: InitBlockProvider<Wc>> {
+pub struct ChainService {
     pub config: ChainConfig,
-    pub web3_client: Wc,
+    pub web3_client: Box<dyn Web3Client>,
     pub transaction_fetcher: Box<dyn TransactionFetcher>,
     pub transaction_enqueuer: Box<dyn TransactionEnqueuer>,
-    pub init_block_provider: Ip,
+    pub init_block_provider: Box<dyn InitBlockProvider>,
     pub redis_client: Arc<dyn RedisClient>,
 }
 
-impl ChainService<Web3ClientImpl, InitBlockProviderImpl<Web3ClientImpl>> {
+impl ChainService {
     pub async fn with_defaults(app_service: &AppService, config: ChainConfig) -> Self {
         let web3_client = get_web3_client(&config.chain_id, &app_service.config).await;
         let fetcher = TransactionFetcherImpl::new(
@@ -102,14 +102,14 @@ impl ChainService<Web3ClientImpl, InitBlockProviderImpl<Web3ClientImpl>> {
             app_service.sqs_client.clone(),
         );
         let redis_client = RedisClientImpl::new().await;
-        let init_block_provider = InitBlockProviderImpl::new(web3_client.clone());
+        let init_block_provider = InitBlockProviderImpl::new(Box::new(web3_client.clone()));
 
         Self {
             config,
-            web3_client: web3_client.clone(),
+            web3_client: Box::new(web3_client.clone()),
             transaction_fetcher: Box::new(fetcher),
             transaction_enqueuer: Box::new(enqueuer),
-            init_block_provider,
+            init_block_provider: Box::new(init_block_provider),
             redis_client: Arc::new(redis_client),
         }
     }
