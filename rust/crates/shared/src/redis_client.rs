@@ -4,12 +4,19 @@ use async_trait::async_trait;
 use redis::{AsyncCommands, FromRedisValue, RedisResult, ToRedisArgs, Value};
 use tokio::sync::OnceCell;
 
+// "rediss://default:AVNS_7BaBQxFTF74jG4c8B1T@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061"
 static CONNECTION: OnceCell<redis::aio::MultiplexedConnection> = OnceCell::const_new();
 
-async fn get_connection() -> &'static redis::aio::MultiplexedConnection {
-    CONNECTION.get_or_init(|| async {
-  redis::Client::open("rediss://default:AVNS_7BaBQxFTF74jG4c8B1T@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061").unwrap().get_multiplexed_async_connection().await.unwrap()
-}).await
+async fn get_connection(redis_url: &str) -> &'static redis::aio::MultiplexedConnection {
+    CONNECTION
+        .get_or_init(|| async {
+            redis::Client::open(redis_url)
+                .unwrap()
+                .get_multiplexed_async_connection()
+                .await
+                .unwrap()
+        })
+        .await
 }
 
 #[derive(Debug)]
@@ -173,8 +180,8 @@ pub struct RedisClientImpl {
 }
 
 impl RedisClientImpl {
-    pub async fn new() -> Self {
-        let connection = get_connection().await.clone();
+    pub async fn new(url: &str) -> Self {
+        let connection = get_connection(url).await.clone();
 
         Self { connection }
     }

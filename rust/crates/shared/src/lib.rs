@@ -27,6 +27,7 @@ pub mod testing;
 pub mod types;
 pub mod web3_client;
 
+pub mod configuration;
 #[cfg(feature = "events")]
 pub mod events;
 #[cfg(feature = "events")]

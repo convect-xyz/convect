@@ -1,5 +1,6 @@
 use lambda_runtime::tracing;
 use shared::{
+    configuration::SharedConfig,
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{
         graphql::{GethGraphqlClient, GethGraphqlClientImpl},
@@ -9,7 +10,7 @@ use shared::{
         providers::{InitBlockProvider, InitBlockProviderImpl},
         Manifest,
     },
-    networks::get_supported_network,
+    networks::{get_first_polling_url, get_supported_network},
     redis_client::{RedisClient, RedisClientImpl},
     s3::S3,
     web3_client::{Web3Client, Web3ClientImpl},
@@ -49,10 +50,12 @@ async fn get_manifest() -> &'static Manifest {
 }
 
 pub struct AppService {
+    pub settings: SharedConfig,
     pub config: Config,
     pub ecs_client: aws_sdk_ecs::Client,
     pub s3_client: aws_sdk_s3::Client,
     pub sqs_client: aws_sdk_sqs::Client,
+    pub redis_client: Arc<dyn RedisClient>,
     pub manifest: Manifest,
 }
 
@@ -62,6 +65,8 @@ impl AppService {
         let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
         let s3_client = aws_sdk_s3::Client::new(&sdk_config);
         let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
+        let settings = SharedConfig::new().unwrap();
+        let redis_client = RedisClientImpl::new(&settings.redis.url).await;
 
         Self {
             config: Config::new(),
@@ -69,6 +74,8 @@ impl AppService {
             ecs_client,
             s3_client,
             sqs_client,
+            redis_client: Arc::new(redis_client),
+            settings,
         }
     }
 }
@@ -79,21 +86,13 @@ pub struct ChainService {
     pub transaction_fetcher: Box<dyn TransactionFetcher>,
     pub transaction_enqueuer: Box<dyn TransactionEnqueuer>,
     pub init_block_provider: Box<dyn InitBlockProvider>,
-    pub redis_client: Arc<dyn RedisClient>,
 }
 
 impl ChainService {
     pub async fn with_defaults(app_service: &AppService, config: ChainConfig) -> Self {
         let web3_client = get_web3_client(&config.chain_id, &app_service.config).await;
         let fetcher = TransactionFetcherImpl::new(
-            GethGraphqlClientImpl::new(
-                get_supported_network(config.chain_id)
-                    .unwrap()
-                    .polling_urls
-                    .first()
-                    .unwrap()
-                    .to_string(),
-            ),
+            GethGraphqlClientImpl::new(get_first_polling_url(config.chain_id)),
             config.chain_id,
         );
         let enqueuer = SQSTransactionEnqueuer::new(
@@ -101,7 +100,6 @@ impl ChainService {
             config.tx_queue_url.clone(),
             app_service.sqs_client.clone(),
         );
-        let redis_client = RedisClientImpl::new().await;
         let init_block_provider = InitBlockProviderImpl::new(Box::new(web3_client.clone()));
 
         Self {
@@ -110,7 +108,6 @@ impl ChainService {
             transaction_fetcher: Box::new(fetcher),
             transaction_enqueuer: Box::new(enqueuer),
             init_block_provider: Box::new(init_block_provider),
-            redis_client: Arc::new(redis_client),
         }
     }
 }
