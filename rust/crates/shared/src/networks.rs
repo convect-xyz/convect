@@ -23,3 +23,9 @@ pub fn get_supported_network(chain_id: u64) -> Option<SupportedNetwork> {
         .into_iter()
         .find(|n| n.id == chain_id);
 }
+
+pub fn get_first_polling_url(chain_id: u64) -> String {
+    return get_supported_network(chain_id)
+        .map(|n| n.polling_urls.first().unwrap().to_string())
+        .unwrap();
+}

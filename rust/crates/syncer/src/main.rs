@@ -1,8 +1,8 @@
 use config::load_config_from_env;
 use shared::{
+    configuration::SharedConfig,
     enqueuer::SQSTransactionEnqueuer,
-    fetcher::graphql::GethGraphqlClientImpl,
-    fetcher::TransactionFetcherImpl,
+    fetcher::{graphql::GethGraphqlClientImpl, TransactionFetcherImpl},
     manifest::Manifest,
     networks::get_supported_network,
     redis_client::RedisClientImpl,
@@ -17,7 +17,8 @@ mod config;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
-    let redis_client = RedisClientImpl::new().await;
+    let configuration = SharedConfig::new()?;
+    let redis_client = RedisClientImpl::new(&configuration.redis.url).await;
     let mut pipeline = State::load(
         syncer_config.function_id.clone(),
         syncer_config.chain_id.clone(),
@@ -26,7 +27,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .await?;
     let network = get_supported_network(syncer_config.chain_id).unwrap();
-
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);

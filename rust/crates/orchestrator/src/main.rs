@@ -155,7 +155,7 @@ async fn sync_chain(
         app_service.config.function_id.clone(),
         chain_id,
         app_service.config.deployment_id.clone(),
-        chain_service.redis_client.clone(),
+        app_service.redis_client.clone(),
     )
     .await?;
 

@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use crate::redis_client::{
-    errors::RedisClientError, IntoOriginalValue as _, RedisClient, RedisClientImpl,
-};
+use crate::redis_client::{errors::RedisClientError, IntoOriginalValue as _, RedisClient};
 use backoff::{exponential::ExponentialBackoff, SystemClock};
 
 #[derive(Clone)]
@@ -44,10 +42,13 @@ impl State {
         }
     }
 
-    pub async fn load(function_id: String, chain_id: u64, deployment_id: String) -> Self {
-        let client = RedisClientImpl::new().await;
-
-        let (error_tx, error_label): (Option<String>, Option<String>) = client
+    pub async fn load(
+        function_id: String,
+        chain_id: u64,
+        deployment_id: String,
+        redis_client: Arc<dyn RedisClient>,
+    ) -> Self {
+        let (error_tx, error_label): (Option<String>, Option<String>) = redis_client
             .mget(vec![
                 format!("process-state-{function_id}-{chain_id}-{deployment_id}-error-tx"),
                 format!("process-state-{function_id}-{chain_id}-{deployment_id}-error-label"),
@@ -57,7 +58,7 @@ impl State {
             .into_original_value();
 
         Self {
-            redis_client: Arc::new(client),
+            redis_client,
             deployment_id,
             function_id,
             chain_id,

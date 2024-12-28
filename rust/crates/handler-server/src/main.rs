@@ -2,26 +2,26 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use config::HandlerServerConfig;
 use lambda_extension::{service_fn, tracing, Error, LambdaEvent, NextEvent};
+use monitoring::init_sentry;
 use sentry::protocol::Context;
 use shared::{
+    configuration::SharedConfig,
     processing,
     redis_client::RedisClientImpl,
     reporting_sdk::{ReportingSdk, SQSReportingSdk},
 };
+use state::AppState;
 use std::collections::BTreeMap;
 use std::{env, sync::Arc};
 use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
 
+mod config;
 mod errors;
-
-#[derive(Clone)]
-struct AppState {
-    pipeline: Arc<Mutex<processing::State>>,
-    reporting: Arc<dyn ReportingSdk + Send + Sync>,
-    config: Config,
-}
+mod monitoring;
+mod state;
 
 async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
     match event.next {
@@ -31,105 +31,45 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
     Ok(())
 }
 
-#[derive(Clone)]
-struct Config {
-    deployment_id: String,
-    function_id: String,
-    chain_id: u64,
-    project_id: i32,
-    transaction_queue_url: String,
-}
-
-fn configure_sentry_scope(config: &Config) {
-    sentry::configure_scope(|scope| {
-        scope.set_user(Some(sentry::User {
-            id: Some(config.project_id.to_string()),
-            ..Default::default()
-        }));
-
-        let mut deployment_map = BTreeMap::new();
-        deployment_map.insert(
-            "deployment_id".to_string(),
-            config.deployment_id.clone().into(),
-        );
-        deployment_map.insert("function_id".to_string(), config.function_id.clone().into());
-
-        scope.set_context("deployment", Context::Other(deployment_map));
-    });
-}
-
 fn main() -> Result<(), Error> {
-    let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", sentry::ClientOptions {
-        release: sentry::release_name!(),
-        ..Default::default()
-    }));
-
-    let config = Config {
-        deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not defined"),
-        function_id: env::var("FUNCTION_ID").expect("FUNCTION_ID is not defined"),
-        chain_id: env::var("CHAIN_ID")
-            .expect("CHAIN_ID is not defined")
-            .parse()
-            .unwrap(),
-        project_id: env::var("PROJECT_ID")
-            .expect("PROJECT_ID is not defined")
-            .parse()
-            .unwrap(),
-        transaction_queue_url: env::var("TRANSACTION_QUEUE_URL")
-            .expect("TRANSACTION_QUEUE_URL is not defined"),
-    };
-
-    configure_sentry_scope(&config);
-
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .unwrap()
-        .block_on(async move {
-            let function_id = config.function_id.clone();
-            let chain_id = config.chain_id.clone();
-            let deployment_id = config.deployment_id.clone();
+        .block_on(_main())
+}
 
-            let pipeline = Arc::new(Mutex::new(
-                processing::State::load(function_id, chain_id, deployment_id).await,
-            ));
-            let reporting_sdk = SQSReportingSdk::new_with_defaults().await;
-            let app_state = AppState {
-                pipeline,
-                reporting: Arc::new(reporting_sdk),
-                config,
-            };
+async fn _main() -> Result<(), Error> {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_target(false)
+        .without_time()
+        .with_ansi(false)
+        .init();
 
-            tracing_subscriber::fmt()
-                .with_max_level(tracing::Level::DEBUG)
-                .with_target(false)
-                .without_time()
-                .with_ansi(false)
-                .init();
+    let app_state = AppState::new().await;
+    let _guard = init_sentry(&app_state.handler_server_config);
 
-            let app = Router::new()
-                .route("/results", post(results::handler))
-                .route("/pipeline", get(get_pipeline::handler))
-                .with_state(app_state)
-                .layer(TraceLayer::new_for_http());
+    let app = Router::new()
+        .route("/results", post(results::handler))
+        .route("/pipeline", get(get_pipeline::handler))
+        .with_state(app_state)
+        .layer(TraceLayer::new_for_http());
 
-            let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
 
-            tokio::spawn(async {
-                println!("Starting server");
+    tokio::spawn(async {
+        println!("Starting server");
+        axum::serve(listener, app).await.unwrap();
+    });
 
-                axum::serve(listener, app).await.unwrap();
-            });
-
-            let func = service_fn(my_extension);
-
-            lambda_extension::run(func).await
-        })
+    let func = service_fn(my_extension);
+    lambda_extension::run(func).await
 }
 
 mod results {
     use super::errors::ServerError;
-    use crate::{AppState, Config};
+    use crate::{AppState, HandlerServerConfig};
     use aws_config::BehaviorVersion;
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
@@ -151,9 +91,6 @@ mod results {
         State(app_state): State<AppState>,
         Json(payload): Json<Request>,
     ) -> Result<Json<Value>, ServerError> {
-        let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-        let sqs_client = aws_sdk_sqs::Client::new(&config);
-
         let failed_tx = payload
             .results
             .iter()
@@ -161,18 +98,18 @@ mod results {
             .map(|v| v.clone());
 
         let reporting_request = reporting_sdk::Report::Results {
-            function_id: app_state.config.function_id.clone(),
-            chain_id: app_state.config.chain_id.to_string(),
-            project_id: app_state.config.project_id.clone(),
+            function_id: app_state.handler_server_config.function_id.clone(),
+            chain_id: app_state.handler_server_config.chain_id.to_string(),
+            project_id: app_state.handler_server_config.project_id.clone(),
             invocation_id: payload.invocation_id.clone(),
             results: payload.results.clone(),
-            deployment_id: app_state.config.deployment_id.clone(),
+            deployment_id: app_state.handler_server_config.deployment_id.clone(),
         };
 
         let (reporting_result, process_result, visibility_result) = join!(
             app_state.reporting.handle(&reporting_request),
             maybe_update_process_state(&app_state, &failed_tx),
-            maybe_update_message_visibility(&sqs_client, &payload, &failed_tx, &app_state.config)
+            maybe_update_message_visibility(&app_state, &payload, &failed_tx,)
         );
 
         reporting_result?;
@@ -194,26 +131,30 @@ mod results {
     }
 
     async fn maybe_update_message_visibility(
-        sqs_client: &aws_sdk_sqs::Client,
+        app_state: &AppState,
         request: &Request,
         failed_tx: &Option<TransactionResult>,
-        config: &Config,
     ) -> Result<(), BoxError> {
         if let Some(_) = failed_tx {
-            return update_message_visibility(config, &sqs_client, &request.message_ids).await;
+            return update_message_visibility(app_state, &request.message_ids).await;
         }
 
         Ok(())
     }
 
     async fn update_message_visibility(
-        config: &Config,
-        sqs_client: &aws_sdk_sqs::Client,
+        app_state: &AppState,
         message_ids: &Vec<String>,
     ) -> Result<(), BoxError> {
-        Ok(sqs_client
+        Ok(app_state
+            .sqs_client
             .change_message_visibility_batch()
-            .set_queue_url(Some(config.transaction_queue_url.clone()))
+            .set_queue_url(Some(
+                app_state
+                    .handler_server_config
+                    .transaction_queue_url
+                    .clone(),
+            ))
             .set_entries(Some(
                 message_ids
                     .into_iter()
