@@ -26,6 +26,7 @@ env:
   AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   CONFIG__REDIS__URL: ${{ secrets.CONFIG__REDIS__URL }}
+  TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -185,7 +186,6 @@ jobs:
           save-if: "false"
       - name: Build
         env:
-          TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
           BIN: ${{ matrix.binary }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
