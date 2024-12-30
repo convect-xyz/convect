@@ -88,7 +88,6 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
-          save-if: "false"
       # - name: Test
       #   working-directory: rust
       #   run: cargo nextest run -p ${{ matrix.binary }}
@@ -128,7 +127,6 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
-          save-if: "false"
       # - name: Test
       #   working-directory: rust
       #   run: cargo nextest run -p reporting
@@ -168,7 +166,6 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
-          save-if: "false"
       - name: Build
         env:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
