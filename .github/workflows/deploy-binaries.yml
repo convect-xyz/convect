@@ -80,10 +80,10 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - uses: actions/checkout@master
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.binary }}
-          workspaces: "rust"
+      # - uses: Swatinem/rust-cache@v2
+      #   with:
+      #     key: ${{ matrix.binary }}
+      #     workspaces: "rust"
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: shared
@@ -120,10 +120,15 @@ jobs:
       # - name: Install nextest
       #   uses: taiki-e/install-action@nextest
       - uses: actions/checkout@master
+      # - uses: Swatinem/rust-cache@v2
+      #   with:
+      #     key: reporting
+      #     workspaces: "rust"
       - uses: Swatinem/rust-cache@v2
         with:
-          key: reporting
+          shared-key: shared
           workspaces: "rust"
+          save-if: "false"
       # - name: Test
       #   working-directory: rust
       #   run: cargo nextest run -p reporting
@@ -155,10 +160,15 @@ jobs:
           platform: linux
           arch: x86_64
       - uses: actions/checkout@master
+      # - uses: Swatinem/rust-cache@v2
+      #   with:
+      #     key: ${{ matrix.binary }}
+      #     workspaces: "rust"
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.binary }}
+          shared-key: shared
           workspaces: "rust"
+          save-if: "false"
       - name: Build
         env:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
