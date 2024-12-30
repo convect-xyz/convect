@@ -47,6 +47,7 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
+          cache-all-crates: "true"
       - name: Build All
         working-directory: rust
         run: cargo build --workspace --all-features
