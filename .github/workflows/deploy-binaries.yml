@@ -55,7 +55,7 @@ jobs:
           workspaces: "rust"
       - name: Test
         working-directory: rust
-        run: cargo nextest run -p shared
+        run: cargo nextest run -p shared --features=supported-networks
 
   build_lambdas:
     runs-on: ubuntu-latest
