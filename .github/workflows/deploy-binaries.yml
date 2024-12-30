@@ -50,7 +50,9 @@ jobs:
           cache-all-crates: "true"
       - name: Build All
         working-directory: rust
-        run: cargo build --workspace --all-features
+        run: |
+          cargo build --workspace --all-features
+          cargo lambda build --workspace --all-features
 
   test_shared:
     needs: [build_all_and_cache]
