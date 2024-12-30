@@ -101,9 +101,9 @@ mod results {
             function_id: app_state.handler_server_config.function_id.clone(),
             chain_id: app_state.handler_server_config.chain_id.to_string(),
             project_id: app_state.handler_server_config.project_id.clone(),
+            deployment_id: app_state.handler_server_config.deployment_id.clone(),
             invocation_id: payload.invocation_id.clone(),
             results: payload.results.clone(),
-            deployment_id: app_state.handler_server_config.deployment_id.clone(),
         };
 
         let (reporting_result, process_result, visibility_result) = join!(
