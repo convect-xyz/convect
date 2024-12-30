@@ -58,7 +58,7 @@ jobs:
         working-directory: rust
         run: |
           cargo build -p producer --all-features
-          cargo lambda build -p extension -p handler-server -p orchestrator -p reporting  --all-features
+          cargo lambda build -p extension -p handler-server -p orchestrator -p reporting --release --all-features
 
   test_shared:
     needs: [build_all_and_cache]
