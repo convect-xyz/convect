@@ -77,7 +77,6 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
-          save-if: "false"
       - name: Test
         working-directory: rust
         run: cargo nextest run -p shared --features=supported-networks
@@ -112,7 +111,6 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
-          save-if: "false"
       # - name: Test
       #   working-directory: rust
       #   run: cargo nextest run -p ${{ matrix.binary }}
@@ -152,7 +150,6 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
-          save-if: "false"
       # - name: Test
       #   working-directory: rust
       #   run: cargo nextest run -p reporting
@@ -192,7 +189,6 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
-          save-if: "false"
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
