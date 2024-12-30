@@ -32,7 +32,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build_and_test_shared:
+  build_all_and_cache:
     runs-on: ubuntu-latest
     steps:
       - name: Install Rust toolchain
@@ -41,12 +41,25 @@ jobs:
         uses: korandoru/setup-zig@v1
         with:
           zig-version: 0.10.0
-      - name: Install Cargo Lambda
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
+      - uses: actions/checkout@master
+      - uses: Swatinem/rust-cache@v2
         with:
-          repo: cargo-lambda/cargo-lambda
-          platform: linux
-          arch: x86_64
+          shared-key: shared
+          workspaces: "rust"
+      - name: Build All
+        working-directory: rust
+        run: cargo build --workspace --all-features
+
+  test_shared:
+    needs: [build_all_and_cache]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Zig toolchain
+        uses: korandoru/setup-zig@v1
+        with:
+          zig-version: 0.10.0
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - uses: actions/checkout@master
@@ -54,12 +67,13 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
+          save-if: "false"
       - name: Test
         working-directory: rust
         run: cargo nextest run -p shared --features=supported-networks
 
   build_lambdas:
-    needs: [build_and_test_shared]
+    needs: [test_shared]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -88,6 +102,7 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
+          save-if: "false"
       # - name: Test
       #   working-directory: rust
       #   run: cargo nextest run -p ${{ matrix.binary }}
@@ -101,7 +116,7 @@ jobs:
           aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/$BIN/bootstrap.zip"
 
   build_reporting:
-    needs: [build_and_test_shared]
+    needs: [test_shared]
     runs-on: ubuntu-latest
     steps:
       - name: Install Rust toolchain
@@ -127,6 +142,7 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
+          save-if: "false"
       # - name: Test
       #   working-directory: rust
       #   run: cargo nextest run -p reporting
@@ -139,7 +155,7 @@ jobs:
           aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
 
   build_extensions:
-    needs: [build_and_test_shared]
+    needs: [test_shared]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -166,6 +182,7 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
+          save-if: "false"
       - name: Build
         env:
           TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
@@ -179,7 +196,7 @@ jobs:
           aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/extensions/$BIN.zip"
 
   build_images:
-    needs: [build_and_test_shared]
+    needs: [test_shared]
     runs-on: ubuntu-latest
     strategy:
       matrix:
