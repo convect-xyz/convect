@@ -43,6 +43,12 @@ jobs:
         with:
           zig-version: 0.10.0
       - uses: actions/checkout@master
+      - name: Install Cargo Lambda
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        with:
+          repo: cargo-lambda/cargo-lambda
+          platform: linux
+          arch: x86_64
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: shared
@@ -51,8 +57,8 @@ jobs:
       - name: Build All
         working-directory: rust
         run: |
-          cargo build --workspace --all-features
-          cargo lambda build --workspace --all-features
+          cargo build -p producer --all-features
+          cargo lambda build -p extension -p handler-server -p orchestrator -p reporting  --all-features
 
   test_shared:
     needs: [build_all_and_cache]
