@@ -5,7 +5,7 @@ pub struct Config {
     pub chain_id: u64,
     pub start_block: u64,
     pub end_block: u64,
-    pub tx_queue_url: String,
+    pub transaction_queue_url: String,
     pub deployment_id: String,
 }
 
@@ -24,7 +24,7 @@ pub fn load_config_from_env() -> Config {
             .expect("END_BLOCK is not present")
             .parse()
             .expect("END_BLOCK is not a u64"),
-        tx_queue_url: env::var("TRANSACTION_QUEUE_URL")
+        transaction_queue_url: env::var("TRANSACTION_QUEUE_URL")
             .expect("TRANSACTION_QUEUE_URL is not present"),
         deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not present"),
     };

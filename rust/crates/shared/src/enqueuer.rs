@@ -8,18 +8,26 @@ use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
-struct TxPayload {
-    #[serde(rename(serialize = "type"))]
-    _type: String,
-    data: Vec<IngestTransaction>,
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Payload {
+    Batch { download_url: String },
+    Raw { data: Vec<IngestTransaction> },
 }
 
-#[derive(Serialize, Deserialize)]
-struct BatchPayload {
-    #[serde(rename(serialize = "type"))]
-    _type: String,
-    download_url: String,
+impl Payload {
+    pub async fn get_transactions(&self) -> Result<Vec<IngestTransaction>, reqwest::Error> {
+        match self {
+            Payload::Batch { download_url } => {
+                reqwest::get(download_url.clone())
+                    .await
+                    .unwrap()
+                    .json::<Vec<IngestTransaction>>()
+                    .await
+            }
+            Payload::Raw { data } => Ok(data.clone()),
+        }
+    }
 }
 
 #[async_trait]
@@ -35,6 +43,20 @@ pub struct SQSTransactionEnqueuer<T: S3> {
     sqs_client: aws_sdk_sqs::Client,
     queue_url: String,
     s3_client: T,
+}
+
+impl SQSTransactionEnqueuer<aws_sdk_s3::Client> {
+    pub async fn with_defaults(queue_url: String) -> Self {
+        let config = aws_config::load_from_env().await;
+        let s3_client = aws_sdk_s3::Client::new(&config);
+        let sqs_client = aws_sdk_sqs::Client::new(&config);
+
+        Self {
+            s3_client,
+            queue_url,
+            sqs_client,
+        }
+    }
 }
 
 impl<T: S3> SQSTransactionEnqueuer<T> {
@@ -90,13 +112,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             .sqs_client
             .send_message()
             .queue_url(self.queue_url.to_owned())
-            .message_body(
-                serde_json::to_string(&TxPayload {
-                    _type: String::from("non-batch"),
-                    data: group,
-                })
-                .unwrap(),
-            )
+            .message_body(serde_json::to_string(&Payload::Raw { data: group }).unwrap())
             .message_group_id("main")
             .message_deduplication_id(Uuid::new_v4())
             .send()
@@ -147,8 +163,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 .send_message()
                 .queue_url(self.queue_url.to_owned())
                 .message_body(
-                    serde_json::to_string(&BatchPayload {
-                        _type: String::from("batch"),
+                    serde_json::to_string(&Payload::Batch {
                         download_url: download_url.clone(),
                     })
                     .unwrap(),

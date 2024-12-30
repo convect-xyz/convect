@@ -46,14 +46,19 @@ pub struct LogConfig {
     pub tx_configs: Vec<i64>,
 }
 
+#[derive(Deserialize, Clone, Debug, Default, PartialEq)]
+pub struct ManifestChainConfig {
+    pub chain_id: u64,
+}
 #[derive(Deserialize, Debug, Clone)]
 pub struct Manifest {
+    pub chains: Vec<ManifestChainConfig>,
     pub log_configs: Vec<LogConfig>,
     pub tx_configs: Vec<TransactionConfig>,
 }
 
 impl Manifest {
-    pub async fn from_env() -> Result<Manifest, errors::ManifestFromEnvError> {
+    pub async fn from_env() -> Result<Self, errors::ManifestFromEnvError> {
         let config = aws_config::load_from_env().await;
         let s3_client = aws_sdk_s3::Client::new(&config);
         let bucket = env::var("MANIFEST_BUCKET")?;
@@ -67,6 +72,11 @@ impl Manifest {
         let data = object.body.collect().await?;
         let content = String::from_utf8(data.into_bytes().to_vec())?;
 
+        Ok(serde_json::from_str(&content)?)
+    }
+
+    pub async fn from_file(path: &str) -> Result<Self, errors::ManifestFromFileError> {
+        let content = tokio::fs::read_to_string(path).await?;
         Ok(serde_json::from_str(&content)?)
     }
 
@@ -107,6 +117,16 @@ pub mod errors {
         ByteStreamError(#[from] aws_smithy_types::byte_stream::error::Error),
         #[error("Invalid UTF-8 in Manifest: {0}")]
         InvalidUtf8(#[from] FromUtf8Error),
+    }
+
+    #[derive(Debug, Error)]
+    pub enum ManifestFromFileError {
+        #[error("File not found")]
+        FileNotFound,
+        #[error("Serialization Error: {0}")]
+        SerError(#[from] serde_json::Error),
+        #[error("IO Error: {0}")]
+        IoError(#[from] std::io::Error),
     }
 }
 

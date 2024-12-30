@@ -34,7 +34,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         GethGraphqlClientImpl::new(network.polling_urls.first().unwrap().to_string()),
         network.id,
     );
-    let enqueuer = SQSTransactionEnqueuer::new(s3_client, syncer_config.tx_queue_url, sqs_client);
+    let enqueuer =
+        SQSTransactionEnqueuer::new(s3_client, syncer_config.transaction_queue_url, sqs_client);
     let manifest = Manifest::from_env().await.unwrap();
 
     let sync_result = ChainSyncer::new(&manifest, &enqueuer, &fetcher)
