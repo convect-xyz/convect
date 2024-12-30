@@ -31,6 +31,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test_shared:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Zig toolchain
+        uses: korandoru/setup-zig@v1
+        with:
+          zig-version: 0.10.0
+      - name: Install Cargo Lambda
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        with:
+          repo: cargo-lambda/cargo-lambda
+          platform: linux
+          arch: x86_64
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - uses: actions/checkout@master
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: shared
+          workspaces: "rust"
+      - name: Test
+        working-directory: rust
+        run: cargo nextest run -p shared
+
   build_lambdas:
     runs-on: ubuntu-latest
     strategy:
@@ -194,7 +220,7 @@ jobs:
           sudo soci push --user AWS:$PASSWORD $REGISTRY_URL
 
   deploy_pulumi:
-    needs: [build_lambdas, build_extensions, build_images]
+    needs: [build_lambdas, build_extensions, build_images, test_shared]
     name: Deploy Pulumi
     runs-on: ubuntu-latest
     steps:
