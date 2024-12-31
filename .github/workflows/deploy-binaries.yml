@@ -54,7 +54,7 @@ jobs:
         uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "v2-rust"
+          prefix-key: "v3-rust"
           shared-key: shared
           workspaces: "rust"
           cache-all-crates: "true"
