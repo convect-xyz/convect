@@ -70,7 +70,6 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          cargo build -p producer --all-features
           cargo lambda build --output-format zip -p extension -p handler-server -p orchestrator -p reporting --release --all-features
 
           aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
