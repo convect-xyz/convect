@@ -27,6 +27,7 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   CONFIG__REDIS__URL: ${{ secrets.CONFIG__REDIS__URL }}
   TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
+  CARGO_INCREMENTAL: "1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
