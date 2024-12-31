@@ -50,164 +50,31 @@ jobs:
           repo: cargo-lambda/cargo-lambda
           platform: linux
           arch: x86_64
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "v1-rust"
+          prefix-key: "v2-rust"
           shared-key: shared
           workspaces: "rust"
           cache-all-crates: "true"
       - name: Build All
         working-directory: rust
-        run: |
-          cargo build -p producer --all-features
-          cargo lambda build -p extension -p handler-server -p orchestrator -p reporting --release --all-features
-
-  test_shared:
-    needs: [build_all_and_cache]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install Zig toolchain
-        uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.10.0
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-      - uses: actions/checkout@master
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v1-rust"
-          shared-key: shared
-          workspaces: "rust"
-      - name: Test
-        working-directory: rust
-        run: cargo nextest run -p shared --features=supported-networks
-
-  build_lambdas:
-    needs: [test_shared]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        binary: ["orchestrator"]
-    steps:
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install Zig toolchain
-        uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.10.0
-      - name: Install Cargo Lambda
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
-        with:
-          repo: cargo-lambda/cargo-lambda
-          platform: linux
-          arch: x86_64
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-      - uses: actions/checkout@master
-      # - uses: Swatinem/rust-cache@v2
-      #   with:
-      #     key: ${{ matrix.binary }}
-      #     workspaces: "rust"
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v1-rust"
-          shared-key: shared
-          workspaces: "rust"
-      # - name: Test
-      #   working-directory: rust
-      #   run: cargo nextest run -p ${{ matrix.binary }}
-      - name: Build
-        working-directory: rust
         env:
-          BIN: ${{ matrix.binary }}
-          GITHUB_SHA: ${{ github.sha }}
-        run: |
-          cargo lambda build --output-format zip --release -p $BIN
-          aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/$BIN/bootstrap.zip"
-
-  build_reporting:
-    needs: [test_shared]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install Zig toolchain
-        uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.10.0
-      - name: Install Cargo Lambda
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
-        with:
-          repo: cargo-lambda/cargo-lambda
-          platform: linux
-          arch: x86_64
-      # - name: Install nextest
-      #   uses: taiki-e/install-action@nextest
-      - uses: actions/checkout@master
-      # - uses: Swatinem/rust-cache@v2
-      #   with:
-      #     key: reporting
-      #     workspaces: "rust"
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v1-rust"
-          shared-key: shared
-          workspaces: "rust"
-      # - name: Test
-      #   working-directory: rust
-      #   run: cargo nextest run -p reporting
-      - name: Build
-        working-directory: rust
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-        run: |
-          cargo lambda build --output-format zip --release -p reporting
-          aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
-
-  build_extensions:
-    needs: [test_shared]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        binary: ["extension", "handler-server"]
-    steps:
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install Zig toolchain
-        uses: korandoru/setup-zig@v1
-        with:
-          zig-version: 0.10.0
-      - name: Install Cargo Lambda
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
-        with:
-          repo: cargo-lambda/cargo-lambda
-          platform: linux
-          arch: x86_64
-      - uses: actions/checkout@master
-      # - uses: Swatinem/rust-cache@v2
-      #   with:
-      #     key: ${{ matrix.binary }}
-      #     workspaces: "rust"
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: shared
-          workspaces: "rust"
-          prefix-key: "v1-rust"
-      - name: Build
-        env:
-          BIN: ${{ matrix.binary }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
           sudo apt-get update
           sudo apt-get install -y libpq-dev postgresql
-          cd rust
-          cargo lambda build --extension --output-format zip --release -p $BIN
-          aws s3api put-object --bucket ingest-functions --key $BIN/$GITHUB_SHA.zip --body "./target/lambda/extensions/$BIN.zip"
+          cargo nextest run -p shared --features=supported-networks
+          cargo build -p producer --all-features
+          cargo lambda build --output-format zip -p extension -p handler-server -p orchestrator -p reporting --release --all-features
+
+          aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
+          aws s3api put-object --bucket ingest-functions --key orchestrator/$GITHUB_SHA.zip --body "./target/lambda/orchestrator/bootstrap.zip"
+          aws s3api put-object --bucket ingest-functions --key extension/$GITHUB_SHA.zip --body "./target/lambda/extension/bootstrap.zip"
+          aws s3api put-object --bucket ingest-functions --key handler-server/$GITHUB_SHA.zip --body "./target/lambda/handler-server/bootstrap.zip"
 
   build_images:
-    needs: [test_shared]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -265,7 +132,7 @@ jobs:
           sudo soci push --user AWS:$PASSWORD $REGISTRY_URL
 
   deploy_pulumi:
-    needs: [build_lambdas, build_extensions, build_images]
+    needs: [build_all_and_cache, build_images]
     name: Deploy Pulumi
     runs-on: ubuntu-latest
     steps:
