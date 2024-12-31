@@ -52,6 +52,7 @@ jobs:
           arch: x86_64
       - uses: Swatinem/rust-cache@v2
         with:
+          prefix-key: "v1-rust"
           shared-key: shared
           workspaces: "rust"
           cache-all-crates: "true"
@@ -76,6 +77,7 @@ jobs:
       - uses: actions/checkout@master
       - uses: Swatinem/rust-cache@v2
         with:
+          prefix-key: "v1-rust"
           shared-key: shared
           workspaces: "rust"
       - name: Test
@@ -110,6 +112,7 @@ jobs:
       #     workspaces: "rust"
       - uses: Swatinem/rust-cache@v2
         with:
+          prefix-key: "v1-rust"
           shared-key: shared
           workspaces: "rust"
       # - name: Test
@@ -149,6 +152,7 @@ jobs:
       #     workspaces: "rust"
       - uses: Swatinem/rust-cache@v2
         with:
+          prefix-key: "v1-rust"
           shared-key: shared
           workspaces: "rust"
       # - name: Test
@@ -190,6 +194,7 @@ jobs:
         with:
           shared-key: shared
           workspaces: "rust"
+          prefix-key: "v1-rust"
       - name: Build
         env:
           BIN: ${{ matrix.binary }}
