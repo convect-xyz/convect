@@ -27,7 +27,6 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   CONFIG__REDIS__URL: ${{ secrets.CONFIG__REDIS__URL }}
   TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
-  CARGO_INCREMENTAL: "1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -58,14 +57,19 @@ jobs:
           shared-key: shared
           workspaces: "rust"
           cache-all-crates: "true"
-      - name: Build All
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev postgresql
+      - name: Run integration tests
+        working-directory: rust
+        run: |
+          cargo nextest run -p shared --features=supported-networks
+      - name: Build and Upload All Binaries
         working-directory: rust
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libpq-dev postgresql
-          cargo nextest run -p shared --features=supported-networks
           cargo build -p producer --all-features
           cargo lambda build --output-format zip -p extension -p handler-server -p orchestrator -p reporting --release --all-features
 
