@@ -208,6 +208,8 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         let conn = &mut self.pool.get().await?;
 
         conn.transaction(|conn| {
+            let function_id = state.function_id();
+            let deployment_id = state.deployment_id();
             async move {
                 let chunked_txs = txs.iter().chunks(200);
                 let futures = chunked_txs.into_iter().map(|txs| {
@@ -215,8 +217,8 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
                         .values(
                             txs.map(|tx| models::EthTransaction {
                                 transaction_hash: tx.transaction_hash.clone(),
-                                function_id: state.function_id(),
-                                deployment_id: state.deployment_id(),
+                                function_id: function_id.clone(),
+                                deployment_id: deployment_id.clone(),
                                 created_at: Utc::now(),
                                 block_timestamp: DateTime::from_timestamp_millis(
                                     tx.block_timestamp * 1000,
