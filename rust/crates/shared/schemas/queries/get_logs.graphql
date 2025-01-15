@@ -23,6 +23,7 @@ query ExampleQuery($filter: FilterCriteria!) {
       block {
         number
         hash
+        timestamp
       }
     }
   }

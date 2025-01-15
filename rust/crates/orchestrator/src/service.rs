@@ -1,6 +1,7 @@
 use lambda_runtime::tracing;
 use shared::{
     configuration::SharedConfig,
+    connection::establish_connection_pool,
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{
         graphql::{GethGraphqlClient, GethGraphqlClientImpl},
@@ -95,10 +96,12 @@ impl ChainService {
             GethGraphqlClientImpl::new(get_first_polling_url(config.chain_id)),
             config.chain_id,
         );
+        let pool = establish_connection_pool().await;
         let enqueuer = SQSTransactionEnqueuer::new(
             app_service.s3_client.clone(),
             config.tx_queue_url.clone(),
             app_service.sqs_client.clone(),
+            pool,
         );
         let init_block_provider = InitBlockProviderImpl::new(Box::new(web3_client.clone()));
 
