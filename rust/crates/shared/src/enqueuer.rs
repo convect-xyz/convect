@@ -215,8 +215,8 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
                         .values(
                             txs.map(|tx| models::EthTransaction {
                                 transaction_hash: tx.transaction_hash.clone(),
-                                function_id: tx.batch_id.clone(),
-                                deployment_id: tx.batch_id.clone(),
+                                function_id: state.function_id(),
+                                deployment_id: state.deployment_id(),
                                 created_at: Utc::now(),
                                 block_timestamp: DateTime::from_timestamp_millis(
                                     tx.block_timestamp * 1000,
