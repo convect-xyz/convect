@@ -211,3 +211,22 @@ async fn test_same_block() -> Result<(), Box<dyn std::error::Error>> {
         .run()
         .await
 }
+
+#[tokio::test]
+async fn test_no_transactions() -> Result<(), Box<dyn std::error::Error>> {
+    Test::new("no-transactions", "tests/expectations/no_transactions")
+        .await
+        .run()
+        .await
+}
+
+#[tokio::test]
+async fn test_historical_transactions() -> Result<(), Box<dyn std::error::Error>> {
+    Test::new(
+        "historical-transactions",
+        "tests/expectations/historical_transactions",
+    )
+    .await
+    .run()
+    .await
+}

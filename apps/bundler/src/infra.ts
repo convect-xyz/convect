@@ -120,6 +120,7 @@ export default async () => {
             })
           )
         ),
+        DATABASE_URL: env.REPORTING_DB_URL,
       },
     },
     timeout: 200,

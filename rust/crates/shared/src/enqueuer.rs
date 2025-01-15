@@ -1,9 +1,14 @@
 use std::env;
 
-use crate::s3::S3;
+use crate::connection::DbPool;
+use crate::models;
+use crate::schema::eth_transaction;
 use crate::syncing::State;
 use crate::types::transactions::IngestTransaction;
+use crate::{connection::establish_connection_pool, s3::S3};
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use diesel_async::RunQueryDsl;
 use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -43,6 +48,7 @@ pub struct SQSTransactionEnqueuer<T: S3> {
     sqs_client: aws_sdk_sqs::Client,
     queue_url: String,
     s3_client: T,
+    pool: DbPool,
 }
 
 impl SQSTransactionEnqueuer<aws_sdk_s3::Client> {
@@ -50,21 +56,29 @@ impl SQSTransactionEnqueuer<aws_sdk_s3::Client> {
         let config = aws_config::load_from_env().await;
         let s3_client = aws_sdk_s3::Client::new(&config);
         let sqs_client = aws_sdk_sqs::Client::new(&config);
+        let pool = establish_connection_pool().await;
 
         Self {
             s3_client,
             queue_url,
             sqs_client,
+            pool,
         }
     }
 }
 
 impl<T: S3> SQSTransactionEnqueuer<T> {
-    pub fn new(s3_client: T, queue_url: String, sqs_client: aws_sdk_sqs::Client) -> Self {
+    pub fn new(
+        s3_client: T,
+        queue_url: String,
+        sqs_client: aws_sdk_sqs::Client,
+        pool: DbPool,
+    ) -> Self {
         Self {
             s3_client,
             queue_url,
             sqs_client,
+            pool,
         }
     }
 
@@ -188,6 +202,23 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         state: &mut State,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
+        let conn = &mut self.pool.get().await?;
+
+        diesel::insert_into(eth_transaction::table)
+            .values(
+                txs.iter()
+                    .map(|tx| models::EthTransaction {
+                        transaction_hash: tx.transaction_hash.clone(),
+                        function_id: tx.batch_id.clone(),
+                        deployment_id: tx.batch_id.clone(),
+                        created_at: Utc::now(),
+                        block_timestamp: DateTime::from_timestamp_millis(tx.block_timestamp * 1000)
+                            .unwrap(),
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .execute(conn);
+
         let serialised_txs = serde_json::to_string(&txs).unwrap();
         if serialised_txs.len() < 200000 {
             return self.upload_raw(state, txs).await;
@@ -199,6 +230,7 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
 
 pub mod errors {
     use aws_sdk_sqs::{error::SdkError, operation::send_message::SendMessageError};
+    use diesel_async::pooled_connection::deadpool::PoolError;
     use thiserror::Error;
 
     use crate::s3::errors::PutS3ObjectError;
@@ -213,5 +245,7 @@ pub mod errors {
         RedisError(#[from] crate::redis_client::errors::RedisClientError),
         #[error("S3 error: {0}")]
         S3Error(#[from] PutS3ObjectError),
+        #[error("Pool error: {0}")]
+        DieselError(#[from] PoolError),
     }
 }

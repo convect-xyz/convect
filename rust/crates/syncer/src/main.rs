@@ -1,6 +1,7 @@
 use config::load_config_from_env;
 use shared::{
     configuration::SharedConfig,
+    connection::establish_connection_pool,
     enqueuer::SQSTransactionEnqueuer,
     fetcher::{graphql::GethGraphqlClientImpl, TransactionFetcherImpl},
     manifest::Manifest,
@@ -34,8 +35,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         GethGraphqlClientImpl::new(network.polling_urls.first().unwrap().to_string()),
         network.id,
     );
-    let enqueuer =
-        SQSTransactionEnqueuer::new(s3_client, syncer_config.transaction_queue_url, sqs_client);
+    let pool = establish_connection_pool().await;
+    let enqueuer = SQSTransactionEnqueuer::new(
+        s3_client,
+        syncer_config.transaction_queue_url,
+        sqs_client,
+        pool,
+    );
     let manifest = Manifest::from_env().await.unwrap();
 
     let sync_result = ChainSyncer::new(&manifest, &enqueuer, &fetcher)

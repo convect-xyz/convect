@@ -100,6 +100,7 @@ export const POST = async (req: NextRequest) => {
     builderTaskDefinition: stackOutputs.builderTaskDefinition,
     dbUrl: env.DATABASE_URL,
     encryptionKey: env.ENCRYPTION_KEY,
+    reportingDbUrl: env.REPORTING_DATABASE_URL,
   });
   console.log("deployment created");
 
