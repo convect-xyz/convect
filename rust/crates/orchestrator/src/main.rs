@@ -276,6 +276,7 @@ fn get_task_override(
                     create_key_value_pair("MANIFEST_BUCKET", &config.manifest_bucket),
                     create_key_value_pair("MANIFEST_PREFIX", &config.manifest_prefix),
                     create_key_value_pair("DEPLOYMENT_ID", &config.deployment_id),
+                    create_key_value_pair("DATABASE_URL", &config.database_url),
                 ]))
                 .build(),
         )

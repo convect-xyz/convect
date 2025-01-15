@@ -29,6 +29,7 @@ export class _DeploymentService {
     dbUrl: string;
     encryptionKey: string;
     mode: "init" | "update";
+    reportingDbUrl: string;
   }) {
     const hasPendingOrRunning = await this.config.db.transaction(async (tx) => {
       const hasPendingOrRunning = await tx.query.deployment.findFirst({
@@ -87,6 +88,10 @@ export class _DeploymentService {
               {
                 name: "INITIAL_DEPLOYMENT_ID",
                 value: options.deploymentId,
+              },
+              {
+                name: "REPORTING_DB_URL",
+                value: options.reportingDbUrl,
               },
             ],
           },

@@ -42,3 +42,14 @@ pub struct Metric {
     pub restore_duration_ms: Option<f64>,
     pub deployment_id: String,
 }
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::eth_transaction)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct EthTransaction {
+    pub transaction_hash: String,
+    pub function_id: String,
+    pub deployment_id: String,
+    pub created_at: DateTime<Utc>,
+    pub block_timestamp: DateTime<Utc>,
+}
