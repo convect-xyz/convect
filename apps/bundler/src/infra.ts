@@ -66,6 +66,7 @@ export default async () => {
           REPORTING_QUEUE_URL: stackRef.getOutput("reportingQueueUrl"),
           DEPLOYMENT_ID: current.deployment.id,
           FUNCTION_ID: current.deployment.functionId.toString(),
+          CONFIG__REDIS__URL: env.CONFIG__REDIS__URL,
         },
       },
       layers: [
@@ -121,6 +122,7 @@ export default async () => {
           )
         ),
         DATABASE_URL: env.REPORTING_DB_URL,
+        CONFIG__REDIS__URL: env.CONFIG__REDIS__URL,
       },
     },
     timeout: 200,
