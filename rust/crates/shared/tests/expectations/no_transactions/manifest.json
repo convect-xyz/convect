@@ -1,7 +1,7 @@
 {
   "chains": [
     {
-      "chain_id": 1,
+      "chainId": 1,
       "name": "Ethereum Mainnet"
     }
   ],
