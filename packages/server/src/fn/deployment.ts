@@ -30,6 +30,7 @@ export class _DeploymentService {
     encryptionKey: string;
     mode: "init" | "update";
     reportingDbUrl: string;
+    redisUrl: string;
   }) {
     const hasPendingOrRunning = await this.config.db.transaction(async (tx) => {
       const hasPendingOrRunning = await tx.query.deployment.findFirst({
@@ -92,6 +93,10 @@ export class _DeploymentService {
               {
                 name: "REPORTING_DB_URL",
                 value: options.reportingDbUrl,
+              },
+              {
+                name: "CONFIG__REDIS__URL",
+                value: options.redisUrl,
               },
             ],
           },
