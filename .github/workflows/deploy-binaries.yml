@@ -63,6 +63,8 @@ jobs:
           sudo apt-get install -y libpq-dev postgresql
       - name: Run integration tests
         working-directory: rust
+        env:
+          DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
         run: |
           cargo nextest run -p shared --features=supported-networks,pg
       - name: Build and Upload All Binaries
