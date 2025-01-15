@@ -57,6 +57,7 @@ jobs:
           shared-key: shared
           workspaces: "rust"
           cache-all-crates: "true"
+          cache-on-failure: "true"
       - name: Install system dependencies
         run: |
           sudo apt-get update
