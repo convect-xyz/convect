@@ -64,7 +64,7 @@ jobs:
       - name: Run integration tests
         working-directory: rust
         run: |
-          cargo nextest run -p shared --features=supported-networks
+          cargo nextest run -p shared --features=supported-networks,pg
       - name: Build and Upload All Binaries
         working-directory: rust
         env:
