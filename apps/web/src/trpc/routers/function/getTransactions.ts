@@ -21,7 +21,6 @@ export const getTransactions = protectedProcedure
     z.object({
       transactions: z.array(
         z.object({
-          id: z.number(),
           transactionHash: z.string(),
           status: z.enum(["SUCCESS", "FAILED"]),
           timestamp: z.number(),
@@ -98,39 +97,16 @@ export const getTransactions = protectedProcedure
       return baseFilter;
     };
 
-    const distinctTransactions = analysisDb
-      .selectDistinctOn(
-        [
-          analysisSchema.processedTransactions.timestamp,
-          analysisSchema.processedTransactions.transactionHash,
-        ],
-        {
-          id: analysisSchema.processedTransactions.id,
-          status: analysisSchema.processedTransactions.status,
-          transactionHash: analysisSchema.processedTransactions.transactionHash,
-          timestamp: analysisSchema.processedTransactions.timestamp,
-        },
-      )
-      .from(analysisSchema.processedTransactions)
-      .where(getFilter())
-      .orderBy(
-        desc(analysisSchema.processedTransactions.timestamp),
-        desc(analysisSchema.processedTransactions.transactionHash),
-      )
-      .limit(input.limit)
-      .as("distinct_transactions");
-
     const recentTransactions = await analysisDb
       .select()
-      .from(distinctTransactions)
-      .orderBy(desc(distinctTransactions.timestamp));
+      .from(analysisSchema.ethTransactions)
+      .orderBy(desc(analysisSchema.ethTransactions.createdAt));
 
     return {
       transactions: recentTransactions.map((tx) => ({
-        id: tx.id,
         transactionHash: tx.transactionHash,
-        status: tx.status as "SUCCESS" | "FAILED",
-        timestamp: tx.timestamp.getTime(),
+        status: "SUCCESS",
+        timestamp: tx.createdAt.getTime(),
       })),
     };
   });
