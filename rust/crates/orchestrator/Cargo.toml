@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 shared = { path = "../shared", features = [
+  "pg",
   "contract-info",
   "supported-networks",
 ] }

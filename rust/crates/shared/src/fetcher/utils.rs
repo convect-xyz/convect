@@ -55,6 +55,17 @@ pub fn group_logs_into_transactions(logs: Vec<ExampleQueryLogs>) -> Vec<IngestTr
                     16,
                 )
                 .unwrap(),
+                block_timestamp: i64::from_str_radix(
+                    log.transaction
+                        .block
+                        .as_ref()
+                        .unwrap()
+                        .timestamp
+                        .strip_prefix("0x")
+                        .unwrap(),
+                    16,
+                )
+                .unwrap(),
                 block_hash: log.transaction.block.as_ref().unwrap().hash.clone(),
                 transaction_index: u64::from_str_radix(
                     log.transaction.index.unwrap().strip_prefix("0x").unwrap(),
