@@ -230,7 +230,7 @@ function RecentTransactions() {
         {maybeTransactions?.transactions.map((tx, idx) => (
           <TransactionRow
             tx={tx}
-            key={tx.id.toString()}
+            key={tx.id}
             onRowSelected={(tx) =>
               setSelectedTransactionHash(tx.transactionHash)
             }
