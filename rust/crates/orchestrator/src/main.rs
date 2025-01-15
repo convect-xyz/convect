@@ -12,6 +12,7 @@ use futures::future::join_all;
 use lambda_http::tracing::Instrument;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
+use shared::configuration::SharedConfig;
 use shared::contract_info::EtherscanContractInfoProvider;
 use shared::fetcher::graphql::GethGraphqlClientImpl;
 use shared::manifest::providers::{InitBlockProvider, InitBlockProviderImpl};
@@ -262,6 +263,7 @@ fn get_task_override(
         .find(|c| c.chain_id == chain_id)
         .unwrap();
 
+    let shared_config = SharedConfig::new().unwrap();
     TaskOverride::builder()
         .container_overrides(
             ContainerOverride::builder()
@@ -277,6 +279,7 @@ fn get_task_override(
                     create_key_value_pair("MANIFEST_PREFIX", &config.manifest_prefix),
                     create_key_value_pair("DEPLOYMENT_ID", &config.deployment_id),
                     create_key_value_pair("DATABASE_URL", &config.database_url),
+                    create_key_value_pair("CONFIG__REDIS__URL", &shared_config.redis.url),
                 ]))
                 .build(),
         )
