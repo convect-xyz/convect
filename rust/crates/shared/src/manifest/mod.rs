@@ -48,6 +48,7 @@ pub struct LogConfig {
 
 #[derive(Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct ManifestChainConfig {
+    #[serde(rename = "chainId")]
     pub chain_id: u64,
 }
 #[derive(Deserialize, Debug, Clone)]
