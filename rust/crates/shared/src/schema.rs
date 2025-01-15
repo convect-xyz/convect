@@ -33,6 +33,136 @@ diesel::table! {
 }
 
 diesel::table! {
+    eth_transaction_p00 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_transaction_p01 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_transaction_p02 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_transaction_p03 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_transaction_p04 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_transaction_p05 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_transaction_p06 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_transaction_p07 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_transaction_p08 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_transaction_p09 (transaction_hash, function_id, deployment_id) {
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        created_at -> Timestamptz,
+        block_timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
     invocation (id) {
         id -> Int4,
         #[max_length = 255]
@@ -310,6 +440,16 @@ diesel::table! {
 diesel::allow_tables_to_appear_in_same_query!(
     eth_processed_result,
     eth_transaction,
+    eth_transaction_p00,
+    eth_transaction_p01,
+    eth_transaction_p02,
+    eth_transaction_p03,
+    eth_transaction_p04,
+    eth_transaction_p05,
+    eth_transaction_p06,
+    eth_transaction_p07,
+    eth_transaction_p08,
+    eth_transaction_p09,
     invocation,
     processed_transactions,
     processed_transactions_temp_3_p00,

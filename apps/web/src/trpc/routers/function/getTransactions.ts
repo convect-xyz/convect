@@ -21,6 +21,7 @@ export const getTransactions = protectedProcedure
     z.object({
       transactions: z.array(
         z.object({
+          id: z.string(),
           transactionHash: z.string(),
           status: z.enum(["SUCCESS", "FAILED"]),
           timestamp: z.number(),
@@ -66,32 +67,19 @@ export const getTransactions = protectedProcedure
 
     const getFilter = () => {
       let baseFilter = and(
+        eq(analysisSchema.ethTransactions.deploymentId, currentDeployment.id),
         eq(
-          analysisSchema.processedTransactions.handlerId,
+          analysisSchema.ethTransactions.functionId,
           input.functionId.toString(),
-        ),
-        eq(
-          analysisSchema.processedTransactions.handlerVersion,
-          input.chainId.toString(),
-        ),
-        eq(
-          analysisSchema.processedTransactions.deploymentId,
-          currentDeployment.id,
         ),
       );
       if (input.search) {
         baseFilter = and(
           baseFilter,
           ilike(
-            analysisSchema.processedTransactions.transactionHash,
+            analysisSchema.ethTransactions.transactionHash,
             `%${input.search}%`,
           ),
-        );
-      }
-      if (input.status) {
-        baseFilter = and(
-          baseFilter,
-          eq(analysisSchema.processedTransactions.status, input.status),
         );
       }
       return baseFilter;
@@ -100,10 +88,12 @@ export const getTransactions = protectedProcedure
     const recentTransactions = await analysisDb
       .select()
       .from(analysisSchema.ethTransactions)
+      .where(getFilter())
       .orderBy(desc(analysisSchema.ethTransactions.createdAt));
 
     return {
       transactions: recentTransactions.map((tx) => ({
+        id: `${tx.transactionHash}-${tx.functionId}-${tx.deploymentId}`,
         transactionHash: tx.transactionHash,
         status: "SUCCESS",
         timestamp: tx.createdAt.getTime(),

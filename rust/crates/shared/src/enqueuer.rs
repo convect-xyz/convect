@@ -8,8 +8,11 @@ use crate::types::transactions::IngestTransaction;
 use crate::{connection::establish_connection_pool, s3::S3};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use diesel_async::RunQueryDsl;
+use diesel_async::scoped_futures::ScopedFutureExt;
+use diesel_async::{AsyncConnection, RunQueryDsl};
+use futures::future::join_all;
 use futures::TryFutureExt;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -204,21 +207,35 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let conn = &mut self.pool.get().await?;
 
-        diesel::insert_into(eth_transaction::table)
-            .values(
-                txs.iter()
-                    .map(|tx| models::EthTransaction {
-                        transaction_hash: tx.transaction_hash.clone(),
-                        function_id: tx.batch_id.clone(),
-                        deployment_id: tx.batch_id.clone(),
-                        created_at: Utc::now(),
-                        block_timestamp: DateTime::from_timestamp_millis(tx.block_timestamp * 1000)
-                            .unwrap(),
-                    })
-                    .collect::<Vec<_>>(),
-            )
-            .execute(conn)
-            .await?;
+        conn.transaction(|conn| {
+            async move {
+                let chunked_txs = txs.iter().chunks(200);
+                let futures = chunked_txs.into_iter().map(|txs| {
+                    diesel::insert_into(eth_transaction::table)
+                        .values(
+                            txs.map(|tx| models::EthTransaction {
+                                transaction_hash: tx.transaction_hash.clone(),
+                                function_id: tx.batch_id.clone(),
+                                deployment_id: tx.batch_id.clone(),
+                                created_at: Utc::now(),
+                                block_timestamp: DateTime::from_timestamp_millis(
+                                    tx.block_timestamp * 1000,
+                                )
+                                .unwrap(),
+                            })
+                            .collect::<Vec<_>>(),
+                        )
+                        .execute(conn)
+                });
+
+                join_all(futures)
+                    .await
+                    .into_iter()
+                    .collect::<Result<Vec<_>, _>>()
+            }
+            .scope_boxed()
+        })
+        .await?;
 
         let serialised_txs = serde_json::to_string(&txs).unwrap();
         if serialised_txs.len() < 200000 {
