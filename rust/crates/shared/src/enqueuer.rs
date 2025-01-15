@@ -217,7 +217,8 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
                     })
                     .collect::<Vec<_>>(),
             )
-            .execute(conn);
+            .execute(conn)
+            .await?;
 
         let serialised_txs = serde_json::to_string(&txs).unwrap();
         if serialised_txs.len() < 200000 {
@@ -246,6 +247,8 @@ pub mod errors {
         #[error("S3 error: {0}")]
         S3Error(#[from] PutS3ObjectError),
         #[error("Pool error: {0}")]
-        DieselError(#[from] PoolError),
+        PoolError(#[from] PoolError),
+        #[error("Diesel error: {0}")]
+        DieselError(#[from] diesel::result::Error),
     }
 }
