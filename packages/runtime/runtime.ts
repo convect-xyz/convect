@@ -179,7 +179,7 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
 
   await Promise.all(
     batchRecords
-      .filter((r) => r.data.type === "batch")
+      .filter((r) => r.data.type === "Batch")
       .map((record) =>
         axios.get(record.data.download_url).then(async (response) => {
           s3Results.set(record.id, response.data);
