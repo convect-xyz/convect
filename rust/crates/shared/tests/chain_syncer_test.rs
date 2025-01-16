@@ -101,7 +101,7 @@ impl Test {
         let mut pipeline = State::load(
             self.pipeline_function_id(),
             chain_id,
-            "main".to_string(),
+            uuid::Uuid::new_v4().to_string(),
             Arc::new(RedisClientImpl::new(&self.shared_config.redis.url).await),
         )
         .await?;
