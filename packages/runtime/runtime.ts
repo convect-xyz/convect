@@ -135,7 +135,6 @@ export function parseTransactions(
   const transactions: Array<Transaction> = [];
   for (const record of parsedRecords) {
     const payload = record.data;
-    console.log(payload);
     if (payload.type === "Raw") {
       transactions.push(...payload.data);
     } else {
