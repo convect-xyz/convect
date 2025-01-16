@@ -4,7 +4,7 @@ use shared::{
     connection::establish_connection_pool,
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{
-        graphql::{GethGraphqlClient, GethGraphqlClientImpl},
+        graphql::GethGraphqlClientImpl,
         TransactionFetcher, TransactionFetcherImpl,
     },
     manifest::{
@@ -13,7 +13,6 @@ use shared::{
     },
     networks::{get_first_polling_url, get_supported_network},
     redis_client::{RedisClient, RedisClientImpl},
-    s3::S3,
     web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::HashMap;
