@@ -1,12 +1,9 @@
 use std::{fs::File, path::Path, sync::Arc};
 
-use chrono::format;
 use expectations::{Expectations, ExpectedTransaction};
 use futures::{future::join_all, FutureExt};
-use mockall::predicate::path;
-use serde::Deserialize;
 use shared::{
-    configuration::{self, SharedConfig},
+    configuration::{SharedConfig},
     enqueuer::{Payload, SQSTransactionEnqueuer},
     fetcher::{graphql::GethGraphqlClientImpl, TransactionFetcherImpl},
     manifest::{Manifest, ManifestChainConfig},
