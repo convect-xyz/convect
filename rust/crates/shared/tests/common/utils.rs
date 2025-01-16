@@ -1,12 +1,9 @@
 use aws_sdk_sqs::{
     error::SdkError,
-    operation::{
-        create_queue::{CreateQueueError, CreateQueueOutput},
-        receive_message::ReceiveMessageError,
-    },
+    operation::create_queue::{CreateQueueError, CreateQueueOutput},
     types::{DeleteMessageBatchRequestEntry, QueueAttributeName},
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 pub async fn create_queue(
