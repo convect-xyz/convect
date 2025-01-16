@@ -30,6 +30,7 @@ fn main() -> Result<(), Error> {
 }
 
 async fn _main() -> Result<(), Error> {
+    println!("main initialised");
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .with_target(false)
@@ -37,7 +38,10 @@ async fn _main() -> Result<(), Error> {
         .with_ansi(false)
         .init();
 
+    println!("loading app state");
     let app_state = AppState::new().await;
+
+    println!("initialising sentry");
     let _guard = init_sentry(&app_state.handler_server_config);
 
     let app = Router::new()
@@ -46,6 +50,7 @@ async fn _main() -> Result<(), Error> {
         .with_state(app_state)
         .layer(TraceLayer::new_for_http());
 
+    println!("binding to port");
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
 
     tokio::spawn(async {
@@ -60,7 +65,7 @@ async fn _main() -> Result<(), Error> {
 mod results {
     use super::errors::ServerError;
     use crate::AppState;
-    
+
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
     use axum::{debug_handler, BoxError, Json};
