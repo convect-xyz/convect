@@ -135,7 +135,7 @@ export function parseTransactions(
   const transactions: Array<Transaction> = [];
   for (const record of parsedRecords) {
     const payload = record.data;
-    if (payload.type === "non-batch") {
+    if (payload.type === "Raw") {
       transactions.push(...payload.data);
     } else {
       transactions.push(...s3Results.get(record.id));

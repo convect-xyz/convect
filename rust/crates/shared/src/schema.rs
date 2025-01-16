@@ -22,6 +22,216 @@ diesel::table! {
 }
 
 diesel::table! {
+    eth_processed_result_p00 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_processed_result_p01 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_processed_result_p02 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_processed_result_p03 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_processed_result_p04 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_processed_result_p05 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_processed_result_p06 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_processed_result_p07 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_processed_result_p08 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eth_processed_result_p09 (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+    }
+}
+
+diesel::table! {
     eth_transaction (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
@@ -463,6 +673,16 @@ diesel::table! {
 
 diesel::allow_tables_to_appear_in_same_query!(
     eth_processed_result,
+    eth_processed_result_p00,
+    eth_processed_result_p01,
+    eth_processed_result_p02,
+    eth_processed_result_p03,
+    eth_processed_result_p04,
+    eth_processed_result_p05,
+    eth_processed_result_p06,
+    eth_processed_result_p07,
+    eth_processed_result_p08,
+    eth_processed_result_p09,
     eth_transaction,
     eth_transaction_p00,
     eth_transaction_p01,
