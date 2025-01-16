@@ -65,6 +65,8 @@ async fn _main() -> Result<(), Error> {
         println!("Starting server");
         axum::serve(listener, app).await.unwrap();
     });
+
+    Ok(())
 }
 
 mod results {
