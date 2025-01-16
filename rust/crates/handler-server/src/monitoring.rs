@@ -1,20 +1,6 @@
 use crate::config::HandlerServerConfig;
-use axum::{
-    routing::{get, post},
-    Router,
-};
-use lambda_extension::{service_fn, tracing, Error, LambdaEvent, NextEvent};
 use sentry::protocol::Context;
-use shared::{
-    configuration::SharedConfig,
-    processing,
-    redis_client::RedisClientImpl,
-    reporting_sdk::{ReportingSdk, SQSReportingSdk},
-};
 use std::collections::BTreeMap;
-use std::{env, sync::Arc};
-use tokio::sync::Mutex;
-use tower_http::trace::TraceLayer;
 
 pub fn init_sentry(handler_server_config: &HandlerServerConfig) -> sentry::ClientInitGuard {
     let options = sentry::ClientOptions {
