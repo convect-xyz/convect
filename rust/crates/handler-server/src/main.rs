@@ -22,6 +22,9 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
+    println!("initialising sentry");
+    let _guard = init_sentry(&app_state.handler_server_config);
+
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -48,9 +51,6 @@ async fn _main() -> Result<(), Error> {
 
     println!("loading app state");
     let app_state = AppState::new().await;
-
-    println!("initialising sentry");
-    let _guard = init_sentry(&app_state.handler_server_config);
 
     let app = Router::new()
         .route("/results", post(results::handler))
