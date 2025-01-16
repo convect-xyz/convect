@@ -26,7 +26,15 @@ fn main() -> Result<(), Error> {
         .enable_all()
         .build()
         .unwrap()
-        .block_on(_main())
+        .block_on(async {
+            main().await;
+
+            let func = service_fn(my_extension);
+            lambda_extension::run(func).await
+        })
+        .unwrap();
+
+    Ok(())
 }
 
 async fn _main() -> Result<(), Error> {
@@ -57,9 +65,6 @@ async fn _main() -> Result<(), Error> {
         println!("Starting server");
         axum::serve(listener, app).await.unwrap();
     });
-
-    let func = service_fn(my_extension);
-    lambda_extension::run(func).await
 }
 
 mod results {
