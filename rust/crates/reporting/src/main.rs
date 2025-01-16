@@ -2,13 +2,13 @@ use aws_config::BehaviorVersion;
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use futures::{future::join_all, join, try_join};
+use futures::{future::join_all, join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
     models::{EthProcessedResult, Invocation, Metric},
     reporting_sdk,
-    schema::{eth_processed_result, invocation, processed_transactions, reported_metrics},
+    schema::{eth_processed_result, invocation, reported_metrics},
 };
 
 enum ExtractedRequest {
