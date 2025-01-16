@@ -8,7 +8,7 @@ pub fn init_sentry(handler_server_config: &HandlerServerConfig) -> sentry::Clien
         ..Default::default()
     };
 
-    let _guard = sentry::init(("https://c749dc7d2929977538ed3abbd4fbdb4a@o4507692210454528.ingest.de.sentry.io/4507692217729104", options));
+    let _guard = sentry::init(("https://b6a72df3ab24772f73a358f4de687797@o4507692210454528.ingest.de.sentry.io/4508655667707984", options));
 
     sentry::configure_scope(|scope| {
         scope.set_user(Some(sentry::User {
