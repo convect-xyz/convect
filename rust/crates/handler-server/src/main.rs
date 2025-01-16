@@ -27,7 +27,7 @@ fn main() -> Result<(), Error> {
         .build()
         .unwrap()
         .block_on(async {
-            main().await;
+            _main().await;
 
             let func = service_fn(my_extension);
             lambda_extension::run(func).await
