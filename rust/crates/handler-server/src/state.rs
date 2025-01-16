@@ -6,7 +6,6 @@ use shared::{
     redis_client::RedisClientImpl,
     reporting_sdk::{ReportingSdk, SQSReportingSdk},
 };
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

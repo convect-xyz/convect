@@ -5,17 +5,7 @@ use axum::{
 use config::HandlerServerConfig;
 use lambda_extension::{service_fn, tracing, Error, LambdaEvent, NextEvent};
 use monitoring::init_sentry;
-use sentry::protocol::Context;
-use shared::{
-    configuration::SharedConfig,
-    processing,
-    redis_client::RedisClientImpl,
-    reporting_sdk::{ReportingSdk, SQSReportingSdk},
-};
 use state::AppState;
-use std::collections::BTreeMap;
-use std::{env, sync::Arc};
-use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
 
 mod config;
@@ -69,8 +59,8 @@ async fn _main() -> Result<(), Error> {
 
 mod results {
     use super::errors::ServerError;
-    use crate::{AppState, HandlerServerConfig};
-    use aws_config::BehaviorVersion;
+    use crate::AppState;
+    
     use aws_sdk_sqs::types::ChangeMessageVisibilityBatchRequestEntry;
     use axum::extract::State;
     use axum::{debug_handler, BoxError, Json};
