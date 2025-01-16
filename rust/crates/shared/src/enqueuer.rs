@@ -87,7 +87,6 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
 
     async fn upload_raw(
         &self,
-        pipeline: &mut State,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let mut i = 0;
@@ -114,8 +113,6 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             }
 
             self.upload_sqs(group.clone()).await?;
-
-            pipeline.increment_transaction_count(group.len()).await?;
         }
 
         Ok(())
@@ -139,7 +136,6 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
 
     async fn upload_s3(
         &self,
-        pipeline: &mut State,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let mut i = 0;
@@ -189,8 +185,6 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 .message_deduplication_id(key)
                 .send()
                 .await?;
-
-            pipeline.increment_transaction_count(batch.len()).await?;
         }
 
         Ok(())
@@ -210,6 +204,8 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         conn.transaction(|conn| {
             let function_id = state.function_id();
             let deployment_id = state.deployment_id();
+            let chain_id = state.chain_id();
+
             async move {
                 let chunked_txs = txs.iter().chunks(200);
                 let futures = chunked_txs.into_iter().map(|txs| {
@@ -220,6 +216,7 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
                                 function_id: function_id.clone(),
                                 deployment_id: deployment_id.clone(),
                                 created_at: Utc::now(),
+                                chain_id: chain_id.clone() as i32,
                                 block_timestamp: DateTime::from_timestamp_millis(
                                     tx.block_timestamp * 1000,
                                 )
@@ -241,10 +238,10 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
 
         let serialised_txs = serde_json::to_string(&txs).unwrap();
         if serialised_txs.len() < 200000 {
-            return self.upload_raw(state, txs).await;
+            return self.upload_raw(txs).await;
         }
 
-        return self.upload_s3(state, txs).await;
+        return self.upload_s3(txs).await;
     }
 }
 

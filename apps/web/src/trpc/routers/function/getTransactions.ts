@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ilike } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -72,6 +72,7 @@ export const getTransactions = protectedProcedure
           analysisSchema.ethTransactions.functionId,
           input.functionId.toString(),
         ),
+        eq(analysisSchema.ethTransactions.chainId, input.chainId),
       );
       if (input.search) {
         baseFilter = and(
@@ -82,6 +83,12 @@ export const getTransactions = protectedProcedure
           ),
         );
       }
+      if (input.cursor) {
+        baseFilter = and(
+          baseFilter,
+          gte(analysisSchema.ethTransactions.id, input.cursor),
+        );
+      }
       return baseFilter;
     };
 
@@ -89,7 +96,11 @@ export const getTransactions = protectedProcedure
       .select()
       .from(analysisSchema.ethTransactions)
       .where(getFilter())
-      .orderBy(desc(analysisSchema.ethTransactions.createdAt));
+      .orderBy(
+        desc(analysisSchema.ethTransactions.createdAt),
+        asc(analysisSchema.ethTransactions.id),
+      )
+      .limit(input.limit);
 
     return {
       transactions: recentTransactions.map((tx) => ({

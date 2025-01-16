@@ -50,6 +50,22 @@ pub struct EthTransaction {
     pub transaction_hash: String,
     pub function_id: String,
     pub deployment_id: String,
+    pub chain_id: i32,
     pub created_at: DateTime<Utc>,
     pub block_timestamp: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::eth_processed_result)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct EthProcessedResult {
+    pub transaction_hash: String,
+    pub function_id: String,
+    pub deployment_id: String,
+    pub status: String,
+    pub handler: String,
+    pub chain_id: i32,
+    pub batch_id: String,
+    pub processed_log_indices: Vec<i32>,
+    pub timestamp: DateTime<Utc>,
 }
