@@ -1,7 +1,8 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    eth_processed_result (transaction_hash, function_id, deployment_id, handler) {
+    eth_processed_result (id, transaction_hash) {
+        id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
         #[max_length = 7]
@@ -9,18 +10,19 @@ diesel::table! {
         #[max_length = 255]
         batch_id -> Nullable<Varchar>,
         #[max_length = 255]
-        transaction_hash -> Varchar,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
     }
 }
 
 diesel::table! {
-    eth_transaction (transaction_hash, function_id, deployment_id) {
+    eth_transaction (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -29,11 +31,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p00 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p00 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -42,11 +46,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p01 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p01 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -55,11 +61,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p02 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p02 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -68,11 +76,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p03 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p03 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -81,11 +91,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p04 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p04 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -94,11 +106,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p05 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p05 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -107,11 +121,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p06 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p06 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -120,11 +136,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p07 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p07 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -133,11 +151,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p08 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p08 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -146,11 +166,13 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 
 diesel::table! {
-    eth_transaction_p09 (transaction_hash, function_id, deployment_id) {
+    eth_transaction_p09 (transaction_hash, function_id, chain_id, deployment_id) {
         #[max_length = 255]
         transaction_hash -> Varchar,
         #[max_length = 255]
@@ -159,6 +181,8 @@ diesel::table! {
         deployment_id -> Varchar,
         created_at -> Timestamptz,
         block_timestamp -> Timestamptz,
+        id -> Int4,
+        chain_id -> Int4,
     }
 }
 

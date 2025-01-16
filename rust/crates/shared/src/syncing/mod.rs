@@ -35,6 +35,10 @@ impl State {
         self.state.clone()
     }
 
+    pub fn chain_id(&self) -> u64 {
+        self.chain_id
+    }
+
     pub fn last_block(&self) -> Option<u64> {
         self.last_block.as_ref().and_then(|v| {
             if v.is_empty() {
@@ -72,29 +76,6 @@ impl State {
             state,
             last_block,
         }
-    }
-
-    pub async fn increment_transaction_count(
-        &mut self,
-        tx_count: usize,
-    ) -> Result<(), RedisClientError> {
-        let key = get_transaction_count_key(&self.function_id, &self.chain_id, &self.deployment_id);
-
-        let _: i64 = self
-            .redis_client
-            .incr(key, tx_count.try_into().unwrap())
-            .await?
-            .into_original_value();
-
-        Ok(())
-    }
-
-    pub async fn get_transaction_count(&mut self) -> Result<u64, RedisClientError> {
-        let key = get_transaction_count_key(&self.function_id, &self.chain_id, &self.deployment_id);
-
-        let count: i64 = self.redis_client.get(key).await?.into_original_value();
-
-        Ok(count as u64)
     }
 
     #[tracing::instrument(err, ret)]
@@ -193,15 +174,6 @@ fn get_state_key(function_id: &str, chain_id: &u64, deployment_id: &str) -> Stri
 fn get_last_block_key(function_id: &str, chain_id: &u64, deployment_id: &str) -> String {
     format!(
         "{function_id}-{chain_id}-{deployment_id}-last-block",
-        function_id = function_id,
-        chain_id = chain_id,
-        deployment_id = deployment_id
-    )
-}
-
-fn get_transaction_count_key(function_id: &str, chain_id: &u64, deployment_id: &str) -> String {
-    format!(
-        "{function_id}-{chain_id}-{deployment_id}-tx-count",
         function_id = function_id,
         chain_id = chain_id,
         deployment_id = deployment_id

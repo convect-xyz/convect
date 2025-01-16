@@ -1,5 +1,6 @@
+import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
@@ -157,10 +158,20 @@ const getTxCount = async (
   chainId: number,
   deploymentId: string,
 ) => {
-  const txCount = await redisClient.get(
-    `${functionId}-${chainId}-${deploymentId}-tx-count`,
-  );
-  return txCount ? Number(txCount) : null;
+  const result = await analysisDb
+    .select({
+      numTransactions: count(analysisSchema.ethTransactions.id),
+    })
+    .from(analysisSchema.ethTransactions)
+    .where(
+      and(
+        eq(analysisSchema.ethTransactions.functionId, functionId),
+        eq(analysisSchema.ethTransactions.deploymentId, deploymentId),
+        eq(analysisSchema.ethTransactions.chainId, chainId),
+      ),
+    );
+
+  return result.length > 0 ? result[0]?.numTransactions : null;
 };
 
 const getFetchState = async (
