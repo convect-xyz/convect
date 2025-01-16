@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
@@ -9,23 +8,16 @@ use aws_sdk_ecs::types::{
 };
 use config::{ChainConfig, Config};
 use futures::future::join_all;
-use lambda_http::tracing::Instrument;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use shared::configuration::SharedConfig;
-use shared::contract_info::EtherscanContractInfoProvider;
-use shared::fetcher::graphql::GethGraphqlClientImpl;
-use shared::manifest::providers::{InitBlockProvider, InitBlockProviderImpl};
-use shared::networks::{get_supported_network, SupportedNetwork};
-use shared::redis_client::RedisClientImpl;
+use shared::manifest::providers::InitBlockProvider;
 use shared::syncer::ChainSyncer;
 use shared::{
-    enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
-    redis_client::RedisClient, syncing::State, web3_client::Web3ClientImpl,
+    redis_client::RedisClient, syncing::State,
 };
 use std::collections::BTreeMap;
-use tokio::sync::OnceCell;
-use tracing::{span, Level};
+use tracing::Level;
 use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
