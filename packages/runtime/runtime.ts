@@ -146,7 +146,7 @@ export function parseTransactions(
 
 export async function getFailureIdx() {
   const pipeline = await axios
-    .get("http://localhost:4121/pipeline")
+    .get("http://127.0.0.1:4121/pipeline")
     .then((r) => r.data);
 
   return Number(pipeline.ErrorLabel_);
@@ -166,7 +166,7 @@ export async function uploadResults(
   results: Array<TransactionResult>,
   message_ids: Array<string>
 ) {
-  await axios.post("http://localhost:4121/results", {
+  await axios.post("http://127.0.0.1:4121/results", {
     invocation_id,
     results,
     message_ids,
