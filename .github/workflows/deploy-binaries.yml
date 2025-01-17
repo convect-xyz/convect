@@ -78,8 +78,8 @@ jobs:
 
           aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
           aws s3api put-object --bucket ingest-functions --key orchestrator/$GITHUB_SHA.zip --body "./target/lambda/orchestrator/bootstrap.zip"
-          aws s3api put-object --bucket ingest-functions --key extension/$GITHUB_SHA.zip --body "./target/lambda/extensions/extension/bootstrap.zip"
-          aws s3api put-object --bucket ingest-functions --key handler-server/$GITHUB_SHA.zip --body "./target/lambda/extensions/handler-server/bootstrap.zip"
+          aws s3api put-object --bucket ingest-functions --key extension/$GITHUB_SHA.zip --body "./target/lambda/extensions/extension.zip"
+          aws s3api put-object --bucket ingest-functions --key handler-server/$GITHUB_SHA.zip --body "./target/lambda/extensions/handler-server.zip"
 
   build_images:
     runs-on: ubuntu-latest
