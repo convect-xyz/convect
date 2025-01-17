@@ -22,12 +22,6 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .with_target(false)
-        .without_time()
-        .with_ansi(false)
-        .init();
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -52,24 +46,24 @@ async fn _main() -> Result<(), Error> {
         .with_ansi(false)
         .init();
 
-    println!("loading app state");
-    let app_state = AppState::new().await;
+    // println!("loading app state");
+    // let app_state = AppState::new().await;
 
-    println!("initialising sentry");
-    let _guard = init_sentry(&app_state.handler_server_config);
+    // println!("initialising sentry");
+    // let _guard = init_sentry(&app_state.handler_server_config);
 
-    let app = Router::new()
-        .route("/results", post(results::handler))
-        .route("/pipeline", get(get_pipeline::handler))
-        .with_state(app_state)
-        .layer(TraceLayer::new_for_http());
+    // let app = Router::new()
+    //     .route("/results", post(results::handler))
+    //     .route("/pipeline", get(get_pipeline::handler))
+    //     .with_state(app_state)
+    //     .layer(TraceLayer::new_for_http());
 
     println!("binding to port");
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4121").await.unwrap();
 
     tokio::spawn(async {
         println!("Starting server");
-        axum::serve(listener, app).await.unwrap();
+        // axum::serve(listener, app).await.unwrap();
     });
 
     Ok(())
