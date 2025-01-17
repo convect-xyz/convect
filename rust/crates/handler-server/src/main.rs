@@ -22,6 +22,12 @@ async fn my_extension(event: LambdaEvent) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_target(false)
+        .without_time()
+        .with_ansi(false)
+        .init();
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
