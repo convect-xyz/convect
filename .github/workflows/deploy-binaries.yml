@@ -73,12 +73,13 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          cargo lambda build --output-format zip -p extension -p handler-server -p orchestrator -p reporting --release --all-features
+          cargo lambda build --output-format zip -p orchestrator -p reporting --release
+          cargo lambda build --extension --output-format zip -p extension -p handler-server --release
 
           aws s3api put-object --bucket ingest-functions --key reporting/$GITHUB_SHA.zip --body "./target/lambda/reporting/bootstrap.zip"
           aws s3api put-object --bucket ingest-functions --key orchestrator/$GITHUB_SHA.zip --body "./target/lambda/orchestrator/bootstrap.zip"
-          aws s3api put-object --bucket ingest-functions --key extension/$GITHUB_SHA.zip --body "./target/lambda/extension/bootstrap.zip"
-          aws s3api put-object --bucket ingest-functions --key handler-server/$GITHUB_SHA.zip --body "./target/lambda/handler-server/bootstrap.zip"
+          aws s3api put-object --bucket ingest-functions --key extension/$GITHUB_SHA.zip --body "./target/lambda/extensions/extension/bootstrap.zip"
+          aws s3api put-object --bucket ingest-functions --key handler-server/$GITHUB_SHA.zip --body "./target/lambda/extensions/handler-server/bootstrap.zip"
 
   build_images:
     runs-on: ubuntu-latest
