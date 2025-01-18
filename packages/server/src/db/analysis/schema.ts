@@ -13,6 +13,7 @@ export const ethTransactions = pgTable(
     id: serial("id"),
     transactionHash: varchar("transaction_hash").notNull(),
     functionId: varchar("function_id").notNull(),
+    projectId: integer("project_id").notNull(),
     deploymentId: varchar("deployment_id").notNull(),
     chainId: integer("chain_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
@@ -26,6 +27,19 @@ export const ethTransactions = pgTable(
     };
   }
 );
+
+export const ethProcessedResult = pgTable("eth_processed_result", {
+  id: serial("id").primaryKey(),
+  handler: varchar("handler").notNull(),
+  status: varchar("status", { length: 256 }).notNull(),
+  batchId: varchar("batch_id", { length: 256 }).notNull(),
+  deploymentId: varchar("deployment_id").notNull(),
+  functionId: varchar("function_id").notNull(),
+  chainId: integer("chain_id").notNull(),
+  transactionHash: varchar("transaction_hash").notNull(),
+  processedLogIndices: integer("processed_log_indices").notNull(),
+  timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+});
 
 export const processedTransactions = pgTable("processed_transactions", {
   id: serial("id").primaryKey(),

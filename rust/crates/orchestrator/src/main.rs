@@ -13,9 +13,7 @@ use sentry::protocol::Context;
 use shared::configuration::SharedConfig;
 use shared::manifest::providers::InitBlockProvider;
 use shared::syncer::ChainSyncer;
-use shared::{
-    redis_client::RedisClient, syncing::State,
-};
+use shared::{redis_client::RedisClient, syncing::State};
 use std::collections::BTreeMap;
 use tracing::Level;
 use tracing_subscriber::filter::LevelFilter;
@@ -145,6 +143,7 @@ async fn sync_chain(
     tracing::info!("Attempting to sync chain {:?}", chain_id);
 
     let mut pipeline = State::load(
+        app_service.config.project_id.clone(),
         app_service.config.function_id.clone(),
         chain_id,
         app_service.config.deployment_id.clone(),
@@ -271,6 +270,7 @@ fn get_task_override(
                     create_key_value_pair("MANIFEST_PREFIX", &config.manifest_prefix),
                     create_key_value_pair("DEPLOYMENT_ID", &config.deployment_id),
                     create_key_value_pair("DATABASE_URL", &config.database_url),
+                    create_key_value_pair("PROJECT_ID", &config.project_id),
                     create_key_value_pair("CONFIG__REDIS__URL", &shared_config.redis.url),
                 ]))
                 .build(),
