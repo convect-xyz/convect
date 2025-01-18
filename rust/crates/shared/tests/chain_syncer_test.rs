@@ -96,7 +96,7 @@ impl Test {
             TransactionFetcherImpl::new(GethGraphqlClientImpl::new(polling_url), chain_id);
         let syncer = ChainSyncer::new(&self.manifest, &enqueuer, &fetcher);
         let mut pipeline = State::load(
-            "1".to_string(),
+            "integration-test".to_string(),
             self.pipeline_function_id(),
             chain_id,
             uuid::Uuid::new_v4().to_string(),
