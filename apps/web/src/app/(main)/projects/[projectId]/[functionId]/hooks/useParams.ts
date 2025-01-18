@@ -6,10 +6,12 @@ export function useParams() {
   const searchParams = useSearchParams();
   const params = _useParams<{ functionId: string }>();
   const maybeChainId = searchParams.get("chainId");
+  const maybeDeploymentId = searchParams.get("deploymentId");
 
   return {
     ...projectParams,
     functionId: Number(params.functionId),
     chainId: maybeChainId ? Number(maybeChainId) : null,
+    deploymentId: maybeDeploymentId ? maybeDeploymentId : null,
   };
 }

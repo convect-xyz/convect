@@ -74,17 +74,14 @@ async function getProcessedTransactionCount(
 ) {
   const numProcessedTransactions = await analysisDb
     .select({
-      count: count(analysisSchema.processedTransactions.id),
+      count: count(analysisSchema.ethTransactions.id),
     })
-    .from(analysisSchema.processedTransactions)
+    .from(analysisSchema.ethTransactions)
     .where(
       and(
-        gt(
-          analysisSchema.processedTransactions.timestamp,
-          new Date(periodStart),
-        ),
-        lt(analysisSchema.processedTransactions.timestamp, new Date(periodEnd)),
-        eq(analysisSchema.processedTransactions.projectId, projectId),
+        gt(analysisSchema.ethTransactions.createdAt, new Date(periodStart)),
+        lt(analysisSchema.ethTransactions.createdAt, new Date(periodEnd)),
+        eq(analysisSchema.ethTransactions.projectId, projectId),
       ),
     );
 

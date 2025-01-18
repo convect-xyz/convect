@@ -15,6 +15,7 @@ pub enum BatchSyncState {
 #[derive(Debug)]
 pub struct State {
     redis_client: Arc<dyn RedisClient>,
+    project_id: String,
     deployment_id: String,
     function_id: String,
     chain_id: u64,
@@ -23,6 +24,10 @@ pub struct State {
 }
 
 impl State {
+    pub fn project_id(&self) -> String {
+        self.project_id.clone()
+    }
+
     pub fn deployment_id(&self) -> String {
         self.deployment_id.clone()
     }
@@ -80,6 +85,7 @@ impl State {
 
     #[tracing::instrument(err, ret)]
     pub async fn load(
+        project_id: String,
         function_id: String,
         chain_id: u64,
         deployment_id: String,
@@ -94,6 +100,7 @@ impl State {
             .into_original_value();
 
         Ok(Self {
+            project_id: project_id.clone(),
             deployment_id: deployment_id.clone(),
             function_id: function_id.clone(),
             chain_id: chain_id.clone(),

@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -69,31 +69,19 @@ export const getInvocations = protectedProcedure
     const getFilter = () => {
       let baseFilter = and(
         eq(
-          analysisSchema.processedTransactions.handlerId,
+          analysisSchema.ethProcessedResult.functionId,
           input.functionId.toString(),
         ),
+        eq(analysisSchema.ethProcessedResult.chainId, input.chainId),
         eq(
-          analysisSchema.processedTransactions.handlerVersion,
-          input.chainId.toString(),
-        ),
-        eq(
-          analysisSchema.processedTransactions.deploymentId,
+          analysisSchema.ethProcessedResult.deploymentId,
           currentDeployment.id,
         ),
         eq(
-          analysisSchema.processedTransactions.transactionHash,
+          analysisSchema.ethProcessedResult.transactionHash,
           input.transactionHash,
         ),
       );
-      if (input.search) {
-        baseFilter = and(
-          baseFilter,
-          ilike(
-            analysisSchema.processedTransactions.transactionHash,
-            `%${input.search}%`,
-          ),
-        )!;
-      }
       if (input.status) {
         baseFilter = and(
           baseFilter,
@@ -103,18 +91,18 @@ export const getInvocations = protectedProcedure
       return baseFilter;
     };
 
-    const recentTransactions = await analysisDb
+    const invocations = await analysisDb
       .select()
-      .from(analysisSchema.processedTransactions)
+      .from(analysisSchema.ethProcessedResult)
       .where(getFilter());
 
     return {
-      invocations: recentTransactions.map((tx) => ({
+      invocations: invocations.map((tx) => ({
         id: tx.id,
         transactionHash: tx.transactionHash,
         status: tx.status as "SUCCESS" | "FAILED",
         timestamp: tx.timestamp.getTime(),
-        label: tx.label,
+        label: tx.handler,
       })),
     };
   });

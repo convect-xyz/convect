@@ -243,6 +243,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -258,6 +260,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -273,6 +277,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -288,6 +294,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -303,6 +311,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -318,6 +328,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -333,6 +345,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -348,6 +362,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -363,6 +379,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -378,6 +396,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 
@@ -393,6 +413,8 @@ diesel::table! {
         block_timestamp -> Timestamptz,
         id -> Int4,
         chain_id -> Int4,
+        #[max_length = 1000]
+        project_id -> Nullable<Varchar>,
     }
 }
 

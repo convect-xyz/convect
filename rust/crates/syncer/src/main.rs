@@ -9,7 +9,6 @@ use shared::{
     redis_client::RedisClientImpl,
     syncer::{self, ChainSyncer},
     syncing::State,
-    web3_client::Web3ClientImpl,
 };
 use std::{error::Error, sync::Arc};
 
@@ -21,6 +20,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let configuration = SharedConfig::new()?;
     let redis_client = RedisClientImpl::new(&configuration.redis.url).await;
     let mut pipeline = State::load(
+        syncer_config.project_id.clone(),
         syncer_config.function_id.clone(),
         syncer_config.chain_id.clone(),
         syncer_config.deployment_id.clone(),

@@ -212,6 +212,7 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
                     diesel::insert_into(eth_transaction::table)
                         .values(
                             txs.map(|tx| models::EthTransaction {
+                                project_id: state.project_id(),
                                 transaction_hash: tx.transaction_hash.clone(),
                                 function_id: function_id.clone(),
                                 deployment_id: deployment_id.clone(),

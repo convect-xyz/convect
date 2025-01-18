@@ -50,6 +50,7 @@ pub struct EthTransaction {
     pub transaction_hash: String,
     pub function_id: String,
     pub deployment_id: String,
+    pub project_id: String,
     pub chain_id: i32,
     pub created_at: DateTime<Utc>,
     pub block_timestamp: DateTime<Utc>,

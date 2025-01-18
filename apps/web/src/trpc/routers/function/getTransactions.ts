@@ -15,6 +15,7 @@ export const getTransactions = protectedProcedure
       status: z.enum(["FAILED", "SUCCESS"]).nullish(),
       functionId: z.number(),
       chainId: z.number(),
+      deploymentId: z.string(),
     }),
   )
   .output(
@@ -32,25 +33,6 @@ export const getTransactions = protectedProcedure
   .query(async (opts) => {
     const { input, ctx } = opts;
 
-    const currentDeployment = await ctx.db.query.deployment.findFirst({
-      where(fields, { eq, and }) {
-        return and(
-          eq(fields.functionId, input.functionId),
-          eq(fields.status, "SUCCESS"),
-        );
-      },
-      orderBy(fields, { desc }) {
-        return desc(fields.createdAt);
-      },
-    });
-
-    if (!currentDeployment) {
-      throw new TRPCError({
-        message: "Deployment not found",
-        code: "NOT_FOUND",
-      });
-    }
-
     const fn = await ctx.db.query.convectFunctions.findFirst({
       where(fields, { eq }) {
         return eq(fields.id, input.functionId);
@@ -67,7 +49,7 @@ export const getTransactions = protectedProcedure
 
     const getFilter = () => {
       let baseFilter = and(
-        eq(analysisSchema.ethTransactions.deploymentId, currentDeployment.id),
+        eq(analysisSchema.ethTransactions.deploymentId, input.deploymentId),
         eq(
           analysisSchema.ethTransactions.functionId,
           input.functionId.toString(),

@@ -1,8 +1,9 @@
 "use client";
 
-import { formatDistanceToNow, millisecondsToMinutes } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { ForceRerender } from "~/components/ui/force-rerender";
@@ -28,12 +29,12 @@ import InvocationDialog from "./(components)/InvocationDialog";
 import ManifestDialog from "./(components)/ManifestDialog";
 import TransactionRow from "./(components)/TransactionRow";
 import TransactionFilters, { useTransactionFilters } from "./filters";
+import { useOverview } from "./hooks/useOverview";
 import { useParams } from "./hooks/useParams";
+import { useTransactions } from "./hooks/useTransactions";
 
 type Transaction =
   RouterOutputs["functions"]["getTransactions"]["transactions"][0];
-
-const DASHBOARD_REFETCH_INTERVAL = 30000;
 
 const code = (id: string) => `import { log, transaction } from "convect-xyz";
 
@@ -56,36 +57,15 @@ export default ingest({
 });`;
 
 export default function Main() {
-  const { chainId, functionId } = useParams();
-  const { data: overview } = api.functions.getOverview.useQuery(
-    {
-      functionId: functionId ?? -1,
-      chainId: chainId ?? -1,
-    },
-    {
-      enabled: !!functionId && !!chainId,
-      refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-      refetchOnMount: true,
-      refetchOnWindowFocus: true,
-      select(data) {
-        const mins = millisecondsToMinutes(data.avgDuration);
-        const secs = (data.avgDuration / 1000).toFixed(1);
-
-        return {
-          ...data,
-          avgDurationParsed: {
-            mins,
-            secs,
-          },
-        };
-      },
-    },
-  );
+  const { data: overview } = useOverview();
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <div className="flex items-stretch gap-2">
+          <div className="mr-4">
+            <ActiveDeploymentsSection />
+          </div>
           <Chain />
           <ManifestSection />
         </div>
@@ -152,16 +132,7 @@ export default function Main() {
 }
 
 function LastUpdatedAt() {
-  const { chainId, functionId } = useParams();
-  const { data: overview, dataUpdatedAt } = api.functions.getOverview.useQuery(
-    {
-      functionId: functionId ?? 0,
-      chainId: chainId ?? 0,
-    },
-    {
-      enabled: !!functionId && !!chainId,
-    },
-  );
+  const { data: overview, dataUpdatedAt } = useOverview();
 
   if (!overview) {
     return <Skeleton className="h-6 w-[200px]" />;
@@ -182,27 +153,11 @@ function LastUpdatedAt() {
 
 function RecentTransactions() {
   const filters = useTransactionFilters();
-  const { projectId, functionId, chainId } = useParams();
   const [selectedTransactionHash, setSelectedTransactionHash] =
     useState<string>();
 
-  const { data: fn } = api.functions.get.useQuery({
-    projectId: projectId,
-    functionId: functionId,
-  });
-
-  const { data: maybeTransactions } = api.functions.getTransactions.useQuery(
-    {
-      functionId: functionId ?? -1,
-      chainId: chainId ?? -1,
-      search: filters.debouncedSearch,
-      status: filters.status,
-    },
-    {
-      refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-      enabled: !!chainId && !!functionId,
-    },
-  );
+  const { data: maybeTransactions } = useTransactions();
+  const { data: overview } = useOverview();
 
   return (
     <div>
@@ -250,7 +205,7 @@ function RecentTransactions() {
                 setSelectedTransactionHash(undefined);
               }
             }}
-            manifest={fn!.currentDeployment!.manifest}
+            manifest={overview!.manifest}
             transactionHash={selectedTransactionHash}
           />
         )}
@@ -314,6 +269,45 @@ function StatusFilter() {
   );
 }
 
+function ActiveDeploymentsSection() {
+  const { projectId, functionId } = useParams();
+  const { data: fn } = api.functions.get.useQuery({
+    projectId: projectId,
+    functionId: functionId,
+  });
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleValueChange = (v: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("deploymentId", v);
+
+    params.toString();
+    router.replace(pathname + "?" + params.toString());
+  };
+
+  return (
+    <Select
+      value={searchParams.get("deploymentId") ?? fn?.activeDeployments[0]?.id}
+      onValueChange={handleValueChange}
+    >
+      <SelectTrigger className="w-[100px] bg-background">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {fn?.activeDeployments.map((deployment) => (
+          <SelectItem value={deployment.id}>
+            <div className="flex items-center gap-2">
+              {deployment.id.slice(0, 6)}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 function ManifestSection() {
   const [isOpen, setIsOpen] = useState(false);
   const { functionId, projectId, chainId } = useParams();
@@ -322,7 +316,9 @@ function ManifestSection() {
     functionId: functionId,
   });
 
-  if (!fn || !fn.currentDeployment) {
+  const { data: overview } = useOverview();
+
+  if (!overview) {
     return null;
   }
 
@@ -335,7 +331,7 @@ function ManifestSection() {
         open={isOpen}
         onOpenChange={setIsOpen}
         initialChainId={chainId ?? undefined}
-        manifest={fn?.currentDeployment?.manifest}
+        manifest={overview.manifest}
       />
     </>
   );
