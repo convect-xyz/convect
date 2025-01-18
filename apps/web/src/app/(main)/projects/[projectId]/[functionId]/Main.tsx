@@ -3,7 +3,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { ForceRerender } from "~/components/ui/force-rerender";
@@ -23,7 +22,7 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { api } from "~/trpc/react";
-import { RouterOutputs } from "~/trpc/shared";
+import { ActiveDeployments } from "./(components)/ActiveDeployments";
 import { Chain } from "./(components)/Chain";
 import InvocationDialog from "./(components)/InvocationDialog";
 import ManifestDialog from "./(components)/ManifestDialog";
@@ -32,9 +31,6 @@ import TransactionFilters, { useTransactionFilters } from "./filters";
 import { useOverview } from "./hooks/useOverview";
 import { useParams } from "./hooks/useParams";
 import { useTransactions } from "./hooks/useTransactions";
-
-type Transaction =
-  RouterOutputs["functions"]["getTransactions"]["transactions"][0];
 
 const code = (id: string) => `import { log, transaction } from "convect-xyz";
 
@@ -64,12 +60,13 @@ export default function Main() {
       <div className="flex items-center justify-between">
         <div className="flex items-stretch gap-2">
           <div className="mr-4">
-            <ActiveDeploymentsSection />
+            <ActiveDeployments />
           </div>
+        </div>
+        <div className="flex items-center gap-2">
           <Chain />
           <ManifestSection />
         </div>
-        <LastUpdatedAt />
       </div>
       <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
         {!overview &&
@@ -264,45 +261,6 @@ function StatusFilter() {
             {renderStatusText("FAILED")}
           </div>
         </SelectItem>
-      </SelectContent>
-    </Select>
-  );
-}
-
-function ActiveDeploymentsSection() {
-  const { projectId, functionId } = useParams();
-  const { data: fn } = api.functions.get.useQuery({
-    projectId: projectId,
-    functionId: functionId,
-  });
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const handleValueChange = (v: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("deploymentId", v);
-
-    params.toString();
-    router.replace(pathname + "?" + params.toString());
-  };
-
-  return (
-    <Select
-      value={searchParams.get("deploymentId") ?? fn?.activeDeployments[0]?.id}
-      onValueChange={handleValueChange}
-    >
-      <SelectTrigger className="w-[100px] bg-background">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {fn?.activeDeployments.map((deployment) => (
-          <SelectItem value={deployment.id}>
-            <div className="flex items-center gap-2">
-              {deployment.id.slice(0, 6)}
-            </div>
-          </SelectItem>
-        ))}
       </SelectContent>
     </Select>
   );

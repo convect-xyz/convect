@@ -2,12 +2,14 @@ import { api } from "~/trpc/react";
 import { useTransactionFilters } from "../filters";
 import { DASHBOARD_REFETCH_INTERVAL } from "./constants";
 import { useParams } from "./useParams";
+import { useSelectedChainId } from "./useSelectedChainId";
 import { useSelectedDeploymentId } from "./useSelectedDeploymentId";
 
 export function useTransactions() {
   const filters = useTransactionFilters();
-  const { functionId, chainId } = useParams();
+  const { functionId } = useParams();
   const deploymentId = useSelectedDeploymentId();
+  const chainId = useSelectedChainId();
 
   return api.functions.getTransactions.useQuery(
     {

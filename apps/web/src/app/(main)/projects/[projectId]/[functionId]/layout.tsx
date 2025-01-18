@@ -62,7 +62,7 @@ function Main(props: PropsWithChildren) {
     <>
       <div className="mx-auto grid w-full max-w-screen-xl items-start gap-6 md:grid-cols-[180px_1fr] lg:grid-cols-[250px_1fr]">
         <nav
-          className="grid gap-4 text-sm text-muted-foreground"
+          className="hidden gap-4 text-sm text-muted-foreground md:grid"
           x-chunk="dashboard-04-chunk-0"
         >
           <div className="text-md font-semibold">
