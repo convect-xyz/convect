@@ -1,7 +1,14 @@
+import { Context, SQSEvent } from "aws-lambda";
 import axios from "axios";
+import axiosRetry from "axios-retry";
 import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
 
-import { Context, SQSEvent } from "aws-lambda";
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: (retryCount) => {
+    return retryCount * 1000;
+  },
+});
 
 const USER_ENVS = (
   JSON.parse(process.env.USER_ENVS!) as Array<{
