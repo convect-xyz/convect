@@ -93,34 +93,31 @@ function RenderTransactionConfigs(props: {
   const structuredManifest = getStructuredManifest(props.manifest);
   const { selectedChainId } = props;
 
+  const validTxConfigs = structuredManifest.txConfigs.filter(
+    (txConfig) =>
+      !txConfig.chains || txConfig.chains.includes(Number(selectedChainId)),
+  );
+  const ignoredTxConfigs = structuredManifest.txConfigs.filter(
+    (txConfig) =>
+      txConfig.chains && !txConfig.chains.includes(Number(selectedChainId)),
+  );
   return (
     <div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-2">
-        {structuredManifest.txConfigs
-          .filter(
-            (txConfig) =>
-              !txConfig.chains ||
-              txConfig.chains.includes(Number(selectedChainId)),
-          )
-          .map((txConfig) => (
-            <TxConfigCard
-              key={txConfig.name}
-              txConfig={txConfig}
-              selectedChainId={
-                selectedChainId ? Number(selectedChainId) : undefined
-              }
-            />
-          ))}
-        <div className="mt-4 flex flex-col gap-2">
-          <div className="text-sm text-muted-foreground">Ignored</div>
-          <div className="opacity-50">
-            {structuredManifest.txConfigs
-              .filter(
-                (txConfig) =>
-                  txConfig.chains &&
-                  !txConfig.chains.includes(Number(selectedChainId)),
-              )
-              .map((txConfig) => (
+        {validTxConfigs.map((txConfig) => (
+          <TxConfigCard
+            key={txConfig.name}
+            txConfig={txConfig}
+            selectedChainId={
+              selectedChainId ? Number(selectedChainId) : undefined
+            }
+          />
+        ))}
+        {ignoredTxConfigs.length > 0 && (
+          <div className="mt-4 flex flex-col gap-2">
+            <div className="text-sm text-muted-foreground">Ignored</div>
+            <div className="opacity-50">
+              {ignoredTxConfigs.map((txConfig) => (
                 <TxConfigCard
                   key={txConfig.name}
                   txConfig={txConfig}
@@ -129,8 +126,9 @@ function RenderTransactionConfigs(props: {
                   }
                 />
               ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

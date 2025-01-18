@@ -59,7 +59,7 @@ function Content() {
 function LogsTable() {
   const [selectedLog, setSelectedLog] = useState<LogRow>();
   const { data: logs } = useLogs();
-
+  console.log(logs);
   return (
     <>
       <div className="w-full border-spacing-x-2">
