@@ -12,6 +12,7 @@ import {
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { RouterOutputs } from "~/trpc/shared";
+import { ActiveDeployments } from "../(components)/ActiveDeployments";
 import { Chain } from "../(components)/Chain";
 import LogFilters, { useFilters } from "./filters";
 import { useLogs } from "./hooks/useLogs";
@@ -32,6 +33,7 @@ function Content() {
   return (
     <div className="flex flex-col gap-2 overflow-hidden p-1">
       <div className="flex items-stretch gap-2">
+        <ActiveDeployments />
         <Chain />
         <Tabs value={logLevel}>
           <TabsList className="h-auto border bg-muted">

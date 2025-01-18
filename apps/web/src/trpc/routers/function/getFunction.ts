@@ -1,3 +1,4 @@
+import { parseManifest } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -24,6 +25,12 @@ export const getFunction = protectedProcedure
       activeDeployments: z.array(
         z.object({
           id: z.string(),
+          chains: z.array(
+            z.object({
+              name: z.string(),
+              chainId: z.number(),
+            }),
+          ),
         }),
       ),
     }),
@@ -71,6 +78,13 @@ export const getFunction = protectedProcedure
       ...fn.convectFunction,
       isInitialised: true,
       project: fn.project,
-      activeDeployments,
+      activeDeployments: activeDeployments.map((d) => {
+        const manifest = parseManifest(d.manifest);
+
+        return {
+          ...d,
+          chains: manifest.chains,
+        };
+      }),
     };
   });
