@@ -3,7 +3,7 @@ use std::{fs::File, path::Path, sync::Arc};
 use expectations::{Expectations, ExpectedTransaction};
 use futures::{future::join_all, FutureExt};
 use shared::{
-    configuration::{SharedConfig},
+    configuration::SharedConfig,
     enqueuer::{Payload, SQSTransactionEnqueuer},
     fetcher::{graphql::GethGraphqlClientImpl, TransactionFetcherImpl},
     manifest::{Manifest, ManifestChainConfig},
@@ -96,6 +96,7 @@ impl Test {
             TransactionFetcherImpl::new(GethGraphqlClientImpl::new(polling_url), chain_id);
         let syncer = ChainSyncer::new(&self.manifest, &enqueuer, &fetcher);
         let mut pipeline = State::load(
+            "1".to_string(),
             self.pipeline_function_id(),
             chain_id,
             uuid::Uuid::new_v4().to_string(),
