@@ -63,7 +63,9 @@ function DeploymentsTable() {
             <div key={deployment.id} className=" p-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="flex flex-1 items-center gap-2">
-                  <div className="basis-96 truncate">{deployment.id}</div>
+                  <div className="bg-chip mr-4 basis-[70px] truncate rounded-full border px-2 text-center">
+                    {deployment.id.slice(0, 6)}
+                  </div>
                   <RenderStatusIcon status={deployment.status} />
                   <div className="basis-56 truncate">
                     {capitalize(deployment.status)}
@@ -120,9 +122,8 @@ function RunningLabel(props: {
   runningAt?: number | null;
   finishedAt?: number | null;
 }) {
-  const [_, setValue] = useState(0); // integer state
+  const [_, setValue] = useState(0);
 
-  console.log(props);
   useEffect(() => {
     const interval = setInterval(() => {
       setValue((prevValue) => prevValue + 1);
