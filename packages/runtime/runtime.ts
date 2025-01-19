@@ -24,6 +24,7 @@ const USER_ENVS = (
 );
 
 const CHAIN_ID = process.env.CHAIN_ID;
+const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID;
 
 for (const env of Object.keys(process.env)) {
   delete process.env[env];
@@ -132,6 +133,7 @@ export async function handler(event: SQSEvent, context: Context) {
 function getContext() {
   return {
     chainId: Number(CHAIN_ID),
+    deploymentId: DEPLOYMENT_ID,
   };
 }
 
