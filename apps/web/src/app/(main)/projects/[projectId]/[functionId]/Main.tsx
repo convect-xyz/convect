@@ -26,10 +26,12 @@ import { ActiveDeployments } from "./(components)/ActiveDeployments";
 import { Chain } from "./(components)/Chain";
 import InvocationDialog from "./(components)/InvocationDialog";
 import ManifestDialog from "./(components)/ManifestDialog";
+import { StillDeployingAlert } from "./(components)/StillDeployingAlert";
 import TransactionRow from "./(components)/TransactionRow";
 import TransactionFilters, { useTransactionFilters } from "./filters";
 import { useOverview } from "./hooks/useOverview";
 import { useParams } from "./hooks/useParams";
+import { useSelectedDeployment } from "./hooks/useSelectedDeployment";
 import { useTransactions } from "./hooks/useTransactions";
 
 const code = (id: string) => `import { log, transaction } from "convect-xyz";
@@ -54,10 +56,17 @@ export default ingest({
 
 export default function Main() {
   const { data: overview } = useOverview();
+  const { data: selectedDeployment } = useSelectedDeployment();
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
+    <div className="overflow-hidden p-1">
+      {(selectedDeployment?.status === "RUNNING" ||
+        selectedDeployment?.status === "PENDING") && (
+        <div>
+          <StillDeployingAlert />
+        </div>
+      )}
+      <div className="mt-4 flex items-center justify-between">
         <div className="flex items-stretch gap-2">
           <div className="mr-4">
             <ActiveDeployments />

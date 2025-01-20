@@ -1,10 +1,10 @@
 "use client";
 
 import { Manifest } from "@convect-xyz/lib";
-import { formatDistanceStrict, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { capitalize, times } from "lodash";
 import { LoaderIcon, MoreHorizontalIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { RouterOutputs } from "~/trpc/shared";
 import ManifestDialog from "../(components)/ManifestDialog";
 import { useDeployments } from "./hooks/useDeployments";
+import { useRunningLabel } from "./hooks/useRunningLabel";
 
 type Deployment = RouterOutputs["functions"]["getDeployments"][0];
 
@@ -67,7 +68,7 @@ function DeploymentsTable() {
                     {deployment.id.slice(0, 6)}
                   </div>
                   <RenderStatusIcon status={deployment.status} />
-                  <div className="basis-56 truncate">
+                  <div className="flex-1 truncate">
                     {capitalize(deployment.status)}
                     <div className="mt-1 text-xs text-muted-foreground">
                       <RunningLabel
@@ -122,28 +123,7 @@ function RunningLabel(props: {
   runningAt?: number | null;
   finishedAt?: number | null;
 }) {
-  const [_, setValue] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setValue((prevValue) => prevValue + 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  var { runningAt, finishedAt } = props;
-
-  if (!runningAt && !finishedAt) return "-";
-  if (!runningAt) {
-    return "-";
-  }
-
-  if (!finishedAt) {
-    finishedAt = new Date().getTime();
-  }
-
-  return formatDistanceStrict(finishedAt, runningAt);
+  return useRunningLabel(props.runningAt, props.finishedAt) ?? "-";
 }
 
 function RenderStatusIcon(props: { status: Deployment["status"] }) {

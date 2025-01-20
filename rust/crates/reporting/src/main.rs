@@ -94,32 +94,17 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .map(Option::unwrap)
         .collect();
 
-    pool.get()
-        .await?
-        .transaction::<_, Error, _>(|conn| {
-            async move {
-                let (invocations, transactions, metrics) = join!(
-                    diesel::insert_into(invocation::table)
-                        .values(invocations)
-                        .execute(conn),
-                    diesel::insert_into(eth_processed_result::table)
-                        .values(transactions)
-                        .execute(conn),
-                    diesel::insert_into(reported_metrics::table)
-                        .values(metrics)
-                        .execute(conn)
-                );
+    let conn = &mut pool.get().await?;
 
-                invocations?;
-                transactions?;
-                metrics?;
-
-                Ok(())
-            }
-            .scope_boxed()
-        })
-        .await
-        .unwrap();
+    diesel::insert_into(invocation::table)
+        .values(invocations)
+        .execute(conn);
+    diesel::insert_into(eth_processed_result::table)
+        .values(transactions)
+        .execute(conn);
+    diesel::insert_into(reported_metrics::table)
+        .values(metrics)
+        .execute(conn);
 
     join_all(
         stored_reports
