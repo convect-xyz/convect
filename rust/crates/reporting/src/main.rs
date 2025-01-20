@@ -96,15 +96,21 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
 
     let conn = &mut pool.get().await?;
 
-    diesel::insert_into(invocation::table)
-        .values(invocations)
-        .execute(conn);
-    diesel::insert_into(eth_processed_result::table)
-        .values(transactions)
-        .execute(conn);
-    diesel::insert_into(reported_metrics::table)
-        .values(metrics)
-        .execute(conn);
+    let (invocations_result, transactions_result, metrics_result) = join!(
+        diesel::insert_into(invocation::table)
+            .values(invocations)
+            .execute(conn),
+        diesel::insert_into(eth_processed_result::table)
+            .values(transactions)
+            .execute(conn),
+        diesel::insert_into(reported_metrics::table)
+            .values(metrics)
+            .execute(conn)
+    );
+
+    invocations_result?;
+    transactions_result?;
+    metrics_result?;
 
     join_all(
         stored_reports
