@@ -32,22 +32,24 @@ function Content() {
 
   return (
     <div className="flex flex-col gap-2 overflow-hidden p-1">
-      <div className="flex items-stretch gap-2">
+      <div className="flex items-stretch justify-between gap-2">
         <ActiveDeployments />
-        <Chain />
-        <Tabs value={logLevel}>
-          <TabsList className="h-auto border bg-muted">
-            <TabsTrigger value="INFO" onClick={() => setLogLevel("INFO")}>
-              Info
-            </TabsTrigger>
-            <TabsTrigger value="ERROR" onClick={() => setLogLevel("ERROR")}>
-              Error
-            </TabsTrigger>
-            <TabsTrigger value="DEBUG" onClick={() => setLogLevel("DEBUG")}>
-              Debug
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex h-full items-center gap-2">
+          <Chain />
+          <Tabs value={logLevel}>
+            <TabsList className="h-auto border bg-muted">
+              <TabsTrigger value="INFO" onClick={() => setLogLevel("INFO")}>
+                Info
+              </TabsTrigger>
+              <TabsTrigger value="ERROR" onClick={() => setLogLevel("ERROR")}>
+                Error
+              </TabsTrigger>
+              <TabsTrigger value="DEBUG" onClick={() => setLogLevel("DEBUG")}>
+                Debug
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
       <div className="overflow-hidden rounded-md border">
         <LogsTable />

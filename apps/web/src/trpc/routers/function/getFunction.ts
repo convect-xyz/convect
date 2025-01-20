@@ -31,6 +31,9 @@ export const getFunction = protectedProcedure
               chainId: z.number(),
             }),
           ),
+          status: z.enum(schema.deploymentStatus.enumValues),
+          runningAt: z.number().nullish(),
+          finishedAt: z.number().nullish(),
         }),
       ),
     }),
@@ -83,6 +86,8 @@ export const getFunction = protectedProcedure
 
         return {
           ...d,
+          runningAt: d.runningAt?.getTime() ?? null,
+          finishedAt: d.finishedAt?.getTime() ?? null,
           chains: manifest.chains,
         };
       }),
