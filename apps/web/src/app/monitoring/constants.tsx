@@ -1,5 +1,5 @@
 import { createConfig, http, Transport } from "wagmi";
-import { blast, Chain, mainnet } from "wagmi/chains";
+import { base, blast, Chain, mainnet, sepolia } from "wagmi/chains";
 
 export const nodes = [
   {
@@ -10,12 +10,27 @@ export const nodes = [
     chain: mainnet,
   } as const,
   {
+    name: "Ethereum Sepolia",
+    alchemyUrl:
+      "https://eth-sepolia.g.alchemy.com/v2/REDACTED",
+    convectUrl: "http://eth-sepolia.rpc.convect.xyz",
+    chain: sepolia,
+  } as const,
+  {
     name: "Blast Mainnet",
     alchemyUrl:
       "https://blast-mainnet.g.alchemy.com/v2/REDACTED",
     convectUrl: "http://blast-mainnet.rpc.convect.xyz",
     chain: blast,
   } as const,
+  {
+    name: "Base Mainnet",
+
+    alchemyUrl:
+      "https://base-mainnet.g.alchemy.com/v2/REDACTED",
+    convectUrl: "http://base-mainnet.rpc.convect.xyz",
+    chain: base,
+  },
 ];
 
 export const alchemyConfig = createConfig({
