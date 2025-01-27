@@ -1,5 +1,12 @@
 import { createConfig, http, Transport } from "wagmi";
-import { base, blast, Chain, mainnet, sepolia } from "wagmi/chains";
+import {
+  base,
+  baseSepolia,
+  blast,
+  Chain,
+  mainnet,
+  sepolia,
+} from "wagmi/chains";
 
 export const nodes = [
   {
@@ -30,6 +37,14 @@ export const nodes = [
       "https://base-mainnet.g.alchemy.com/v2/REDACTED",
     convectUrl: "http://base-mainnet.rpc.convect.xyz",
     chain: base,
+  },
+  {
+    name: "Base Sepolia",
+
+    alchemyUrl:
+      "https://base-sepolia.g.alchemy.com/v2/REDACTED",
+    convectUrl: "http://base-sepolia.rpc.convect.xyz",
+    chain: baseSepolia,
   },
 ];
 
