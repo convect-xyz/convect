@@ -3,6 +3,7 @@ import {
   base,
   baseSepolia,
   blast,
+  blastSepolia,
   Chain,
   mainnet,
   sepolia,
@@ -29,6 +30,13 @@ export const nodes = [
       "https://blast-mainnet.g.alchemy.com/v2/FI_nQzZX2RUOkr0-ypStCGnT5ucYpHrd",
     convectUrl: "http://blast-mainnet.rpc.convect.xyz",
     chain: blast,
+  } as const,
+  {
+    name: "Blast Sepolia",
+    alchemyUrl:
+      "https://blast-sepolia.g.alchemy.com/v2/FI_nQzZX2RUOkr0-ypStCGnT5ucYpHrd",
+    convectUrl: "http://blast-sepolia.rpc.convect.xyz",
+    chain: blastSepolia,
   } as const,
   {
     name: "Base Mainnet",
