@@ -1,6 +1,14 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
+pub enum FetchStrategyType {
+    #[serde(rename = "graphql")]
+    Graphql,
+    #[serde(rename = "jsonrpc")]
+    Jsonrpc,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct SupportedNetwork {
     pub id: u64,
     pub name: String,
@@ -9,6 +17,7 @@ pub struct SupportedNetwork {
     pub sns_topic: String,
     pub etherscan_api_key: String,
     pub etherscan_like: String,
+    pub fetch_strategy: FetchStrategyType,
 }
 
 const CHAINS_JSON: &str = include_str!("../../../../config/chains.json");
