@@ -67,7 +67,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
         run: |
-          cargo nextest run -p shared --features=supported-networks,pg
+          cargo nextest run -p shared --features=pg
       - name: Build and Upload All Binaries
         working-directory: rust
         env:
