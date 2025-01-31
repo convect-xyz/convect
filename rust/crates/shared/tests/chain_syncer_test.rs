@@ -5,9 +5,8 @@ use futures::{future::join_all, FutureExt};
 use shared::{
     configuration::SharedConfig,
     enqueuer::{Payload, SQSTransactionEnqueuer},
-    fetcher::{graphql::GethGraphqlClientImpl, TransactionFetcherImpl},
+    fetcher::TransactionFetcherImpl,
     manifest::{Manifest, ManifestChainConfig},
-    networks::get_first_polling_url,
     redis_client::RedisClientImpl,
     syncer::ChainSyncer,
     syncing::State,
@@ -87,13 +86,11 @@ impl Test {
         chain_config: &ManifestChainConfig,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let chain_id = chain_config.chain_id;
-        let polling_url = get_first_polling_url(chain_id);
         let queue =
             common::utils::setup_queue(&self.queue_name(chain_id), &self.sqs_client).await?;
         let enqueuer =
             SQSTransactionEnqueuer::with_defaults(queue.queue_url.clone().unwrap()).await;
-        let fetcher =
-            TransactionFetcherImpl::new(GethGraphqlClientImpl::new(polling_url), chain_id);
+        let fetcher = TransactionFetcherImpl::with_defaults(chain_id);
         let syncer = ChainSyncer::new(&self.manifest, &enqueuer, &fetcher);
         let mut pipeline = State::load(
             "integration-test".to_string(),

@@ -4,7 +4,8 @@ use shared::{
     connection::establish_connection_pool,
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{
-        graphql::GethGraphqlClientImpl,
+        graphql::client::GethGraphqlClientImpl,
+        web3::client::{Web3Client, Web3ClientImpl},
         TransactionFetcher, TransactionFetcherImpl,
     },
     manifest::{
@@ -13,7 +14,6 @@ use shared::{
     },
     networks::{get_first_polling_url, get_supported_network},
     redis_client::{RedisClient, RedisClientImpl},
-    web3_client::{Web3Client, Web3ClientImpl},
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -91,10 +91,7 @@ pub struct ChainService {
 impl ChainService {
     pub async fn with_defaults(app_service: &AppService, config: ChainConfig) -> Self {
         let web3_client = get_web3_client(&config.chain_id, &app_service.config).await;
-        let fetcher = TransactionFetcherImpl::new(
-            GethGraphqlClientImpl::new(get_first_polling_url(config.chain_id)),
-            config.chain_id,
-        );
+        let fetcher = TransactionFetcherImpl::with_defaults(config.chain_id);
         let pool = establish_connection_pool().await;
         let enqueuer = SQSTransactionEnqueuer::new(
             app_service.s3_client.clone(),

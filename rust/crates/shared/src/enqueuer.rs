@@ -255,8 +255,8 @@ pub mod errors {
 
     #[derive(Error, Debug)]
     pub enum TransactionEnqueuerError {
-        #[error("Failed to upload transactions: {0}")]
-        Web3ClientError(#[from] crate::web3_client::errors::Web3ClientError),
+        #[error("Failed to fetch transactions: {0}")]
+        Web3ClientError(#[from] crate::fetcher::web3::client::errors::Web3ClientError),
         #[error("Failed to upload transactions: {0}")]
         SQSError(#[from] SdkError<SendMessageError>),
         #[error("Redis error: {0}")]

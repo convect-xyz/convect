@@ -136,8 +136,8 @@ pub mod providers {
     use thiserror::Error;
 
     use crate::contract_info;
+    use crate::fetcher::web3::client::Web3Client;
     use crate::manifest::Manifest;
-    use crate::web3_client::Web3Client;
 
     #[async_trait]
     pub trait InitBlockProvider: std::marker::Sync {
@@ -182,6 +182,6 @@ pub mod providers {
             #[from] contract_info::errors::EtherscanContractInfoProviderError,
         ),
         #[error("Web3 client error: {0}")]
-        Web3ClientError(#[from] crate::web3_client::errors::Web3ClientError),
+        Web3ClientError(#[from] crate::fetcher::web3::client::errors::Web3ClientError),
     }
 }
