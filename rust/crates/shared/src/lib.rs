@@ -10,7 +10,6 @@ pub mod macros;
 pub mod manifest;
 #[cfg(feature = "pg")]
 pub mod models;
-#[cfg(feature = "supported-networks")]
 pub mod networks;
 pub mod processing;
 pub mod redis_client;

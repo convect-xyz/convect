@@ -76,7 +76,6 @@ pg = [
   "deadpool",
 ]
 telemetry = []
-supported-networks = []
 reporting-sdk = []
 contract-info = []
 events = []
