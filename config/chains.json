@@ -8,7 +8,7 @@
     "etherscan_like": "https://api.etherscan.io",
     "etherscan_api_key": "REDACTED",
     "slug": "eth-mainnet",
-    "fetch_strategy": "graphql"
+    "fetch_strategy": "jsonrpc"
   },
   {
     "id": 11155111,
