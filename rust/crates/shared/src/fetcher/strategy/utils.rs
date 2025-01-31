@@ -1,9 +1,10 @@
 use crate::{
+    fetcher::web3::client::Web3ClientImpl,
     manifest::{LogConfig, Manifest, TransactionConfig},
-    networks::{get_supported_network, FetchStrategyType},
+    networks::{get_first_polling_url, get_supported_network, FetchStrategyType},
 };
 
-use super::{graphql::GraphqlFetchStrategyImpl, FetchStrategy};
+use super::{graphql::GraphqlFetchStrategyImpl, jsonrpc::JsonRpcFetcherImpl, FetchStrategy};
 
 pub fn get_eligible_tx_configs<'a>(
     manifest: &'a Manifest,
@@ -28,15 +29,18 @@ pub fn get_eligible_tx_configs<'a>(
         .collect()
 }
 
-pub fn get_strategy_for_chain_id(chain_id: u64) -> impl FetchStrategy {
+pub fn get_strategy_for_chain_id(chain_id: u64) -> Box<dyn FetchStrategy> {
     let network = get_supported_network(chain_id).unwrap();
 
     match &network.fetch_strategy {
         FetchStrategyType::Graphql => {
-            return GraphqlFetchStrategyImpl::with_defaults(chain_id);
+            return Box::new(GraphqlFetchStrategyImpl::with_defaults(chain_id));
         }
         FetchStrategyType::Jsonrpc => {
-            return GraphqlFetchStrategyImpl::with_defaults(chain_id);
+            return Box::new(JsonRpcFetcherImpl::new(Web3ClientImpl::new(
+                chain_id,
+                vec![get_first_polling_url(chain_id)],
+            )))
         }
     }
 }

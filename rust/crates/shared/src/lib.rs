@@ -1,7 +1,10 @@
+pub mod configuration;
 #[cfg(feature = "pg")]
 pub mod connection;
 pub mod contract_info;
 pub mod enqueuer;
+#[cfg(feature = "events")]
+pub mod events;
 pub mod fetcher;
 pub mod macros;
 pub mod manifest;
@@ -24,11 +27,6 @@ pub mod syncing;
 pub mod telemetry;
 #[cfg(test)]
 pub mod testing;
-pub mod types;
-pub mod web3_client;
-
-pub mod configuration;
-#[cfg(feature = "events")]
-pub mod events;
 #[cfg(feature = "events")]
 pub mod tinybird;
+pub mod types;

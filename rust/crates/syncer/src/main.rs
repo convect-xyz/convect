@@ -3,7 +3,7 @@ use shared::{
     configuration::SharedConfig,
     connection::establish_connection_pool,
     enqueuer::SQSTransactionEnqueuer,
-    fetcher::{graphql::GethGraphqlClientImpl, TransactionFetcherImpl},
+    fetcher::{graphql::client::GethGraphqlClientImpl, TransactionFetcherImpl},
     manifest::Manifest,
     networks::get_supported_network,
     redis_client::RedisClientImpl,
@@ -31,10 +31,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
-    let fetcher = TransactionFetcherImpl::new(
-        GethGraphqlClientImpl::new(network.polling_urls.first().unwrap().to_string()),
-        network.id,
-    );
+    let fetcher = TransactionFetcherImpl::with_defaults(network.id);
     let pool = establish_connection_pool().await;
     let enqueuer = SQSTransactionEnqueuer::new(
         s3_client,

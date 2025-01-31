@@ -290,7 +290,7 @@ mod errors {
         #[error("Manifest error: {0}")]
         ManifestError(#[from] shared::manifest::errors::ManifestFromEnvError),
         #[error("Web3 client error: {0}")]
-        Web3ClientError(#[from] shared::web3_client::errors::Web3ClientError),
+        Web3ClientError(#[from] shared::fetcher::web3::client::errors::Web3ClientError),
         #[error("Contract info provider error: {0}")]
         ContractInfoProviderError(
             #[from] shared::contract_info::errors::EtherscanContractInfoProviderError,
