@@ -97,8 +97,18 @@
     "polling_urls": ["https://api.testnet.abs.xyz"],
     "ws_url": "wss://api.testnet.abs.xyz/ws",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
-    "etherscan_like": "https://block-explorer-api.testnet.abs.xyz",
+    "etherscan_like": "https://api-sepolia.abscan.org",
     "etherscan_api_key": "",
     "slug": "abstract-testnet"
+  },
+  {
+    "id": 2741,
+    "name": "Abstract Mainnet",
+    "polling_urls": ["https://api.mainnet.abs.xyz"],
+    "ws_url": "wss://api.mainnet.abs.xyz/ws",
+    "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
+    "etherscan_like": "https://api.abscan.org",
+    "etherscan_api_key": "",
+    "slug": "abstract-mainnet"
   }
 ]
