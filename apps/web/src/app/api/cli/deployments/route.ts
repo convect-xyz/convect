@@ -66,6 +66,8 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ message: e.message }, { status: 400 });
     }
 
+    console.log(e);
+
     return NextResponse.json(
       { message: "An unexpected error occurred" },
       { status: 500 },
