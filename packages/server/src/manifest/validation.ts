@@ -67,9 +67,9 @@ export class ManifestValidationService {
     const txReceiptRegistry: TxReceiptRegistry = new Map();
     for (const chain of manifest.chains) {
       const publicClient = getPublicClient(chain.chainId);
-      const allAddresses = manifest.log_configs.map(
-        (logConfig) => getAddress(chain.chainId, logConfig)!
-      );
+      const allAddresses = manifest.log_configs
+        .map((logConfig) => getAddress(chain.chainId, logConfig)!)
+        .filter((address) => address !== undefined);
       const etherscanProvider = new EtherscanProvider(chain.chainId, this.db);
       console.log("allAddresses", allAddresses);
       const addressToTxHash =
