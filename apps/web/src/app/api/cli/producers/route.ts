@@ -26,6 +26,7 @@ export const POST = async (req: NextRequest) => {
 
       for (const id of data.ids) {
         const chainId = chains.find((c) => c.slug === id)?.id;
+        console.log(chainId);
         if (chainId) {
           filter = or(
             filter,
