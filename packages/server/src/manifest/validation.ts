@@ -80,7 +80,7 @@ export class ManifestValidationService {
         .map((logConfig) => getAddress(chain.chainId, logConfig)!);
 
       const etherscanProvider = new EtherscanProvider(chain.chainId, this.db);
-      console.log("allAddresses", allAddresses);
+      console.log(`[${chain.chainId}] allAddresses: ${allAddresses}`);
       const addressToTxHash =
         await etherscanProvider.getContractCreationTxHashes(allAddresses);
       const addressToTxReceipt = await getTxReceipts(
