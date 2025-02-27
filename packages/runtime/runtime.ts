@@ -383,7 +383,7 @@ export function decodeTx(tx: any, txConfig: any) {
     } catch (e) {
       console.log(e);
       console.log(logConfig._event);
-      console.log(newTx);
+      console.log(tx);
       console.log(txConfig);
       console.log(log);
     }
