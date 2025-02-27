@@ -102,7 +102,7 @@ pub fn get_web3_client_filter(
 
     let mut addresses: Vec<H160> = all_log_configs
         .iter()
-        .map(|c| H160::from_str(c.address.get_address(chain_id).as_str()).unwrap())
+        .map(|c| H160::from_str(c.address.get_address(chain_id).unwrap().as_str()).unwrap())
         .collect();
     addresses.sort();
     addresses.dedup();
