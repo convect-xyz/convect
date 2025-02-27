@@ -73,11 +73,11 @@ pub fn remove_extranous_logs(
 ) -> Vec<LogResult> {
     let has_matching_log_cfg = |log: &LogResult| {
         manifest.log_configs.iter().any(|log_cfg| {
-            let parsed_cfg_address = H160::from_str(log_cfg.address.get_address(chain_id).as_str())
-                .expect(
+            let parsed_cfg_address =
+                H160::from_str(log_cfg.address.get_address(chain_id).unwrap().as_str()).expect(
                     format!(
                         "Could not convert to H256: {}",
-                        log_cfg.address.get_address(chain_id)
+                        log_cfg.address.get_address(chain_id).unwrap()
                     )
                     .as_str(),
                 );

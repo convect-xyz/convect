@@ -31,10 +31,10 @@ impl Default for LogOrigin {
 }
 
 impl LogOrigin {
-    pub fn get_address(&self, chain_id: u64) -> String {
+    pub fn get_address(&self, chain_id: u64) -> Option<String> {
         match self {
-            LogOrigin::String(address) => address.clone(),
-            LogOrigin::Map(map) => map.get(&chain_id.to_string()).unwrap().clone(),
+            LogOrigin::String(address) => Some(address.clone()),
+            LogOrigin::Map(map) => map.get(&chain_id.to_string()).clone(),
         }
     }
 }
