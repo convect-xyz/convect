@@ -382,9 +382,10 @@ export function decodeTx(tx: any, txConfig: any) {
         args: decodedEvent.args,
       });
     } catch (e) {
-      console.log(`Error decoding event log: ${e}`);
+      console.log(logConfig._event);
       console.log(newTx);
       console.log(txConfig);
+      console.log(log);
     }
   }
 
