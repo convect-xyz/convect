@@ -53,6 +53,10 @@ const config = {
           DEFAULT: "#0d0d0d",
           foreground: "hsl(var(--card-foreground))",
         },
+        chip: {
+          DEFAULT: "#121417",
+          foreground: "hsl(var(--chip-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -102,6 +102,9 @@ export const POST = async (req: NextRequest) => {
     builderTaskDefinition: stackOutputs.builderTaskDefinition,
     dbUrl: env.DATABASE_URL,
     encryptionKey: env.ENCRYPTION_KEY,
+    reportingDbUrl: env.REPORTING_DATABASE_URL,
+    redisUrl:
+      "rediss://default:AVNS_7BaBQxFTF74jG4c8B1T@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061",
   });
   console.log("deployment created");
 

@@ -2,17 +2,17 @@ use aws_config::BehaviorVersion;
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use futures::{future::join_all, join, try_join};
+use futures::{future::join_all, join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
-    models::{Invocation, Metric, ProcessedTransaction},
+    models::{EthProcessedResult, Invocation, Metric},
     reporting_sdk,
-    schema::{invocation, processed_transactions, reported_metrics},
+    schema::{eth_processed_result, invocation, reported_metrics},
 };
 
 enum ExtractedRequest {
-    Transaction(ProcessedTransaction),
+    Transaction(EthProcessedResult),
     Metric(Metric),
     Invocation(Invocation),
 }
@@ -94,32 +94,23 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .map(Option::unwrap)
         .collect();
 
-    pool.get()
-        .await?
-        .transaction::<_, Error, _>(|conn| {
-            async move {
-                let (invocations, transactions, metrics) = join!(
-                    diesel::insert_into(invocation::table)
-                        .values(invocations)
-                        .execute(conn),
-                    diesel::insert_into(processed_transactions::table)
-                        .values(transactions)
-                        .execute(conn),
-                    diesel::insert_into(reported_metrics::table)
-                        .values(metrics)
-                        .execute(conn)
-                );
+    let conn = &mut pool.get().await?;
 
-                invocations?;
-                transactions?;
-                metrics?;
+    let (invocations_result, transactions_result, metrics_result) = join!(
+        diesel::insert_into(invocation::table)
+            .values(invocations)
+            .execute(conn),
+        diesel::insert_into(eth_processed_result::table)
+            .values(transactions)
+            .execute(conn),
+        diesel::insert_into(reported_metrics::table)
+            .values(metrics)
+            .execute(conn)
+    );
 
-                Ok(())
-            }
-            .scope_boxed()
-        })
-        .await
-        .unwrap();
+    invocations_result?;
+    transactions_result?;
+    metrics_result?;
 
     join_all(
         stored_reports
@@ -154,30 +145,30 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
 
             for result in results.into_iter() {
                 for label in result.successful_labels.iter() {
-                    rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
+                    rows.push(ExtractedRequest::Transaction(EthProcessedResult {
                         transaction_hash: result.transaction_hash.clone(),
-                        label: label.label.clone(),
+                        handler: label.label.clone(),
                         status: "SUCCESS".to_string(),
                         timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        handler_id: function_id.clone(),
-                        handler_version: chain_id.clone(),
+                        function_id: function_id.clone(),
                         batch_id: result.batch_id.clone(),
                         deployment_id: deployment_id.clone(),
-                        project_id,
+                        chain_id: chain_id.parse().unwrap(),
+                        processed_log_indices: vec![],
                     }))
                 }
 
                 if let Some(label) = result.failed_label.as_ref() {
-                    rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
+                    rows.push(ExtractedRequest::Transaction(EthProcessedResult {
                         transaction_hash: result.transaction_hash.clone(),
-                        label: label.label.clone(),
+                        handler: label.label.clone(),
                         status: "FAILED".to_string(),
                         timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        handler_id: function_id.clone(),
-                        handler_version: chain_id.clone(),
+                        function_id: function_id.clone(),
                         batch_id: result.batch_id.clone(),
                         deployment_id: deployment_id.clone(),
-                        project_id,
+                        chain_id: chain_id.parse().unwrap(),
+                        processed_log_indices: vec![],
                     }))
                 }
             }

@@ -56,6 +56,10 @@ thiserror = "1.0.63"
 rustc-hex = "2.1.0"
 resend-rs = "0.9.1"
 tracing = "0.1.40"
+graphql_client = "0.14.0"
+config = "0.15.4"
+serde_yaml = "0.9.34"
+itertools = "0.13.0"
 
 [dev-dependencies]
 mockall = "0.12.1"
@@ -72,7 +76,6 @@ pg = [
   "deadpool",
 ]
 telemetry = []
-supported-networks = []
 reporting-sdk = []
 contract-info = []
 events = []

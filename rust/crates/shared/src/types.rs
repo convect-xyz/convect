@@ -6,6 +6,8 @@ pub mod transactions {
     pub struct IngestTransaction {
         #[serde(rename = "blockNumber")]
         pub block_number: u64,
+        #[serde(rename = "blockTimestamp")]
+        pub block_timestamp: i64,
         #[serde(rename = "blockHash")]
         pub block_hash: String,
         #[serde(rename = "transactionIndex")]
@@ -14,6 +16,9 @@ pub mod transactions {
         pub transaction_hash: String,
         #[serde(rename = "batchId")]
         pub batch_id: String,
+        pub from: String,
+        pub to: String,
+        pub value: String,
         pub logs: Vec<IngestLog>,
     }
 

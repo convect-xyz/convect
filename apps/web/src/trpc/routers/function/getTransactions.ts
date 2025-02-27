@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ilike } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -15,13 +15,14 @@ export const getTransactions = protectedProcedure
       status: z.enum(["FAILED", "SUCCESS"]).nullish(),
       functionId: z.number(),
       chainId: z.number(),
+      deploymentId: z.string(),
     }),
   )
   .output(
     z.object({
       transactions: z.array(
         z.object({
-          id: z.number(),
+          id: z.string(),
           transactionHash: z.string(),
           status: z.enum(["SUCCESS", "FAILED"]),
           timestamp: z.number(),
@@ -31,25 +32,6 @@ export const getTransactions = protectedProcedure
   )
   .query(async (opts) => {
     const { input, ctx } = opts;
-
-    const currentDeployment = await ctx.db.query.deployment.findFirst({
-      where(fields, { eq, and }) {
-        return and(
-          eq(fields.functionId, input.functionId),
-          eq(fields.status, "SUCCESS"),
-        );
-      },
-      orderBy(fields, { desc }) {
-        return desc(fields.createdAt);
-      },
-    });
-
-    if (!currentDeployment) {
-      throw new TRPCError({
-        message: "Deployment not found",
-        code: "NOT_FOUND",
-      });
-    }
 
     const fn = await ctx.db.query.convectFunctions.findFirst({
       where(fields, { eq }) {
@@ -67,70 +49,47 @@ export const getTransactions = protectedProcedure
 
     const getFilter = () => {
       let baseFilter = and(
+        eq(analysisSchema.ethTransactions.deploymentId, input.deploymentId),
         eq(
-          analysisSchema.processedTransactions.handlerId,
+          analysisSchema.ethTransactions.functionId,
           input.functionId.toString(),
         ),
-        eq(
-          analysisSchema.processedTransactions.handlerVersion,
-          input.chainId.toString(),
-        ),
-        eq(
-          analysisSchema.processedTransactions.deploymentId,
-          currentDeployment.id,
-        ),
+        eq(analysisSchema.ethTransactions.chainId, input.chainId),
       );
       if (input.search) {
         baseFilter = and(
           baseFilter,
           ilike(
-            analysisSchema.processedTransactions.transactionHash,
+            analysisSchema.ethTransactions.transactionHash,
             `%${input.search}%`,
           ),
         );
       }
-      if (input.status) {
+      if (input.cursor) {
         baseFilter = and(
           baseFilter,
-          eq(analysisSchema.processedTransactions.status, input.status),
+          gte(analysisSchema.ethTransactions.id, input.cursor),
         );
       }
       return baseFilter;
     };
 
-    const distinctTransactions = analysisDb
-      .selectDistinctOn(
-        [
-          analysisSchema.processedTransactions.timestamp,
-          analysisSchema.processedTransactions.transactionHash,
-        ],
-        {
-          id: analysisSchema.processedTransactions.id,
-          status: analysisSchema.processedTransactions.status,
-          transactionHash: analysisSchema.processedTransactions.transactionHash,
-          timestamp: analysisSchema.processedTransactions.timestamp,
-        },
-      )
-      .from(analysisSchema.processedTransactions)
-      .where(getFilter())
-      .orderBy(
-        desc(analysisSchema.processedTransactions.timestamp),
-        desc(analysisSchema.processedTransactions.transactionHash),
-      )
-      .limit(input.limit)
-      .as("distinct_transactions");
-
     const recentTransactions = await analysisDb
       .select()
-      .from(distinctTransactions)
-      .orderBy(desc(distinctTransactions.timestamp));
+      .from(analysisSchema.ethTransactions)
+      .where(getFilter())
+      .orderBy(
+        desc(analysisSchema.ethTransactions.createdAt),
+        asc(analysisSchema.ethTransactions.id),
+      )
+      .limit(input.limit);
 
     return {
       transactions: recentTransactions.map((tx) => ({
-        id: tx.id,
+        id: `${tx.transactionHash}-${tx.functionId}-${tx.deploymentId}`,
         transactionHash: tx.transactionHash,
-        status: tx.status as "SUCCESS" | "FAILED",
-        timestamp: tx.timestamp.getTime(),
+        status: "SUCCESS",
+        timestamp: tx.createdAt.getTime(),
       })),
     };
   });

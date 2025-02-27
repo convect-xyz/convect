@@ -1,10 +1,45 @@
 import {
   integer,
   pgTable,
+  primaryKey,
   serial,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+
+export const ethTransactions = pgTable(
+  "eth_transaction",
+  {
+    id: serial("id"),
+    transactionHash: varchar("transaction_hash").notNull(),
+    functionId: varchar("function_id").notNull(),
+    projectId: integer("project_id").notNull(),
+    deploymentId: varchar("deployment_id").notNull(),
+    chainId: integer("chain_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    blockTimestamp: timestamp("block_timestamp", {
+      withTimezone: true,
+    }).notNull(),
+  },
+  (table) => {
+    return {
+      pk: primaryKey({ columns: [table.id, table.functionId] }),
+    };
+  }
+);
+
+export const ethProcessedResult = pgTable("eth_processed_result", {
+  id: serial("id").primaryKey(),
+  handler: varchar("handler").notNull(),
+  status: varchar("status", { length: 256 }).notNull(),
+  batchId: varchar("batch_id", { length: 256 }).notNull(),
+  deploymentId: varchar("deployment_id").notNull(),
+  functionId: varchar("function_id").notNull(),
+  chainId: integer("chain_id").notNull(),
+  transactionHash: varchar("transaction_hash").notNull(),
+  processedLogIndices: integer("processed_log_indices").notNull(),
+  timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+});
 
 export const processedTransactions = pgTable("processed_transactions", {
   id: serial("id").primaryKey(),

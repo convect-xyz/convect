@@ -1,7 +1,14 @@
+import { Context, SQSEvent } from "aws-lambda";
 import axios from "axios";
+import axiosRetry from "axios-retry";
 import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
 
-import { Context, SQSEvent } from "aws-lambda";
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: (retryCount) => {
+    return retryCount * 1000;
+  },
+});
 
 const USER_ENVS = (
   JSON.parse(process.env.USER_ENVS!) as Array<{
@@ -17,6 +24,7 @@ const USER_ENVS = (
 );
 
 const CHAIN_ID = process.env.CHAIN_ID;
+const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID;
 
 for (const env of Object.keys(process.env)) {
   delete process.env[env];
@@ -125,6 +133,7 @@ export async function handler(event: SQSEvent, context: Context) {
 function getContext() {
   return {
     chainId: Number(CHAIN_ID),
+    deploymentId: DEPLOYMENT_ID,
   };
 }
 
@@ -135,7 +144,7 @@ export function parseTransactions(
   const transactions: Array<Transaction> = [];
   for (const record of parsedRecords) {
     const payload = record.data;
-    if (payload.type === "non-batch") {
+    if (payload.type === "Raw") {
       transactions.push(...payload.data);
     } else {
       transactions.push(...s3Results.get(record.id));
@@ -146,7 +155,7 @@ export function parseTransactions(
 
 export async function getFailureIdx() {
   const pipeline = await axios
-    .get("http://localhost:4121/pipeline")
+    .get("http://127.0.0.1:4121/pipeline")
     .then((r) => r.data);
 
   return Number(pipeline.ErrorLabel_);
@@ -166,7 +175,7 @@ export async function uploadResults(
   results: Array<TransactionResult>,
   message_ids: Array<string>
 ) {
-  await axios.post("http://localhost:4121/results", {
+  await axios.post("http://127.0.0.1:4121/results", {
     invocation_id,
     results,
     message_ids,
@@ -178,7 +187,7 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
 
   await Promise.all(
     batchRecords
-      .filter((r) => r.data.type === "batch")
+      .filter((r) => r.data.type === "Batch")
       .map((record) =>
         axios.get(record.data.download_url).then(async (response) => {
           s3Results.set(record.id, response.data);

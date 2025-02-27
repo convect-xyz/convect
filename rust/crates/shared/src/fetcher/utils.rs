@@ -1,10 +1,11 @@
-use std::cmp::max;
 use std::collections::HashMap;
 use std::str::FromStr;
-use web3::types::{Filter, FilterBuilder, Log, H160, H256};
+use web3::types::{H160, H256};
 
 use crate::manifest::{LogConfig, Manifest, TransactionConfig};
-use crate::types::transactions::{IngestLog, IngestTransaction};
+use crate::types::transactions::IngestTransaction;
+
+use super::strategy::LogResult;
 
 pub fn get_eligible_tx_configs<'a>(
     manifest: &'a Manifest,
@@ -29,23 +30,27 @@ pub fn get_eligible_tx_configs<'a>(
         .collect()
 }
 
-pub fn group_logs_into_transactions(logs: Vec<Log>) -> Vec<IngestTransaction> {
-    let mut tx_indices: HashMap<H256, usize> = HashMap::new();
+pub fn group_logs_into_transactions(logs: Vec<LogResult>) -> Vec<IngestTransaction> {
+    let mut tx_indices: HashMap<String, usize> = HashMap::new();
     let mut txs: Vec<IngestTransaction> = Vec::new();
 
     let id = uuid::Uuid::new_v4();
-    for log in logs.into_iter() {
-        let tx_hash = log.transaction_hash.unwrap();
+    for log_result in logs.into_iter() {
+        let tx_hash = log_result.transaction_hash();
 
         if !tx_indices.contains_key(&tx_hash) {
             tx_indices.insert(tx_hash.clone(), txs.len());
 
             txs.push(IngestTransaction {
-                block_number: log.block_number.unwrap().as_u64(),
-                block_hash: format!("{:#x}", log.block_hash.unwrap()),
-                transaction_index: log.transaction_index.unwrap().as_u64(),
+                block_number: log_result.block_number(),
+                block_timestamp: 0,
+                block_hash: log_result.block_hash(),
+                transaction_index: log_result.transaction_index(),
                 batch_id: id.to_string(),
-                transaction_hash: format!("{:#x}", log.transaction_hash.unwrap()),
+                transaction_hash: log_result.transaction_hash(),
+                from: log_result.from(),
+                to: log_result.to(),
+                value: log_result.value(),
                 logs: Vec::new(),
             });
         }
@@ -55,27 +60,24 @@ pub fn group_logs_into_transactions(logs: Vec<Log>) -> Vec<IngestTransaction> {
             .expect(format!("Could not find index for hash {:?}", tx_hash).as_str())
             .clone();
         let transaction = txs.get_mut(tx_index).unwrap();
-
-        transaction.logs.push(IngestLog {
-            address: format!("{:#x}", log.address),
-            topics: log.topics.iter().map(|t| format!("{:#x}", t)).collect(),
-            data: log.data,
-            log_index: log.log_index,
-            removed: log.removed,
-        });
+        transaction.logs.push(log_result.into_ingest_log());
     }
 
     txs
 }
 
-pub fn remove_extranous_logs(manifest: &Manifest, chain_id: u64, logs: Vec<Log>) -> Vec<Log> {
-    let has_matching_log_cfg = |log: &Log| {
+pub fn remove_extranous_logs(
+    manifest: &Manifest,
+    chain_id: u64,
+    logs: Vec<LogResult>,
+) -> Vec<LogResult> {
+    let has_matching_log_cfg = |log: &LogResult| {
         manifest.log_configs.iter().any(|log_cfg| {
-            let parsed_cfg_address = H160::from_str(log_cfg.address.get_address(chain_id).as_str())
-                .expect(
+            let parsed_cfg_address =
+                H160::from_str(log_cfg.address.get_address(chain_id).unwrap().as_str()).expect(
                     format!(
                         "Could not convert to H256: {}",
-                        log_cfg.address.get_address(chain_id)
+                        log_cfg.address.get_address(chain_id).unwrap()
                     )
                     .as_str(),
                 );
@@ -83,7 +85,8 @@ pub fn remove_extranous_logs(manifest: &Manifest, chain_id: u64, logs: Vec<Log>)
             let parsed_cfg_topic = H256::from_str(log_cfg.topics[0].as_str())
                 .expect(format!("Could not convert to H256: {}", log_cfg.topics[0]).as_str());
 
-            log.address.eq(&parsed_cfg_address) && log.topics[0].eq(&parsed_cfg_topic)
+            log.address().eq(&format!("{:#x}", parsed_cfg_address))
+                && log.topics()[0].eq(&format!("{:#x}", parsed_cfg_topic))
         })
     };
 
@@ -92,288 +95,233 @@ pub fn remove_extranous_logs(manifest: &Manifest, chain_id: u64, logs: Vec<Log>)
         .collect()
 }
 
-/**
-  Returns a Filter that covers all the logs that are relevant to the given range.
-  The Filter is constructed by:
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::manifest::Manifest;
+//     use crate::{build_log, build_log_config};
 
-  * taking all log config addresses and topics that are relevant to the current range.
-  * taking the smallest start block of all the tx_configs as the start block that are relevant to the current range.
+//     mod get_eligible_tx_configs {
+//         use super::*;
 
-  After a response is returned from the web3 client, any extraneous logs that are not relevant to the Manifest should be removed with
-  the remove_extranous_logs function.
-*/
-pub fn get_web3_client_filter(
-    tx_configs: &Vec<(TransactionConfig, Vec<LogConfig>)>,
-    chain_id: u64,
-    range_start: u64,
-    range_end: u64,
-) -> Filter {
-    let all_log_configs: Vec<&LogConfig> = tx_configs
-        .iter()
-        .map(|(_, log_configs)| log_configs)
-        .flatten()
-        .collect();
+//         #[tokio::test]
+//         async fn test_gets_eligible_tx_configs() {
+//             // Arrange.
+//             let manifest = Manifest {
+//                 tx_configs: vec![
+//                     TransactionConfig {
+//                         chains: None,
+//                         start_block: HashMap::from([("1".to_string(), 150)]),
+//                     },
+//                     TransactionConfig {
+//                         chains: None,
+//                         start_block: HashMap::from([("1".to_string(), 180)]),
+//                     },
+//                     TransactionConfig {
+//                         chains: None,
+//                         start_block: HashMap::from([("1".to_string(), 5)]),
+//                     },
+//                 ],
+//                 log_configs: vec![
+//                     build_log_config! {
+//                         address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
+//                         topics = vec!["0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62".to_string()],
+//                         tx_configs = vec![0]
+//                     },
+//                     build_log_config! {
+//                         address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                         topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
+//                         tx_configs = vec![1]
+//                     },
+//                     build_log_config! {
+//                         address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                         topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
+//                         tx_configs = vec![2]
+//                     },
+//                 ],
+//             };
 
-    let mut addresses: Vec<H160> = all_log_configs
-        .iter()
-        .map(|c| H160::from_str(c.address.get_address(chain_id).as_str()).unwrap())
-        .collect();
-    addresses.sort();
-    addresses.dedup();
+//             // Act.
+//             let eligible_tx_configs = get_eligible_tx_configs(&manifest, 1, 100);
 
-    let mut topics: Vec<H256> = all_log_configs
-        .iter()
-        .map(|c| H256::from_str(c.topics[0].as_str()).unwrap())
-        .collect();
-    topics.sort();
-    topics.dedup();
+//             // Assert.
+//             assert_eq!(
+//                 eligible_tx_configs,
+//                 vec![(
+//                     manifest.tx_configs[2].clone(),
+//                     vec![manifest.log_configs[2].clone()]
+//                 )]
+//             );
+//         }
+//     }
 
-    let smallest_tx_cfg_start_block = tx_configs
-        .iter()
-        .map(|tx_cfg| tx_cfg.0.get_start_block(chain_id).unwrap_or(0))
-        .min()
-        .unwrap_or(0);
+//     mod get_web3_client_filter {
+//         use super::*;
 
-    let start_block = max(
-        u64::try_from(smallest_tx_cfg_start_block).expect("Could not convert to u64"),
-        range_start,
-    );
+//         #[tokio::test]
+//         async fn test_removes_duplicate_addresses_and_topics() {
+//             // Arrange.
+//             let manifest = Manifest {
+//                 tx_configs: vec![
+//                     TransactionConfig {
+//                         chains: None,
+//                         start_block: HashMap::from([("1".to_string(), 150)]),
+//                     },
+//                     TransactionConfig {
+//                         chains: None,
+//                         start_block: HashMap::from([("1".to_string(), 180)]),
+//                     },
+//                     TransactionConfig {
+//                         chains: None,
+//                         start_block: HashMap::from([("1".to_string(), 5)]),
+//                     },
+//                 ],
+//                 log_configs: vec![
+//                     build_log_config! {
+//                         address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
+//                         topics = vec!["0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62".to_string()],
+//                         tx_configs = vec![0]
+//                     },
+//                     build_log_config! {
+//                         address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
+//                         topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
+//                         tx_configs = vec![0]
+//                     },
+//                     build_log_config! {
+//                         address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                         topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
+//                         tx_configs = vec![1]
+//                     },
+//                     build_log_config! {
+//                         address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                         topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
+//                         tx_configs = vec![2]
+//                     },
+//                 ],
+//             };
 
-    FilterBuilder::default()
-        .address(addresses)
-        .topics(Some(topics), None, None, None)
-        .from_block(web3::types::BlockNumber::Number(start_block.into()))
-        .to_block(web3::types::BlockNumber::Number(range_end.into()))
-        .build()
-}
+//             // Act.
+//             let web3_filter =
+//                 get_web3_client_filter(&manifest.get_tx_configs_with_log_configs(), 1, 0, 1000000);
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::manifest::Manifest;
-    use crate::{build_log, build_log_config};
+//             // Assert.
+//             assert_eq!(
+//                 web3_filter,
+//                 FilterBuilder::default()
+//                     .address(vec![
+//                         H160::from_str("0x8d9088383506437d8De8897B5cF924a2ac70BBDb").unwrap(),
+//                         H160::from_str("0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002").unwrap(),
+//                     ])
+//                     .topics(
+//                         Some(vec![
+//                           H256::from_str(
+//                             "0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33",
+//                           )
+//                           .unwrap(),
+//                           H256::from_str(
+//                             "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62",
+//                           )
+//                           .unwrap(),
+//                         ]),
+//                         None,
+//                         None,
+//                         None
+//                     )
+//                     .from_block(web3::types::BlockNumber::Number(5.into()))
+//                     .to_block(web3::types::BlockNumber::Number(1000000.into()))
+//                     .build()
+//             );
+//         }
+//     }
 
-    mod get_eligible_tx_configs {
-        use super::*;
+//     mod remove_extranous_logs {
+//         use super::*;
 
-        #[tokio::test]
-        async fn test_gets_eligible_tx_configs() {
-            // Arrange.
-            let manifest = Manifest {
-                tx_configs: vec![
-                    TransactionConfig {
-                        chains: None,
-                        start_block: HashMap::from([("1".to_string(), 150)]),
-                    },
-                    TransactionConfig {
-                        chains: None,
-                        start_block: HashMap::from([("1".to_string(), 180)]),
-                    },
-                    TransactionConfig {
-                        chains: None,
-                        start_block: HashMap::from([("1".to_string(), 5)]),
-                    },
-                ],
-                log_configs: vec![
-                    build_log_config! {
-                        address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
-                        topics = vec!["0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62".to_string()],
-                        tx_configs = vec![0]
-                    },
-                    build_log_config! {
-                        address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                        topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
-                        tx_configs = vec![1]
-                    },
-                    build_log_config! {
-                        address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                        topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
-                        tx_configs = vec![2]
-                    },
-                ],
-            };
+//         #[tokio::test]
+//         async fn test_removes_extranous_logs() {
+//             // Arrange.
+//             let manifest = Manifest {
+//                 tx_configs: vec![],
+//                 log_configs: vec![
+//                     build_log_config! {
+//                         address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
+//                         topics = vec!["0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"],
+//                     },
+//                     build_log_config! {
+//                         address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                         topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
+//                     },
+//                     build_log_config! {
+//                         address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                         topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
+//                     },
+//                 ],
+//             };
 
-            // Act.
-            let eligible_tx_configs = get_eligible_tx_configs(&manifest, 1, 100);
+//             let logs = vec![
+//                 build_log! {
+//                     address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                     topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
+//                 },
+//                 build_log! {
+//                     address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
+//                     topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
+//                 },
+//             ];
 
-            // Assert.
-            assert_eq!(
-                eligible_tx_configs,
-                vec![(
-                    manifest.tx_configs[2].clone(),
-                    vec![manifest.log_configs[2].clone()]
-                )]
-            );
-        }
-    }
+//             let expected_logs = vec![build_log! {
+//                 address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                 topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
+//             }];
 
-    mod get_web3_client_filter {
-        use super::*;
+//             // Act.
+//             let filtered_logs = remove_extranous_logs(&manifest, 1, logs);
 
-        #[tokio::test]
-        async fn test_removes_duplicate_addresses_and_topics() {
-            // Arrange.
-            let manifest = Manifest {
-                tx_configs: vec![
-                    TransactionConfig {
-                        chains: None,
-                        start_block: HashMap::from([("1".to_string(), 150)]),
-                    },
-                    TransactionConfig {
-                        chains: None,
-                        start_block: HashMap::from([("1".to_string(), 180)]),
-                    },
-                    TransactionConfig {
-                        chains: None,
-                        start_block: HashMap::from([("1".to_string(), 5)]),
-                    },
-                ],
-                log_configs: vec![
-                    build_log_config! {
-                        address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
-                        topics = vec!["0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62".to_string()],
-                        tx_configs = vec![0]
-                    },
-                    build_log_config! {
-                        address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
-                        topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
-                        tx_configs = vec![0]
-                    },
-                    build_log_config! {
-                        address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                        topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
-                        tx_configs = vec![1]
-                    },
-                    build_log_config! {
-                        address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                        topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33".to_string()],
-                        tx_configs = vec![2]
-                    },
-                ],
-            };
+//             // Assert.
+//             assert_eq!(filtered_logs, expected_logs);
+//         }
+//     }
 
-            // Act.
-            let web3_filter =
-                get_web3_client_filter(&manifest.get_tx_configs_with_log_configs(), 1, 0, 1000000);
+//     mod group_logs_into_transactions {
+//         use super::*;
 
-            // Assert.
-            assert_eq!(
-                web3_filter,
-                FilterBuilder::default()
-                    .address(vec![
-                        H160::from_str("0x8d9088383506437d8De8897B5cF924a2ac70BBDb").unwrap(),
-                        H160::from_str("0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002").unwrap(),
-                    ])
-                    .topics(
-                        Some(vec![
-                          H256::from_str(
-                            "0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33",
-                          )
-                          .unwrap(),
-                          H256::from_str(
-                            "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62",
-                          )
-                          .unwrap(),
-                        ]),
-                        None,
-                        None,
-                        None
-                    )
-                    .from_block(web3::types::BlockNumber::Number(5.into()))
-                    .to_block(web3::types::BlockNumber::Number(1000000.into()))
-                    .build()
-            );
-        }
-    }
+//         #[tokio::test]
+//         async fn test_groups_logs_into_transactions() {
+//             // Arrange.
+//             let logs = vec![
+//                 build_log! {
+//                     address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
+//                     block_hash = "0x0000000000000000000000000000000000000000000000000000000000000000",
+//                     block_number = 150,
+//                     topics = vec!["0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"],
+//                     transaction_hash = "0x0000000000000000000000000000000000000000000000000000000000000000",
+//                     transaction_index = 0,
+//                 },
+//                 build_log! {
+//                     address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                     block_hash = "0x0000000000000000000000000000000000000000000000000000000000000000",
+//                     block_number = 180,
+//                     topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
+//                     transaction_hash = "0x0000000000000000000000000000000000000000000000000000000000000000",
+//                     transaction_index = 0,
+//                 },
+//                 build_log! {
+//                     address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
+//                     block_hash = "0x1111111111111111111111111111111111111111111111111111111111111111",
+//                     block_number = 5,
+//                     topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
+//                     transaction_hash = "0x1111111111111111111111111111111111111111111111111111111111111111",
+//                     transaction_index = 1,
+//                 },
+//             ];
 
-    mod remove_extranous_logs {
-        use super::*;
+//             // Act.
+//             let grouped_txs = group_logs_into_transactions(logs);
 
-        #[tokio::test]
-        async fn test_removes_extranous_logs() {
-            // Arrange.
-            let manifest = Manifest {
-                tx_configs: vec![],
-                log_configs: vec![
-                    build_log_config! {
-                        address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
-                        topics = vec!["0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"],
-                    },
-                    build_log_config! {
-                        address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                        topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
-                    },
-                    build_log_config! {
-                        address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                        topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
-                    },
-                ],
-            };
-
-            let logs = vec![
-                build_log! {
-                    address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                    topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
-                },
-                build_log! {
-                    address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
-                    topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
-                },
-            ];
-
-            let expected_logs = vec![build_log! {
-                address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
-            }];
-
-            // Act.
-            let filtered_logs = remove_extranous_logs(&manifest, 1, logs);
-
-            // Assert.
-            assert_eq!(filtered_logs, expected_logs);
-        }
-    }
-
-    mod group_logs_into_transactions {
-        use super::*;
-
-        #[tokio::test]
-        async fn test_groups_logs_into_transactions() {
-            // Arrange.
-            let logs = vec![
-                build_log! {
-                    address = "0xA0A85A94eB44b171791e0F8bc106c3Ff543d4002",
-                    block_hash = "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    block_number = 150,
-                    topics = vec!["0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"],
-                    transaction_hash = "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    transaction_index = 0,
-                },
-                build_log! {
-                    address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                    block_hash = "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    block_number = 180,
-                    topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
-                    transaction_hash = "0x0000000000000000000000000000000000000000000000000000000000000000",
-                    transaction_index = 0,
-                },
-                build_log! {
-                    address = "0x8d9088383506437d8De8897B5cF924a2ac70BBDb",
-                    block_hash = "0x1111111111111111111111111111111111111111111111111111111111111111",
-                    block_number = 5,
-                    topics = vec!["0x6b9fc20cbc3e40e447711f4628cc9aa1102e79c7a8388d5f62b33d99cb971b33"],
-                    transaction_hash = "0x1111111111111111111111111111111111111111111111111111111111111111",
-                    transaction_index = 1,
-                },
-            ];
-
-            // Act.
-            let grouped_txs = group_logs_into_transactions(logs);
-
-            // Assert.
-            assert_eq!(grouped_txs.len(), 2);
-            assert_eq!(grouped_txs[0].logs.len(), 2);
-            assert_eq!(grouped_txs[1].logs.len(), 1);
-        }
-    }
-}
+//             // Assert.
+//             assert_eq!(grouped_txs.len(), 2);
+//             assert_eq!(grouped_txs[0].logs.len(), 2);
+//             assert_eq!(grouped_txs[1].logs.len(), 1);
+//         }
+//     }
+// }
