@@ -368,7 +368,6 @@ export function decodeTx(tx: any, txConfig: any) {
         abi: [logConfig._event],
         data: log.data,
         topics: log.topics,
-        strict: true,
       });
 
       log.eventName = decodedEvent.eventName;
@@ -382,6 +381,7 @@ export function decodeTx(tx: any, txConfig: any) {
         args: decodedEvent.args,
       });
     } catch (e) {
+      console.log(e);
       console.log(logConfig._event);
       console.log(newTx);
       console.log(txConfig);
