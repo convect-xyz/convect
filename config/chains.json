@@ -16,7 +16,7 @@
     "polling_urls": [
       "https://eth-sepolia.g.alchemy.com/v2/REDACTED"
     ],
-    "ws_url": "wss://lb.drpc.org/ogws?network=sepolia&dkey=REDACTED",
+    "ws_url": "wss://eth-sepolia.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia",
     "etherscan_like": "https://api-sepolia.etherscan.io",
     "etherscan_api_key": "REDACTED",
@@ -53,7 +53,7 @@
     "id": 81457,
     "name": "Blast Mainnet",
     "polling_urls": ["http://blast-mainnet.rpc.convect.xyz"],
-    "ws_url": "wss://lb.drpc.org/ogws?network=blast&dkey=REDACTED",
+    "ws_url": "wss://blast-mainnet.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast",
     "etherscan_like": "https://api.blastscan.io",
     "etherscan_api_key": "REDACTED",
@@ -64,7 +64,7 @@
     "id": 168587773,
     "name": "Blast Sepolia",
     "polling_urls": ["http://blast-sepolia.rpc.convect.xyz"],
-    "ws_url": "wss://lb.drpc.org/ogws?network=blast&dkey=REDACTED",
+    "ws_url": "wss://blast-sepolia.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:blast",
     "etherscan_like": "https://api.blastscan.io",
     "etherscan_api_key": "REDACTED",
@@ -101,7 +101,7 @@
     "polling_urls": ["https://api.testnet.abs.xyz"],
     "ws_url": "wss://api.testnet.abs.xyz/ws",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
-    "etherscan_like": "https://block-explorer-api.testnet.abs.xyz",
+    "etherscan_like": "https://api-sepolia.abscan.org",
     "etherscan_api_key": "",
     "slug": "abstract-testnet",
     "fetch_strategy": "jsonrpc"
