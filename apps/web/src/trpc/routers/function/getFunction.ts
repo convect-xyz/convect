@@ -1,4 +1,4 @@
-import { manifestSchema, parseManifest } from "@convect-xyz/lib";
+import { parseManifest } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -22,19 +22,20 @@ export const getFunction = protectedProcedure
       project: z.object({
         name: z.string(),
       }),
-      chains: z
-        .array(
-          z.object({
-            name: z.string(),
-            chainId: z.number(),
-          }),
-        )
-        .nullable(),
-      currentDeployment: z
-        .object({
-          manifest: manifestSchema,
-        })
-        .nullable(),
+      activeDeployments: z.array(
+        z.object({
+          id: z.string(),
+          chains: z.array(
+            z.object({
+              name: z.string(),
+              chainId: z.number(),
+            }),
+          ),
+          status: z.enum(schema.deploymentStatus.enumValues),
+          runningAt: z.number().nullish(),
+          finishedAt: z.number().nullish(),
+        }),
+      ),
     }),
   )
   .query(async (opts) => {
@@ -66,37 +67,29 @@ export const getFunction = protectedProcedure
       userId: ctx.session.user.id,
     });
 
-    const currentDeployment = await ctx.db.query.deployment.findFirst({
-      where(fields, { eq, and }) {
-        return and(
-          eq(fields.functionId, input.functionId),
-          eq(fields.status, "SUCCESS"),
-        );
+    const activeDeployments = await ctx.db.query.deployment.findMany({
+      where(fields, { eq }) {
+        return eq(fields.functionId, input.functionId);
       },
+      limit: 3,
       orderBy(fields, { desc }) {
         return desc(fields.createdAt);
       },
     });
 
-    const manifest = currentDeployment
-      ? parseManifest(currentDeployment.manifest)
-      : null;
-
-    const chains =
-      manifest?.chains.map((c: any) => ({
-        name: c.name,
-        chainId: c.chainId,
-      })) ?? null;
-
     return {
       ...fn.convectFunction,
       isInitialised: true,
       project: fn.project,
-      chains,
-      currentDeployment: manifest
-        ? {
-            manifest,
-          }
-        : null,
+      activeDeployments: activeDeployments.map((d) => {
+        const manifest = parseManifest(d.manifest);
+
+        return {
+          ...d,
+          runningAt: d.runningAt?.getTime() ?? null,
+          finishedAt: d.finishedAt?.getTime() ?? null,
+          chains: manifest.chains,
+        };
+      }),
     };
   });

@@ -12,29 +12,19 @@ pub fn get_block_configs(
     end_block: u64,
     batch_size: u64,
 ) -> Vec<BlockConfig> {
-    let mut result: Vec<BlockConfig> = Vec::new();
+    let mut result = Vec::new();
 
-    while start_block + batch_size <= end_block {
-        let id = uuid::Uuid::new_v4().to_string();
+    while start_block <= end_block {
+        let next_end_block = (start_block + batch_size).min(end_block);
         result.push(BlockConfig {
-            id,
+            id: uuid::Uuid::new_v4().to_string(),
             start_block,
-            end_block: start_block + batch_size,
+            end_block: next_end_block,
         });
-        start_block += batch_size + 1;
+        start_block = next_end_block + 1;
     }
 
-    if (end_block as i64 - start_block as i64) >= 0 {
-        let id = uuid::Uuid::new_v4().to_string();
-
-        result.push(BlockConfig {
-            id,
-            start_block,
-            end_block,
-        });
-    }
-
-    return result;
+    result
 }
 
 #[cfg(test)]

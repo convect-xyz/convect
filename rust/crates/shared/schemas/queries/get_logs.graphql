@@ -1,0 +1,30 @@
+query ExampleQuery($filter: FilterCriteria!) {
+  logs(filter: $filter) {
+    data
+    index
+    topics
+    account {
+      address
+    }
+    transaction {
+      hash
+      index
+      from {
+        address
+        transactionCount
+      }
+      to {
+        address
+        transactionCount
+      }
+      value
+      gasPrice
+      gasUsed
+      block {
+        number
+        hash
+        timestamp
+      }
+    }
+  }
+}

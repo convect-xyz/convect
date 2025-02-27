@@ -1,5 +1,7 @@
+import { manifestSchema, parseManifest } from "@convect-xyz/lib";
+import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
@@ -23,42 +25,32 @@ export const getOverview = protectedProcedure
     z.object({
       functionId: z.number(),
       chainId: z.number(),
+      deploymentId: z.string(),
     }),
   )
   .output(
     z.object({
-      status: z.enum(["failed", "processing", "provisioning"]),
       chain: z.object({
         name: z.string(),
         chainId: z.number(),
       }),
+      manifest: manifestSchema,
+      chains: z
+        .array(
+          z.object({
+            name: z.string(),
+            chainId: z.number(),
+          }),
+        )
+        .nullable(),
       lastFetchedBlock: z.number(),
       transactionCount: z.number(),
       processedTransactionsCount: z.number(),
       avgDuration: z.number(),
-      internalId: z.string(),
     }),
   )
   .query(async (opts) => {
     const { input, ctx } = opts;
-
-    const currentDeployment = await ctx.db.query.deployment.findFirst({
-      where(fields, { eq, and }) {
-        return and(
-          eq(fields.functionId, input.functionId),
-          eq(fields.status, "SUCCESS"),
-        );
-      },
-      orderBy(fields, { desc }) {
-        return desc(fields.createdAt);
-      },
-    });
-    if (!currentDeployment) {
-      throw new TRPCError({
-        message: "Deployment not found",
-        code: "NOT_FOUND",
-      });
-    }
 
     const fn = await ctx.db.query.convectFunctions.findFirst({
       where(fields, { eq }) {
@@ -69,30 +61,50 @@ export const getOverview = protectedProcedure
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
+    const deployment = await ctx.db.query.deployment.findFirst({
+      where(fields, { eq, and }) {
+        return and(
+          eq(fields.functionId, input.functionId),
+          eq(fields.status, "SUCCESS"),
+        );
+      },
+      orderBy(fields, { desc }) {
+        return desc(fields.createdAt);
+      },
+    });
+
+    if (!deployment) {
+      throw new TRPCError({
+        message: "Deployment not found",
+        code: "NOT_FOUND",
+      });
+    }
+
     await throwIfNotProjectCollaborator({
       projectId: fn.projectId,
       userId: ctx.session.user.id,
     });
+
     const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
       getFetchState(
         input.functionId.toString(),
         input.chainId,
-        currentDeployment.id,
+        input.deploymentId,
       ),
       getTxCount(
         input.functionId.toString(),
         input.chainId,
-        currentDeployment.id,
+        input.deploymentId,
       ),
       getAvgDuration(
         input.functionId.toString(),
         input.chainId,
-        currentDeployment.id,
+        input.deploymentId,
       ),
       getSuccessfulTxCount(
         input.functionId.toString(),
         input.chainId,
-        currentDeployment.id,
+        input.deploymentId,
       ),
     ]);
 
@@ -109,8 +121,14 @@ export const getOverview = protectedProcedure
       });
     }
 
+    const manifest = parseManifest(deployment.manifest);
+    const chains =
+      manifest?.chains.map((c: any) => ({
+        name: c.name,
+        chainId: c.chainId,
+      })) ?? null;
+
     return {
-      status: fetchState.state ? "processing" : "provisioning",
       chain: {
         name: producer.name,
         chainId: producer.chainId,
@@ -119,7 +137,8 @@ export const getOverview = protectedProcedure
       processedTransactionsCount: successfulTx,
       lastFetchedBlock: fetchState?.lastBlock ?? 0,
       avgDuration: avgDuration,
-      internalId: "handler.internalId",
+      manifest,
+      chains,
     };
   });
 
@@ -136,20 +155,23 @@ const getAvgDuration = async (
 };
 
 const getSuccessfulTxCount = async (
-  internalId: string,
-  version: number,
+  functionId: string,
+  chainId: number,
   deploymentId: string,
 ) => {
   return analysisDb
-    .execute(
-      sql`SELECT COUNT(*) FROM
-        (SELECT DISTINCT transaction_hash FROM processed_transactions WHERE handler_id = ${internalId} 
-          AND handler_version = ${version}
-          AND status = 'SUCCESS'
-          AND deployment_id = ${deploymentId})
-      `,
+    .select({
+      count: count(analysisSchema.ethProcessedResult.id),
+    })
+    .from(analysisSchema.ethProcessedResult)
+    .where(
+      and(
+        eq(analysisSchema.ethProcessedResult.functionId, functionId),
+        eq(analysisSchema.ethProcessedResult.deploymentId, deploymentId),
+        eq(analysisSchema.ethProcessedResult.chainId, chainId),
+      ),
     )
-    .then((r) => Number(r.rows.at(0)!.count));
+    .then((r) => Number(r.at(0)!.count));
 };
 
 const getTxCount = async (
@@ -157,10 +179,20 @@ const getTxCount = async (
   chainId: number,
   deploymentId: string,
 ) => {
-  const txCount = await redisClient.get(
-    `${functionId}-${chainId}-${deploymentId}-tx-count`,
-  );
-  return txCount ? Number(txCount) : null;
+  const result = await analysisDb
+    .select({
+      numTransactions: count(analysisSchema.ethTransactions.id),
+    })
+    .from(analysisSchema.ethTransactions)
+    .where(
+      and(
+        eq(analysisSchema.ethTransactions.functionId, functionId),
+        eq(analysisSchema.ethTransactions.deploymentId, deploymentId),
+        eq(analysisSchema.ethTransactions.chainId, chainId),
+      ),
+    );
+
+  return result.length > 0 ? result[0]?.numTransactions : null;
 };
 
 const getFetchState = async (

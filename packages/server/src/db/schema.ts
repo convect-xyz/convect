@@ -282,6 +282,8 @@ export const deploymentStatus = pgEnum("deployment_status", [
   "FAILED",
 ]);
 
+export type DeploymentStatus = (typeof deploymentStatus.enumValues)[number];
+
 export const deploymentMode = pgEnum("deployment_mode", [
   "init",
   "update",

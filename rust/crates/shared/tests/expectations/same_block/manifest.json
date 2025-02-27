@@ -1,0 +1,24 @@
+{
+  "chains": [
+    {
+      "chainId": 1,
+      "name": "Ethereum Mainnet"
+    }
+  ],
+  "tx_configs": [
+    {
+      "start_block": {
+        "1": 21503796
+      }
+    }
+  ],
+  "log_configs": [
+    {
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "topics": [
+        "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+      ],
+      "tx_configs": [0]
+    }
+  ]
+}

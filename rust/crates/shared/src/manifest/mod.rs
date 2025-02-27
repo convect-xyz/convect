@@ -31,10 +31,10 @@ impl Default for LogOrigin {
 }
 
 impl LogOrigin {
-    pub fn get_address(&self, chain_id: u64) -> String {
+    pub fn get_address(&self, chain_id: u64) -> Option<String> {
         match self {
-            LogOrigin::String(address) => address.clone(),
-            LogOrigin::Map(map) => map.get(&chain_id.to_string()).unwrap().clone(),
+            LogOrigin::String(address) => Some(address.clone()),
+            LogOrigin::Map(map) => map.get(&chain_id.to_string()).map(|s| s.clone()),
         }
     }
 }
@@ -46,14 +46,20 @@ pub struct LogConfig {
     pub tx_configs: Vec<i64>,
 }
 
+#[derive(Deserialize, Clone, Debug, Default, PartialEq)]
+pub struct ManifestChainConfig {
+    #[serde(rename = "chainId")]
+    pub chain_id: u64,
+}
 #[derive(Deserialize, Debug, Clone)]
 pub struct Manifest {
+    pub chains: Vec<ManifestChainConfig>,
     pub log_configs: Vec<LogConfig>,
     pub tx_configs: Vec<TransactionConfig>,
 }
 
 impl Manifest {
-    pub async fn from_env() -> Result<Manifest, errors::ManifestFromEnvError> {
+    pub async fn from_env() -> Result<Self, errors::ManifestFromEnvError> {
         let config = aws_config::load_from_env().await;
         let s3_client = aws_sdk_s3::Client::new(&config);
         let bucket = env::var("MANIFEST_BUCKET")?;
@@ -67,6 +73,11 @@ impl Manifest {
         let data = object.body.collect().await?;
         let content = String::from_utf8(data.into_bytes().to_vec())?;
 
+        Ok(serde_json::from_str(&content)?)
+    }
+
+    pub async fn from_file(path: &str) -> Result<Self, errors::ManifestFromFileError> {
+        let content = tokio::fs::read_to_string(path).await?;
         Ok(serde_json::from_str(&content)?)
     }
 
@@ -108,6 +119,16 @@ pub mod errors {
         #[error("Invalid UTF-8 in Manifest: {0}")]
         InvalidUtf8(#[from] FromUtf8Error),
     }
+
+    #[derive(Debug, Error)]
+    pub enum ManifestFromFileError {
+        #[error("File not found")]
+        FileNotFound,
+        #[error("Serialization Error: {0}")]
+        SerError(#[from] serde_json::Error),
+        #[error("IO Error: {0}")]
+        IoError(#[from] std::io::Error),
+    }
 }
 
 pub mod providers {
@@ -115,85 +136,29 @@ pub mod providers {
     use thiserror::Error;
 
     use crate::contract_info;
+    use crate::fetcher::web3::client::Web3Client;
     use crate::manifest::Manifest;
-    use crate::web3_client::Web3Client;
 
     #[async_trait]
-    pub trait InitBlockProvider<W: Web3Client>: std::marker::Sync {
-        async fn get_init_block(&self) -> Result<u64, InitBlockProviderError>;
+    pub trait InitBlockProvider: std::marker::Sync {
+        async fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError>;
     }
 
-    pub struct InitBlockProviderImpl<'a, W: Web3Client> {
-        manifest: &'a Manifest,
-        web3_client: W,
+    pub struct InitBlockProviderImpl {
+        web3_client: Box<dyn Web3Client>,
     }
 
-    impl<'a, W: Web3Client> InitBlockProviderImpl<'a, W> {
-        pub fn new(manifest: &'a Manifest, web3_client: W) -> Self {
-            Self {
-                manifest,
-                web3_client,
-            }
+    impl InitBlockProviderImpl {
+        pub fn new(web3_client: Box<dyn Web3Client>) -> Self {
+            Self { web3_client }
         }
-
-        //     async fn get_min_contract_creation_block(
-        //         &self,
-        //     ) -> Result<Option<u64>, InitBlockProviderError> {
-        //         let creation_tx_hashes: Vec<_> = self
-        //             .contract_info_provider
-        //             .get_contract_creation_info(
-        //                 self.manifest
-        //                     .log_configs
-        //                     .iter()
-        //                     .map(|l| l.address.get_address(self.web3_client.chain_id()))
-        //                     .collect(),
-        //             )
-        //             .await
-        //             .unwrap()
-        //             .iter()
-        //             .map(|c| c.tx_hash.clone())
-        //             .collect();
-
-        //         let transactions: Result<Vec<_>, _> = join_all(
-        //             creation_tx_hashes
-        //                 .iter()
-        //                 .map(|tx_hash| self.web3_client.get_transaction_by_hash(tx_hash.clone())),
-        //         )
-        //         .await
-        //         .into_iter()
-        //         .collect();
-
-        //         let min_block = match transactions {
-        //             Ok(txs) => {
-        //                 let mut min_block = None;
-
-        //                 for tx in txs.iter() {
-        //                     if let Some(receipt) = tx {
-        //                         let block_number = receipt.block_number.unwrap().as_u64();
-        //                         if min_block.is_none() || block_number < min_block.unwrap() {
-        //                             min_block = Some(block_number);
-        //                         }
-        //                     }
-        //                 }
-
-        //                 min_block
-        //             }
-        //             Err(e) => {
-        //                 println!("{:?}", e);
-        //                 None
-        //             }
-        //         };
-
-        //         Ok(min_block)
-        //     }
     }
 
     #[async_trait]
-    impl<W: Web3Client> InitBlockProvider<W> for InitBlockProviderImpl<'_, W> {
+    impl InitBlockProvider for InitBlockProviderImpl {
         #[tracing::instrument(skip_all, ret, err)]
-        async fn get_init_block(&self) -> Result<u64, InitBlockProviderError> {
-            let manifest_min_block = self
-                .manifest
+        async fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError> {
+            let manifest_min_block = manifest
                 .tx_configs
                 .iter()
                 .filter(|c| {
@@ -217,6 +182,6 @@ pub mod providers {
             #[from] contract_info::errors::EtherscanContractInfoProviderError,
         ),
         #[error("Web3 client error: {0}")]
-        Web3ClientError(#[from] crate::web3_client::errors::Web3ClientError),
+        Web3ClientError(#[from] crate::fetcher::web3::client::errors::Web3ClientError),
     }
 }

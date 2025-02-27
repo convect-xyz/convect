@@ -75,7 +75,8 @@
     "superjson": "2.2.1",
     "tailwind-merge": "2.2.1",
     "tailwindcss-animate": "1.0.7",
-    "viem": "^2.19.4",
+    "viem": "2.x",
+    "wagmi": "^2.14.3",
     "zod": "3.23.8"
   },
   "devDependencies": {
@@ -90,6 +91,7 @@
     "@types/uuid": "9.0.8",
     "@typescript-eslint/eslint-plugin": "6.11.0",
     "@typescript-eslint/parser": "6.11.0",
+    "@wagmi/cli": "^2.1.22",
     "autoprefixer": "10.4.14",
     "drizzle-kit": "0.22.7",
     "eslint": "8.54.0",

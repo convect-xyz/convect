@@ -7,7 +7,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "~/components/ui/select";
-import { api } from "~/trpc/react";
+import { useOverview } from "../hooks/useOverview";
 import { useParams } from "../hooks/useParams";
 
 export function Chain() {
@@ -15,25 +15,21 @@ export function Chain() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { data: fn } = api.functions.get.useQuery(
-    {
-      projectId,
-      functionId,
-    },
-    {
-      enabled: !!chainId,
-    },
-  );
+  const { data: overview } = useOverview();
 
   useEffect(() => {
-    if (!fn?.chains) {
+    if (!overview?.chains) {
       return;
     }
 
-    if (!searchParams.get("chainId") && fn && fn.chains.length > 0) {
-      handleValueChange(fn.chains.at(0)!.chainId.toString());
+    if (
+      !searchParams.get("chainId") &&
+      overview &&
+      overview.chains.length > 0
+    ) {
+      handleValueChange(overview.chains.at(0)!.chainId.toString());
     }
-  }, [searchParams, fn]);
+  }, [searchParams, overview]);
 
   const handleValueChange = (v: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -43,7 +39,7 @@ export function Chain() {
     router.replace(pathname + "?" + params.toString());
   };
 
-  if (!fn?.chains) {
+  if (!overview?.chains) {
     return null;
   }
 
@@ -51,11 +47,13 @@ export function Chain() {
     <Select value={chainId?.toString()} onValueChange={handleValueChange}>
       <SelectTrigger className="h-auto w-[55px] bg-muted">
         <ChainIcon
-          chainId={fn?.chains.find((f) => f.chainId === chainId)?.chainId ?? 0}
+          chainId={
+            overview?.chains.find((f) => f.chainId === chainId)?.chainId ?? 0
+          }
         />
       </SelectTrigger>
       <SelectContent>
-        {fn?.chains.map((h) => (
+        {overview?.chains.map((h) => (
           <SelectItem value={h.chainId.toString()}>
             <div className="flex items-center gap-2">
               <ChainIcon chainId={h.chainId} />

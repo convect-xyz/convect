@@ -12,6 +12,7 @@ import {
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { RouterOutputs } from "~/trpc/shared";
+import { ActiveDeployments } from "../(components)/ActiveDeployments";
 import { Chain } from "../(components)/Chain";
 import LogFilters, { useFilters } from "./filters";
 import { useLogs } from "./hooks/useLogs";
@@ -31,21 +32,24 @@ function Content() {
 
   return (
     <div className="flex flex-col gap-2 overflow-hidden p-1">
-      <div className="flex items-stretch gap-2">
-        <Chain />
-        <Tabs value={logLevel}>
-          <TabsList className="h-auto border bg-muted">
-            <TabsTrigger value="INFO" onClick={() => setLogLevel("INFO")}>
-              Info
-            </TabsTrigger>
-            <TabsTrigger value="ERROR" onClick={() => setLogLevel("ERROR")}>
-              Error
-            </TabsTrigger>
-            <TabsTrigger value="DEBUG" onClick={() => setLogLevel("DEBUG")}>
-              Debug
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <div className="flex items-stretch justify-between gap-2">
+        <ActiveDeployments />
+        <div className="flex h-full items-center gap-2">
+          <Chain />
+          <Tabs value={logLevel}>
+            <TabsList className="h-auto border bg-muted">
+              <TabsTrigger value="INFO" onClick={() => setLogLevel("INFO")}>
+                Info
+              </TabsTrigger>
+              <TabsTrigger value="ERROR" onClick={() => setLogLevel("ERROR")}>
+                Error
+              </TabsTrigger>
+              <TabsTrigger value="DEBUG" onClick={() => setLogLevel("DEBUG")}>
+                Debug
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
       <div className="overflow-hidden rounded-md border">
         <LogsTable />
@@ -57,7 +61,7 @@ function Content() {
 function LogsTable() {
   const [selectedLog, setSelectedLog] = useState<LogRow>();
   const { data: logs } = useLogs();
-
+  console.log(logs);
   return (
     <>
       <div className="w-full border-spacing-x-2">

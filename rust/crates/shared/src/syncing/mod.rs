@@ -1,5 +1,7 @@
-use crate::redis_client::errors::RedisClientError;
-use crate::redis_client::RedisClient;
+use std::sync::Arc;
+
+use crate::redis_client::{errors::RedisClientError, ConvectRedisValue};
+use crate::redis_client::{IntoOriginalValue, RedisClient};
 use serde::{Deserialize, Serialize};
 use tokio_retry::Retry;
 
@@ -11,8 +13,9 @@ pub enum BatchSyncState {
 }
 
 #[derive(Debug)]
-pub struct State<T: RedisClient> {
-    redis_client: T,
+pub struct State {
+    redis_client: Arc<dyn RedisClient>,
+    project_id: String,
     deployment_id: String,
     function_id: String,
     chain_id: u64,
@@ -20,7 +23,11 @@ pub struct State<T: RedisClient> {
     last_block: Option<String>,
 }
 
-impl<T: RedisClient> State<T> {
+impl State {
+    pub fn project_id(&self) -> String {
+        self.project_id.clone()
+    }
+
     pub fn deployment_id(&self) -> String {
         self.deployment_id.clone()
     }
@@ -31,6 +38,10 @@ impl<T: RedisClient> State<T> {
 
     pub fn state(&self) -> BatchSyncState {
         self.state.clone()
+    }
+
+    pub fn chain_id(&self) -> u64 {
+        self.chain_id
     }
 
     pub fn last_block(&self) -> Option<u64> {
@@ -61,7 +72,7 @@ impl<T: RedisClient> State<T> {
         self.state().eq(&BatchSyncState::Idle)
     }
 
-    pub fn update(&mut self) -> UpdateStateFluentBuilder<T> {
+    pub fn update(&mut self) -> UpdateStateFluentBuilder {
         let state = self.state.clone();
         let last_block = self.last_block.clone();
 
@@ -72,40 +83,24 @@ impl<T: RedisClient> State<T> {
         }
     }
 
-    pub async fn increment_transaction_count(
-        &mut self,
-        tx_count: usize,
-    ) -> Result<(), RedisClientError> {
-        let redis_client = self.redis_client.clone();
-        let key = get_transaction_count_key(&self.function_id, &self.chain_id, &self.deployment_id);
-
-        let _: u64 = redis_client.incr(key, tx_count).await?;
-        Ok(())
-    }
-
-    pub async fn get_transaction_count(&mut self) -> Result<u64, RedisClientError> {
-        let redis_client = self.redis_client.clone();
-        let key = get_transaction_count_key(&self.function_id, &self.chain_id, &self.deployment_id);
-
-        let count: u64 = redis_client.get(key).await?;
-        Ok(count)
-    }
-
     #[tracing::instrument(err, ret)]
     pub async fn load(
+        project_id: String,
         function_id: String,
         chain_id: u64,
         deployment_id: String,
-        redis_client: T,
+        redis_client: Arc<dyn RedisClient>,
     ) -> Result<Self, errors::StateError> {
         let (state, last_block): (Option<String>, Option<String>) = redis_client
-            .mget((
+            .mget(vec![
                 get_state_key(&function_id, &chain_id, &deployment_id),
                 get_last_block_key(&function_id, &chain_id, &deployment_id),
-            ))
-            .await?;
+            ])
+            .await?
+            .into_original_value();
 
-        let pipeline = Self {
+        Ok(Self {
+            project_id: project_id.clone(),
             deployment_id: deployment_id.clone(),
             function_id: function_id.clone(),
             chain_id: chain_id.clone(),
@@ -115,21 +110,19 @@ impl<T: RedisClient> State<T> {
             ),
             last_block: last_block.clone(),
             redis_client,
-        };
-
-        Ok(pipeline)
+        })
     }
 }
 
 #[derive(Debug)]
-pub struct UpdateStateFluentBuilder<'a, T: RedisClient> {
-    inner: &'a mut State<T>,
+pub struct UpdateStateFluentBuilder<'a> {
+    inner: &'a mut State,
 
     state: BatchSyncState,
     last_block: Option<String>,
 }
 
-impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
+impl<'a> UpdateStateFluentBuilder<'a> {
     pub fn set_state(mut self, new_state: BatchSyncState) -> Self {
         self.state = new_state;
         self
@@ -142,7 +135,7 @@ impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
 
     #[tracing::instrument(err)]
     pub async fn send(&mut self) -> Result<(), errors::StateError> {
-        let redis_client = self.inner.redis_client.clone();
+        let redis_client = &self.inner.redis_client;
 
         let deployment_id = &self.inner.deployment_id;
         let function_id = &self.inner.function_id;
@@ -150,13 +143,13 @@ impl<'a, T: RedisClient> UpdateStateFluentBuilder<'a, T> {
 
         let mut params = vec![(
             get_state_key(function_id, chain_id, deployment_id),
-            serde_json::to_string(&self.state).unwrap(),
+            ConvectRedisValue::String(serde_json::to_string(&self.state).unwrap()),
         )];
 
         if let Some(last_block) = &self.last_block {
             params.push((
                 get_last_block_key(function_id, chain_id, deployment_id),
-                last_block.clone(),
+                ConvectRedisValue::String(last_block.clone()),
             ));
         }
 
@@ -188,15 +181,6 @@ fn get_state_key(function_id: &str, chain_id: &u64, deployment_id: &str) -> Stri
 fn get_last_block_key(function_id: &str, chain_id: &u64, deployment_id: &str) -> String {
     format!(
         "{function_id}-{chain_id}-{deployment_id}-last-block",
-        function_id = function_id,
-        chain_id = chain_id,
-        deployment_id = deployment_id
-    )
-}
-
-fn get_transaction_count_key(function_id: &str, chain_id: &u64, deployment_id: &str) -> String {
-    format!(
-        "{function_id}-{chain_id}-{deployment_id}-tx-count",
         function_id = function_id,
         chain_id = chain_id,
         deployment_id = deployment_id
