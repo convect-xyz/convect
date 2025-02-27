@@ -5,6 +5,7 @@ import { db } from "~/server/db";
 import chains from "../../../../../../../config/chains.json";
 import { getJsonData, getUserContext } from "../utils";
 
+console.log(chains);
 const requestSchema = z.object({
   ids: z.array(z.string()),
 });
