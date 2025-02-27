@@ -89,7 +89,7 @@
     "etherscan_like": "https://api-sepolia.basescan.org",
     "etherscan_api_key": "REDACTED",
     "slug": "base-sepolia",
-    "fetch_strategy": "graphql"
+    "fetch_strategy": "jsonrpc"
   },
   {
     "id": 11124,
