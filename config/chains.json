@@ -102,7 +102,7 @@
     "ws_url": "wss://api.testnet.abs.xyz/ws",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
     "etherscan_like": "https://api-sepolia.abscan.org",
-    "etherscan_api_key": "",
+    "etherscan_api_key": "REDACTED",
     "slug": "abstract-testnet",
     "fetch_strategy": "jsonrpc"
   },
