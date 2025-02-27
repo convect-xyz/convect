@@ -82,7 +82,6 @@ jobs:
           aws s3api put-object --bucket ingest-functions --key handler-server/$GITHUB_SHA.zip --body "./target/lambda/extensions/handler-server.zip"
 
   build_images:
-    needs: [build_and_test_shared]
     runs-on: ubuntu-latest
     strategy:
       matrix:
