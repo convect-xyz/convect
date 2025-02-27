@@ -363,23 +363,29 @@ export function decodeTx(tx: any, txConfig: any) {
 
     if (!logConfig) continue;
 
-    const decodedEvent: any = decodeEventLog({
-      abi: [logConfig._event],
-      data: log.data,
-      topics: log.topics,
-      strict: true,
-    });
+    try {
+      const decodedEvent: any = decodeEventLog({
+        abi: [logConfig._event],
+        data: log.data,
+        topics: log.topics,
+        strict: true,
+      });
 
-    log.eventName = decodedEvent.eventName;
-    log.args = decodedEvent.args;
-    log.transactionHash = tx.transactionHash;
-    log.transactionIndex = tx.transactionIndex;
+      log.eventName = decodedEvent.eventName;
+      log.args = decodedEvent.args;
+      log.transactionHash = tx.transactionHash;
+      log.transactionIndex = tx.transactionIndex;
 
-    newTx.logs.push({
-      ...log,
-      eventName: decodedEvent.eventName,
-      args: decodedEvent.args,
-    });
+      newTx.logs.push({
+        ...log,
+        eventName: decodedEvent.eventName,
+        args: decodedEvent.args,
+      });
+    } catch (e) {
+      console.log(`Error decoding event log: ${e}`);
+      console.log(newTx);
+      console.log(txConfig);
+    }
   }
 
   return newTx;
