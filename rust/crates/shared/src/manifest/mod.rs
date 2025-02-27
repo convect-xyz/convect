@@ -34,7 +34,7 @@ impl LogOrigin {
     pub fn get_address(&self, chain_id: u64) -> Option<String> {
         match self {
             LogOrigin::String(address) => Some(address.clone()),
-            LogOrigin::Map(map) => map.get(&chain_id.to_string()).clone(),
+            LogOrigin::Map(map) => map.get(&chain_id.to_string()).map(|s| s.clone()),
         }
     }
 }
