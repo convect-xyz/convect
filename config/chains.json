@@ -13,9 +13,7 @@
   {
     "id": 11155111,
     "name": "Ethereum Sepolia",
-    "polling_urls": [
-      "https://eth-sepolia.g.alchemy.com/v2/REDACTED"
-    ],
+    "polling_urls": ["http://eth-sepolia.rpc.convect.xyz"],
     "ws_url": "wss://eth-sepolia.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:eth-sepolia",
     "etherscan_like": "https://api-sepolia.etherscan.io",
@@ -85,9 +83,7 @@
   {
     "id": 84532,
     "name": "Base Sepolia",
-    "polling_urls": [
-      "https://base-sepolia.g.alchemy.com/v2/REDACTED"
-    ],
+    "polling_urls": ["http://base-sepolia.rpc.convect.xyz"],
     "ws_url": "wss://base-sepolia.g.alchemy.com/v2/REDACTED",
     "sns_topic": "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
     "etherscan_like": "https://api-sepolia.basescan.org",
