@@ -1,6 +1,6 @@
 pub mod transactions {
     use serde::{Deserialize, Serialize};
-    use web3::types::{Bytes, U256};
+    use web3::types::U256;
 
     #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
     pub struct IngestTransaction {
@@ -26,7 +26,7 @@ pub mod transactions {
     pub struct IngestLog {
         pub address: String,
         pub topics: Vec<String>,
-        pub data: Bytes,
+        pub data: String,
         #[serde(rename = "logIndex")]
         pub log_index: Option<U256>,
         pub removed: Option<bool>,

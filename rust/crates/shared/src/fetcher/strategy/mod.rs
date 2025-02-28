@@ -1,8 +1,8 @@
 use super::graphql::client::example_query::ExampleQueryLogs;
 use crate::types::transactions::IngestLog;
+use hex::encode;
 use std::str::FromStr as _;
 use web3::types::U256;
-
 pub mod graphql;
 pub mod jsonrpc;
 pub mod utils;
@@ -126,10 +126,11 @@ impl IntoIngestLog for ExampleQueryLogs {
 
 impl IntoIngestLog for web3::types::Log {
     fn into_ingest_log(&self) -> IngestLog {
+        println!("{:?}", encode(self.data.clone().0));
         IngestLog {
             address: format!("{:#x}", self.address),
             topics: self.topics.iter().map(|t| format!("{:#x}", t)).collect(),
-            data: self.data.clone().into(),
+            data: format!("0x{}", encode(self.data.clone().0)),
             log_index: self.log_index,
             removed: self.removed,
         }

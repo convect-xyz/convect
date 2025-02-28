@@ -6084,6 +6084,7 @@ dependencies = [
  "ethers-etherscan",
  "futures",
  "graphql_client",
+ "hex",
  "itertools 0.13.0",
  "lambda_runtime",
  "mockall",
