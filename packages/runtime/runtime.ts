@@ -74,7 +74,6 @@ export async function handler(event: SQSEvent, context: Context) {
     isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
     data: JSON.parse(record.body),
   }));
-  console.log(parsedRecords.map((r) => r.data.data[0]));
 
   const isRetry = event.Records.some(
     (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
@@ -367,30 +366,22 @@ export function decodeTx(tx: any, txConfig: any) {
 
     if (!logConfig) continue;
 
-    try {
-      const decodedEvent: any = decodeEventLog({
-        abi: [logConfig._event],
-        data: log.data,
-        topics: log.topics,
-      });
+    const decodedEvent: any = decodeEventLog({
+      abi: [logConfig._event],
+      data: log.data,
+      topics: log.topics,
+    });
 
-      log.eventName = decodedEvent.eventName;
-      log.args = decodedEvent.args;
-      log.transactionHash = tx.transactionHash;
-      log.transactionIndex = tx.transactionIndex;
+    log.eventName = decodedEvent.eventName;
+    log.args = decodedEvent.args;
+    log.transactionHash = tx.transactionHash;
+    log.transactionIndex = tx.transactionIndex;
 
-      newTx.logs.push({
-        ...log,
-        eventName: decodedEvent.eventName,
-        args: decodedEvent.args,
-      });
-    } catch (e) {
-      console.log(e);
-      console.log(logConfig._event);
-      console.log(tx);
-      console.log(txConfig);
-      console.log(log);
-    }
+    newTx.logs.push({
+      ...log,
+      eventName: decodedEvent.eventName,
+      args: decodedEvent.args,
+    });
   }
 
   return newTx;
