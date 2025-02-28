@@ -172,7 +172,6 @@ const getSuccessfulTxCount = async (
         eq(analysisSchema.ethProcessedResult.status, "SUCCESS"),
       ),
     )
-    .orderBy(analysisSchema.ethProcessedResult.transactionHash)
     .then((r) => Number(r.at(0)!.count));
 };
 
