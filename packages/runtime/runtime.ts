@@ -74,6 +74,7 @@ export async function handler(event: SQSEvent, context: Context) {
     isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
     data: JSON.parse(record.body),
   }));
+  console.log(parsedRecords.map((r) => r.data));
 
   const isRetry = event.Records.some(
     (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
@@ -148,7 +149,6 @@ export function parseTransactions(
 
     const tx =
       payload.type === "Raw" ? payload.data : s3Results.get(record.id)!;
-
     transactions.push({
       ...tx,
       value: Number(tx.value),
