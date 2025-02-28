@@ -147,12 +147,11 @@ export function parseTransactions(
   for (const record of parsedRecords) {
     const payload = record.data;
 
-    const tx =
+    const txs =
       payload.type === "Raw" ? payload.data : s3Results.get(record.id)!;
-    transactions.push({
-      ...tx,
-      value: Number(tx.value),
-    });
+    transactions.push(
+      ...txs.map((tx: any) => ({ ...tx, value: Number(tx.value) }))
+    );
   }
 
   return transactions;
