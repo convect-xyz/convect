@@ -173,6 +173,7 @@ const getSuccessfulTxCount = async (
       ),
     )
     .orderBy(analysisSchema.ethProcessedResult.transactionHash)
+    .groupBy(analysisSchema.ethProcessedResult.transactionHash)
     .then((r) => Number(r.at(0)!.count));
 };
 
