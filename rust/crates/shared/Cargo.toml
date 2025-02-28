@@ -21,6 +21,7 @@ serde_with = "3.8.1"
 aws-sdk-lambda = "1.19.0"
 futures = "0.3.30"
 web3 = "0.19.0"
+hex = "0.4.3"
 openssl = { version = "0.10.35", features = ["vendored"] }
 uuid = { version = "1.8.0", features = ["v4", "v7", "js"] }
 aws-sdk-sns = "1.18.0"
