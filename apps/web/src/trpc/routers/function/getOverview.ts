@@ -160,7 +160,7 @@ const getSuccessfulTxCount = async (
   deploymentId: string,
 ) => {
   return analysisDb
-    .select({
+    .selectDistinctOn([analysisSchema.ethProcessedResult.transactionHash], {
       count: count(analysisSchema.ethProcessedResult.id),
     })
     .from(analysisSchema.ethProcessedResult)
@@ -169,8 +169,10 @@ const getSuccessfulTxCount = async (
         eq(analysisSchema.ethProcessedResult.functionId, functionId),
         eq(analysisSchema.ethProcessedResult.deploymentId, deploymentId),
         eq(analysisSchema.ethProcessedResult.chainId, chainId),
+        eq(analysisSchema.ethProcessedResult.status, "SUCCESS"),
       ),
     )
+    .orderBy(analysisSchema.ethProcessedResult.transactionHash)
     .then((r) => Number(r.at(0)!.count));
 };
 
