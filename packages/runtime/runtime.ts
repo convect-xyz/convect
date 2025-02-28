@@ -74,7 +74,7 @@ export async function handler(event: SQSEvent, context: Context) {
     isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
     data: JSON.parse(record.body),
   }));
-  console.log(parsedRecords.map((r) => r.data));
+  console.log(parsedRecords.map((r) => r.data.data[0]));
 
   const isRetry = event.Records.some(
     (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
