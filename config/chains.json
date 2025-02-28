@@ -19,7 +19,7 @@
     "etherscan_like": "https://api-sepolia.etherscan.io",
     "etherscan_api_key": "8KM3GY51K8PDT3TM62CVQ6PPKBPSGI86SR",
     "slug": "eth-sepolia",
-    "fetch_strategy": "graphql"
+    "fetch_strategy": "jsonrpc"
   },
   {
     "id": 137,
