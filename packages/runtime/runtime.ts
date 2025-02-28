@@ -65,6 +65,7 @@ type TransactionResult = {
 type Transaction = {
   transactionHash: string;
   blockNumber: number;
+  value: number;
 };
 
 export async function handler(event: SQSEvent, context: Context) {
@@ -144,12 +145,16 @@ export function parseTransactions(
   const transactions: Array<Transaction> = [];
   for (const record of parsedRecords) {
     const payload = record.data;
-    if (payload.type === "Raw") {
-      transactions.push(...payload.data);
-    } else {
-      transactions.push(...s3Results.get(record.id));
-    }
+
+    const tx =
+      payload.type === "Raw" ? payload.data : s3Results.get(record.id)!;
+
+    transactions.push({
+      ...tx,
+      value: Number(tx.value),
+    });
   }
+
   return transactions;
 }
 
