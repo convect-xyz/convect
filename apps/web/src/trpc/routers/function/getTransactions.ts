@@ -22,7 +22,7 @@ export const getTransactions = protectedProcedure
     z.object({
       transactions: z.array(
         z.object({
-          id: z.string(),
+          id: z.number(),
           transactionHash: z.string(),
           status: z.enum(["SUCCESS", "FAILED"]),
           successCount: z.number(),
@@ -30,6 +30,7 @@ export const getTransactions = protectedProcedure
           timestamp: z.number(),
         }),
       ),
+      nextCursor: z.number().optional(),
     }),
   )
   .query(async (opts) => {
@@ -105,6 +106,7 @@ export const getTransactions = protectedProcedure
 
     const recentTransactions = await analysisDb
       .select({
+        id: analysisSchema.ethTransactions.id,
         transactionHash: analysisSchema.ethTransactions.transactionHash,
         createdAt: analysisSchema.ethTransactions.createdAt,
         functionId: analysisSchema.ethTransactions.functionId,
@@ -138,12 +140,13 @@ export const getTransactions = protectedProcedure
     console.log(recentTransactions);
     return {
       transactions: recentTransactions.map((tx) => ({
-        id: `${tx.transactionHash}-${tx.functionId}-${tx.deploymentId}`,
+        id: tx.id,
         transactionHash: tx.transactionHash,
         status: "SUCCESS",
         timestamp: tx.createdAt.getTime(),
         successCount: tx.successCount,
         failureCount: tx.failureCount,
       })),
+      nextCursor: recentTransactions.at(-1)?.id,
     };
   });
