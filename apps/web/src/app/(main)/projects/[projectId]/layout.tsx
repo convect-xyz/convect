@@ -19,8 +19,10 @@ function Main(props: PropsWithChildren) {
   const pathname = usePathname();
   const { projectId, functionId } = useParams();
 
-  const getLinkProps = (route: string) => {
-    const isLinked = trim(route, "/") === trim(pathname, "/");
+  const getLinkProps = (route: string, isRoot: boolean) => {
+    const isLinked = isRoot
+      ? trim(pathname, "/") === trim(route, "/")
+      : trim(pathname, "/").startsWith(trim(route, "/"));
 
     return {
       className: cn(
@@ -36,8 +38,10 @@ function Main(props: PropsWithChildren) {
       <nav className="sticky top-[var(--navbar-height)] z-20 flex w-full gap-4 overflow-x-auto border-b bg-background px-4 text-sm text-muted-foreground md:px-8">
         {!functionId && (
           <>
-            <Link {...getLinkProps(`/projects/${projectId}/`)}>Overview</Link>
-            <Link {...getLinkProps(`/projects/${projectId}/settings`)}>
+            <Link {...getLinkProps(`/projects/${projectId}/`, true)}>
+              Overview
+            </Link>
+            <Link {...getLinkProps(`/projects/${projectId}/settings`, false)}>
               Settings
             </Link>
           </>
