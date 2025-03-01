@@ -17,7 +17,7 @@ export default function Layout(props: PropsWithChildren) {
 
 function Main(props: PropsWithChildren) {
   const pathname = usePathname();
-  const { projectId } = useParams();
+  const { projectId, functionId } = useParams();
 
   const getLinkProps = (route: string) => {
     const isLinked = trim(route, "/") === trim(pathname, "/");
@@ -33,12 +33,14 @@ function Main(props: PropsWithChildren) {
 
   return (
     <>
-      <nav className="sticky top-[var(--navbar-height)] z-10 flex w-full gap-4 overflow-x-auto border-b bg-background px-4 text-sm text-muted-foreground md:px-8">
-        <Link {...getLinkProps(`/projects/${projectId}/`)}>Overview</Link>
-        <Link {...getLinkProps(`/projects/${projectId}/settings`)}>
-          Settings
-        </Link>
-      </nav>
+      {!functionId && (
+        <nav className="sticky top-[var(--navbar-height)] z-10 flex w-full gap-4 overflow-x-auto border-b bg-background px-4 text-sm text-muted-foreground md:px-8">
+          <Link {...getLinkProps(`/projects/${projectId}/`)}>Overview</Link>
+          <Link {...getLinkProps(`/projects/${projectId}/settings`)}>
+            Settings
+          </Link>
+        </nav>
+      )}
       <div className="mx-auto grid w-full items-start gap-6">
         <div>{props.children}</div>
       </div>
