@@ -135,9 +135,14 @@ export const getTransactions = protectedProcedure
         desc(analysisSchema.ethTransactions.createdAt),
         asc(analysisSchema.ethTransactions.id),
       )
-      .limit(input.limit);
+      .limit(input.limit + 1);
 
-    console.log(recentTransactions);
+    let nextCursor: typeof input.cursor | undefined = undefined;
+    if (recentTransactions.length > input.limit) {
+      const nextItem = recentTransactions.pop();
+      nextCursor = nextItem!.id;
+    }
+
     return {
       transactions: recentTransactions.map((tx) => ({
         id: tx.id,
@@ -147,6 +152,6 @@ export const getTransactions = protectedProcedure
         successCount: tx.successCount,
         failureCount: tx.failureCount,
       })),
-      nextCursor: recentTransactions.at(-1)?.id,
+      nextCursor,
     };
   });
