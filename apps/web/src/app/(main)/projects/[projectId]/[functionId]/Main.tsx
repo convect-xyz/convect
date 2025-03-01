@@ -60,14 +60,14 @@ export default function Main() {
   const { data: selectedDeployment } = useSelectedDeployment();
 
   return (
-    <div className="overflow-hidden p-1">
+    <div className="overflow-hidden px-1">
       {(selectedDeployment?.status === "RUNNING" ||
         selectedDeployment?.status === "PENDING") && (
-        <div>
+        <div className="mb-4">
           <StillDeployingAlert />
         </div>
       )}
-      <div className="mt-4 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div className="flex items-stretch gap-2">
           <div className="mr-4">
             <ActiveDeployments />
