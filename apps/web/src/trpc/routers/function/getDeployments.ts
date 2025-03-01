@@ -73,7 +73,7 @@ export const getDeployments = protectedProcedure
       orderBy(fields, { desc }) {
         return [desc(fields.createdAt), desc(fields.id)];
       },
-      limit: 10,
+      limit: 20,
     });
 
     const nextCursorDeployment = deployments[deployments.length - 1];
