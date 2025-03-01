@@ -16,7 +16,6 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import BackToSettings from "../(components)/BackToSettings";
@@ -27,24 +26,20 @@ export default function Page() {
     <>
       <BackToSettings />
       <div className="px-4">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-8">
           <InviteUser />
-          <Tabs defaultValue="collaborators">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
-              <TabsTrigger value="pending-invites">Pending Invites</TabsTrigger>
-            </TabsList>
-            <TabsContent value="pending-invites">
-              <Section className="p-4">
-                <PendingInvites />
-              </Section>
-            </TabsContent>
-            <TabsContent value="collaborators">
-              <Section>
-                <Collaborators />
-              </Section>
-            </TabsContent>
-          </Tabs>
+          <div>
+            <div className="mb-2">Collaborators</div>
+            <Section>
+              <Collaborators />
+            </Section>
+          </div>
+          <div>
+            <div className="mb-2">Pending Invites</div>
+            <Section className="p-4">
+              <PendingInvites />
+            </Section>
+          </div>
         </div>
       </div>
     </>
@@ -127,6 +122,11 @@ function PendingInvites() {
 
   return (
     <div>
+      {pendingInvites && pendingInvites.length === 0 && (
+        <div className="flex items-center justify-center py-10">
+          No pending invites.
+        </div>
+      )}
       {pendingInvites?.map((invite) => (
         <div key={invite.user.id}>{invite.user.email}</div>
       ))}
