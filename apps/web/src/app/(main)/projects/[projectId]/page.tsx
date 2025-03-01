@@ -21,7 +21,7 @@ export default function Page() {
 
   return (
     <>
-      <div className="mx-auto w-full max-w-screen-2xl">
+      <div className="mx-auto w-full max-w-screen-xl px-4 pt-8">
         <div className="mx-auto flex w-full max-w-screen-lg flex-col gap-2">
           {functions && functions.functions.length > 0 && (
             <div className="flex items-center justify-between">

@@ -19,31 +19,35 @@ import { Input } from "~/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import BackToSettings from "../(components)/BackToSettings";
 import { useParams } from "../../hooks/useParams";
 
 export default function Page() {
   return (
-    <div>
-      <div className="flex flex-col gap-4">
-        <InviteUser />
-        <Tabs defaultValue="collaborators">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
-            <TabsTrigger value="pending-invites">Pending Invites</TabsTrigger>
-          </TabsList>
-          <TabsContent value="pending-invites">
-            <Section className="p-4">
-              <PendingInvites />
-            </Section>
-          </TabsContent>
-          <TabsContent value="collaborators">
-            <Section>
-              <Collaborators />
-            </Section>
-          </TabsContent>
-        </Tabs>
+    <>
+      <BackToSettings />
+      <div className="px-4">
+        <div className="flex flex-col gap-4">
+          <InviteUser />
+          <Tabs defaultValue="collaborators">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="collaborators">Collaborators</TabsTrigger>
+              <TabsTrigger value="pending-invites">Pending Invites</TabsTrigger>
+            </TabsList>
+            <TabsContent value="pending-invites">
+              <Section className="p-4">
+                <PendingInvites />
+              </Section>
+            </TabsContent>
+            <TabsContent value="collaborators">
+              <Section>
+                <Collaborators />
+              </Section>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
