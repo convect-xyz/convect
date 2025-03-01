@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, gte, ilike } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, sql } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -25,6 +25,8 @@ export const getTransactions = protectedProcedure
           id: z.string(),
           transactionHash: z.string(),
           status: z.enum(["SUCCESS", "FAILED"]),
+          successCount: z.number(),
+          failureCount: z.number(),
           timestamp: z.number(),
         }),
       ),
@@ -74,9 +76,58 @@ export const getTransactions = protectedProcedure
       return baseFilter;
     };
 
+    const success = "SUCCESS";
+    const failed = "FAILED";
+
+    const txCounts = analysisDb
+      .select({
+        transactionHash: analysisSchema.ethProcessedResult.transactionHash,
+        functionId: analysisSchema.ethProcessedResult.functionId,
+        chainId: analysisSchema.ethProcessedResult.chainId,
+        deploymentId: analysisSchema.ethProcessedResult.deploymentId,
+        successCount:
+          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = ${success} THEN 1 ELSE 0 END) AS INT)`.as(
+            "successCount",
+          ),
+        failureCount:
+          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = ${failed} THEN 1 ELSE 0 END) AS INT)`.as(
+            "failureCount",
+          ),
+      })
+      .from(analysisSchema.ethProcessedResult)
+      .groupBy(
+        analysisSchema.ethProcessedResult.transactionHash,
+        analysisSchema.ethProcessedResult.deploymentId,
+        analysisSchema.ethProcessedResult.functionId,
+        analysisSchema.ethProcessedResult.chainId,
+      )
+      .as("txCounts");
+
     const recentTransactions = await analysisDb
-      .select()
+      .select({
+        transactionHash: analysisSchema.ethTransactions.transactionHash,
+        createdAt: analysisSchema.ethTransactions.createdAt,
+        functionId: analysisSchema.ethTransactions.functionId,
+        deploymentId: analysisSchema.ethTransactions.deploymentId,
+        successCount: txCounts.successCount,
+        failureCount: txCounts.failureCount,
+      })
       .from(analysisSchema.ethTransactions)
+      .leftJoin(
+        txCounts,
+        and(
+          eq(
+            txCounts.transactionHash,
+            analysisSchema.ethTransactions.transactionHash,
+          ),
+          eq(txCounts.functionId, analysisSchema.ethTransactions.functionId),
+          eq(txCounts.chainId, analysisSchema.ethTransactions.chainId),
+          eq(
+            txCounts.deploymentId,
+            analysisSchema.ethTransactions.deploymentId,
+          ),
+        ),
+      )
       .where(getFilter())
       .orderBy(
         desc(analysisSchema.ethTransactions.createdAt),
@@ -84,12 +135,15 @@ export const getTransactions = protectedProcedure
       )
       .limit(input.limit);
 
+    console.log(recentTransactions);
     return {
       transactions: recentTransactions.map((tx) => ({
         id: `${tx.transactionHash}-${tx.functionId}-${tx.deploymentId}`,
         transactionHash: tx.transactionHash,
         status: "SUCCESS",
         timestamp: tx.createdAt.getTime(),
+        successCount: tx.successCount,
+        failureCount: tx.failureCount,
       })),
     };
   });
