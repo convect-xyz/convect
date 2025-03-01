@@ -18,7 +18,6 @@ export default function ActivePlan() {
   return (
     <>
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between"></div>
         <Card className="bg-background">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
