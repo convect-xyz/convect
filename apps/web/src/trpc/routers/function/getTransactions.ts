@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, gte, ilike, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, sql } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -71,14 +71,11 @@ export const getTransactions = protectedProcedure
       if (input.cursor) {
         baseFilter = and(
           baseFilter,
-          gte(analysisSchema.ethTransactions.id, input.cursor),
+          gt(analysisSchema.ethTransactions.id, input.cursor),
         );
       }
       return baseFilter;
     };
-
-    const success = "SUCCESS";
-    const failed = "FAILED";
 
     const txCounts = analysisDb
       .select({
@@ -87,11 +84,11 @@ export const getTransactions = protectedProcedure
         chainId: analysisSchema.ethProcessedResult.chainId,
         deploymentId: analysisSchema.ethProcessedResult.deploymentId,
         successCount:
-          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = ${success} THEN 1 ELSE 0 END) AS INT)`.as(
+          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
             "successCount",
           ),
         failureCount:
-          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = ${failed} THEN 1 ELSE 0 END) AS INT)`.as(
+          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = 'FAILED' THEN 1 ELSE 0 END) AS INT)`.as(
             "failureCount",
           ),
       })
