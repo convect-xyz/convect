@@ -159,20 +159,58 @@ const getSuccessfulTxCount = async (
   chainId: number,
   deploymentId: string,
 ) => {
-  return analysisDb
+  const txCounts = analysisDb
     .select({
-      count: count(analysisSchema.ethProcessedResult.id),
+      transactionHash: analysisSchema.ethProcessedResult.transactionHash,
+      functionId: analysisSchema.ethProcessedResult.functionId,
+      chainId: analysisSchema.ethProcessedResult.chainId,
+      deploymentId: analysisSchema.ethProcessedResult.deploymentId,
+      successCount:
+        sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
+          "successCount",
+        ),
+      uniqueCount:
+        sql<number>`CAST(COUNT(DISTINCT ${analysisSchema.ethProcessedResult.handler}) AS INT)`.as(
+          "uniqueCount",
+        ),
     })
     .from(analysisSchema.ethProcessedResult)
-    .where(
+    .groupBy(
+      analysisSchema.ethProcessedResult.transactionHash,
+      analysisSchema.ethProcessedResult.deploymentId,
+      analysisSchema.ethProcessedResult.functionId,
+      analysisSchema.ethProcessedResult.chainId,
+    )
+    .as("txCounts");
+
+  return analysisDb
+    .select({
+      successIsUniqueCount:
+        sql<number>`CAST(SUM(CASE WHEN ${txCounts.successCount} = ${txCounts.uniqueCount} THEN 1 ELSE 0 END) AS INT)`.as(
+          "successIsUniqueCount",
+        ),
+    })
+    .from(analysisSchema.ethTransactions)
+    .leftJoin(
+      txCounts,
       and(
-        eq(analysisSchema.ethProcessedResult.functionId, functionId),
-        eq(analysisSchema.ethProcessedResult.deploymentId, deploymentId),
-        eq(analysisSchema.ethProcessedResult.chainId, chainId),
-        eq(analysisSchema.ethProcessedResult.status, "SUCCESS"),
+        eq(
+          txCounts.transactionHash,
+          analysisSchema.ethTransactions.transactionHash,
+        ),
+        eq(txCounts.functionId, analysisSchema.ethTransactions.functionId),
+        eq(txCounts.chainId, analysisSchema.ethTransactions.chainId),
+        eq(txCounts.deploymentId, analysisSchema.ethTransactions.deploymentId),
       ),
     )
-    .then((r) => Number(r.at(0)!.count));
+    .where(
+      and(
+        eq(analysisSchema.ethTransactions.functionId, functionId),
+        eq(analysisSchema.ethTransactions.deploymentId, deploymentId),
+        eq(analysisSchema.ethTransactions.chainId, chainId),
+      ),
+    )
+    .then((r) => Number(r.at(0)!.successIsUniqueCount));
 };
 
 const getTxCount = async (
