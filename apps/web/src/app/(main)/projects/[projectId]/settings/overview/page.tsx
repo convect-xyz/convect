@@ -58,7 +58,7 @@ function ProjectName() {
   const form = useForm({
     resolver: zodResolver(
       z.object({
-        name: z.string(),
+        name: z.string().min(1),
       }),
     ),
     defaultValues: {
