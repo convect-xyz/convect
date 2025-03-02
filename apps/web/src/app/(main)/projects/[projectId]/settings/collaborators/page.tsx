@@ -149,7 +149,9 @@ function PendingInvites() {
   return (
     <div>
       {pendingInvites?.map((invite) => (
-        <div key={invite.user.id}>{invite.user.email}</div>
+        <div className="text-sm" key={invite.user.id}>
+          {invite.user.email}
+        </div>
       ))}
     </div>
   );
