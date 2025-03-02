@@ -138,13 +138,16 @@ function PendingInvites() {
     projectId: projectId,
   });
 
+  if (pendingInvites && pendingInvites.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-10 text-sm">
+        No pending invites.
+      </div>
+    );
+  }
+
   return (
     <div>
-      {pendingInvites && pendingInvites.length === 0 && (
-        <div className="flex items-center justify-center py-10 text-sm">
-          No pending invites.
-        </div>
-      )}
       {pendingInvites?.map((invite) => (
         <div key={invite.user.id}>{invite.user.email}</div>
       ))}
@@ -159,13 +162,14 @@ function Collaborators() {
     projectId: projectId,
   });
 
+  if (collaborators && collaborators.length === 0) {
+    return;
+    <div className="flex items-center justify-center py-10 text-sm">
+      No collaborators.
+    </div>;
+  }
   return (
     <div className="flex flex-col divide-y divide-border">
-      {collaborators && collaborators.length === 0 && (
-        <div className="flex items-center justify-center py-10 text-sm">
-          No collaborators.
-        </div>
-      )}
       {collaborators?.map((collaborator) => (
         <div
           key={collaborator.user.id}
