@@ -35,7 +35,7 @@ function Main(props: PropsWithChildren) {
   };
 
   return (
-    <>
+    <div className="pb-10">
       <div className="border-b px-4 py-8">
         <div className="mx-auto max-w-screen-xl">
           <div className="text-2xl">Project Settings</div>
@@ -51,6 +51,6 @@ function Main(props: PropsWithChildren) {
         </nav>
         <div className="grid gap-6">{props.children}</div>
       </div>
-    </>
+    </div>
   );
 }
