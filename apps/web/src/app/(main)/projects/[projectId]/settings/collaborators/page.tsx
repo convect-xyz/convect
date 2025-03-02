@@ -163,11 +163,13 @@ function Collaborators() {
   });
 
   if (collaborators && collaborators.length === 0) {
-    return;
-    <div className="flex items-center justify-center py-10 text-sm">
-      No collaborators.
-    </div>;
+    return (
+      <div className="flex items-center justify-center py-10 text-sm">
+        No collaborators.
+      </div>
+    );
   }
+
   return (
     <div className="flex flex-col divide-y divide-border">
       {collaborators?.map((collaborator) => (
