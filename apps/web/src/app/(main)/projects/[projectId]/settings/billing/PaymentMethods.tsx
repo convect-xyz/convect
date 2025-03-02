@@ -11,11 +11,13 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useMutation } from "@tanstack/react-query";
+import { times } from "lodash";
 import { ComponentProps, PropsWithChildren, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog";
+import { Skeleton } from "~/components/ui/skeleton";
 import { env } from "~/env";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
@@ -223,8 +225,27 @@ function ListPaymentMethods() {
     projectId,
   });
 
+  if (paymentMethods && paymentMethods.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-10 text-sm">
+        No payment methods added.
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col divide-y">
+      {!paymentMethods &&
+        times(3).map((v) => (
+          <div key={v} className="flex items-center gap-2 p-4 py-5 text-sm">
+            <div className="flex flex-1 items-center gap-2">
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <div className="text-right">
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+        ))}
       {paymentMethods?.map((method) => (
         <div
           key={method.id}
