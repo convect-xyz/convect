@@ -9,7 +9,7 @@ import { useParams } from "../../hooks/useParams";
 
 type UsageMetric = RouterOutputs["project"]["getUsage"][number];
 
-export default function Overview() {
+export default function Usage() {
   const { projectId } = useParams();
   const { data: usage } = api.project.getUsage.useQuery({
     projectId,
@@ -19,7 +19,7 @@ export default function Overview() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-xl">Overview</div>
+      <div className="text-xl">Usage</div>
       <Card className="bg-background">
         <CardContent className="p-1">
           <div className="flex gap-2 p-2 text-xs font-medium text-muted-foreground">

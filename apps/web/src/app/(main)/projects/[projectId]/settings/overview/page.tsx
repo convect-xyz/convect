@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { PropsWithChildren } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -30,13 +30,10 @@ import { Input } from "~/components/ui/input";
 import { api } from "~/trpc/react";
 import BackToSettings from "../(components)/BackToSettings";
 import { useParams } from "../../hooks/useParams";
+import { useProject } from "../../hooks/useProject";
 
 export default function Overview() {
-  const pathname = usePathname();
-  const { projectId } = useParams();
-  const { data: project } = api.project.getProjectById.useQuery({
-    id: projectId,
-  });
+  const { data: project } = useProject();
 
   if (!project) {
     return null;
@@ -55,9 +52,7 @@ export default function Overview() {
 
 function ProjectName() {
   const { projectId } = useParams();
-  const { data: project } = api.project.getProjectById.useQuery({
-    id: projectId,
-  });
+  const { data: project } = useProject();
 
   const utils = api.useUtils();
   const form = useForm({
@@ -75,6 +70,7 @@ function ProjectName() {
       onSuccess() {
         toast("Updated project name.");
         utils.functions.get.refetch();
+        utils.project.getProjects.refetch();
       },
     });
 
@@ -110,7 +106,9 @@ function ProjectName() {
               />
             </div>
             <div>
-              <Button isLoading={isSaving}>Save</Button>
+              <Button disabled={!form.formState.isValid} isLoading={isSaving}>
+                Save
+              </Button>
             </div>
           </div>
         </Section>

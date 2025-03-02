@@ -4,17 +4,15 @@ import { trim } from "lodash";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "~/lib/utils";
-import { api } from "~/trpc/react";
 import { useParams } from "../hooks/useParams";
+import { useProject } from "../hooks/useProject";
 import Overview from "./overview/page";
 import { navigation } from "./utils";
 
 export default function Page() {
   const pathname = usePathname();
   const { projectId } = useParams();
-  const { data: project } = api.project.getProjectById.useQuery({
-    id: projectId,
-  });
+  const { data: project } = useProject();
 
   if (!project) {
     return null;

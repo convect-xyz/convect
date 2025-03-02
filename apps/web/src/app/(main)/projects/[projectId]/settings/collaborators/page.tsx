@@ -1,10 +1,21 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ComponentProps, PropsWithChildren } from "react";
+import { TrashIcon } from "@radix-ui/react-icons";
+import { times } from "lodash";
+import { ComponentProps, PropsWithChildren, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
 import {
   Form,
@@ -16,10 +27,12 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
+import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import BackToSettings from "../(components)/BackToSettings";
 import { useParams } from "../../hooks/useParams";
+import { useProject } from "../../hooks/useProject";
 
 export default function Page() {
   return (
@@ -51,7 +64,7 @@ function InviteUser() {
   const form = useForm({
     resolver: zodResolver(
       z.object({
-        email: z.string(),
+        email: z.string().email("Invalid email address"),
       }),
     ),
     defaultValues: {
@@ -105,7 +118,12 @@ function InviteUser() {
               />
             </div>
             <div>
-              <Button isLoading={isInvitingCollaborator}>Invite</Button>
+              <Button
+                disabled={!form.formState.isValid}
+                isLoading={isInvitingCollaborator}
+              >
+                Invite
+              </Button>
             </div>
           </div>
         </Section>
@@ -123,7 +141,7 @@ function PendingInvites() {
   return (
     <div>
       {pendingInvites && pendingInvites.length === 0 && (
-        <div className="flex items-center justify-center py-10">
+        <div className="flex items-center justify-center py-10 text-sm">
           No pending invites.
         </div>
       )}
@@ -136,18 +154,96 @@ function PendingInvites() {
 
 function Collaborators() {
   const { projectId } = useParams();
+  const { data: project } = useProject();
   const { data: collaborators } = api.project.getCollaborators.useQuery({
     projectId: projectId,
   });
 
   return (
     <div className="flex flex-col divide-y divide-border">
+      {collaborators && collaborators.length === 0 && (
+        <div className="flex items-center justify-center py-10 text-sm">
+          No collaborators.
+        </div>
+      )}
       {collaborators?.map((collaborator) => (
-        <div key={collaborator.user.id} className="p-4">
-          {collaborator.user.email}
+        <div
+          key={collaborator.user.id}
+          className="flex items-center justify-between p-4 text-sm"
+        >
+          <div>{collaborator.user.email}</div>
+          {project && project.isOwner && !collaborator.user.isOwner && (
+            <DeleteCollaboratorConfirmation email={collaborator.user.email} />
+          )}
         </div>
       ))}
+      {!collaborators &&
+        times(10).map((v) => (
+          <div className="flex items-center justify-between gap-8 p-4 text-sm">
+            <Skeleton key={v} className="h-4 flex-1" />
+            <Skeleton key={v} className="h-8 w-8" />
+          </div>
+        ))}
     </div>
+  );
+}
+
+function DeleteCollaboratorConfirmation(props: { email: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { projectId } = useParams();
+  const utils = api.useUtils();
+  const { mutateAsync: removeCollaborator } =
+    api.project.removeCollaborator.useMutation({
+      onSuccess: () => {
+        toast.success("Collaborator removed");
+        utils.project.getCollaborators.refetch({ projectId });
+      },
+    });
+
+  const form = useForm({
+    resolver: zodResolver(z.object({})),
+  });
+
+  const onRemove = async () => {
+    await removeCollaborator({
+      projectId,
+      email: props.email,
+    });
+    setIsOpen(false);
+  };
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+      <Button
+        variant="ghost"
+        className="cursor-pointer justify-start text-destructive"
+        onClick={() => setIsOpen(true)}
+      >
+        <TrashIcon className="h-5 w-5" />
+      </Button>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This user will no longer have access to this project.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onRemove)}>
+              <Button
+                type="submit"
+                variant="destructive"
+                isLoading={form.formState.isSubmitting}
+              >
+                Delete
+              </Button>
+            </form>
+          </Form>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
