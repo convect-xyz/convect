@@ -11,9 +11,8 @@ use futures::future::join_all;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
 use shared::configuration::SharedConfig;
-use shared::manifest::providers::InitBlockProvider;
 use shared::syncer::ChainSyncer;
-use shared::{redis_client::RedisClient, syncing::State};
+use shared::syncing::State;
 use std::collections::BTreeMap;
 use tracing::Level;
 use tracing_subscriber::filter::LevelFilter;
@@ -142,7 +141,7 @@ async fn sync_chain(
     let chain_id = chain_service.config.chain_id;
     tracing::info!("Attempting to sync chain {:?}", chain_id);
 
-    let mut pipeline = State::load(
+    let mut sync_state = State::load(
         app_service.config.project_id.clone(),
         app_service.config.function_id.clone(),
         chain_id,
@@ -151,30 +150,21 @@ async fn sync_chain(
     )
     .await?;
 
-    if pipeline.has_synced(latest_block) || pipeline.is_batch_syncing() {
+    if sync_state.has_synced(latest_block) || sync_state.is_batch_syncing() {
         tracing::info!(
           target: "orchestrator",
-          is_batch_syncing=pipeline.is_batch_syncing(),
-          has_synced=pipeline.has_synced(latest_block)
+          is_batch_syncing=sync_state.is_batch_syncing(),
+          has_synced=sync_state.has_synced(latest_block)
         );
         return Ok(());
     }
 
-    let start_block = match pipeline.next_block() {
-        Some(next_block) => next_block,
-        None => {
-            chain_service
-                .init_block_provider
-                .get_init_block(&app_service.manifest)
-                .await?
-        }
-    };
-
+    let start_block = sync_state.start_block(&app_service.manifest)?;
     if latest_block - start_block > 10000 {
         return sync_with_ecs(
             chain_id,
             &app_service.ecs_client,
-            &mut pipeline,
+            &mut sync_state,
             start_block,
             latest_block,
             &app_service.config,
@@ -187,7 +177,7 @@ async fn sync_chain(
         chain_service.transaction_enqueuer.as_ref(),
         chain_service.transaction_fetcher.as_ref(),
     )
-    .sync(&mut pipeline, start_block, latest_block)
+    .sync(&mut sync_state, start_block, latest_block)
     .await?;
 
     Ok(())

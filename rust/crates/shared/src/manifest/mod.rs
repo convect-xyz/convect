@@ -139,9 +139,8 @@ pub mod providers {
     use crate::fetcher::web3::client::Web3Client;
     use crate::manifest::Manifest;
 
-    #[async_trait]
     pub trait InitBlockProvider: std::marker::Sync {
-        async fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError>;
+        fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError>;
     }
 
     pub struct InitBlockProviderImpl {
@@ -154,10 +153,8 @@ pub mod providers {
         }
     }
 
-    #[async_trait]
     impl InitBlockProvider for InitBlockProviderImpl {
-        #[tracing::instrument(skip_all, ret, err)]
-        async fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError> {
+        fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError> {
             let manifest_min_block = manifest
                 .tx_configs
                 .iter()

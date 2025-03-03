@@ -1,5 +1,8 @@
 use crate::{
-    enqueuer::TransactionEnqueuer, fetcher::TransactionFetcher, manifest::Manifest, syncing::State,
+    enqueuer::TransactionEnqueuer,
+    fetcher::TransactionFetcher,
+    manifest::{providers::InitBlockProvider, Manifest},
+    syncing::State,
     types::transactions::IngestTransaction,
 };
 use futures::future::join_all;
@@ -34,6 +37,16 @@ impl<'a> ChainSyncer<'a> {
         start_block: u64,
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {
+        return Ok(self._sync(state, start_block, end_block).await?);
+    }
+
+    #[tracing::instrument(skip_all, err)]
+    pub async fn sync_to(
+        &self,
+        state: &mut State,
+        end_block: u64,
+    ) -> Result<(), errors::ChainSyncerError> {
+        let start_block = state.start_block(&self.manifest)?;
         return Ok(self._sync(state, start_block, end_block).await?);
     }
 
@@ -85,5 +98,7 @@ pub mod errors {
         TransactionEnqueuerError(#[from] crate::enqueuer::errors::TransactionEnqueuerError),
         #[error("Failed to update pipeline: {0}")]
         StateError(#[from] crate::syncing::errors::StateError),
+        #[error("Failed to get init block: {0}")]
+        InitBlockProviderError(#[from] crate::manifest::providers::InitBlockProviderError),
     }
 }
