@@ -6087,6 +6087,7 @@ dependencies = [
  "hex",
  "itertools 0.13.0",
  "lambda_runtime",
+ "lazy_static",
  "mockall",
  "once_cell",
  "openssl",
