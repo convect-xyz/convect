@@ -1,23 +1,156 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    eth_processed_result (id, transaction_hash) {
+    batch (id, deployment_id, function_id, batch_id) {
         id -> Int4,
         #[max_length = 255]
-        handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
-        #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
+        batch_id -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
         chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p00 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
         #[max_length = 255]
-        transaction_hash -> Varchar,
-        processed_log_indices -> Array<Nullable<Int4>>,
-        timestamp -> Timestamptz,
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p01 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p02 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p03 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p04 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p05 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p06 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p07 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p08 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    batch_p09 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        timestamp_ms -> Timestamptz,
+        chain_id -> Int4,
     }
 }
 
@@ -29,8 +162,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -39,6 +170,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -50,8 +182,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -60,6 +190,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -71,8 +202,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -81,6 +210,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -92,8 +222,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -102,6 +230,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -113,8 +242,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -123,6 +250,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -134,8 +262,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -144,6 +270,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -155,8 +282,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -165,6 +290,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -176,8 +302,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -186,6 +310,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -197,8 +322,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -207,6 +330,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -218,8 +342,6 @@ diesel::table! {
         #[max_length = 7]
         status -> Varchar,
         #[max_length = 255]
-        batch_id -> Nullable<Varchar>,
-        #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
         function_id -> Varchar,
@@ -228,6 +350,7 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -245,6 +368,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -262,6 +387,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -279,6 +406,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -296,6 +425,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -313,6 +444,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -330,6 +463,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -347,6 +482,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -364,6 +501,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -381,6 +520,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -398,6 +539,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -415,6 +558,8 @@ diesel::table! {
         chain_id -> Int4,
         #[max_length = 1000]
         project_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -428,6 +573,202 @@ diesel::table! {
         #[max_length = 255]
         deployment_id -> Varchar,
         project_id -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
+    processed_batch (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p00 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p01 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p02 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p03 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p04 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p05 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p06 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p07 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p08 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_batch_p09 (id, deployment_id, function_id, batch_id) {
+        id -> Int4,
+        #[max_length = 255]
+        batch_id -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        timestamp -> Timestamptz,
+        chain_id -> Int4,
+    }
+}
+
+diesel::table! {
+    processed_transaction (id, transaction_hash) {
+        id -> Int4,
+        #[max_length = 255]
+        handler -> Varchar,
+        #[max_length = 7]
+        status -> Varchar,
+        #[max_length = 255]
+        deployment_id -> Varchar,
+        #[max_length = 255]
+        function_id -> Varchar,
+        chain_id -> Int4,
+        #[max_length = 255]
+        transaction_hash -> Varchar,
+        processed_log_indices -> Array<Nullable<Int4>>,
+        timestamp -> Timestamptz,
+        processed_batch_id -> Nullable<Int4>,
     }
 }
 
@@ -694,7 +1035,17 @@ diesel::table! {
 }
 
 diesel::allow_tables_to_appear_in_same_query!(
-    eth_processed_result,
+    batch,
+    batch_p00,
+    batch_p01,
+    batch_p02,
+    batch_p03,
+    batch_p04,
+    batch_p05,
+    batch_p06,
+    batch_p07,
+    batch_p08,
+    batch_p09,
     eth_processed_result_p00,
     eth_processed_result_p01,
     eth_processed_result_p02,
@@ -717,6 +1068,18 @@ diesel::allow_tables_to_appear_in_same_query!(
     eth_transaction_p08,
     eth_transaction_p09,
     invocation,
+    processed_batch,
+    processed_batch_p00,
+    processed_batch_p01,
+    processed_batch_p02,
+    processed_batch_p03,
+    processed_batch_p04,
+    processed_batch_p05,
+    processed_batch_p06,
+    processed_batch_p07,
+    processed_batch_p08,
+    processed_batch_p09,
+    processed_transaction,
     processed_transactions,
     processed_transactions_temp_3_p00,
     processed_transactions_temp_3_p01,

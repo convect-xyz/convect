@@ -8,17 +8,24 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TransactionResultLabel {
-    pub label: String,
-    pub timestamp_ms: i64,
+pub struct ProcessedTransactionResult {
+    pub transaction_hash: String,
+    pub handler: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum BatchStatus {
+    Success,
+    Failure,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TransactionResult {
-    pub transaction_hash: String,
+pub struct ProcessedBatchResult {
     pub batch_id: String,
-    pub successful_labels: Vec<TransactionResultLabel>,
-    pub failed_label: Option<TransactionResultLabel>,
+    pub message_id: String,
+    pub timestamp_ms: i64,
+    pub status: BatchStatus,
+    pub transactions: Vec<ProcessedTransactionResult>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -38,7 +45,7 @@ pub enum Report {
         chain_id: String,
         project_id: i32,
         invocation_id: String,
-        results: Vec<TransactionResult>,
+        results: Vec<ProcessedBatchResult>,
         deployment_id: String,
     },
     Metrics {

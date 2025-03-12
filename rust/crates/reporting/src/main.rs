@@ -6,13 +6,14 @@ use futures::{future::join_all, join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
-    models::{EthProcessedResult, Invocation, Metric},
+    models::{EthTransactionResult, Invocation, Metric, ProcessedBatch},
     reporting_sdk,
-    schema::{eth_processed_result, invocation, reported_metrics},
+    schema::{invocation, processed_batch, processed_transaction, reported_metrics},
 };
 
 enum ExtractedRequest {
-    Transaction(EthProcessedResult),
+    Transaction(EthTransactionResult),
+    Batch(ProcessedBatch),
     Metric(Metric),
     Invocation(Invocation),
 }
@@ -94,13 +95,26 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .map(Option::unwrap)
         .collect();
 
+    let batches: Vec<_> = extracted
+        .iter()
+        .map(|r| match r {
+            ExtractedRequest::Batch(b) => Some(b),
+            _ => None,
+        })
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .collect();
+
     let conn = &mut pool.get().await?;
 
     let (invocations_result, transactions_result, metrics_result) = join!(
         diesel::insert_into(invocation::table)
             .values(invocations)
             .execute(conn),
-        diesel::insert_into(eth_processed_result::table)
+        diesel::insert_into(processed_batch::table)
+            .values(batches)
+            .execute(conn),
+        diesel::insert_into(processed_transaction::table)
             .values(transactions)
             .execute(conn),
         diesel::insert_into(reported_metrics::table)
@@ -144,31 +158,25 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
             }));
 
             for result in results.into_iter() {
-                for label in result.successful_labels.iter() {
-                    rows.push(ExtractedRequest::Transaction(EthProcessedResult {
-                        transaction_hash: result.transaction_hash.clone(),
-                        handler: label.label.clone(),
-                        status: "SUCCESS".to_string(),
-                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        function_id: function_id.clone(),
-                        batch_id: result.batch_id.clone(),
-                        deployment_id: deployment_id.clone(),
-                        chain_id: chain_id.parse().unwrap(),
-                        processed_log_indices: vec![],
-                    }))
-                }
+                rows.push(ExtractedRequest::Batch(ProcessedBatch {
+                    timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
+                    function_id: function_id.clone(),
+                    batch_id: result.batch_id.clone(),
+                    deployment_id: deployment_id.clone(),
+                    status: result.status.clone(),
+                    chain_id: chain_id.clone(),
+                }));
 
-                if let Some(label) = result.failed_label.as_ref() {
-                    rows.push(ExtractedRequest::Transaction(EthProcessedResult {
-                        transaction_hash: result.transaction_hash.clone(),
-                        handler: label.label.clone(),
-                        status: "FAILED".to_string(),
-                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
+                for tx in result.transactions.into_iter() {
+                    rows.push(ExtractedRequest::Transaction(EthTransactionResult {
                         function_id: function_id.clone(),
-                        batch_id: result.batch_id.clone(),
                         deployment_id: deployment_id.clone(),
-                        chain_id: chain_id.parse().unwrap(),
+                        batch_id: result.batch_id.clone(),
+                        transaction_hash: tx.transaction_hash,
+                        chain_id: chain_id.clone(),
+                        handler: tx.handler,
                         processed_log_indices: vec![],
+                        timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
                     }))
                 }
             }
