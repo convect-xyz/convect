@@ -9,7 +9,7 @@ export const updateName = protectedProcedure
   .input(
     z.object({
       projectId: z.number(),
-      name: z.string(),
+      name: z.string().min(1),
     }),
   )
   .output(z.object({}))
@@ -25,7 +25,6 @@ export const updateName = protectedProcedure
     const project = await ctx.db.query.projects.findFirst({
       where: (fields, { eq, and }) => and(eq(fields.id, input.projectId)),
     });
-
     if (!project) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
     }

@@ -77,7 +77,11 @@ function Content(props: DialogProps) {
               </FormItem>
             )}
           />
-          <Button type="submit" isLoading={isCreatingProject}>
+          <Button
+            type="submit"
+            disabled={!form.formState.isValid}
+            isLoading={isCreatingProject}
+          >
             Create
           </Button>
         </div>

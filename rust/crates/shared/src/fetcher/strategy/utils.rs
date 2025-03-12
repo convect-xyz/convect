@@ -1,10 +1,39 @@
+use std::collections::HashMap;
+
+use std::sync::Mutex;
+
 use crate::{
     fetcher::web3::client::Web3ClientImpl,
     manifest::{LogConfig, Manifest, TransactionConfig},
-    networks::{get_first_polling_url, get_supported_network, FetchStrategyType},
+    networks::{get_supported_network, FetchStrategyType},
 };
+use lazy_static::lazy_static;
 
 use super::{graphql::GraphqlFetchStrategyImpl, jsonrpc::JsonRpcFetcherImpl, FetchStrategy};
+
+lazy_static! {
+    static ref web3_client_mutex: Mutex<HashMap<u64, Web3ClientImpl>> = Mutex::new(HashMap::new());
+}
+
+#[tracing::instrument(skip_all)]
+fn get_web3_client(chain_id: u64) -> Web3ClientImpl {
+    let mut web3_clients = web3_client_mutex.lock().unwrap();
+
+    if !web3_clients.contains_key(&chain_id) {
+        web3_clients.insert(
+            chain_id,
+            Web3ClientImpl::new(
+                chain_id,
+                get_supported_network(chain_id)
+                    .unwrap()
+                    .polling_urls
+                    .clone(),
+            ),
+        );
+    }
+
+    web3_clients.get(&chain_id).unwrap().clone()
+}
 
 pub fn get_eligible_tx_configs<'a>(
     manifest: &'a Manifest,
@@ -37,10 +66,7 @@ pub fn get_strategy_for_chain_id(chain_id: u64) -> Box<dyn FetchStrategy> {
             return Box::new(GraphqlFetchStrategyImpl::with_defaults(chain_id));
         }
         FetchStrategyType::Jsonrpc => {
-            return Box::new(JsonRpcFetcherImpl::new(Web3ClientImpl::new(
-                chain_id,
-                vec![get_first_polling_url(chain_id)],
-            )))
+            return Box::new(JsonRpcFetcherImpl::new(get_web3_client(chain_id)));
         }
     }
 }

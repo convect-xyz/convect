@@ -3,6 +3,7 @@ import {
   getAddress,
   getLogConfigsForTxConfig,
   getStartBlock,
+  getStructuredManifest,
   Manifest,
 } from "@convect-xyz/lib";
 import { Hex, PublicClient, TransactionReceipt } from "viem";
@@ -65,13 +66,21 @@ export class ManifestValidationService {
 
   async _getTxReceiptRegistryByChain(manifest: Manifest) {
     const txReceiptRegistry: TxReceiptRegistry = new Map();
-    for (const chain of manifest.chains) {
+    const structuredManifest = getStructuredManifest(manifest);
+
+    for (const chain of structuredManifest.chains) {
       const publicClient = getPublicClient(chain.chainId);
-      const allAddresses = manifest.log_configs
-        .map((logConfig) => getAddress(chain.chainId, logConfig)!)
-        .filter((address) => address !== undefined);
+
+      const allAddresses = structuredManifest.txConfigs
+        .filter(
+          (txConfig) =>
+            !txConfig.chains || txConfig.chains.includes(chain.chainId)
+        )
+        .flatMap((txConfig) => txConfig.logConfigs)
+        .map((logConfig) => getAddress(chain.chainId, logConfig)!);
+
       const etherscanProvider = new EtherscanProvider(chain.chainId, this.db);
-      console.log("allAddresses", allAddresses);
+      console.log(`[${chain.chainId}] allAddresses: ${allAddresses}`);
       const addressToTxHash =
         await etherscanProvider.getContractCreationTxHashes(allAddresses);
       const addressToTxReceipt = await getTxReceipts(

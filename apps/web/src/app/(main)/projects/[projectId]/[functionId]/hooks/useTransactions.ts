@@ -11,7 +11,7 @@ export function useTransactions() {
   const deploymentId = useSelectedDeploymentId();
   const chainId = useSelectedChainId();
 
-  return api.functions.getTransactions.useQuery(
+  return api.functions.getTransactions.useInfiniteQuery(
     {
       functionId: functionId ?? -1,
       chainId: chainId ?? -1,
@@ -20,6 +20,7 @@ export function useTransactions() {
       status: filters.status,
     },
     {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
       refetchInterval: DASHBOARD_REFETCH_INTERVAL,
       enabled: !!chainId && !!functionId,
     },

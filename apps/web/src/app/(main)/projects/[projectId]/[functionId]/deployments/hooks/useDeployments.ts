@@ -4,11 +4,12 @@ import { useParams } from "../../hooks/useParams";
 export function useDeployments() {
   const { functionId } = useParams();
 
-  return api.functions.getDeployments.useQuery(
+  return api.functions.getDeployments.useInfiniteQuery(
     {
       functionId: functionId ?? -1,
     },
     {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
       enabled: !!functionId,
     },
   );

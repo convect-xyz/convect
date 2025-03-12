@@ -27,6 +27,9 @@ export default function TransactionRow(props: {
         )}
       ></span>
       <div className="flex-1 text-left">{tx.transactionHash}</div>
+      <div className="flex items-center justify-center rounded-full border px-2 text-sm text-xs text-muted-foreground">
+        {tx.successCount}/{tx.failureCount + tx.successCount}
+      </div>
       <div className="text-sm text-muted-foreground">
         <ForceRerender>
           {formatDistanceToNow(tx.timestamp, { addSuffix: true })}

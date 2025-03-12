@@ -4,7 +4,8 @@ import { Manifest } from "@convect-xyz/lib";
 import { formatDistanceToNow } from "date-fns";
 import { capitalize, times } from "lodash";
 import { LoaderIcon, MoreHorizontalIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useInView } from "react-intersection-observer";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -18,7 +19,8 @@ import ManifestDialog from "../(components)/ManifestDialog";
 import { useDeployments } from "./hooks/useDeployments";
 import { useRunningLabel } from "./hooks/useRunningLabel";
 
-type Deployment = RouterOutputs["functions"]["getDeployments"][0];
+type Deployment =
+  RouterOutputs["functions"]["getDeployments"]["deployments"][0];
 
 export default function Page() {
   return <Content />;
@@ -35,9 +37,23 @@ function Content() {
 }
 
 function DeploymentsTable() {
-  const { data: deployments } = useDeployments();
+  const { ref, inView } = useInView();
+  const {
+    data: deploymentPages,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useDeployments();
   const [currentManifest, setCurrentManifest] = useState<Manifest>();
 
+  const deployments = deploymentPages?.pages?.flatMap(
+    (page) => page.deployments,
+  );
+
+  useEffect(() => {
+    if (inView && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, isFetchingNextPage, fetchNextPage]);
   return (
     <>
       <div className="w-full border-spacing-x-2">
@@ -47,19 +63,6 @@ function DeploymentsTable() {
           </div>
         )}
         <div className="flex flex-col divide-y">
-          {!deployments &&
-            times(20).map((v) => (
-              <div key={v} className="p-4 py-5 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-1 items-center gap-2">
-                    <Skeleton className="h-6 basis-96" />
-                    <Skeleton className="h-2 w-2" />
-                    <Skeleton className="h-6 basis-24" />
-                  </div>
-                  <Skeleton className="h-6 w-24" />
-                </div>
-              </div>
-            ))}
           {deployments?.map((deployment) => (
             <div key={deployment.id} className=" p-4 text-sm">
               <div className="flex items-center gap-2">
@@ -102,6 +105,22 @@ function DeploymentsTable() {
               </div>
             </div>
           ))}
+
+          {(!deployments || isFetchingNextPage) &&
+            times(20).map((v) => (
+              <div key={v} className="p-4 py-5 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-1 items-center gap-2">
+                    <Skeleton className="h-6 basis-96" />
+                    <Skeleton className="h-2 w-2" />
+                    <Skeleton className="h-6 basis-24" />
+                  </div>
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </div>
+            ))}
+
+          {deployments && deployments.length > 0 && <div ref={ref}></div>}
         </div>
       </div>
       {currentManifest && (

@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use crate::manifest::providers::InitBlockProvider;
+use crate::manifest::Manifest;
 use crate::redis_client::{errors::RedisClientError, ConvectRedisValue};
 use crate::redis_client::{IntoOriginalValue, RedisClient};
 use serde::{Deserialize, Serialize};
@@ -42,6 +44,23 @@ impl State {
 
     pub fn chain_id(&self) -> u64 {
         self.chain_id
+    }
+
+    pub fn start_block(&self, manifest: &Manifest) -> Result<u64, errors::StateError> {
+        let manifest_min_block = manifest
+            .tx_configs
+            .iter()
+            .filter(|c| {
+                c.chains
+                    .as_ref()
+                    .is_none_or(|chains| chains.contains(&(self.chain_id() as i64)))
+            })
+            .map(|c| c.get_start_block(self.chain_id()))
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .min();
+
+        Ok(manifest_min_block.unwrap())
     }
 
     pub fn last_block(&self) -> Option<u64> {

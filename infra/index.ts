@@ -1,12 +1,11 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { getConfigForStack } from "./config";
+import config from "./config/config";
 
 export = async () => {
   const stackName = pulumi.getStack();
   const GITHUB_SHA = process.env.GITHUB_SHA!;
 
-  const config = await getConfigForStack();
   const reportingQueue = new aws.sqs.Queue(
     `reporting-queue`,
     {
@@ -193,6 +192,12 @@ export = async () => {
     { dependsOn: [syncer] }
   );
 
+  const serverConfig = new aws.s3.BucketObject("config", {
+    bucket: "convect-pzecvtjr9v",
+    key: "config/config.json",
+    source: new pulumi.asset.StringAsset(JSON.stringify(config)),
+  });
+
   return {
     handlerExtensionArn: extension.arn,
     handlerServerArn: handler_server.arn,
@@ -201,6 +206,7 @@ export = async () => {
     reportingHandlerArn: reportingHandler.arn,
     reportingQueueUrl: reportingQueue.url,
     githubSha: pulumi.output(GITHUB_SHA),
-    config: pulumi.secret(config),
+    configBucket: pulumi.secret(serverConfig.bucket),
+    configKey: pulumi.secret(serverConfig.key),
   };
 };

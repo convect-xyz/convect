@@ -71,6 +71,7 @@ type ProcessedBatchResult = {
 type Transaction = {
   transactionHash: string;
   blockNumber: number;
+  value: number;
 };
 
 export async function handler(event: SQSEvent, context: Context) {
@@ -346,7 +347,6 @@ export function decodeTx(tx: any, txConfig: any) {
       abi: [logConfig._event],
       data: log.data,
       topics: log.topics,
-      strict: true,
     });
 
     log.eventName = decodedEvent.eventName;
