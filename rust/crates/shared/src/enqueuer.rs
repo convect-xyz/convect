@@ -89,10 +89,9 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
     async fn upload_raw(
         &self,
         state: &mut State,
-        batch: &IngestBatch,
+        txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let mut i = 0;
-        let txs = &batch.transactions;
 
         while i < txs.len() {
             let mut group = Vec::new();
@@ -156,13 +155,13 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             let mut transactions_for_batch = Vec::new();
 
             // Max transactions per batch: 60
-            while i < transactions_for_batch.len() && transactions_for_batch.len() < 60 {
-                let s3_result = &transactions_for_batch[i];
-                transactions_for_batch.push(s3_result);
+            while i < transactions.len() && transactions_for_batch.len() < 60 {
+                let transaction = transactions[i].clone();
+                transactions_for_batch.push(transaction);
                 i += 1;
             }
 
-            let batch_id = uuid::Uuid::new_v4();
+            let batch_id = uuid::Uuid::new_v4().to_string();
             let bucket = "ingest-fetch-logs";
             let key = format!(
                 "syncs/{function_id}/{batch_id}",
@@ -174,7 +173,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                     "ingest-fetch-logs",
                     key.as_str(),
                     serde_json::to_string(&IngestBatch {
-                        batch_id,
+                        batch_id: batch_id.clone(),
                         chain_id: state.chain_id(),
                         transactions: transactions_for_batch.clone(),
                     })
@@ -204,6 +203,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 .await?;
 
             self.create_batch(batch_id.to_string(), state, &transactions_for_batch)
+                .await?;
         }
 
         Ok(())
