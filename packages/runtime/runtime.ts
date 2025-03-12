@@ -37,8 +37,14 @@ for (const [name, value] of Object.entries(USER_ENVS)) {
 const { default: pipeline } = require("./pipeline");
 
 type ParsedRecord = {
-  id: string;
+  messageId: string;
   data: Record<string, any>;
+};
+
+type ParsedBatch = {
+  batchId: string;
+  messageId: string;
+  transactions: Array<Transaction>;
 };
 
 type LogIdentifier = {
@@ -51,15 +57,15 @@ type EligibleTxConfig = {
   config: any;
 };
 
-type TransactionResultLabel = {
-  label: String;
-  timestamp_ms: number;
-};
-type TransactionResult = {
-  transaction_hash: string;
-  batch_id: string;
-  successful_labels: Array<TransactionResultLabel>;
-  failed_label: TransactionResultLabel | undefined;
+type ProcessedBatchResult = {
+  batchId: string;
+  status: "success" | "failure";
+  transactions: Array<
+    {
+      txHashes: string[];
+      label: string;
+    }[]
+  >;
 };
 
 type Transaction = {
@@ -69,57 +75,49 @@ type Transaction = {
 
 export async function handler(event: SQSEvent, context: Context) {
   const parsedRecords: Array<ParsedRecord> = event.Records.map((record) => ({
-    id: record.messageId,
-    isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
+    messageId: record.messageId,
     data: JSON.parse(record.body),
   }));
 
-  const isRetry = event.Records.some(
-    (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
-  );
-
-  const parsedTxs = parseTransactions(
+  const parsedBatches = parseBatches(
     parsedRecords,
     await getS3Results(parsedRecords)
   );
 
-  const { results, addFailure, addSuccessful, getFailureCount } =
+  const { results, failBatch, succeedBatch, getFailureCount } =
     createStateManager();
 
   let err: any;
+  const failureId = await getFailureId();
+  const startIdx = failureId
+    ? parsedBatches.findIndex((b) => b.batchId === failureId)
+    : 0;
 
-  const groupedTxs = groupTransactions(parsedTxs, pipeline.handlers);
-  for (
-    let i = isRetry ? await getFailureIdx() : 0;
-    i < groupedTxs.length;
-    i++
-  ) {
-    let txConfig = pipeline.handlers[i];
-    const batch = groupedTxs[i]!.map((tx) => decodeTx(tx, txConfig));
+  for (var i = startIdx; i < parsedBatches.length; i++) {
+    const batch = parsedBatches[i]!;
+    const groupedTxs = groupTransactions(batch.transactions, pipeline.handlers);
+    for (let i = 0; i < groupedTxs.length; i++) {
+      let txConfig = pipeline.handlers[i];
+      const txs = groupedTxs[i]!.map((tx) => decodeTx(tx, txConfig));
 
-    if (batch.length === 0) {
-      continue;
-    }
+      if (txs.length === 0) {
+        continue;
+      }
 
-    try {
-      await txConfig._handler(batch, getContext());
-      batch.map((tx) =>
-        addSuccessful(tx.transactionHash, tx.batchId, i.toString())
-      );
-    } catch (e) {
-      addFailure(
-        batch.at(0).transactionHash,
-        batch.at(0).batchId,
-        i.toString()
-      );
-      err = e;
-      break;
+      try {
+        await txConfig._handler(txs, getContext());
+        succeedBatch(batch.batchId);
+      } catch (e) {
+        failBatch(batch.batchId);
+        err = e;
+        break;
+      }
     }
   }
 
   await uploadResults(
     context.awsRequestId,
-    results,
+    results as any,
     event.Records.map((r) => r.receiptHandle)
   );
 
@@ -137,28 +135,35 @@ function getContext() {
   };
 }
 
-export function parseTransactions(
+export function parseBatches(
   parsedRecords: Array<ParsedRecord>,
   s3Results: Map<any, any>
 ) {
-  const transactions: Array<Transaction> = [];
+  const batches: Array<ParsedBatch> = [];
   for (const record of parsedRecords) {
-    const payload = record.data;
-    if (payload.type === "Raw") {
-      transactions.push(...payload.data);
-    } else {
-      transactions.push(...s3Results.get(record.id));
-    }
+    const batch = record.data;
+
+    const txs =
+      batch.type === "Raw"
+        ? batch.data.transactions
+        : s3Results.get(record.messageId)!.transactions;
+
+    batches.push({
+      batchId: batch.batchId,
+      messageId: record.messageId,
+      transactions: txs.map((tx: any) => ({ ...tx, value: Number(tx.value) })),
+    });
   }
-  return transactions;
+
+  return batches;
 }
 
-export async function getFailureIdx() {
+export async function getFailureId() {
   const pipeline = await axios
     .get("http://127.0.0.1:4121/pipeline")
     .then((r) => r.data);
 
-  return Number(pipeline.ErrorLabel_);
+  return pipeline.errorBatchId;
 }
 
 export function findErrorTxIdx(parsedTxs: Array<Transaction>, pipeline: any) {
@@ -172,7 +177,7 @@ export function findErrorTxIdx(parsedTxs: Array<Transaction>, pipeline: any) {
 
 export async function uploadResults(
   invocation_id: string,
-  results: Array<TransactionResult>,
+  results: Array<ProcessedBatchResult>,
   message_ids: Array<string>
 ) {
   await axios.post("http://127.0.0.1:4121/results", {
@@ -190,7 +195,7 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
       .filter((r) => r.data.type === "Batch")
       .map((record) =>
         axios.get(record.data.download_url).then(async (response) => {
-          s3Results.set(record.id, response.data);
+          s3Results.set(record.messageId, response.data);
         })
       )
   );
@@ -199,50 +204,24 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
 }
 
 function createStateManager() {
-  const txHashIdx = new Map<string, number>();
-  const results: Array<TransactionResult> = [];
+  const results: Map<string, ProcessedBatchResult> = new Map();
   let failureCount = 0;
   let successCount = 0;
 
-  function addSuccessful(txHash: string, batchId: string, handler: string) {
-    if (!txHashIdx.has(txHash)) {
-      txHashIdx.set(txHash, results.length);
-      results.push({
-        transaction_hash: txHash,
-        successful_labels: [],
-        batch_id: batchId,
-        failed_label: undefined,
-      });
-    }
-
-    results[txHashIdx.get(txHash)!]!.successful_labels.push({
-      label: handler,
-      timestamp_ms: Date.now(),
-    });
-    successCount++;
+  function succeedBatch(batchId: string) {
+    // if(res)
   }
 
-  function addFailure(txHash: string, batchId: string, handler: string) {
-    if (!txHashIdx.has(txHash)) {
-      txHashIdx.set(txHash, results.length);
-      results.push({
-        transaction_hash: txHash,
-        successful_labels: [],
-        batch_id: batchId,
-        failed_label: undefined,
-      });
-    }
-
-    results[txHashIdx.get(txHash)!]!.failed_label = {
-      label: handler,
-      timestamp_ms: Date.now(),
-    };
-    failureCount++;
+  function failBatch(batchId: string) {
+    // results.push({
+    //   batchId: batchId,
+    //   status: "failure",
+    // });
   }
 
   return {
-    addSuccessful,
-    addFailure,
+    succeedBatch,
+    failBatch,
     results,
     getFailureCount: () => failureCount,
     getSuccessCount: () => successCount,

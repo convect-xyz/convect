@@ -28,7 +28,6 @@ fn main() -> Result<(), Error> {
         .unwrap()
         .block_on(async {
             _main().await;
-
             let func = service_fn(my_extension);
             lambda_extension::run(func).await
         })
@@ -79,13 +78,12 @@ mod results {
     use futures::{join, TryFutureExt};
     use serde::Deserialize;
     use serde_json::{json, Value};
-    use shared::reporting_sdk::{self, TransactionResult};
+    use shared::reporting_sdk::{self, ProcessedBatchResult};
 
     #[derive(Deserialize, Debug)]
     pub struct Request {
         pub invocation_id: String,
-        pub message_ids: Vec<String>,
-        pub results: Vec<reporting_sdk::TransactionResult>,
+        pub results: Vec<reporting_sdk::ProcessedBatchResult>,
     }
 
     #[debug_handler]
@@ -93,10 +91,10 @@ mod results {
         State(app_state): State<AppState>,
         Json(payload): Json<Request>,
     ) -> Result<Json<Value>, ServerError> {
-        let failed_tx = payload
+        let failed_batch: Option<ProcessedBatchResult> = payload
             .results
             .iter()
-            .find(|v| v.failed_label.is_some())
+            .find(|v| v.status.eq(&reporting_sdk::BatchStatus::Failure))
             .map(|v| v.clone());
 
         let reporting_request = reporting_sdk::Report::Results {
@@ -110,8 +108,8 @@ mod results {
 
         let (reporting_result, process_result, visibility_result) = join!(
             app_state.reporting.handle(&reporting_request),
-            maybe_update_process_state(&app_state, &failed_tx),
-            maybe_update_message_visibility(&app_state, &payload, &failed_tx,)
+            maybe_update_process_state(&app_state, &failed_batch),
+            maybe_update_message_visibility(&app_state, &failed_batch)
         );
 
         reporting_result?;
@@ -123,10 +121,10 @@ mod results {
 
     async fn maybe_update_process_state(
         app_state: &AppState,
-        failed_tx: &Option<TransactionResult>,
+        failed_batch: &Option<ProcessedBatchResult>,
     ) -> Result<(), BoxError> {
-        if let Some(failed_tx) = failed_tx {
-            return fail_process_state(app_state, &failed_tx).await;
+        if let Some(failed_batch) = failed_batch {
+            return fail_process_state(app_state, &failed_batch).await;
         }
 
         return unfail_process_state(app_state).await;
@@ -134,11 +132,10 @@ mod results {
 
     async fn maybe_update_message_visibility(
         app_state: &AppState,
-        request: &Request,
-        failed_tx: &Option<TransactionResult>,
+        failed_tx: &Option<ProcessedBatchResult>,
     ) -> Result<(), BoxError> {
-        if let Some(_) = failed_tx {
-            return update_message_visibility(app_state, &request.message_ids).await;
+        if let Some(failed_tx) = failed_tx {
+            return update_message_visibility(app_state, &failed_tx.message_id).await;
         }
 
         Ok(())
@@ -146,7 +143,7 @@ mod results {
 
     async fn update_message_visibility(
         app_state: &AppState,
-        message_ids: &Vec<String>,
+        message_ids: &String,
     ) -> Result<(), BoxError> {
         Ok(app_state
             .sqs_client
@@ -177,16 +174,13 @@ mod results {
 
     async fn fail_process_state(
         app_state: &AppState,
-        failed_tx: &TransactionResult,
+        batch_result: &ProcessedBatchResult,
     ) -> Result<(), BoxError> {
         let mut state = app_state.pipeline.lock().await;
 
         Ok(state
             .update()
-            .set_error_label(Some(
-                failed_tx.failed_label.as_ref().unwrap().label.to_string(),
-            ))
-            .set_error_tx(Some(failed_tx.transaction_hash.to_string()))
+            .set_error_batch_id(Some(batch_result.batch_id.clone()))
             .send()
             .await?)
     }
@@ -194,12 +188,7 @@ mod results {
     async fn unfail_process_state(app_state: &AppState) -> Result<(), BoxError> {
         let mut state = app_state.pipeline.lock().await;
 
-        Ok(state
-            .update()
-            .set_error_label(None)
-            .set_error_tx(None)
-            .send()
-            .await?)
+        Ok(state.update().set_error_batch_id(None).send().await?)
     }
 }
 
@@ -215,16 +204,12 @@ mod get_pipeline {
 
         let mut response = HashMap::new();
 
-        response.insert("FunctionId_".to_string(), process_state.function_id());
-        response.insert("ChainId_".to_string(), process_state.chain_id().to_string());
-        response.insert("DeploymentId_".to_string(), process_state.deployment_id());
+        response.insert("functionId".to_string(), process_state.function_id());
+        response.insert("chainId".to_string(), process_state.chain_id().to_string());
+        response.insert("deploymentId".to_string(), process_state.deployment_id());
         response.insert(
-            "ErrorLabel_".to_string(),
-            process_state.error_label().unwrap_or_default(),
-        );
-        response.insert(
-            "ErrorTx_".to_string(),
-            process_state.error_tx().unwrap_or_default(),
+            "errorBatchId".to_string(),
+            process_state.error_batch_id().unwrap_or_default(),
         );
 
         return Json(response);

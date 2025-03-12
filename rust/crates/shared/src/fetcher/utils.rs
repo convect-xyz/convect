@@ -34,7 +34,6 @@ pub fn group_logs_into_transactions(logs: Vec<LogResult>) -> Vec<IngestTransacti
     let mut tx_indices: HashMap<String, usize> = HashMap::new();
     let mut txs: Vec<IngestTransaction> = Vec::new();
 
-    let id = uuid::Uuid::new_v4();
     for log_result in logs.into_iter() {
         let tx_hash = log_result.transaction_hash();
 
@@ -46,7 +45,6 @@ pub fn group_logs_into_transactions(logs: Vec<LogResult>) -> Vec<IngestTransacti
                 block_timestamp: 0,
                 block_hash: log_result.block_hash(),
                 transaction_index: log_result.transaction_index(),
-                batch_id: id.to_string(),
                 transaction_hash: log_result.transaction_hash(),
                 from: log_result.from(),
                 to: log_result.to(),
