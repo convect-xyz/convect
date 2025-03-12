@@ -25,7 +25,7 @@ pub enum Payload {
 }
 
 impl Payload {
-    pub async fn get_transactions(&self) -> Result<IngestBatch, reqwest::Error> {
+    pub async fn get_data(&self) -> Result<IngestBatch, reqwest::Error> {
         match self {
             Payload::S3 { download_url } => {
                 reqwest::get(download_url.clone())
