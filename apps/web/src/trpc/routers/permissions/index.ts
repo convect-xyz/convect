@@ -21,4 +21,32 @@ export const throwIfNotProjectCollaborator = async ({
   if (!collaborator) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
   }
+
+  return collaborator;
+};
+
+export const throwIfNotProjectOwner = async ({
+  projectId,
+  userId,
+}: {
+  projectId: number;
+  userId: string;
+}) => {
+  const project = await db.query.projects.findFirst({
+    where: (fields, { eq }) => eq(fields.id, projectId),
+  });
+  if (!project) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
+  }
+
+  const collaborator = await getCollaborator(projectId, userId);
+  if (!collaborator) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+  }
+
+  if (collaborator.userId !== project.userId) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+  }
+
+  return { project, collaborator };
 };

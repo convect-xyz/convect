@@ -13,10 +13,11 @@ export const getProjectById = protectedProcedure
     z.object({
       id: z.number(),
       name: z.string(),
+      isOwner: z.boolean(),
     }),
   )
   .query(async ({ ctx, input }) => {
-    await throwIfNotProjectCollaborator({
+    const collaborator = await throwIfNotProjectCollaborator({
       projectId: input.id,
       userId: ctx.session.user.id,
     });
@@ -26,10 +27,9 @@ export const getProjectById = protectedProcedure
         return eq(fields.id, input.id);
       },
     });
-
     if (!project) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
     }
 
-    return project;
+    return { ...project, isOwner: project.userId === collaborator.userId };
   });

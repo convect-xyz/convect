@@ -14,6 +14,7 @@ export const getCollaborators = protectedProcedure
         user: z.object({
           id: z.string(),
           email: z.string(),
+          isOwner: z.boolean(),
         }),
       }),
     ),
@@ -30,6 +31,7 @@ export const getCollaborators = protectedProcedure
       },
       with: {
         user: true,
+        project: true,
       },
     });
 
@@ -37,6 +39,7 @@ export const getCollaborators = protectedProcedure
       user: {
         id: invite.userId,
         email: invite.user.email,
+        isOwner: invite.userId === invite.project.userId,
       },
     }));
   });

@@ -1,7 +1,9 @@
 "use client";
 
 import { endOfMonth, startOfMonth } from "date-fns";
+import { times } from "lodash";
 import { Card, CardContent } from "~/components/ui/card";
+import { Skeleton } from "~/components/ui/skeleton";
 import { formatCurrency } from "~/lib/shared/utils/formatting";
 import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
@@ -9,7 +11,7 @@ import { useParams } from "../../hooks/useParams";
 
 type UsageMetric = RouterOutputs["project"]["getUsage"][number];
 
-export default function Overview() {
+export default function Usage() {
   const { projectId } = useParams();
   const { data: usage } = api.project.getUsage.useQuery({
     projectId,
@@ -19,7 +21,7 @@ export default function Overview() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-xl">Overview</div>
+      <div className="text-xl">Usage</div>
       <Card className="bg-background">
         <CardContent className="p-1">
           <div className="flex gap-2 p-2 text-xs font-medium text-muted-foreground">
@@ -28,7 +30,9 @@ export default function Overview() {
             <div className="basis-[120px] text-right">On Demand</div>
             <div className="basis-[140px] text-right">Charge</div>
           </div>
+
           {usage?.map((metric) => <Product key={metric.key} metric={metric} />)}
+          {!usage && times(10).map((v) => <ProductSkeleton key={v} />)}
         </CardContent>
       </Card>
     </div>
@@ -74,6 +78,26 @@ function Product(props: { metric: UsageMetric }) {
       </div>
       <div className="basis-[140px] text-right">
         {formatCurrency(metric.additionalChargeInCents)}
+      </div>
+    </div>
+  );
+}
+
+function ProductSkeleton() {
+  return (
+    <div className="flex cursor-pointer items-center gap-2 rounded-md p-2 text-sm odd:bg-black hover:bg-muted">
+      <div className="flex flex-1 items-center gap-2">
+        <Skeleton className="aspect-square h-6 w-6 rounded-full" />
+        <Skeleton className="max-w-20 h-5 w-full" />
+      </div>
+      <div className="basis-[140px] text-right">
+        <Skeleton className="ml-auto h-5 w-14" />
+      </div>
+      <div className="basis-[120px] text-right">
+        <Skeleton className="ml-auto h-5 w-14" />
+      </div>
+      <div className="basis-[140px] text-right">
+        <Skeleton className="ml-auto h-5 w-8" />
       </div>
     </div>
   );

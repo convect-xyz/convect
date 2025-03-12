@@ -11,6 +11,7 @@ import { getProjects } from "./getProjects";
 import { getStripeSetupIntent } from "./getStripeSetupIntent";
 import { getUsage } from "./getUsage";
 import { inviteCollaborator } from "./inviteCollaborator";
+import { removeCollaborator } from "./removeCollaborator";
 import { setDefaultPaymentMethod } from "./setDefaultPaymentMethod";
 import { updateName } from "./updateName";
 
@@ -29,4 +30,5 @@ export const projectRouter = createTRPCRouter({
   getStripeSetupIntent,
   setDefaultPaymentMethod,
   getActivePlan,
+  removeCollaborator,
 });

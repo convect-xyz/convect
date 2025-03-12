@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, gte, ilike } from "drizzle-orm";
+import { and, desc, eq, ilike, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -22,12 +22,15 @@ export const getTransactions = protectedProcedure
     z.object({
       transactions: z.array(
         z.object({
-          id: z.string(),
+          id: z.number(),
           transactionHash: z.string(),
           status: z.enum(["SUCCESS", "FAILED"]),
+          successCount: z.number(),
+          failureCount: z.number(),
           timestamp: z.number(),
         }),
       ),
+      nextCursor: z.number().optional(),
     }),
   )
   .query(async (opts) => {
@@ -68,28 +71,75 @@ export const getTransactions = protectedProcedure
       if (input.cursor) {
         baseFilter = and(
           baseFilter,
-          gte(analysisSchema.ethTransactions.id, input.cursor),
+          lt(analysisSchema.ethTransactions.id, input.cursor),
         );
       }
       return baseFilter;
     };
 
-    const recentTransactions = await analysisDb
-      .select()
-      .from(analysisSchema.ethTransactions)
-      .where(getFilter())
-      .orderBy(
-        desc(analysisSchema.ethTransactions.createdAt),
-        asc(analysisSchema.ethTransactions.id),
+    const txCounts = analysisDb
+      .select({
+        transactionHash: analysisSchema.ethProcessedResult.transactionHash,
+        functionId: analysisSchema.ethProcessedResult.functionId,
+        chainId: analysisSchema.ethProcessedResult.chainId,
+        deploymentId: analysisSchema.ethProcessedResult.deploymentId,
+        successCount:
+          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
+            "successCount",
+          ),
+        failureCount:
+          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = 'FAILED' THEN 1 ELSE 0 END) AS INT)`.as(
+            "failureCount",
+          ),
+      })
+      .from(analysisSchema.ethProcessedResult)
+      .groupBy(
+        analysisSchema.ethProcessedResult.transactionHash,
+        analysisSchema.ethProcessedResult.deploymentId,
+        analysisSchema.ethProcessedResult.functionId,
+        analysisSchema.ethProcessedResult.chainId,
       )
-      .limit(input.limit);
+      .as("txCounts");
+
+    const recentTransactions = await analysisDb
+      .select({
+        id: analysisSchema.ethTransactions.id,
+        transactionHash: analysisSchema.ethTransactions.transactionHash,
+        createdAt: analysisSchema.ethTransactions.createdAt,
+        functionId: analysisSchema.ethTransactions.functionId,
+        deploymentId: analysisSchema.ethTransactions.deploymentId,
+        successCount: txCounts.successCount,
+        failureCount: txCounts.failureCount,
+      })
+      .from(analysisSchema.ethTransactions)
+      .leftJoin(
+        txCounts,
+        and(
+          eq(
+            txCounts.transactionHash,
+            analysisSchema.ethTransactions.transactionHash,
+          ),
+          eq(txCounts.functionId, analysisSchema.ethTransactions.functionId),
+          eq(txCounts.chainId, analysisSchema.ethTransactions.chainId),
+          eq(
+            txCounts.deploymentId,
+            analysisSchema.ethTransactions.deploymentId,
+          ),
+        ),
+      )
+      .where(getFilter())
+      .orderBy(desc(analysisSchema.ethTransactions.id))
+      .limit(input.limit + 1);
 
     return {
       transactions: recentTransactions.map((tx) => ({
-        id: `${tx.transactionHash}-${tx.functionId}-${tx.deploymentId}`,
+        id: tx.id,
         transactionHash: tx.transactionHash,
         status: "SUCCESS",
         timestamp: tx.createdAt.getTime(),
+        successCount: tx.successCount,
+        failureCount: tx.failureCount,
       })),
+      nextCursor: recentTransactions.at(-1)?.id,
     };
   });

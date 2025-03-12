@@ -3,7 +3,8 @@
 import { formatDistanceToNow } from "date-fns";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useInView } from "react-intersection-observer";
 import { Button } from "~/components/ui/button";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
@@ -59,14 +60,14 @@ export default function Main() {
   const { data: selectedDeployment } = useSelectedDeployment();
 
   return (
-    <div className="overflow-hidden p-1">
+    <div className="overflow-hidden px-1">
       {(selectedDeployment?.status === "RUNNING" ||
         selectedDeployment?.status === "PENDING") && (
-        <div>
+        <div className="mb-4">
           <StillDeployingAlert />
         </div>
       )}
-      <div className="mt-4 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div className="flex items-stretch gap-2">
           <div className="mr-4">
             <ActiveDeployments />
@@ -158,12 +159,27 @@ function LastUpdatedAt() {
 }
 
 function RecentTransactions() {
+  const { ref: scrollRef, inView } = useInView();
+
   const filters = useTransactionFilters();
   const [selectedTransactionHash, setSelectedTransactionHash] =
     useState<string>();
 
-  const { data: maybeTransactions } = useTransactions();
+  const {
+    data: maybeTransactionsPages,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useTransactions();
   const { data: overview } = useOverview();
+  const maybeTransactions = maybeTransactionsPages?.pages.flatMap(
+    (p) => p.transactions,
+  );
+
+  useEffect(() => {
+    if (inView && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, isFetchingNextPage, fetchNextPage]);
 
   return (
     <div>
@@ -180,15 +196,7 @@ function RecentTransactions() {
         </div>
       </div>
       <div className="flex flex-col divide-y rounded-md border px-4">
-        {!maybeTransactions &&
-          times(25).map((v) => (
-            <div className="flex items-center gap-2 py-4" key={v}>
-              <Skeleton className="h-2 w-2 rounded-full" />
-              <Skeleton className="h-6 flex-1" />
-              <Skeleton className="h-6 w-24" />
-            </div>
-          ))}
-        {maybeTransactions?.transactions.map((tx, idx) => (
+        {maybeTransactions?.map((tx, idx) => (
           <TransactionRow
             tx={tx}
             key={tx.id}
@@ -197,7 +205,16 @@ function RecentTransactions() {
             }
           />
         ))}
-        {maybeTransactions?.transactions.length === 0 && (
+
+        {(!maybeTransactions || isFetchingNextPage) &&
+          times(25).map((v) => (
+            <div className="flex items-center gap-2 py-4" key={v}>
+              <Skeleton className="h-2 w-2 rounded-full" />
+              <Skeleton className="h-6 flex-1" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+          ))}
+        {maybeTransactions?.length === 0 && (
           <div className="py-10 text-center">
             <p>No transactions processed</p>
           </div>
@@ -215,6 +232,8 @@ function RecentTransactions() {
             transactionHash={selectedTransactionHash}
           />
         )}
+
+        {maybeTransactions?.length !== 0 && <div ref={scrollRef} />}
       </div>
     </div>
   );
