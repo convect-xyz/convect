@@ -1,18 +1,18 @@
 use aws_config::BehaviorVersion;
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use diesel_async::RunQueryDsl;
 use futures::{future::join_all, join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
-    models::{EthTransactionResult, Invocation, Metric, ProcessedBatch},
+    models::{Invocation, Metric, ProcessedBatch, ProcessedTransaction},
     reporting_sdk,
     schema::{invocation, processed_batch, processed_transaction, reported_metrics},
 };
 
 enum ExtractedRequest {
-    Transaction(EthTransactionResult),
+    Transaction(ProcessedTransaction),
     Batch(ProcessedBatch),
     Metric(Metric),
     Invocation(Invocation),
@@ -107,7 +107,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
 
     let conn = &mut pool.get().await?;
 
-    let (invocations_result, transactions_result, metrics_result) = join!(
+    let (invocations_result, processed_batch_result, transactions_result, metrics_result) = join!(
         diesel::insert_into(invocation::table)
             .values(invocations)
             .execute(conn),
@@ -123,6 +123,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     );
 
     invocations_result?;
+    processed_batch_result?;
     transactions_result?;
     metrics_result?;
 
@@ -168,12 +169,12 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
                 }));
 
                 for tx in result.transactions.into_iter() {
-                    rows.push(ExtractedRequest::Transaction(EthTransactionResult {
+                    rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
                         function_id: function_id.clone(),
                         deployment_id: deployment_id.clone(),
-                        batch_id: result.batch_id.clone(),
+                        processed_batch_id: 1,
                         transaction_hash: tx.transaction_hash,
-                        chain_id: chain_id.clone(),
+                        chain_id: chain_id.clone().parse().unwrap(),
                         handler: tx.handler,
                         processed_log_indices: vec![],
                         timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
