@@ -2,7 +2,6 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use config::HandlerServerConfig;
 use lambda_extension::{service_fn, tracing, Error, LambdaEvent, NextEvent};
 use monitoring::init_sentry;
 use state::AppState;
@@ -143,7 +142,7 @@ mod results {
 
     async fn update_message_visibility(
         app_state: &AppState,
-        message_ids: &String,
+        message_id: &String,
     ) -> Result<(), BoxError> {
         Ok(app_state
             .sqs_client
@@ -154,19 +153,14 @@ mod results {
                     .transaction_queue_url
                     .clone(),
             ))
-            .set_entries(Some(
-                message_ids
-                    .into_iter()
-                    .map(|v| {
-                        ChangeMessageVisibilityBatchRequestEntry::builder()
-                            .set_id(Some(uuid::Uuid::new_v4().to_string()))
-                            .set_receipt_handle(Some(v.to_string()))
-                            .set_visibility_timeout(Some(180))
-                            .build()
-                            .unwrap()
-                    })
-                    .collect(),
-            ))
+            .set_entries(Some(vec![
+                ChangeMessageVisibilityBatchRequestEntry::builder()
+                    .set_id(Some(uuid::Uuid::new_v4().to_string()))
+                    .set_receipt_handle(Some(message_id.to_string()))
+                    .set_visibility_timeout(Some(180))
+                    .build()
+                    .unwrap(),
+            ]))
             .send()
             .map_ok(|_| ())
             .await?)
