@@ -163,8 +163,8 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
                     function_id: function_id.clone(),
                     batch_id: result.batch_id.clone(),
                     deployment_id: deployment_id.clone(),
-                    status: result.status.clone(),
-                    chain_id: chain_id.clone(),
+                    status: serde_json::to_string(&result.status).unwrap(),
+                    chain_id: chain_id.clone().parse().unwrap(),
                 }));
 
                 for tx in result.transactions.into_iter() {
