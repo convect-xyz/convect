@@ -169,7 +169,11 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
                     function_id: function_id.clone(),
                     batch_id: result.batch_id.clone(),
                     deployment_id: deployment_id.clone(),
-                    status: serde_json::to_string(&result.status).unwrap(),
+                    status: match &result.status {
+                        reporting_sdk::BatchStatus::Success => "SUCCESS",
+                        reporting_sdk::BatchStatus::Failure => "FAILURE",
+                    }
+                    .to_string(),
                     chain_id: chain_id.clone().parse().unwrap(),
                 }));
 
