@@ -97,9 +97,9 @@ export const getInvocations = protectedProcedure
       invocations: invocations.map((tx) => ({
         id: tx.id,
         transactionHash: tx.transactionHash,
-        status: tx.status as "SUCCESS" | "FAILED",
+        status: "SUCCESS" as const,
         timestamp: tx.timestamp.getTime(),
-        label: tx.handler,
+        label: "0",
       })),
     };
   });
