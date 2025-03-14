@@ -113,13 +113,16 @@ impl Test {
         let payloads: Vec<Payload> =
             common::utils::poll_queue(&queue.queue_url.clone().unwrap(), &self.sqs_client).await?;
 
-        let actual_transactions = join_all(
-            payloads
-                .iter()
-                .map(|p| p.get_transactions().map(|v| v.unwrap())),
-        )
-        .map(|transactions| transactions.into_iter().flatten().collect::<Vec<_>>())
-        .await;
+        let actual_transactions =
+            join_all(payloads.iter().map(|p| p.get_data().map(|v| v.unwrap())))
+                .map(|transactions| {
+                    transactions
+                        .into_iter()
+                        .map(|b| b.transactions)
+                        .flatten()
+                        .collect::<Vec<_>>()
+                })
+                .await;
 
         let expected_transactions = &expectations.transactions;
         assert_eq!(

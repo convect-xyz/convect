@@ -1,18 +1,20 @@
 use aws_config::BehaviorVersion;
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use diesel_async::RunQueryDsl;
 use futures::{future::join_all, join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
-    models::{EthProcessedResult, Invocation, Metric},
+    models::{Invocation, Metric, ProcessedBatch, ProcessedTransaction},
     reporting_sdk,
-    schema::{eth_processed_result, invocation, reported_metrics},
+    schema::{invocation, processed_batch, processed_transaction, reported_metrics},
 };
 
+#[derive(Debug)]
 enum ExtractedRequest {
-    Transaction(EthProcessedResult),
+    Transaction(ProcessedTransaction),
+    Batch(ProcessedBatch),
     Metric(Metric),
     Invocation(Invocation),
 }
@@ -64,6 +66,8 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .flatten()
         .collect();
 
+    println!("Extracted: {:?}", extracted);
+
     let invocations: Vec<_> = extracted
         .iter()
         .map(|r| match r {
@@ -94,13 +98,26 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .map(Option::unwrap)
         .collect();
 
+    let batches: Vec<_> = extracted
+        .iter()
+        .map(|r| match r {
+            ExtractedRequest::Batch(b) => Some(b),
+            _ => None,
+        })
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .collect();
+
     let conn = &mut pool.get().await?;
 
-    let (invocations_result, transactions_result, metrics_result) = join!(
+    let (invocations_result, processed_batch_result, transactions_result, metrics_result) = join!(
         diesel::insert_into(invocation::table)
             .values(invocations)
             .execute(conn),
-        diesel::insert_into(eth_processed_result::table)
+        diesel::insert_into(processed_batch::table)
+            .values(batches)
+            .execute(conn),
+        diesel::insert_into(processed_transaction::table)
             .values(transactions)
             .execute(conn),
         diesel::insert_into(reported_metrics::table)
@@ -109,6 +126,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     );
 
     invocations_result?;
+    processed_batch_result?;
     transactions_result?;
     metrics_result?;
 
@@ -144,31 +162,31 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
             }));
 
             for result in results.into_iter() {
-                for label in result.successful_labels.iter() {
-                    rows.push(ExtractedRequest::Transaction(EthProcessedResult {
-                        transaction_hash: result.transaction_hash.clone(),
-                        handler: label.label.clone(),
-                        status: "SUCCESS".to_string(),
-                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
-                        function_id: function_id.clone(),
-                        batch_id: result.batch_id.clone(),
-                        deployment_id: deployment_id.clone(),
-                        chain_id: chain_id.parse().unwrap(),
-                        processed_log_indices: vec![],
-                    }))
-                }
+                let id = uuid::Uuid::new_v4().to_string();
+                rows.push(ExtractedRequest::Batch(ProcessedBatch {
+                    id: id.clone(),
+                    timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
+                    function_id: function_id.clone(),
+                    batch_id: result.batch_id.clone(),
+                    deployment_id: deployment_id.clone(),
+                    status: match &result.status {
+                        reporting_sdk::BatchStatus::Success => "SUCCESS",
+                        reporting_sdk::BatchStatus::Failure => "FAILURE",
+                    }
+                    .to_string(),
+                    chain_id: chain_id.clone().parse().unwrap(),
+                }));
 
-                if let Some(label) = result.failed_label.as_ref() {
-                    rows.push(ExtractedRequest::Transaction(EthProcessedResult {
-                        transaction_hash: result.transaction_hash.clone(),
-                        handler: label.label.clone(),
-                        status: "FAILED".to_string(),
-                        timestamp: DateTime::from_timestamp_millis(label.timestamp_ms).unwrap(),
+                for tx in result.transactions.into_iter() {
+                    rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
                         function_id: function_id.clone(),
-                        batch_id: result.batch_id.clone(),
                         deployment_id: deployment_id.clone(),
-                        chain_id: chain_id.parse().unwrap(),
+                        processed_batch_id: id.clone(),
+                        transaction_hash: tx.transaction_hash,
+                        chain_id: chain_id.clone().parse().unwrap(),
+                        handler: tx.handler,
                         processed_log_indices: vec![],
+                        timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
                     }))
                 }
             }

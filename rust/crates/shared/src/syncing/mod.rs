@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::manifest::providers::InitBlockProvider;
 use crate::manifest::Manifest;
 use crate::redis_client::{errors::RedisClientError, ConvectRedisValue};
 use crate::redis_client::{IntoOriginalValue, RedisClient};
@@ -46,7 +45,7 @@ impl State {
         self.chain_id
     }
 
-    pub fn start_block(&self, manifest: &Manifest) -> Result<u64, errors::StateError> {
+    pub fn manifest_min_block(&self, manifest: &Manifest) -> Result<u64, errors::StateError> {
         let manifest_min_block = manifest
             .tx_configs
             .iter()
@@ -63,7 +62,7 @@ impl State {
         Ok(manifest_min_block.unwrap())
     }
 
-    pub fn last_block(&self) -> Option<u64> {
+    pub fn last_fetched_block(&self) -> Option<u64> {
         self.last_block.as_ref().and_then(|v| {
             if v.is_empty() {
                 return None;
@@ -73,12 +72,14 @@ impl State {
         })
     }
 
-    pub fn next_block(&self) -> Option<u64> {
-        self.last_block().map(|l| l + 1)
+    pub fn next_block_to_fetch(&self, manifest: &Manifest) -> u64 {
+        self.last_fetched_block()
+            .map(|l| l + 1)
+            .unwrap_or(self.manifest_min_block(manifest).unwrap())
     }
 
     pub fn has_synced(&self, incoming_block: u64) -> bool {
-        self.last_block()
+        self.last_fetched_block()
             .map(|last_processed_block: u64| incoming_block <= last_processed_block)
             .unwrap_or(false)
     }

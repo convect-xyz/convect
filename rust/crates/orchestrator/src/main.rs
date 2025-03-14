@@ -1,3 +1,4 @@
+use core::sync;
 use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
@@ -159,7 +160,8 @@ async fn sync_chain(
         return Ok(());
     }
 
-    let start_block = sync_state.start_block(&app_service.manifest)?;
+    let start_block = sync_state.next_block_to_fetch(&app_service.manifest);
+
     if latest_block - start_block > 10000 {
         return sync_with_ecs(
             chain_id,

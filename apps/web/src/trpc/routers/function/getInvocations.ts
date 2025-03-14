@@ -69,16 +69,13 @@ export const getInvocations = protectedProcedure
     const getFilter = () => {
       let baseFilter = and(
         eq(
-          analysisSchema.ethProcessedResult.functionId,
+          analysisSchema.ethTransaction.functionId,
           input.functionId.toString(),
         ),
-        eq(analysisSchema.ethProcessedResult.chainId, input.chainId),
+        eq(analysisSchema.ethTransaction.chainId, input.chainId),
+        eq(analysisSchema.ethTransaction.deploymentId, currentDeployment.id),
         eq(
-          analysisSchema.ethProcessedResult.deploymentId,
-          currentDeployment.id,
-        ),
-        eq(
-          analysisSchema.ethProcessedResult.transactionHash,
+          analysisSchema.ethTransaction.transactionHash,
           input.transactionHash,
         ),
       );
@@ -93,16 +90,16 @@ export const getInvocations = protectedProcedure
 
     const invocations = await analysisDb
       .select()
-      .from(analysisSchema.ethProcessedResult)
+      .from(analysisSchema.ethTransaction)
       .where(getFilter());
 
     return {
       invocations: invocations.map((tx) => ({
         id: tx.id,
         transactionHash: tx.transactionHash,
-        status: tx.status as "SUCCESS" | "FAILED",
+        status: "SUCCESS" as const,
         timestamp: tx.timestamp.getTime(),
-        label: tx.handler,
+        label: "0",
       })),
     };
   });
