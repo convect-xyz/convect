@@ -123,7 +123,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             })
             .await?;
 
-            self.create_batch(batch_id.clone(), state, txs).await?;
+            self.create_batch(batch_id.clone(), state, &group).await?;
         }
 
         Ok(())
