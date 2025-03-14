@@ -170,7 +170,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -190,7 +191,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -210,7 +212,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -230,7 +233,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -250,7 +254,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -270,7 +275,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -290,7 +296,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -310,7 +317,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -330,7 +338,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -350,7 +359,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
@@ -578,7 +588,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -594,7 +605,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p00 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -610,7 +622,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p01 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -626,7 +639,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p02 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -642,7 +656,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p03 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -658,7 +673,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p04 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -674,7 +690,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p05 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -690,7 +707,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p06 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -706,7 +724,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p07 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -722,7 +741,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p08 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -738,7 +758,8 @@ diesel::table! {
 
 diesel::table! {
     processed_batch_p09 (id, deployment_id, function_id, batch_id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
         #[max_length = 255]
         batch_id -> Varchar,
         #[max_length = 255]
@@ -768,7 +789,8 @@ diesel::table! {
         transaction_hash -> Varchar,
         processed_log_indices -> Array<Nullable<Int4>>,
         timestamp -> Timestamptz,
-        processed_batch_id -> Nullable<Int4>,
+        #[max_length = 255]
+        processed_batch_id -> Nullable<Varchar>,
     }
 }
 
