@@ -161,56 +161,49 @@ const getSuccessfulTxCount = async (
 ) => {
   const txCounts = analysisDb
     .select({
-      transactionHash: analysisSchema.ethProcessedResult.transactionHash,
-      functionId: analysisSchema.ethProcessedResult.functionId,
-      chainId: analysisSchema.ethProcessedResult.chainId,
-      deploymentId: analysisSchema.ethProcessedResult.deploymentId,
-      successCount:
-        sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.ethProcessedResult.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
-          "successCount",
-        ),
-      uniqueCount:
-        sql<number>`CAST(COUNT(DISTINCT ${analysisSchema.ethProcessedResult.handler}) AS INT)`.as(
-          "uniqueCount",
-        ),
+      transactionHash: analysisSchema.ethTransaction.transactionHash,
+      functionId: analysisSchema.ethTransaction.functionId,
+      chainId: analysisSchema.ethTransaction.chainId,
+      deploymentId: analysisSchema.ethTransaction.deploymentId,
     })
-    .from(analysisSchema.ethProcessedResult)
+    .from(analysisSchema.ethTransaction)
     .groupBy(
-      analysisSchema.ethProcessedResult.transactionHash,
-      analysisSchema.ethProcessedResult.deploymentId,
-      analysisSchema.ethProcessedResult.functionId,
-      analysisSchema.ethProcessedResult.chainId,
+      analysisSchema.ethTransaction.transactionHash,
+      analysisSchema.ethTransaction.deploymentId,
+      analysisSchema.ethTransaction.functionId,
+      analysisSchema.ethTransaction.chainId,
     )
     .as("txCounts");
 
-  return analysisDb
-    .select({
-      successIsUniqueCount:
-        sql<number>`CAST(SUM(CASE WHEN ${txCounts.successCount} = ${txCounts.uniqueCount} THEN 1 ELSE 0 END) AS INT)`.as(
-          "successIsUniqueCount",
-        ),
-    })
-    .from(analysisSchema.ethTransactions)
-    .leftJoin(
-      txCounts,
-      and(
-        eq(
-          txCounts.transactionHash,
-          analysisSchema.ethTransactions.transactionHash,
-        ),
-        eq(txCounts.functionId, analysisSchema.ethTransactions.functionId),
-        eq(txCounts.chainId, analysisSchema.ethTransactions.chainId),
-        eq(txCounts.deploymentId, analysisSchema.ethTransactions.deploymentId),
-      ),
-    )
-    .where(
-      and(
-        eq(analysisSchema.ethTransactions.functionId, functionId),
-        eq(analysisSchema.ethTransactions.deploymentId, deploymentId),
-        eq(analysisSchema.ethTransactions.chainId, chainId),
-      ),
-    )
-    .then((r) => Number(r.at(0)!.successIsUniqueCount));
+  return 1;
+  // return analysisDb
+  //   .select({
+  //     successIsUniqueCount:
+  //       sql<number>`CAST(SUM(CASE WHEN ${txCounts.successCount} = ${txCounts.uniqueCount} THEN 1 ELSE 0 END) AS INT)`.as(
+  //         "successIsUniqueCount",
+  //       ),
+  //   })
+  //   .from(analysisSchema.ethTransactions)
+  //   .leftJoin(
+  //     txCounts,
+  //     and(
+  //       eq(
+  //         txCounts.transactionHash,
+  //         analysisSchema.ethTransactions.transactionHash,
+  //       ),
+  //       eq(txCounts.functionId, analysisSchema.ethTransactions.functionId),
+  //       eq(txCounts.chainId, analysisSchema.ethTransactions.chainId),
+  //       eq(txCounts.deploymentId, analysisSchema.ethTransactions.deploymentId),
+  //     ),
+  //   )
+  //   .where(
+  //     and(
+  //       eq(analysisSchema.ethTransactions.functionId, functionId),
+  //       eq(analysisSchema.ethTransactions.deploymentId, deploymentId),
+  //       eq(analysisSchema.ethTransactions.chainId, chainId),
+  //     ),
+  //   )
+  //   .then((r) => Number(r.at(0)!.successIsUniqueCount));
 };
 
 const getTxCount = async (
