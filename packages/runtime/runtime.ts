@@ -162,7 +162,7 @@ export function parseBatches(
         : s3Results.get(record.messageId)!.transactions;
 
     batches.push({
-      batchId: batch.data.batchId,
+      batchId: batch.data.batch_id,
       messageId: record.messageId,
       transactions: txs.map((tx: any) => ({ ...tx, value: Number(tx.value) })),
     });
