@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::invocation)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Invocation {
@@ -12,7 +12,7 @@ pub struct Invocation {
     pub deployment_id: String,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::reported_metrics)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Metric {
@@ -28,7 +28,7 @@ pub struct Metric {
     pub deployment_id: String,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::batch)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Batch {
@@ -39,7 +39,7 @@ pub struct Batch {
     pub deployment_id: String,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::eth_transaction)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct EthTransaction {
@@ -53,7 +53,7 @@ pub struct EthTransaction {
     pub block_timestamp: DateTime<Utc>,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::processed_batch)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct ProcessedBatch {
@@ -66,7 +66,7 @@ pub struct ProcessedBatch {
     pub status: String,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::processed_transaction)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct ProcessedTransaction {
