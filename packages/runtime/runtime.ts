@@ -154,17 +154,17 @@ export function parseBatches(
 ) {
   const batches: Array<ParsedBatch> = [];
   for (const record of parsedRecords) {
-    const batch = record.data;
-    console.log(batch);
-    const txs =
-      batch.type === "Raw"
-        ? batch.data.transactions
-        : s3Results.get(record.messageId)!.transactions;
-
+    const batchData =
+      record.data.type === "Raw"
+        ? record.data.data
+        : s3Results.get(record.messageId)!;
     batches.push({
-      batchId: batch.data.batch_id,
+      batchId: batchData.batch_id,
       messageId: record.messageId,
-      transactions: txs.map((tx: any) => ({ ...tx, value: Number(tx.value) })),
+      transactions: batchData.transactions.map((tx: any) => ({
+        ...tx,
+        value: Number(tx.value),
+      })),
     });
   }
 
