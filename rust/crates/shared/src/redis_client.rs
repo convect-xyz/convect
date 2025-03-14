@@ -3,8 +3,6 @@ use std::borrow::Borrow;
 use async_trait::async_trait;
 use redis::{AsyncCommands, FromRedisValue, RedisResult, ToRedisArgs, Value};
 
-// "rediss://default:REDACTED@db-redis-nyc3-60846-do-user-17204040-0.e.db.ondigitalocean.com:25061"
-
 #[derive(Debug)]
 pub enum ConvectRedisValue {
     String(String),

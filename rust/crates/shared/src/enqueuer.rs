@@ -2,8 +2,9 @@ use std::env;
 
 use crate::connection::DbPool;
 use crate::models;
-use crate::schema::eth_transaction;
+use crate::schema::{batch, eth_transaction};
 use crate::syncing::State;
+use crate::types::batch::IngestBatch;
 use crate::types::transactions::IngestTransaction;
 use crate::{connection::establish_connection_pool, s3::S3};
 use async_trait::async_trait;
@@ -19,18 +20,18 @@ use uuid::Uuid;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Payload {
-    Batch { download_url: String },
-    Raw { data: Vec<IngestTransaction> },
+    S3 { download_url: String },
+    Raw { data: IngestBatch },
 }
 
 impl Payload {
-    pub async fn get_transactions(&self) -> Result<Vec<IngestTransaction>, reqwest::Error> {
+    pub async fn get_data(&self) -> Result<IngestBatch, reqwest::Error> {
         match self {
-            Payload::Batch { download_url } => {
+            Payload::S3 { download_url } => {
                 reqwest::get(download_url.clone())
                     .await
                     .unwrap()
-                    .json::<Vec<IngestTransaction>>()
+                    .json::<IngestBatch>()
                     .await
             }
             Payload::Raw { data } => Ok(data.clone()),
@@ -87,9 +88,11 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
 
     async fn upload_raw(
         &self,
+        state: &mut State,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let mut i = 0;
+
         while i < txs.len() {
             let mut group = Vec::new();
             let mut group_byte_size = 0;
@@ -112,21 +115,29 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 i += 1;
             }
 
-            self.upload_sqs(group.clone()).await?;
+            let batch_id = Uuid::new_v4().to_string();
+            self.send_batch_to_queue(IngestBatch {
+                batch_id: batch_id.clone(),
+                chain_id: state.chain_id(),
+                transactions: group.clone(),
+            })
+            .await?;
+
+            self.create_batch(batch_id.clone(), state, txs).await?;
         }
 
         Ok(())
     }
 
-    async fn upload_sqs(
+    async fn send_batch_to_queue(
         &self,
-        group: Vec<IngestTransaction>,
+        batch: IngestBatch,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         Ok(self
             .sqs_client
             .send_message()
             .queue_url(self.queue_url.to_owned())
-            .message_body(serde_json::to_string(&Payload::Raw { data: group }).unwrap())
+            .message_body(serde_json::to_string(&Payload::Raw { data: batch }).unwrap())
             .message_group_id("main")
             .message_deduplication_id(Uuid::new_v4())
             .send()
@@ -134,26 +145,26 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             .await?)
     }
 
-    async fn upload_s3(
+    async fn upload_to_s3(
         &self,
-        txs: &Vec<IngestTransaction>,
+        state: &mut State,
+        transactions: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let mut i = 0;
-        while i < txs.len() {
-            let mut batch = Vec::new();
+        while i < transactions.len() {
+            let mut transactions_for_batch = Vec::new();
 
             // Max transactions per batch: 60
-            while i < txs.len() && batch.len() < 60 {
-                let s3_result = &txs[i];
-                batch.push(s3_result);
+            while i < transactions.len() && transactions_for_batch.len() < 60 {
+                let transaction = transactions[i].clone();
+                transactions_for_batch.push(transaction);
                 i += 1;
             }
 
-            let id = uuid::Uuid::new_v4();
-
+            let batch_id = uuid::Uuid::new_v4().to_string();
             let bucket = "ingest-fetch-logs";
             let key = format!(
-                "syncs/{function_id}/{id}",
+                "syncs/{function_id}/{batch_id}",
                 function_id = env::var("FUNCTION_ID").expect("FUNCTION ID not defined"),
             );
 
@@ -161,7 +172,12 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 .put_s3_object(
                     "ingest-fetch-logs",
                     key.as_str(),
-                    serde_json::to_string(&batch).unwrap(),
+                    serde_json::to_string(&IngestBatch {
+                        batch_id: batch_id.clone(),
+                        chain_id: state.chain_id(),
+                        transactions: transactions_for_batch.clone(),
+                    })
+                    .unwrap(),
                 )
                 .await?;
 
@@ -176,7 +192,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 .send_message()
                 .queue_url(self.queue_url.to_owned())
                 .message_body(
-                    serde_json::to_string(&Payload::Batch {
+                    serde_json::to_string(&Payload::S3 {
                         download_url: download_url.clone(),
                     })
                     .unwrap(),
@@ -185,17 +201,17 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 .message_deduplication_id(key)
                 .send()
                 .await?;
+
+            self.create_batch(batch_id.to_string(), state, &transactions_for_batch)
+                .await?;
         }
 
         Ok(())
     }
-}
 
-#[async_trait]
-impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
-    #[tracing::instrument(skip_all, err)]
-    async fn enqueue_transactions(
+    async fn create_batch(
         &self,
+        batch_id: String,
         state: &mut State,
         txs: &Vec<IngestTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
@@ -207,12 +223,24 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
             let chain_id = state.chain_id();
 
             async move {
+                diesel::insert_into(batch::table)
+                    .values(models::Batch {
+                        batch_id: batch_id.clone(),
+                        function_id: function_id.clone(),
+                        deployment_id: deployment_id.clone(),
+                        chain_id: chain_id.clone() as i32,
+                        timestamp_ms: Utc::now(),
+                    })
+                    .execute(conn)
+                    .await?;
+
                 let chunked_txs = txs.iter().chunks(200);
                 let futures = chunked_txs.into_iter().map(|txs| {
                     diesel::insert_into(eth_transaction::table)
                         .values(
                             txs.map(|tx| models::EthTransaction {
                                 project_id: state.project_id(),
+                                batch_id: batch_id.clone(),
                                 transaction_hash: tx.transaction_hash.clone(),
                                 function_id: function_id.clone(),
                                 deployment_id: deployment_id.clone(),
@@ -237,12 +265,24 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         })
         .await?;
 
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
+    #[tracing::instrument(skip_all, err)]
+    async fn enqueue_transactions(
+        &self,
+        state: &mut State,
+        txs: &Vec<IngestTransaction>,
+    ) -> Result<(), errors::TransactionEnqueuerError> {
         let serialised_txs = serde_json::to_string(&txs).unwrap();
         if serialised_txs.len() < 200000 {
-            return self.upload_raw(txs).await;
+            return self.upload_raw(state, &txs).await;
         }
 
-        return self.upload_s3(txs).await;
+        return self.upload_to_s3(state, &txs).await;
     }
 }
 

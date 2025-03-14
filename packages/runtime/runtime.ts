@@ -37,8 +37,14 @@ for (const [name, value] of Object.entries(USER_ENVS)) {
 const { default: pipeline } = require("./pipeline");
 
 type ParsedRecord = {
-  id: string;
+  messageId: string;
   data: Record<string, any>;
+};
+
+type ParsedBatch = {
+  batchId: string;
+  messageId: string;
+  transactions: Array<Transaction>;
 };
 
 type LogIdentifier = {
@@ -51,15 +57,15 @@ type EligibleTxConfig = {
   config: any;
 };
 
-type TransactionResultLabel = {
-  label: String;
-  timestamp_ms: number;
-};
-type TransactionResult = {
-  transaction_hash: string;
-  batch_id: string;
-  successful_labels: Array<TransactionResultLabel>;
-  failed_label: TransactionResultLabel | undefined;
+type ProcessedBatchResult = {
+  batchId: string;
+  messageId: string;
+  timestampMs: number;
+  status: "SUCCESS" | "FAILURE";
+  transactions: Array<{
+    transactionHash: string;
+    handler: string;
+  }>;
 };
 
 type Transaction = {
@@ -70,57 +76,61 @@ type Transaction = {
 
 export async function handler(event: SQSEvent, context: Context) {
   const parsedRecords: Array<ParsedRecord> = event.Records.map((record) => ({
-    id: record.messageId,
-    isRetry: Number(record.attributes.ApproximateReceiveCount) > 1,
+    messageId: record.messageId,
     data: JSON.parse(record.body),
   }));
 
-  const isRetry = event.Records.some(
-    (r) => Number(r.messageAttributes.ApproximateReceiveCount) > 1
-  );
-
-  const parsedTxs = parseTransactions(
+  const parsedBatches = parseBatches(
     parsedRecords,
     await getS3Results(parsedRecords)
   );
 
-  const { results, addFailure, addSuccessful, getFailureCount } =
+  const { results, failBatch, succeedBatch, getFailureCount } =
     createStateManager();
 
   let err: any;
+  const failureId = await getFailureId();
+  const startIdx = failureId
+    ? parsedBatches.findIndex((b) => b.batchId === failureId)
+    : 0;
 
-  const groupedTxs = groupTransactions(parsedTxs, pipeline.handlers);
-  for (
-    let i = isRetry ? await getFailureIdx() : 0;
-    i < groupedTxs.length;
-    i++
-  ) {
-    let txConfig = pipeline.handlers[i];
-    const batch = groupedTxs[i]!.map((tx) => decodeTx(tx, txConfig));
+  for (var i = startIdx; i < parsedBatches.length; i++) {
+    const batch = parsedBatches[i]!;
+    const groupedTxs = groupTransactions(batch.transactions, pipeline.handlers);
+    for (let i = 0; i < groupedTxs.length; i++) {
+      let txConfig = pipeline.handlers[i];
+      const txs = groupedTxs[i]!.map((tx) => decodeTx(tx, txConfig));
 
-    if (batch.length === 0) {
-      continue;
-    }
+      if (txs.length === 0) {
+        continue;
+      }
 
-    try {
-      await txConfig._handler(batch, getContext());
-      batch.map((tx) =>
-        addSuccessful(tx.transactionHash, tx.batchId, i.toString())
-      );
-    } catch (e) {
-      addFailure(
-        batch.at(0).transactionHash,
-        batch.at(0).batchId,
-        i.toString()
-      );
-      err = e;
-      break;
+      try {
+        await txConfig._handler(txs, getContext());
+        succeedBatch(batch.batchId, {
+          messageId: batch.messageId,
+          transactions: txs.map((tx) => ({
+            transactionHash: tx.transactionHash,
+            handler: i.toString(),
+          })),
+        });
+      } catch (e) {
+        failBatch(batch.batchId, {
+          messageId: batch.messageId,
+          transactions: txs.map((tx) => ({
+            transactionHash: tx.transactionHash,
+            handler: i.toString(),
+          })),
+        });
+        err = e;
+        break;
+      }
     }
   }
 
   await uploadResults(
     context.awsRequestId,
-    results,
+    [...results.values()],
     event.Records.map((r) => r.receiptHandle)
   );
 
@@ -138,50 +148,45 @@ function getContext() {
   };
 }
 
-export function parseTransactions(
+export function parseBatches(
   parsedRecords: Array<ParsedRecord>,
   s3Results: Map<any, any>
 ) {
-  const transactions: Array<Transaction> = [];
+  const batches: Array<ParsedBatch> = [];
   for (const record of parsedRecords) {
-    const payload = record.data;
-
+    const batch = record.data;
+    console.log(batch);
     const txs =
-      payload.type === "Raw" ? payload.data : s3Results.get(record.id)!;
-    transactions.push(
-      ...txs.map((tx: any) => ({ ...tx, value: Number(tx.value) }))
-    );
+      batch.type === "Raw"
+        ? batch.data.transactions
+        : s3Results.get(record.messageId)!.transactions;
+
+    batches.push({
+      batchId: batch.data.batch_id,
+      messageId: record.messageId,
+      transactions: txs.map((tx: any) => ({ ...tx, value: Number(tx.value) })),
+    });
   }
 
-  return transactions;
+  return batches;
 }
 
-export async function getFailureIdx() {
+export async function getFailureId() {
   const pipeline = await axios
     .get("http://127.0.0.1:4121/pipeline")
     .then((r) => r.data);
 
-  return Number(pipeline.ErrorLabel_);
-}
-
-export function findErrorTxIdx(parsedTxs: Array<Transaction>, pipeline: any) {
-  const index = parsedTxs.findIndex(
-    (v) => pipeline.ErrorTx_ === v.transactionHash
-  );
-  if (index === -1) throw new Error("Index for failed tx not found");
-
-  return index;
+  return pipeline.errorBatchId;
 }
 
 export async function uploadResults(
   invocation_id: string,
-  results: Array<TransactionResult>,
+  results: Array<ProcessedBatchResult>,
   message_ids: Array<string>
 ) {
   await axios.post("http://127.0.0.1:4121/results", {
     invocation_id,
     results,
-    message_ids,
   });
 }
 
@@ -193,7 +198,7 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
       .filter((r) => r.data.type === "Batch")
       .map((record) =>
         axios.get(record.data.download_url).then(async (response) => {
-          s3Results.set(record.id, response.data);
+          s3Results.set(record.messageId, response.data);
         })
       )
   );
@@ -202,50 +207,57 @@ export async function getS3Results(batchRecords: Array<ParsedRecord>) {
 }
 
 function createStateManager() {
-  const txHashIdx = new Map<string, number>();
-  const results: Array<TransactionResult> = [];
+  const results: Map<string, ProcessedBatchResult> = new Map();
   let failureCount = 0;
   let successCount = 0;
 
-  function addSuccessful(txHash: string, batchId: string, handler: string) {
-    if (!txHashIdx.has(txHash)) {
-      txHashIdx.set(txHash, results.length);
-      results.push({
-        transaction_hash: txHash,
-        successful_labels: [],
-        batch_id: batchId,
-        failed_label: undefined,
+  function addWithStatus(
+    batchId: string,
+    status: "SUCCESS" | "FAILURE",
+    opts: {
+      messageId: string;
+      transactions: ProcessedBatchResult["transactions"];
+    }
+  ) {
+    if (!results.has(batchId)) {
+      results.set(batchId, {
+        batchId,
+        messageId: opts.messageId,
+        timestampMs: Date.now(),
+        status,
+        transactions: [],
       });
     }
 
-    results[txHashIdx.get(txHash)!]!.successful_labels.push({
-      label: handler,
-      timestamp_ms: Date.now(),
-    });
+    const result = results.get(batchId)!;
+    result.transactions.push(...opts.transactions);
+  }
+
+  function succeedBatch(
+    batchId: string,
+    opts: {
+      messageId: string;
+      transactions: ProcessedBatchResult["transactions"];
+    }
+  ) {
+    addWithStatus(batchId, "SUCCESS", opts);
     successCount++;
   }
 
-  function addFailure(txHash: string, batchId: string, handler: string) {
-    if (!txHashIdx.has(txHash)) {
-      txHashIdx.set(txHash, results.length);
-      results.push({
-        transaction_hash: txHash,
-        successful_labels: [],
-        batch_id: batchId,
-        failed_label: undefined,
-      });
+  function failBatch(
+    batchId: string,
+    opts: {
+      messageId: string;
+      transactions: ProcessedBatchResult["transactions"];
     }
-
-    results[txHashIdx.get(txHash)!]!.failed_label = {
-      label: handler,
-      timestamp_ms: Date.now(),
-    };
+  ) {
+    addWithStatus(batchId, "FAILURE", opts);
     failureCount++;
   }
 
   return {
-    addSuccessful,
-    addFailure,
+    succeedBatch,
+    failBatch,
     results,
     getFailureCount: () => failureCount,
     getSuccessCount: () => successCount,

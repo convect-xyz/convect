@@ -1,3 +1,13 @@
+pub mod batch {
+    use serde::{Deserialize, Serialize};
+    #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+    pub struct IngestBatch {
+        pub batch_id: String,
+        pub chain_id: u64,
+        pub transactions: Vec<super::transactions::IngestTransaction>,
+    }
+}
+
 pub mod transactions {
     use serde::{Deserialize, Serialize};
     use web3::types::{Bytes, U256};
@@ -14,8 +24,6 @@ pub mod transactions {
         pub transaction_index: u64,
         #[serde(rename = "transactionHash")]
         pub transaction_hash: String,
-        #[serde(rename = "batchId")]
-        pub batch_id: String,
         pub from: String,
         pub to: String,
         pub value: String,

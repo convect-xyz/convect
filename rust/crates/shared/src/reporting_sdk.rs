@@ -8,17 +8,30 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TransactionResultLabel {
-    pub label: String,
-    pub timestamp_ms: i64,
+pub struct ProcessedTransactionResult {
+    #[serde(rename = "transactionHash")]
+    pub transaction_hash: String,
+    pub handler: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum BatchStatus {
+    #[serde(rename = "SUCCESS")]
+    Success,
+    #[serde(rename = "FAILURE")]
+    Failure,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TransactionResult {
-    pub transaction_hash: String,
+pub struct ProcessedBatchResult {
+    #[serde(rename = "batchId")]
     pub batch_id: String,
-    pub successful_labels: Vec<TransactionResultLabel>,
-    pub failed_label: Option<TransactionResultLabel>,
+    #[serde(rename = "messageId")]
+    pub message_id: String,
+    #[serde(rename = "timestampMs")]
+    pub timestamp_ms: i64,
+    pub status: BatchStatus,
+    pub transactions: Vec<ProcessedTransactionResult>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -31,14 +44,14 @@ pub struct Metric {
     pub restore_duration_ms: Option<f64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Report {
     Results {
         function_id: String,
         chain_id: String,
         project_id: i32,
         invocation_id: String,
-        results: Vec<TransactionResult>,
+        results: Vec<ProcessedBatchResult>,
         deployment_id: String,
     },
     Metrics {

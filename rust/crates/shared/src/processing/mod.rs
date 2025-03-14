@@ -9,8 +9,7 @@ pub struct State {
     deployment_id: String,
     function_id: String,
     chain_id: u64,
-    error_tx: Option<String>,
-    error_label: Option<String>,
+    error_batch_id: Option<String>,
 }
 
 impl State {
@@ -26,18 +25,13 @@ impl State {
         self.chain_id
     }
 
-    pub fn error_tx(&self) -> Option<String> {
-        self.error_tx.clone()
-    }
-
-    pub fn error_label(&self) -> Option<String> {
-        self.error_label.clone()
+    pub fn error_batch_id(&self) -> Option<String> {
+        self.error_batch_id.clone()
     }
 
     pub fn update(&mut self) -> UpdateStateFluentBuilder {
         UpdateStateFluentBuilder {
-            error_tx: self.error_tx.clone(),
-            error_label: self.error_label.clone(),
+            error_batch_id: self.error_batch_id.clone(),
             state: self,
         }
     }
@@ -48,11 +42,10 @@ impl State {
         deployment_id: String,
         redis_client: Arc<dyn RedisClient>,
     ) -> Self {
-        let (error_tx, error_label): (Option<String>, Option<String>) = redis_client
-            .mget(vec![
-                format!("process-state-{function_id}-{chain_id}-{deployment_id}-error-tx"),
-                format!("process-state-{function_id}-{chain_id}-{deployment_id}-error-label"),
-            ])
+        let error_batch_id: Option<String> = redis_client
+            .get(format!(
+                "process-state-{function_id}-{chain_id}-{deployment_id}-error-batch-id"
+            ))
             .await
             .unwrap()
             .into_original_value();
@@ -62,26 +55,19 @@ impl State {
             deployment_id,
             function_id,
             chain_id,
-            error_tx,
-            error_label,
+            error_batch_id,
         }
     }
 }
 
 pub struct UpdateStateFluentBuilder<'a> {
     state: &'a mut State,
-    error_tx: Option<String>,
-    error_label: Option<String>,
+    error_batch_id: Option<String>,
 }
 
 impl<'a> UpdateStateFluentBuilder<'a> {
-    pub fn set_error_tx(mut self, error_tx: Option<String>) -> Self {
-        self.error_tx = error_tx;
-        self
-    }
-
-    pub fn set_error_label(mut self, error_label: Option<String>) -> Self {
-        self.error_label = error_label;
+    pub fn set_error_batch_id(mut self, batch_id: Option<String>) -> Self {
+        self.error_batch_id = batch_id;
         self
     }
 
@@ -95,16 +81,10 @@ impl<'a> UpdateStateFluentBuilder<'a> {
             ExponentialBackoff::default(),
             || async {
                 redis_client
-                    .mset(&[
-                        (
-                            get_error_tx_key(function_id, chain_id, deployment_id),
-                            self.error_tx.clone().unwrap_or_default().into(),
-                        ),
-                        (
-                            get_error_label_key(function_id, chain_id, deployment_id),
-                            self.error_label.clone().unwrap_or_default().into(),
-                        ),
-                    ])
+                    .mset(&[(
+                        get_error_batch_id_key(function_id, chain_id, deployment_id),
+                        self.error_batch_id.clone().unwrap_or_default().into(),
+                    )])
                     .await?;
 
                 Ok(())
@@ -112,25 +92,15 @@ impl<'a> UpdateStateFluentBuilder<'a> {
         )
         .await?;
 
-        self.state.error_label = self.error_label;
-        self.state.error_label = self.error_tx;
+        self.state.error_batch_id = self.error_batch_id;
 
         Ok(())
     }
 }
 
-fn get_error_tx_key(function_id: &str, chain_id: &u64, deployment_id: &str) -> String {
+fn get_error_batch_id_key(function_id: &str, chain_id: &u64, deployment_id: &str) -> String {
     format!(
         "{function_id}-{chain_id}-{deployment_id}-error-tx",
-        function_id = function_id,
-        chain_id = chain_id,
-        deployment_id = deployment_id
-    )
-}
-
-fn get_error_label_key(function_id: &str, chain_id: &u64, deployment_id: &str) -> String {
-    format!(
-        "{function_id}-{chain_id}-{deployment_id}-error-label",
         function_id = function_id,
         chain_id = chain_id,
         deployment_id = deployment_id
