@@ -78,7 +78,7 @@
     "etherscan_like": "https://api.basescan.org",
     "etherscan_api_key": "CXIDAN4QTX36JPJ54ZX8CCDNFDQ29S413I",
     "slug": "base-mainnet",
-    "fetch_strategy": "graphql"
+    "fetch_strategy": "jsonrpc"
   },
   {
     "id": 84532,
