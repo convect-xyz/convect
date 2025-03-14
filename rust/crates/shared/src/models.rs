@@ -57,6 +57,7 @@ pub struct EthTransaction {
 #[diesel(table_name = crate::schema::processed_batch)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct ProcessedBatch {
+    pub id: String,
     pub function_id: String,
     pub batch_id: String,
     pub chain_id: i32,
@@ -74,7 +75,7 @@ pub struct ProcessedTransaction {
     pub deployment_id: String,
     pub handler: String,
     pub chain_id: i32,
-    pub processed_batch_id: i32,
+    pub processed_batch_id: String,
     pub processed_log_indices: Vec<i32>,
     pub timestamp: DateTime<Utc>,
 }

@@ -159,7 +159,9 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
             }));
 
             for result in results.into_iter() {
+                let id = uuid::Uuid::new_v4().to_string();
                 rows.push(ExtractedRequest::Batch(ProcessedBatch {
+                    id: id.clone(),
                     timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
                     function_id: function_id.clone(),
                     batch_id: result.batch_id.clone(),
@@ -172,7 +174,7 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
                     rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
                         function_id: function_id.clone(),
                         deployment_id: deployment_id.clone(),
-                        processed_batch_id: 1,
+                        processed_batch_id: id.clone(),
                         transaction_hash: tx.transaction_hash,
                         chain_id: chain_id.clone().parse().unwrap(),
                         handler: tx.handler,
