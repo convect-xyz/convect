@@ -59,6 +59,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     .into_iter()
     .collect::<Result<Vec<_>, _>>()?;
 
+    println!("Reports: {:?}", reports);
     let extracted: Vec<_> = reports
         .into_iter()
         .map(extract_transactions)

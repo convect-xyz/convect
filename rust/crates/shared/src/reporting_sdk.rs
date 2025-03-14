@@ -44,7 +44,7 @@ pub struct Metric {
     pub restore_duration_ms: Option<f64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Report {
     Results {
         function_id: String,
