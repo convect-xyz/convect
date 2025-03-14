@@ -159,8 +159,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -180,8 +178,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -201,8 +197,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -222,8 +216,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -243,8 +235,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -264,8 +254,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -285,8 +273,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -306,8 +292,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -327,8 +311,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -348,8 +330,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
@@ -778,8 +758,6 @@ diesel::table! {
         id -> Int4,
         #[max_length = 255]
         handler -> Varchar,
-        #[max_length = 7]
-        status -> Varchar,
         #[max_length = 255]
         deployment_id -> Varchar,
         #[max_length = 255]
