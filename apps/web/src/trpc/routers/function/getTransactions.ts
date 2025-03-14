@@ -84,11 +84,11 @@ export const getTransactions = protectedProcedure
         chainId: analysisSchema.processedTransaction.chainId,
         deploymentId: analysisSchema.processedTransaction.deploymentId,
         successCount:
-          sql<number>`COALESCE(CAST(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT), 0)`.as(
+          sql<number>`CAST(COALESCE(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS INT)`.as(
             "successCount",
           ),
         failureCount:
-          sql<number>`COALESCE(CAST(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'FAILED' THEN 1 ELSE 0 END) AS INT), 0)`.as(
+          sql<number>`CAST(COALESCE(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'FAILED' THEN 1 ELSE 0 END), 0) AS INT)`.as(
             "failureCount",
           ),
       })
@@ -136,7 +136,6 @@ export const getTransactions = protectedProcedure
       .orderBy(desc(analysisSchema.ethTransaction.id))
       .limit(input.limit + 1);
 
-    console.log(recentTransactions);
     return {
       transactions: recentTransactions.map((tx) => ({
         id: tx.id,
