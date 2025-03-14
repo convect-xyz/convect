@@ -155,14 +155,14 @@ export function parseBatches(
   const batches: Array<ParsedBatch> = [];
   for (const record of parsedRecords) {
     const batch = record.data;
-
+    console.log(batch);
     const txs =
       batch.type === "Raw"
         ? batch.data.transactions
         : s3Results.get(record.messageId)!.transactions;
 
     batches.push({
-      batchId: batch.batchId,
+      batchId: batch.data.batchId,
       messageId: record.messageId,
       transactions: txs.map((tx: any) => ({ ...tx, value: Number(tx.value) })),
     });
@@ -187,7 +187,6 @@ export async function uploadResults(
   await axios.post("http://127.0.0.1:4121/results", {
     invocation_id,
     results,
-    message_ids,
   });
 }
 
@@ -226,7 +225,7 @@ function createStateManager() {
         messageId: opts.messageId,
         timestampMs: Date.now(),
         status,
-        transactions: opts.transactions,
+        transactions: [],
       });
     }
 
