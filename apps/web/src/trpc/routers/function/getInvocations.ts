@@ -69,28 +69,31 @@ export const getInvocations = protectedProcedure
     const getFilter = () => {
       let baseFilter = and(
         eq(
-          analysisSchema.ethTransaction.functionId,
+          analysisSchema.processedTransaction.functionId,
           input.functionId.toString(),
         ),
-        eq(analysisSchema.ethTransaction.chainId, input.chainId),
-        eq(analysisSchema.ethTransaction.deploymentId, currentDeployment.id),
+        eq(analysisSchema.processedTransaction.chainId, input.chainId),
         eq(
-          analysisSchema.ethTransaction.transactionHash,
+          analysisSchema.processedTransaction.deploymentId,
+          currentDeployment.id,
+        ),
+        eq(
+          analysisSchema.processedTransaction.transactionHash,
           input.transactionHash,
         ),
       );
-      if (input.status) {
-        baseFilter = and(
-          baseFilter,
-          eq(analysisSchema.processedTransactions.status, input.status),
-        )!;
-      }
+      // if (input.status) {
+      //   baseFilter = and(
+      //     baseFilter,
+      //     eq(analysisSchema.processedTransaction.status, input.status),
+      //   )!;
+      // }
       return baseFilter;
     };
 
     const invocations = await analysisDb
       .select()
-      .from(analysisSchema.ethTransaction)
+      .from(analysisSchema.processedTransaction)
       .where(getFilter());
 
     return {
@@ -99,7 +102,7 @@ export const getInvocations = protectedProcedure
         transactionHash: tx.transactionHash,
         status: "SUCCESS" as const,
         timestamp: tx.timestamp.getTime(),
-        label: "0",
+        label: tx.handler,
       })),
     };
   });

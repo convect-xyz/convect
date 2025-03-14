@@ -159,51 +159,63 @@ const getSuccessfulTxCount = async (
   chainId: number,
   deploymentId: string,
 ) => {
-  const txCounts = analysisDb
+  const processedTransactions = analysisDb
     .select({
-      transactionHash: analysisSchema.ethTransaction.transactionHash,
-      functionId: analysisSchema.ethTransaction.functionId,
-      chainId: analysisSchema.ethTransaction.chainId,
-      deploymentId: analysisSchema.ethTransaction.deploymentId,
+      transactionHash: analysisSchema.processedTransaction.transactionHash,
+      functionId: analysisSchema.processedTransaction.functionId,
+      chainId: analysisSchema.processedTransaction.chainId,
+      deploymentId: analysisSchema.processedTransaction.deploymentId,
+    })
+    .from(analysisSchema.processedTransaction)
+    .leftJoin(
+      analysisSchema.processedBatch,
+      eq(
+        analysisSchema.processedBatch.id,
+        analysisSchema.processedTransaction.processedBatchId,
+      ),
+    )
+    .groupBy(
+      analysisSchema.processedTransaction.transactionHash,
+      analysisSchema.processedTransaction.deploymentId,
+      analysisSchema.processedTransaction.functionId,
+      analysisSchema.processedTransaction.chainId,
+    )
+    .as("processedTransactions");
+
+  return analysisDb
+    .select({
+      successIsUniqueCount: count(processedTransactions.transactionHash),
     })
     .from(analysisSchema.ethTransaction)
-    .groupBy(
-      analysisSchema.ethTransaction.transactionHash,
-      analysisSchema.ethTransaction.deploymentId,
-      analysisSchema.ethTransaction.functionId,
-      analysisSchema.ethTransaction.chainId,
+    .leftJoin(
+      processedTransactions,
+      and(
+        eq(
+          processedTransactions.transactionHash,
+          analysisSchema.ethTransaction.transactionHash,
+        ),
+        eq(
+          processedTransactions.functionId,
+          analysisSchema.ethTransaction.functionId,
+        ),
+        eq(
+          processedTransactions.chainId,
+          analysisSchema.ethTransaction.chainId,
+        ),
+        eq(
+          processedTransactions.deploymentId,
+          analysisSchema.ethTransaction.deploymentId,
+        ),
+      ),
     )
-    .as("txCounts");
-
-  return 1;
-  // return analysisDb
-  //   .select({
-  //     successIsUniqueCount:
-  //       sql<number>`CAST(SUM(CASE WHEN ${txCounts.successCount} = ${txCounts.uniqueCount} THEN 1 ELSE 0 END) AS INT)`.as(
-  //         "successIsUniqueCount",
-  //       ),
-  //   })
-  //   .from(analysisSchema.ethTransactions)
-  //   .leftJoin(
-  //     txCounts,
-  //     and(
-  //       eq(
-  //         txCounts.transactionHash,
-  //         analysisSchema.ethTransactions.transactionHash,
-  //       ),
-  //       eq(txCounts.functionId, analysisSchema.ethTransactions.functionId),
-  //       eq(txCounts.chainId, analysisSchema.ethTransactions.chainId),
-  //       eq(txCounts.deploymentId, analysisSchema.ethTransactions.deploymentId),
-  //     ),
-  //   )
-  //   .where(
-  //     and(
-  //       eq(analysisSchema.ethTransactions.functionId, functionId),
-  //       eq(analysisSchema.ethTransactions.deploymentId, deploymentId),
-  //       eq(analysisSchema.ethTransactions.chainId, chainId),
-  //     ),
-  //   )
-  //   .then((r) => Number(r.at(0)!.successIsUniqueCount));
+    .where(
+      and(
+        eq(analysisSchema.ethTransaction.functionId, functionId),
+        eq(analysisSchema.ethTransaction.deploymentId, deploymentId),
+        eq(analysisSchema.ethTransaction.chainId, chainId),
+      ),
+    )
+    .then((r) => Number(r.at(0)!.successIsUniqueCount));
 };
 
 const getTxCount = async (
@@ -213,14 +225,14 @@ const getTxCount = async (
 ) => {
   const result = await analysisDb
     .select({
-      numTransactions: count(analysisSchema.ethTransactions.id),
+      numTransactions: count(analysisSchema.ethTransaction.id),
     })
-    .from(analysisSchema.ethTransactions)
+    .from(analysisSchema.ethTransaction)
     .where(
       and(
-        eq(analysisSchema.ethTransactions.functionId, functionId),
-        eq(analysisSchema.ethTransactions.deploymentId, deploymentId),
-        eq(analysisSchema.ethTransactions.chainId, chainId),
+        eq(analysisSchema.ethTransaction.functionId, functionId),
+        eq(analysisSchema.ethTransaction.deploymentId, deploymentId),
+        eq(analysisSchema.ethTransaction.chainId, chainId),
       ),
     );
 

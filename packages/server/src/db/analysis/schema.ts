@@ -1,54 +1,42 @@
 import {
   integer,
   pgTable,
-  primaryKey,
   serial,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
-
-export const ethTransactions = pgTable(
-  "eth_transaction",
-  {
-    id: serial("id"),
-    transactionHash: varchar("transaction_hash").notNull(),
-    functionId: varchar("function_id").notNull(),
-    projectId: integer("project_id").notNull(),
-    deploymentId: varchar("deployment_id").notNull(),
-    chainId: integer("chain_id"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-    blockTimestamp: timestamp("block_timestamp", {
-      withTimezone: true,
-    }).notNull(),
-  },
-  (table) => {
-    return {
-      pk: primaryKey({ columns: [table.id, table.functionId] }),
-    };
-  }
-);
 
 export const ethTransaction = pgTable("eth_transaction", {
   id: serial("id").primaryKey(),
   batchId: varchar("batch_id", { length: 256 }).notNull(),
   deploymentId: varchar("deployment_id").notNull(),
   functionId: varchar("function_id").notNull(),
+  projectId: integer("project_id").notNull(),
+  chainId: integer("chain_id").notNull(),
+  transactionHash: varchar("transaction_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+export const processedBatch = pgTable("processed_batch", {
+  id: serial("id").primaryKey(),
+  functionId: varchar("function_id").notNull(),
+  batchId: varchar("batch_id").notNull(),
+  chainId: integer("chain_id").notNull(),
+  deploymentId: varchar("deployment_id").notNull(),
+  timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+  status: varchar("status", { length: 256 }).notNull(),
+});
+
+export const processedTransaction = pgTable("processed_transaction", {
+  id: serial("id").primaryKey(),
+  processedBatchId: varchar("processed_batch_id", { length: 256 }).notNull(),
+  deploymentId: varchar("deployment_id").notNull(),
+  functionId: varchar("function_id").notNull(),
   chainId: integer("chain_id").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
   processedLogIndices: integer("processed_log_indices").notNull(),
   timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
-});
-
-export const processedTransactions = pgTable("processed_transactions", {
-  id: serial("id").primaryKey(),
-  projectId: integer("project_id"),
-  handlerId: varchar("handler_id").notNull(),
-  handlerVersion: varchar("handler_version").notNull(),
-  transactionHash: varchar("transaction_hash").notNull(),
-  deploymentId: varchar("deployment_id").notNull(),
-  label: varchar("label").notNull(),
-  status: varchar("status", { length: 256 }).notNull(),
-  timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+  handler: varchar("handler").notNull(),
 });
 
 export const invocation = pgTable("invocation", {
