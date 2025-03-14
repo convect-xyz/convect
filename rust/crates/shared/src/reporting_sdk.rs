@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProcessedTransactionResult {
+    #[serde(rename = "transactionHash")]
     pub transaction_hash: String,
     pub handler: String,
 }
@@ -23,8 +24,11 @@ pub enum BatchStatus {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProcessedBatchResult {
+    #[serde(rename = "batchId")]
     pub batch_id: String,
+    #[serde(rename = "messageId")]
     pub message_id: String,
+    #[serde(rename = "timestampMs")]
     pub timestamp_ms: i64,
     pub status: BatchStatus,
     pub transactions: Vec<ProcessedTransactionResult>,

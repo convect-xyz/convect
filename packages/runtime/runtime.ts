@@ -59,13 +59,13 @@ type EligibleTxConfig = {
 
 type ProcessedBatchResult = {
   batchId: string;
-  status: "success" | "failure";
-  transactions: Array<
-    {
-      txHashes: string[];
-      label: string;
-    }[]
-  >;
+  messageId: string;
+  timestampMs: number;
+  status: "SUCCESS" | "FAILURE";
+  transactions: Array<{
+    transactionHash: string;
+    handler: string;
+  }>;
 };
 
 type Transaction = {
@@ -107,9 +107,21 @@ export async function handler(event: SQSEvent, context: Context) {
 
       try {
         await txConfig._handler(txs, getContext());
-        succeedBatch(batch.batchId);
+        succeedBatch(batch.batchId, {
+          messageId: batch.messageId,
+          transactions: txs.map((tx) => ({
+            transactionHash: tx.transactionHash,
+            handler: i.toString(),
+          })),
+        });
       } catch (e) {
-        failBatch(batch.batchId);
+        failBatch(batch.batchId, {
+          messageId: batch.messageId,
+          transactions: txs.map((tx) => ({
+            transactionHash: tx.transactionHash,
+            handler: i.toString(),
+          })),
+        });
         err = e;
         break;
       }
@@ -118,7 +130,7 @@ export async function handler(event: SQSEvent, context: Context) {
 
   await uploadResults(
     context.awsRequestId,
-    results as any,
+    [...results.values()],
     event.Records.map((r) => r.receiptHandle)
   );
 
@@ -167,15 +179,6 @@ export async function getFailureId() {
   return pipeline.errorBatchId;
 }
 
-export function findErrorTxIdx(parsedTxs: Array<Transaction>, pipeline: any) {
-  const index = parsedTxs.findIndex(
-    (v) => pipeline.ErrorTx_ === v.transactionHash
-  );
-  if (index === -1) throw new Error("Index for failed tx not found");
-
-  return index;
-}
-
 export async function uploadResults(
   invocation_id: string,
   results: Array<ProcessedBatchResult>,
@@ -209,15 +212,48 @@ function createStateManager() {
   let failureCount = 0;
   let successCount = 0;
 
-  function succeedBatch(batchId: string) {
-    // if(res)
+  function addWithStatus(
+    batchId: string,
+    status: "SUCCESS" | "FAILURE",
+    opts: {
+      messageId: string;
+      transactions: ProcessedBatchResult["transactions"];
+    }
+  ) {
+    if (!results.has(batchId)) {
+      results.set(batchId, {
+        batchId,
+        messageId: opts.messageId,
+        timestampMs: Date.now(),
+        status,
+        transactions: opts.transactions,
+      });
+    }
+
+    const result = results.get(batchId)!;
+    result.transactions.push(...opts.transactions);
   }
 
-  function failBatch(batchId: string) {
-    // results.push({
-    //   batchId: batchId,
-    //   status: "failure",
-    // });
+  function succeedBatch(
+    batchId: string,
+    opts: {
+      messageId: string;
+      transactions: ProcessedBatchResult["transactions"];
+    }
+  ) {
+    addWithStatus(batchId, "SUCCESS", opts);
+    successCount++;
+  }
+
+  function failBatch(
+    batchId: string,
+    opts: {
+      messageId: string;
+      transactions: ProcessedBatchResult["transactions"];
+    }
+  ) {
+    addWithStatus(batchId, "FAILURE", opts);
+    failureCount++;
   }
 
   return {
