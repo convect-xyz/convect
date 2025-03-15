@@ -46,10 +46,16 @@ pub mod batch {
 
             let all_log_configs_match = |log_cfgs: &Vec<LogConfig>| {
                 log_cfgs.iter().all(|log_cfg| {
+                    println!("Log Cfg: {:?}", log_cfg);
                     transaction.logs.iter().any(|log| {
                         println!(
-                            "Log Cfg Topics: {:?}. Log Topicss: {:?}",
+                            "Log Cfg Topics: {:?}. Log Topics: {:?}",
                             &log_cfg.topics, &log.topics
+                        );
+                        println!(
+                            "Log Cfg Address: {:?}. Log Address: {:?}",
+                            &log_cfg.address.get_address(chain_id),
+                            &log.address
                         );
                         log_cfg
                             .address
@@ -66,6 +72,11 @@ pub mod batch {
                 .iter()
                 .enumerate()
                 .filter(|(_, (tx_cfg, log_cfgs))| {
+                    println!("is in chain: {:?}", is_in_chain(tx_cfg));
+                    println!(
+                        "all log configs match: {:?}",
+                        all_log_configs_match(log_cfgs)
+                    );
                     is_in_chain(tx_cfg) && all_log_configs_match(log_cfgs)
                 })
                 .map(|(idx, _)| idx as i32)
