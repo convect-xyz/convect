@@ -70,7 +70,7 @@ async function processBatch(
   const groupedTxs = groupTransactions(batch.transactions, pipeline.handlers);
   for (let i = 0; i < groupedTxs.length; i++) {
     let txConfig = pipeline.handlers[i];
-    const txs = groupedTxs[i]!.map((tx) => decodeTx(tx, txConfig));
+    const txs = groupedTxs[i]!.map((tx) => decodeTx(tx.transaction, txConfig));
     if (txs.length === 0) {
       continue;
     }
