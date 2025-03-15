@@ -33,13 +33,10 @@ export = async () => {
     runtime: "provided.al2023",
   });
 
-  const handlerSourceMapping = new aws.lambda.EventSourceMapping(
-    "reporing-handler-source-mapping",
-    {
-      eventSourceArn: reportingQueue.arn,
-      functionName: reportingHandler.arn,
-    }
-  );
+  new aws.lambda.EventSourceMapping("reporing-handler-source-mapping", {
+    eventSourceArn: reportingQueue.arn,
+    functionName: reportingHandler.arn,
+  });
 
   const extension = new aws.lambda.LayerVersion("handler_extension", {
     layerName: `${stackName}_handler_extension`,
