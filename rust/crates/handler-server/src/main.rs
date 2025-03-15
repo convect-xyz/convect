@@ -81,6 +81,7 @@ mod results {
 
     #[derive(Deserialize, Debug)]
     pub struct Request {
+        #[serde(rename = "invocationId")]
         pub invocation_id: String,
         pub results: Vec<reporting_sdk::ProcessedBatchResult>,
     }
