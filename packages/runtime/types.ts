@@ -7,7 +7,7 @@ export const ingestBatchSchema = z.object({
     z.object({
       transactionHash: z.string(),
       blockNumber: z.number(),
-      value: z.number(),
+      value: z.string(),
     })
   ),
 });
