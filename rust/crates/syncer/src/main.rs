@@ -1,13 +1,8 @@
 use config::load_config_from_env;
 use shared::{
-    configuration::SharedConfig,
-    connection::establish_connection_pool,
-    enqueuer::SQSTransactionEnqueuer,
-    fetcher::{graphql::client::GethGraphqlClientImpl, TransactionFetcherImpl},
-    manifest::Manifest,
-    networks::get_supported_network,
-    redis_client::RedisClientImpl,
-    syncer::{self, ChainSyncer},
+    configuration::SharedConfig, connection::establish_connection_pool,
+    enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
+    networks::get_supported_network, redis_client::RedisClientImpl, syncer::ChainSyncer,
     syncing::State,
 };
 use std::{error::Error, sync::Arc};
@@ -33,13 +28,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let sqs_client = aws_sdk_sqs::Client::new(&config);
     let fetcher = TransactionFetcherImpl::with_defaults(network.id);
     let pool = establish_connection_pool().await;
+    let manifest = Manifest::from_env().await.unwrap();
+
     let enqueuer = SQSTransactionEnqueuer::new(
         s3_client,
         syncer_config.transaction_queue_url,
         sqs_client,
         pool,
+        syncer_config.chain_id,
+        manifest.clone(),
     );
-    let manifest = Manifest::from_env().await.unwrap();
 
     let sync_result = ChainSyncer::new(&manifest, &enqueuer, &fetcher)
         .sync(

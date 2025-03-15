@@ -51,6 +51,7 @@ pub struct EthTransaction {
     pub chain_id: i32,
     pub created_at: DateTime<Utc>,
     pub block_timestamp: DateTime<Utc>,
+    pub tx_configs: Vec<i32>,
 }
 
 #[derive(Insertable, Debug)]

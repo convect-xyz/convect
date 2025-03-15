@@ -42,7 +42,6 @@ pub fn group_logs_into_transactions(logs: Vec<LogResult>) -> Vec<IngestTransacti
 
             txs.push(IngestTransaction {
                 block_number: log_result.block_number(),
-                block_timestamp: 0,
                 block_hash: log_result.block_hash(),
                 transaction_index: log_result.transaction_index(),
                 transaction_hash: log_result.transaction_hash(),

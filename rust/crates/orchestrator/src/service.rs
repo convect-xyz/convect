@@ -68,6 +68,8 @@ impl ChainService {
             config.tx_queue_url.clone(),
             app_service.sqs_client.clone(),
             pool,
+            config.chain_id,
+            app_service.manifest.clone(),
         );
 
         Self {

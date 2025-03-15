@@ -1,10 +1,11 @@
 use std::env;
 
 use crate::connection::DbPool;
+use crate::manifest::Manifest;
 use crate::models;
 use crate::schema::{batch, eth_transaction};
 use crate::syncing::State;
-use crate::types::batch::IngestBatch;
+use crate::types::batch::{IngestBatch, IngestBatchTransaction};
 use crate::types::transactions::IngestTransaction;
 use crate::{connection::establish_connection_pool, s3::S3};
 use async_trait::async_trait;
@@ -58,10 +59,12 @@ pub struct SQSTransactionEnqueuer<T: S3> {
     queue_url: String,
     s3_client: T,
     pool: DbPool,
+    chain_id: u64,
+    manifest: Manifest,
 }
 
 impl SQSTransactionEnqueuer<aws_sdk_s3::Client> {
-    pub async fn with_defaults(queue_url: String) -> Self {
+    pub async fn with_defaults(queue_url: String, chain_id: u64, manifest: Manifest) -> Self {
         let config = aws_config::load_from_env().await;
         let s3_client = aws_sdk_s3::Client::new(&config);
         let sqs_client = aws_sdk_sqs::Client::new(&config);
@@ -72,6 +75,8 @@ impl SQSTransactionEnqueuer<aws_sdk_s3::Client> {
             queue_url,
             sqs_client,
             pool,
+            manifest,
+            chain_id,
         }
     }
 }
@@ -82,12 +87,16 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         queue_url: String,
         sqs_client: aws_sdk_sqs::Client,
         pool: DbPool,
+        chain_id: u64,
+        manifest: Manifest,
     ) -> Self {
         Self {
             s3_client,
             queue_url,
             sqs_client,
             pool,
+            manifest,
+            chain_id,
         }
     }
 
@@ -120,15 +129,27 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 i += 1;
             }
 
+            let batch_transactions: Vec<IngestBatchTransaction> = group
+                .iter()
+                .map(|tx| {
+                    IngestBatchTransaction::from_transaction(
+                        &self.manifest,
+                        self.chain_id,
+                        tx.clone(),
+                    )
+                })
+                .collect();
+
             let batch_id = Uuid::new_v4().to_string();
             self.send_batch_to_queue(IngestBatch {
                 batch_id: batch_id.clone(),
                 chain_id: state.chain_id(),
-                transactions: group.clone(),
+                transactions: batch_transactions.clone(),
             })
             .await?;
 
-            self.create_batch(batch_id.clone(), state, &group).await?;
+            self.create_batch(batch_id.clone(), state, &batch_transactions)
+                .await?;
         }
 
         Ok(())
@@ -173,6 +194,17 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 function_id = env::var("FUNCTION_ID").expect("FUNCTION ID not defined"),
             );
 
+            let batch_transactions: Vec<IngestBatchTransaction> = transactions_for_batch
+                .iter()
+                .map(|tx| {
+                    IngestBatchTransaction::from_transaction(
+                        &self.manifest,
+                        self.chain_id,
+                        tx.clone(),
+                    )
+                })
+                .collect();
+
             self.s3_client
                 .put_s3_object(
                     "ingest-fetch-logs",
@@ -180,7 +212,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                     serde_json::to_string(&IngestBatch {
                         batch_id: batch_id.clone(),
                         chain_id: state.chain_id(),
-                        transactions: transactions_for_batch.clone(),
+                        transactions: batch_transactions.clone(),
                     })
                     .unwrap(),
                 )
@@ -207,7 +239,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                 .send()
                 .await?;
 
-            self.create_batch(batch_id.to_string(), state, &transactions_for_batch)
+            self.create_batch(batch_id.to_string(), state, &batch_transactions)
                 .await?;
         }
 
@@ -218,7 +250,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         &self,
         batch_id: String,
         state: &mut State,
-        txs: &Vec<IngestTransaction>,
+        txs: &Vec<IngestBatchTransaction>,
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let conn = &mut self.pool.get().await?;
 
@@ -246,15 +278,13 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
                             txs.map(|tx| models::EthTransaction {
                                 project_id: state.project_id(),
                                 batch_id: batch_id.clone(),
-                                transaction_hash: tx.transaction_hash.clone(),
+                                transaction_hash: tx.transaction.transaction_hash.clone(),
                                 function_id: function_id.clone(),
                                 deployment_id: deployment_id.clone(),
                                 created_at: Utc::now(),
                                 chain_id: chain_id.clone() as i32,
-                                block_timestamp: DateTime::from_timestamp_millis(
-                                    tx.block_timestamp * 1000,
-                                )
-                                .unwrap(),
+                                block_timestamp: DateTime::from_timestamp_millis(0).unwrap(),
+                                tx_configs: tx.tx_configs.clone(),
                             })
                             .collect::<Vec<_>>(),
                         )
