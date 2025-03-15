@@ -15,6 +15,7 @@ pub mod batch {
         // The actual transaction.
         pub transaction: super::transactions::IngestTransaction,
         // The tx_config indices that this transaction should be processed by.
+        #[serde(rename = "txConfigs")]
         pub tx_configs: Vec<i32>,
     }
 
