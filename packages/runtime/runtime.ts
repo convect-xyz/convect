@@ -60,10 +60,10 @@ export async function handler(event: SQSEvent, context: Context) {
   const failure = resultsManager.failure;
   if (failure) {
     const failureIdx = batches.findIndex((b) => b.batchId === failure.batchId);
-    const sliced = batches.slice(failureIdx);
+    const batchesToRetry = batches.slice(failureIdx);
 
     return {
-      batchItemFailures: sliced.map((batch) => ({
+      batchItemFailures: batchesToRetry.map((batch) => ({
         itemIdentifier: batch.messageId,
       })),
     };
