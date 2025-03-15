@@ -51,9 +51,12 @@ async function parseBatches(records: Array<ParsedRecord>) {
     batches.push({
       ...batchData,
       messageId: record.messageId,
-      transactions: batchData.transactions.map((tx: any) => ({
+      transactions: batchData.transactions.map((tx) => ({
         ...tx,
-        value: Number(tx.value),
+        transaction: {
+          ...tx.transaction,
+          value: Number(tx.transaction.value),
+        },
       })),
     });
   }
