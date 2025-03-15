@@ -2,7 +2,9 @@ pub mod batch {
     use serde::{Deserialize, Serialize};
     #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
     pub struct IngestBatch {
+        #[serde(rename = "batchId")]
         pub batch_id: String,
+        #[serde(rename = "chainId")]
         pub chain_id: u64,
         pub transactions: Vec<super::transactions::IngestTransaction>,
     }
