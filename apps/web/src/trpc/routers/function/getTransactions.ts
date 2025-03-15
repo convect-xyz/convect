@@ -24,10 +24,14 @@ export const getTransactions = protectedProcedure
         z.object({
           id: z.number(),
           transactionHash: z.string(),
-          status: z.enum(["SUCCESS", "FAILED"]),
-          successCount: z.number(),
-          failureCount: z.number(),
           timestamp: z.number(),
+          result: z
+            .object({
+              successCount: z.number(),
+              failureCount: z.number(),
+              status: z.enum(["SUCCESS", "FAILED"]),
+            })
+            .optional(),
         }),
       ),
       nextCursor: z.number().optional(),
@@ -109,8 +113,18 @@ export const getTransactions = protectedProcedure
       )
       .as("txCounts");
 
-    const recentTransactions = await analysisDb
+    const mostRecentBatch = analysisDb
       .select({
+        status: analysisSchema.processedBatch.status,
+        batchId: analysisSchema.processedBatch.batchId,
+        id: analysisSchema.processedBatch.id,
+        timestamp: analysisSchema.processedBatch.timestamp,
+      })
+      .from(analysisSchema.processedBatch)
+      .as("mostRecentBatch");
+
+    const recentTransactions = await analysisDb
+      .selectDistinctOn([analysisSchema.ethTransaction.id], {
         id: analysisSchema.ethTransaction.id,
         transactionHash: analysisSchema.ethTransaction.transactionHash,
         createdAt: analysisSchema.ethTransaction.createdAt,
@@ -122,6 +136,9 @@ export const getTransactions = protectedProcedure
         failureCount: sql<number>`COALESCE(${txCounts.failureCount}, 0)`.as(
           "failureCount",
         ),
+        mostRecentStatus: sql<
+          "SUCCESS" | "FAILED" | null
+        >`${mostRecentBatch.status}`.as("mostRecentStatus"),
       })
       .from(analysisSchema.ethTransaction)
       .leftJoin(
@@ -136,18 +153,29 @@ export const getTransactions = protectedProcedure
           eq(txCounts.deploymentId, analysisSchema.ethTransaction.deploymentId),
         ),
       )
+      .leftJoin(
+        mostRecentBatch,
+        and(eq(mostRecentBatch.batchId, analysisSchema.ethTransaction.batchId)),
+      )
       .where(getFilter())
-      .orderBy(desc(analysisSchema.ethTransaction.id))
+      .orderBy(
+        desc(analysisSchema.ethTransaction.id),
+        desc(mostRecentBatch.timestamp),
+      )
       .limit(input.limit + 1);
 
     return {
       transactions: recentTransactions.map((tx) => ({
         id: tx.id,
         transactionHash: tx.transactionHash,
-        status: "SUCCESS",
         timestamp: tx.createdAt.getTime(),
-        successCount: tx.successCount,
-        failureCount: tx.failureCount,
+        result: tx.mostRecentStatus
+          ? {
+              status: tx.mostRecentStatus,
+              successCount: tx.successCount,
+              failureCount: tx.failureCount,
+            }
+          : undefined,
       })),
       nextCursor: recentTransactions.at(-1)?.id,
     };

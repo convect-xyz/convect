@@ -40,6 +40,11 @@ export default function InvocationDialog(
         </div>
         <div>
           <div className="flex flex-col rounded-md border px-3 py-1">
+            {response && response.invocations.length === 0 && (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                This transaction has not been processed.
+              </div>
+            )}
             {response?.invocations.map((invocation) => (
               <InvocationRow
                 tx={invocation}

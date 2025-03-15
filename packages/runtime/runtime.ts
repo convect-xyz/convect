@@ -1,9 +1,9 @@
 import { Context, SQSEvent } from "aws-lambda";
-import { Address, Hex, decodeEventLog, isAddressEqual } from "viem";
+import { decodeEventLog } from "viem";
 import { ResultsManager } from "./manager";
 import { parseSqsEvent } from "./parser";
 import { BatchQueue } from "./processing";
-import { IngestBatch, IngestTransaction } from "./types";
+import { IngestBatch, IngestBatchTransaction } from "./types";
 
 const USER_ENVS = (
   JSON.parse(process.env.USER_ENVS!) as Array<{
@@ -30,16 +30,6 @@ for (const [name, value] of Object.entries(USER_ENVS)) {
 }
 
 const { default: pipeline } = require("./pipeline");
-
-type LogIdentifier = {
-  signature: Address;
-  address: Hex;
-};
-
-type EligibleTxConfig = {
-  label: string;
-  config: any;
-};
 
 export async function handler(event: SQSEvent, context: Context) {
   const batches = await parseSqsEvent(event);
@@ -117,108 +107,22 @@ function getContext() {
 }
 
 export function groupTransactions(
-  transactions: IngestTransaction[],
+  transactions: IngestBatchTransaction[],
   allTxConfigs: Array<any>
 ) {
-  const groupedTxs: Array<Array<IngestTransaction>> = [
+  const groupedTxs: Array<Array<IngestBatchTransaction>> = [
     ...allTxConfigs.map((_) => []),
   ];
+  console.log(transactions);
 
   for (let txIdx = 0; txIdx < transactions.length; txIdx++) {
     const transaction = transactions[txIdx]!;
-    const txLogIdentifiers = getUniqueLogIdentifiers(transaction);
-
-    for (var txCfgIdx = 0; txCfgIdx < allTxConfigs.length; txCfgIdx++) {
-      const txConfig = allTxConfigs[txCfgIdx];
-
-      const isInChain = () =>
-        !txConfig._chains ||
-        txConfig._chains.map((c: any) => c.chainId).includes(Number(CHAIN_ID));
-
-      const canProcessTx = txConfig._logs.every((logConfig: any) =>
-        txLogIdentifiers.some(
-          (log) => logConfigMatches(logConfig, log) && isInChain()
-        )
-      );
-
-      if (canProcessTx) {
-        groupedTxs[txCfgIdx]!.push(transaction);
-      }
+    for (const txConfigIdx of transaction.txConfigs) {
+      groupedTxs[txConfigIdx]!.push(transaction);
     }
   }
 
   return groupedTxs;
-}
-
-// Eligible Tx configs are configs that match the given transaction
-export function getEligibleTxConfigs(
-  tx: any,
-  allTxConfigs: Array<any>
-): Array<EligibleTxConfig> {
-  const eligibleTxConfigs = [];
-  const txLogIdentifiers = getUniqueLogIdentifiers(tx);
-
-  for (const [label, config] of allTxConfigs) {
-    var isEligible = true;
-
-    for (const logConfig of config._logs) {
-      const hasMatchingLog = txLogIdentifiers.some((log) =>
-        logConfigMatches(logConfig, log)
-      );
-      if (!hasMatchingLog) {
-        isEligible = false;
-        break;
-      }
-    }
-
-    if (isEligible) {
-      eligibleTxConfigs.push({ label, config });
-    }
-  }
-
-  return eligibleTxConfigs.sort(txConfigComparison(tx));
-}
-
-export function txConfigComparison(tx: any) {
-  const identifiers = getUniqueLogIdentifiers(tx);
-  return (txConfigA: any, txConfigB: any) => {
-    for (const identifier of identifiers) {
-      if (
-        txConfigA.config._logMap.get(identifier.signature) &&
-        txConfigB.config._logMap.get(identifier.signature)
-      ) {
-        continue;
-      }
-
-      if (txConfigA.config._logMap.get(identifier.signature)) return -1;
-
-      if (txConfigB.config._logMap.get(identifier.signature)) return 1;
-    }
-
-    return 0;
-  };
-}
-
-export function getUniqueLogIdentifiers(tx: any): Array<LogIdentifier> {
-  const seen = new Set();
-  const unique = [];
-
-  for (const log of tx.logs) {
-    const identifier = log.topics.at(0) + log.address;
-    if (!seen.has(identifier)) {
-      unique.push(getLogIdentifier(log));
-      seen.add(identifier);
-    }
-  }
-
-  return unique;
-}
-
-export function getLogIdentifier(txLog: any): LogIdentifier {
-  return {
-    signature: txLog.topics.at(0),
-    address: txLog.address,
-  };
 }
 
 export function decodeTx(tx: any, txConfig: any) {
@@ -249,20 +153,4 @@ export function decodeTx(tx: any, txConfig: any) {
   }
 
   return newTx;
-}
-
-export function logConfigMatches(logConfig: any, logIdentifier: LogIdentifier) {
-  return (
-    (isAddressEqual(getOrigin(logConfig), logIdentifier.address) &&
-      logConfig._topics.at(0) === logIdentifier.signature) ||
-    (!logConfig.address && logConfig._topics.at(0) === logIdentifier.signature)
-  );
-}
-
-export function getOrigin(logConfig: any) {
-  if (typeof logConfig._origin === "string") {
-    return logConfig._origin;
-  }
-
-  return logConfig._origin[getContext().chainId];
 }

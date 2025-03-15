@@ -88,8 +88,12 @@ impl Test {
         let chain_id = chain_config.chain_id;
         let queue =
             common::utils::setup_queue(&self.queue_name(chain_id), &self.sqs_client).await?;
-        let enqueuer =
-            SQSTransactionEnqueuer::with_defaults(queue.queue_url.clone().unwrap()).await;
+        let enqueuer = SQSTransactionEnqueuer::with_defaults(
+            queue.queue_url.clone().unwrap(),
+            chain_id,
+            self.manifest.clone(),
+        )
+        .await;
         let fetcher = TransactionFetcherImpl::with_defaults(chain_id);
         let syncer = ChainSyncer::new(&self.manifest, &enqueuer, &fetcher);
         let mut pipeline = State::load(
