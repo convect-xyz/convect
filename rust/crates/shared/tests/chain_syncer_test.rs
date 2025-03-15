@@ -10,7 +10,7 @@ use shared::{
     redis_client::RedisClientImpl,
     syncer::ChainSyncer,
     syncing::State,
-    types::transactions::IngestTransaction,
+    types::{batch::IngestBatchTransaction, transactions::IngestTransaction},
 };
 
 mod common;
@@ -144,40 +144,40 @@ impl Test {
         Ok(())
     }
 
-    fn assert_expectations(&self, expected: &ExpectedTransaction, actual: &IngestTransaction) {
+    fn assert_expectations(&self, expected: &ExpectedTransaction, actual: &IngestBatchTransaction) {
         assert_eq!(
-            expected.block_number, actual.block_number,
+            expected.block_number, actual.transaction.block_number,
             "Block number mismatch. Expected: {:?}, Actual: {:?}",
-            expected.block_number, actual.block_number
+            expected.block_number, actual.transaction.block_number
         );
         assert_eq!(
             expected.block_hash.to_lowercase(),
-            actual.block_hash.to_lowercase(),
+            actual.transaction.block_hash.to_lowercase(),
             "Block hash mismatch. Expected: {:?}, Actual: {:?}",
             expected.block_hash,
-            actual.block_hash
+            actual.transaction.block_hash
         );
         assert_eq!(
             expected.transaction_hash.to_lowercase(),
-            actual.transaction_hash.to_lowercase(),
+            actual.transaction.transaction_hash.to_lowercase(),
             "Transaction hash mismatch. Expected: {:?}, Actual: {:?}",
             expected.transaction_hash,
-            actual.transaction_hash
+            actual.transaction.transaction_hash
         );
         assert_eq!(
-            expected.transaction_index, actual.transaction_index,
+            expected.transaction_index, actual.transaction.transaction_index,
             "Transaction index mismatch. Expected: {:?}, Actual: {:?}",
-            expected.transaction_index, actual.transaction_index
+            expected.transaction_index, actual.transaction.transaction_index
         );
         assert_eq!(
             expected.logs.len(),
-            actual.logs.len(),
+            actual.transaction.logs.len(),
             "Log count mismatch. Expected: {:?}, Actual: {:?}",
             expected.logs.len(),
-            actual.logs.len()
+            actual.transaction.logs.len()
         );
 
-        for (expected_log, actual_log) in expected.logs.iter().zip(actual.logs.iter()) {
+        for (expected_log, actual_log) in expected.logs.iter().zip(actual.transaction.logs.iter()) {
             assert_eq!(
                 expected_log.address, actual_log.address,
                 "Address mismatch. Expected: {:?}, Actual: {:?}",
