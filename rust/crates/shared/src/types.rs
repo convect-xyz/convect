@@ -47,6 +47,10 @@ pub mod batch {
             let all_log_configs_match = |log_cfgs: &Vec<LogConfig>| {
                 log_cfgs.iter().all(|log_cfg| {
                     transaction.logs.iter().any(|log| {
+                        println!(
+                            "Log Cfg Topics: {:?}. Log Topicss: {:?}",
+                            &log_cfg.topics, &log.topics
+                        );
                         log_cfg
                             .address
                             .get_address(chain_id)
