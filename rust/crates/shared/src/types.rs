@@ -60,9 +60,12 @@ pub mod batch {
                         log_cfg
                             .address
                             .get_address(chain_id)
+                            .map(|addr| addr.trim_start_matches("0x"))
                             .unwrap()
                             .eq_ignore_ascii_case(&log.address)
-                            && log_cfg.topics[0].eq_ignore_ascii_case(log.topics[0].as_str())
+                            && log_cfg.topics[0].eq_ignore_ascii_case(
+                                log.topics[0].as_str().trim_start_matches("0x"),
+                            )
                     })
                 })
             };
