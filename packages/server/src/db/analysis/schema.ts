@@ -15,6 +15,7 @@ export const ethTransaction = pgTable("eth_transaction", {
   chainId: integer("chain_id").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  txConfigs: integer("tx_configs").array(),
 });
 
 export const processedBatch = pgTable("processed_batch", {
