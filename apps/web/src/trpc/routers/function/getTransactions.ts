@@ -25,6 +25,7 @@ export const getTransactions = protectedProcedure
           id: z.number(),
           transactionHash: z.string(),
           timestamp: z.number(),
+          txConfigs: z.array(z.number()),
           result: z
             .object({
               successCount: z.number(),
@@ -139,6 +140,7 @@ export const getTransactions = protectedProcedure
         mostRecentStatus: sql<
           "SUCCESS" | "FAILED" | null
         >`${mostRecentBatch.status}`.as("mostRecentStatus"),
+        txConfigs: analysisSchema.ethTransaction.txConfigs,
       })
       .from(analysisSchema.ethTransaction)
       .leftJoin(
@@ -169,6 +171,7 @@ export const getTransactions = protectedProcedure
         id: tx.id,
         transactionHash: tx.transactionHash,
         timestamp: tx.createdAt.getTime(),
+        txConfigs: tx.txConfigs ?? [],
         result: tx.mostRecentStatus
           ? {
               status: tx.mostRecentStatus,
