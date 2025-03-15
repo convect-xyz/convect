@@ -14,7 +14,7 @@ axiosRetry(axios, {
 const eventBodySchema = z
   .object({
     type: z.literal("S3"),
-    download_url: z.string(),
+    downloadUrl: z.string(),
   })
   .or(z.object({ type: z.literal("Raw"), data: ingestBatchSchema }));
 
@@ -63,7 +63,7 @@ async function getS3Results(records: Array<ParsedRecord>) {
   for (const record of records) {
     if (record.body.type === "S3") {
       promises.push(
-        axios.get(record.body.download_url).then(async (response) => {
+        axios.get(record.body.downloadUrl).then(async (response) => {
           s3Results.set(
             record.messageId,
             ingestBatchSchema.parse(response.data)

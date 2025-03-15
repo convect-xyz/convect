@@ -20,8 +20,13 @@ use uuid::Uuid;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Payload {
-    S3 { download_url: String },
-    Raw { data: IngestBatch },
+    S3 {
+        #[serde(rename = "downloadUrl")]
+        download_url: String,
+    },
+    Raw {
+        data: IngestBatch,
+    },
 }
 
 impl Payload {
