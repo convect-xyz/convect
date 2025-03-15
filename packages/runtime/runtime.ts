@@ -52,6 +52,7 @@ export async function handler(event: SQSEvent, context: Context) {
     try {
       await processBatch(resultsManager, batch);
     } catch (e) {
+      console.error(e);
       break;
     }
   }
