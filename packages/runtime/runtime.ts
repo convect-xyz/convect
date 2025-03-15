@@ -48,7 +48,6 @@ export async function handler(event: SQSEvent, context: Context) {
   });
 
   for (const batch of await BatchQueue.fromBatches(batches)) {
-    console.log(batch.batchId);
     try {
       await processBatch(resultsManager, batch);
     } catch (e) {

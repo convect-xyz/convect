@@ -20,6 +20,8 @@ pub enum BatchStatus {
     Success,
     #[serde(rename = "FAILURE")]
     Failure,
+    #[serde(rename = "FAILED")]
+    Failed,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

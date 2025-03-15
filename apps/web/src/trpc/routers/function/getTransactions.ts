@@ -84,11 +84,11 @@ export const getTransactions = protectedProcedure
         chainId: analysisSchema.processedTransaction.chainId,
         deploymentId: analysisSchema.processedTransaction.deploymentId,
         successCount:
-          sql<number>`CAST(COALESCE(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS INT)`.as(
+          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
             "successCount",
           ),
         failureCount:
-          sql<number>`CAST(COALESCE(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'FAILED' THEN 1 ELSE 0 END), 0) AS INT)`.as(
+          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'FAILED' THEN 1 ELSE 0 END) AS INT)`.as(
             "failureCount",
           ),
       })
@@ -116,8 +116,12 @@ export const getTransactions = protectedProcedure
         createdAt: analysisSchema.ethTransaction.createdAt,
         functionId: analysisSchema.ethTransaction.functionId,
         deploymentId: analysisSchema.ethTransaction.deploymentId,
-        successCount: txCounts.successCount,
-        failureCount: txCounts.failureCount,
+        successCount: sql<number>`COALESCE(${txCounts.successCount}, 0)`.as(
+          "successCount",
+        ),
+        failureCount: sql<number>`COALESCE(${txCounts.failureCount}, 0)`.as(
+          "failureCount",
+        ),
       })
       .from(analysisSchema.ethTransaction)
       .leftJoin(

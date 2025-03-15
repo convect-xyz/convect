@@ -8,7 +8,7 @@ type ProcessedBatchResult = {
     transactionHash: string;
     handler: string;
   }>;
-} & ({ status: "SUCCESS" } | { status: "FAILURE"; error: object });
+} & ({ status: "SUCCESS" } | { status: "FAILED"; error: object });
 
 export class ResultsManager {
   // A map of batchId to ProcessedBatchResult
@@ -22,7 +22,7 @@ export class ResultsManager {
 
   get failure() {
     for (const result of this.results.values()) {
-      if (result.status === "FAILURE") {
+      if (result.status === "FAILED") {
         return result;
       }
     }
@@ -33,7 +33,7 @@ export class ResultsManager {
       batchId: string;
       messageId: string;
       transactions: ProcessedBatchResult["transactions"];
-    } & ({ status: "SUCCESS" } | { status: "FAILURE"; error: any })
+    } & ({ status: "SUCCESS" } | { status: "FAILED"; error: any })
   ) {
     const { batchId } = opts;
     if (!this.results.has(batchId)) {
@@ -68,7 +68,7 @@ export class ResultsManager {
     this._addWithStatus({
       ...opts,
       error: opts.error,
-      status: "FAILURE",
+      status: "FAILED",
     });
 
     throw opts.error;
