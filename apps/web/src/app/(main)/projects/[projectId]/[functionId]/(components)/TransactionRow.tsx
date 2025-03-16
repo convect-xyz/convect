@@ -22,13 +22,14 @@ export default function TransactionRow(props: {
       <span
         className={cn(
           "h-2 w-2 rounded-full",
-          tx.status === "SUCCESS" && "bg-green-400",
-          tx.status === "FAILED" && "bg-red-400",
+          tx.result?.status === "SUCCESS" && "bg-green-400",
+          tx.result?.status === "FAILED" && "bg-red-400",
+          !tx.result && "bg-gray-400",
         )}
       ></span>
       <div className="flex-1 text-left">{tx.transactionHash}</div>
       <div className="flex items-center justify-center rounded-full border px-2 text-sm text-xs text-muted-foreground">
-        {tx.successCount}/{tx.failureCount + tx.successCount}
+        {tx.result?.successCount ?? "0"} / {tx.txConfigs.length}
       </div>
       <div className="text-sm text-muted-foreground">
         <ForceRerender>
