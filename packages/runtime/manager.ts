@@ -77,12 +77,11 @@ export class ResultsManager {
       status: "FAILED",
     });
 
+    console.error(opts.error);
     throw opts.error;
   }
 
   async uploadResults() {
-    console.log("uploading results");
-    console.log(Array.from(this.results.values()));
     await handlerServerAxios.post("/results", {
       invocationId: this.invocationId,
       results: Array.from(this.results.values()),

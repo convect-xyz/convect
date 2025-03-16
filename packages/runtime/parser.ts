@@ -27,7 +27,6 @@ type ParsedRecord = {
 
 export function parseSqsEvent(event: SQSEvent) {
   const records = event.Records.map((record) => {
-    console.log(JSON.parse(record.body));
     return {
       messageId: record.messageId,
       body: eventBodySchema.parse(JSON.parse(record.body)),
