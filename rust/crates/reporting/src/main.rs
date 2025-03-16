@@ -188,6 +188,11 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
                         handler: tx.handler,
                         processed_log_indices: vec![],
                         timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
+                        status: match &tx.status {
+                            reporting_sdk::ProcessedTransactionStatus::Success => "SUCCESS",
+                            reporting_sdk::ProcessedTransactionStatus::Failed => "FAILED",
+                        }
+                        .to_string(),
                     }))
                 }
             }
