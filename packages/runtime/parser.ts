@@ -77,5 +77,7 @@ async function getS3Results(records: Array<ParsedRecord>) {
       );
     }
   }
+
+  await Promise.all(promises);
   return s3Results;
 }
