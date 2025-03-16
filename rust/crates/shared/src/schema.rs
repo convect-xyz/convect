@@ -170,6 +170,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -189,6 +191,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -208,6 +212,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -227,6 +233,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -246,6 +254,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -265,6 +275,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -284,6 +296,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -303,6 +317,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -322,6 +338,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -341,6 +359,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 
@@ -780,6 +800,8 @@ diesel::table! {
         timestamp -> Timestamptz,
         #[max_length = 255]
         processed_batch_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        status -> Nullable<Varchar>,
     }
 }
 

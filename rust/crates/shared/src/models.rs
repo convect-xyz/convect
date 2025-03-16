@@ -79,4 +79,5 @@ pub struct ProcessedTransaction {
     pub processed_batch_id: String,
     pub processed_log_indices: Vec<i32>,
     pub timestamp: DateTime<Utc>,
+    pub status: String,
 }

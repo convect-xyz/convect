@@ -46,7 +46,12 @@ export class ResultsManager {
 
     const result = this.results.get(batchId)!;
     result.status = opts.status;
-    result.transactions.push(...opts.transactions);
+    result.transactions.push(
+      ...opts.transactions.map((tx) => ({
+        ...tx,
+        status: opts.status,
+      }))
+    );
   }
 
   addSuccess(opts: {
