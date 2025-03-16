@@ -113,7 +113,6 @@ export function groupTransactions(
   const groupedTxs: Array<Array<IngestBatchTransaction>> = [
     ...allTxConfigs.map((_) => []),
   ];
-  console.log(transactions);
 
   for (let txIdx = 0; txIdx < transactions.length; txIdx++) {
     const transaction = transactions[txIdx]!;

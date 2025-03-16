@@ -1,8 +1,5 @@
 use crate::{
-    enqueuer::TransactionEnqueuer,
-    fetcher::TransactionFetcher,
-    manifest::{providers::InitBlockProvider, Manifest},
-    syncing::State,
+    enqueuer::TransactionEnqueuer, fetcher::TransactionFetcher, manifest::Manifest, syncing::State,
     types::transactions::IngestTransaction,
 };
 use futures::future::join_all;
