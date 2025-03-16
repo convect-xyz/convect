@@ -7,11 +7,20 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum ProcessedTransactionStatus {
+    #[serde(rename = "SUCCESS")]
+    Success,
+    #[serde(rename = "FAILED")]
+    Failed,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProcessedTransactionResult {
     #[serde(rename = "transactionHash")]
     pub transaction_hash: String,
     pub handler: String,
+    pub status: ProcessedTransactionStatus,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -20,6 +29,8 @@ pub enum BatchStatus {
     Success,
     #[serde(rename = "FAILURE")]
     Failure,
+    #[serde(rename = "FAILED")]
+    Failed,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

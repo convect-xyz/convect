@@ -1,12 +1,11 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
+import { TabsContent } from "@radix-ui/react-tabs";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { Button } from "~/components/ui/button";
-import { ForceRerender } from "~/components/ui/force-rerender";
 import { Input } from "~/components/ui/input";
 import {
   Select,
@@ -16,6 +15,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -24,12 +24,14 @@ import {
 } from "~/components/ui/tooltip";
 import { api } from "~/trpc/react";
 import { ActiveDeployments } from "./(components)/ActiveDeployments";
+import BatchRow from "./(components)/BatchRow";
 import { Chain } from "./(components)/Chain";
 import InvocationDialog from "./(components)/InvocationDialog";
 import ManifestDialog from "./(components)/ManifestDialog";
 import { StillDeployingAlert } from "./(components)/StillDeployingAlert";
 import TransactionRow from "./(components)/TransactionRow";
 import TransactionFilters, { useTransactionFilters } from "./filters";
+import { useBatches } from "./hooks/useBatches";
 import { useOverview } from "./hooks/useOverview";
 import { useParams } from "./hooks/useParams";
 import { useSelectedDeployment } from "./hooks/useSelectedDeployment";
@@ -129,31 +131,67 @@ export default function Main() {
           </>
         )}
       </div>
-      <div className="mt-2">
-        <TransactionFilters>
-          <RecentTransactions />
-        </TransactionFilters>
+      <div className="my-6">
+        <Tabs defaultValue="batches">
+          <TabsList>
+            <TabsTrigger value="batches">Batches</TabsTrigger>
+            <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          </TabsList>
+          <TabsContent value="batches">
+            <RecentBatches />
+          </TabsContent>
+          <TabsContent value="transactions">
+            <TransactionFilters>
+              <RecentTransactions />
+            </TransactionFilters>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 }
 
-function LastUpdatedAt() {
-  const { data: overview, dataUpdatedAt } = useOverview();
+function RecentBatches() {
+  const { ref: scrollRef, inView } = useInView();
+  const {
+    data: maybeBatchesPages,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useBatches();
+  const maybeBatches = maybeBatchesPages?.pages.flatMap((p) => p.batches);
 
-  if (!overview) {
-    return <Skeleton className="h-6 w-[200px]" />;
-  }
+  useEffect(() => {
+    if (inView && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, isFetchingNextPage, fetchNextPage]);
 
   return (
-    <div className="text-xs text-muted-foreground">
-      Last updated{" "}
-      <ForceRerender>
-        {formatDistanceToNow(dataUpdatedAt, {
-          addSuffix: true,
-          includeSeconds: true,
-        })}
-      </ForceRerender>
+    <div>
+      <div className="my-2 flex flex-col divide-y rounded-md border px-4">
+        {maybeBatches?.map((batch, idx) => (
+          <BatchRow
+            batch={batch}
+            key={batch.id}
+            onRowSelected={(batch) => {}}
+          />
+        ))}
+
+        {(!maybeBatches || isFetchingNextPage) &&
+          times(25).map((v) => (
+            <div className="flex items-center gap-2 py-4" key={v}>
+              <Skeleton className="h-2 w-2 rounded-full" />
+              <Skeleton className="h-6 flex-1" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+          ))}
+        {maybeBatches?.length === 0 && (
+          <div className="py-10 text-center">
+            <p>No batches processed</p>
+          </div>
+        )}
+      </div>
+      {maybeBatches?.length !== 0 && <div ref={scrollRef} />}
     </div>
   );
 }
@@ -183,7 +221,6 @@ function RecentTransactions() {
 
   return (
     <div>
-      <div className="mb-2 mt-4 text-muted-foreground">Transactions</div>
       <div className="my-2">
         <div className="flex gap-2">
           <Input

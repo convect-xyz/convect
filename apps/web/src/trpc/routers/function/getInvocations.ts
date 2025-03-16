@@ -94,13 +94,15 @@ export const getInvocations = protectedProcedure
     const invocations = await analysisDb
       .select()
       .from(analysisSchema.processedTransaction)
+
       .where(getFilter());
 
+    console.log(invocations);
     return {
       invocations: invocations.map((tx) => ({
         id: tx.id,
         transactionHash: tx.transactionHash,
-        status: "SUCCESS" as const,
+        status: tx.status as "SUCCESS" | "FAILED",
         timestamp: tx.timestamp.getTime(),
         label: tx.handler,
       })),

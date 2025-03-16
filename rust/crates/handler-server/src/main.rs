@@ -81,6 +81,7 @@ mod results {
 
     #[derive(Deserialize, Debug)]
     pub struct Request {
+        #[serde(rename = "invocationId")]
         pub invocation_id: String,
         pub results: Vec<reporting_sdk::ProcessedBatchResult>,
     }
@@ -93,7 +94,7 @@ mod results {
         let failed_batch: Option<ProcessedBatchResult> = payload
             .results
             .iter()
-            .find(|v| v.status.eq(&reporting_sdk::BatchStatus::Failure))
+            .find(|v| v.status.eq(&reporting_sdk::BatchStatus::Failed))
             .map(|v| v.clone());
 
         let reporting_request = reporting_sdk::Report::Results {

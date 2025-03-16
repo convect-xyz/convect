@@ -174,6 +174,7 @@ const getSuccessfulTxCount = async (
         analysisSchema.processedTransaction.processedBatchId,
       ),
     )
+    .where(eq(analysisSchema.processedBatch.status, "SUCCESS"))
     .groupBy(
       analysisSchema.processedTransaction.transactionHash,
       analysisSchema.processedTransaction.deploymentId,

@@ -6,6 +6,15 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+export const batch = pgTable("batch", {
+  id: serial("id").primaryKey(),
+  functionId: varchar("function_id").notNull(),
+  batchId: varchar("batch_id").notNull(),
+  chainId: integer("chain_id").notNull(),
+  deploymentId: varchar("deployment_id").notNull(),
+  timestampMs: integer("timestamp_ms").notNull(),
+});
+
 export const ethTransaction = pgTable("eth_transaction", {
   id: serial("id").primaryKey(),
   batchId: varchar("batch_id", { length: 256 }).notNull(),
@@ -15,6 +24,7 @@ export const ethTransaction = pgTable("eth_transaction", {
   chainId: integer("chain_id").notNull(),
   transactionHash: varchar("transaction_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  txConfigs: integer("tx_configs").array(),
 });
 
 export const processedBatch = pgTable("processed_batch", {
@@ -36,6 +46,7 @@ export const processedTransaction = pgTable("processed_transaction", {
   transactionHash: varchar("transaction_hash").notNull(),
   processedLogIndices: integer("processed_log_indices").notNull(),
   timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+  status: varchar("status", { length: 256 }),
   handler: varchar("handler").notNull(),
 });
 

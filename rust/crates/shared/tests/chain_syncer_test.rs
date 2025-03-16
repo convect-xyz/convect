@@ -10,7 +10,7 @@ use shared::{
     redis_client::RedisClientImpl,
     syncer::ChainSyncer,
     syncing::State,
-    types::transactions::IngestTransaction,
+    types::{batch::IngestBatchTransaction, transactions::IngestTransaction},
 };
 
 mod common;
@@ -88,8 +88,12 @@ impl Test {
         let chain_id = chain_config.chain_id;
         let queue =
             common::utils::setup_queue(&self.queue_name(chain_id), &self.sqs_client).await?;
-        let enqueuer =
-            SQSTransactionEnqueuer::with_defaults(queue.queue_url.clone().unwrap()).await;
+        let enqueuer = SQSTransactionEnqueuer::with_defaults(
+            queue.queue_url.clone().unwrap(),
+            chain_id,
+            self.manifest.clone(),
+        )
+        .await;
         let fetcher = TransactionFetcherImpl::with_defaults(chain_id);
         let syncer = ChainSyncer::new(&self.manifest, &enqueuer, &fetcher);
         let mut pipeline = State::load(
@@ -140,40 +144,40 @@ impl Test {
         Ok(())
     }
 
-    fn assert_expectations(&self, expected: &ExpectedTransaction, actual: &IngestTransaction) {
+    fn assert_expectations(&self, expected: &ExpectedTransaction, actual: &IngestBatchTransaction) {
         assert_eq!(
-            expected.block_number, actual.block_number,
+            expected.block_number, actual.transaction.block_number,
             "Block number mismatch. Expected: {:?}, Actual: {:?}",
-            expected.block_number, actual.block_number
+            expected.block_number, actual.transaction.block_number
         );
         assert_eq!(
             expected.block_hash.to_lowercase(),
-            actual.block_hash.to_lowercase(),
+            actual.transaction.block_hash.to_lowercase(),
             "Block hash mismatch. Expected: {:?}, Actual: {:?}",
             expected.block_hash,
-            actual.block_hash
+            actual.transaction.block_hash
         );
         assert_eq!(
             expected.transaction_hash.to_lowercase(),
-            actual.transaction_hash.to_lowercase(),
+            actual.transaction.transaction_hash.to_lowercase(),
             "Transaction hash mismatch. Expected: {:?}, Actual: {:?}",
             expected.transaction_hash,
-            actual.transaction_hash
+            actual.transaction.transaction_hash
         );
         assert_eq!(
-            expected.transaction_index, actual.transaction_index,
+            expected.transaction_index, actual.transaction.transaction_index,
             "Transaction index mismatch. Expected: {:?}, Actual: {:?}",
-            expected.transaction_index, actual.transaction_index
+            expected.transaction_index, actual.transaction.transaction_index
         );
         assert_eq!(
             expected.logs.len(),
-            actual.logs.len(),
+            actual.transaction.logs.len(),
             "Log count mismatch. Expected: {:?}, Actual: {:?}",
             expected.logs.len(),
-            actual.logs.len()
+            actual.transaction.logs.len()
         );
 
-        for (expected_log, actual_log) in expected.logs.iter().zip(actual.logs.iter()) {
+        for (expected_log, actual_log) in expected.logs.iter().zip(actual.transaction.logs.iter()) {
             assert_eq!(
                 expected_log.address, actual_log.address,
                 "Address mismatch. Expected: {:?}, Actual: {:?}",

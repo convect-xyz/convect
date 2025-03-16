@@ -87,6 +87,7 @@ export default async () => {
       {
         eventSourceArn: queue.arn,
         functionName: handler.arn,
+        functionResponseTypes: ["ReportBatchItemFailures"],
       }
     );
   }

@@ -24,10 +24,14 @@ export const getTransactions = protectedProcedure
         z.object({
           id: z.number(),
           transactionHash: z.string(),
-          status: z.enum(["SUCCESS", "FAILED"]),
-          successCount: z.number(),
-          failureCount: z.number(),
           timestamp: z.number(),
+          txConfigs: z.array(z.number()),
+          result: z
+            .object({
+              successCount: z.number(),
+              status: z.enum(["SUCCESS", "FAILED"]),
+            })
+            .optional(),
         }),
       ),
       nextCursor: z.number().optional(),
@@ -80,16 +84,17 @@ export const getTransactions = protectedProcedure
     const txCounts = analysisDb
       .select({
         transactionHash: analysisSchema.processedTransaction.transactionHash,
+        processedBatchId: analysisSchema.processedTransaction.processedBatchId,
         functionId: analysisSchema.processedTransaction.functionId,
         chainId: analysisSchema.processedTransaction.chainId,
         deploymentId: analysisSchema.processedTransaction.deploymentId,
         successCount:
-          sql<number>`CAST(COALESCE(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS INT)`.as(
+          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.processedTransaction.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
             "successCount",
           ),
-        failureCount:
-          sql<number>`CAST(COALESCE(SUM(CASE WHEN ${analysisSchema.processedBatch.status} = 'FAILED' THEN 1 ELSE 0 END), 0) AS INT)`.as(
-            "failureCount",
+        status:
+          sql<string>`CASE WHEN BOOL_AND(${analysisSchema.processedTransaction.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
+            "txStatus",
           ),
       })
       .from(analysisSchema.processedTransaction)
@@ -109,41 +114,98 @@ export const getTransactions = protectedProcedure
       )
       .as("txCounts");
 
-    const recentTransactions = await analysisDb
+    const processedTransactions = analysisDb
       .select({
-        id: analysisSchema.ethTransaction.id,
-        transactionHash: analysisSchema.ethTransaction.transactionHash,
-        createdAt: analysisSchema.ethTransaction.createdAt,
-        functionId: analysisSchema.ethTransaction.functionId,
-        deploymentId: analysisSchema.ethTransaction.deploymentId,
-        successCount: txCounts.successCount,
-        failureCount: txCounts.failureCount,
+        transactionHash: analysisSchema.processedTransaction.transactionHash,
+        functionId: analysisSchema.processedTransaction.functionId,
+        chainId: analysisSchema.processedTransaction.chainId,
+        deploymentId: analysisSchema.processedTransaction.deploymentId,
+        processedBatchId: analysisSchema.processedTransaction.processedBatchId,
+        successCount: sql<number>`COALESCE(${txCounts.successCount}, 0)`.as(
+          "successCount",
+        ),
+        status: txCounts.status,
+        timestamp: analysisSchema.processedTransaction.timestamp,
       })
-      .from(analysisSchema.ethTransaction)
+      .from(analysisSchema.processedTransaction)
       .leftJoin(
         txCounts,
         and(
           eq(
             txCounts.transactionHash,
+            analysisSchema.processedTransaction.transactionHash,
+          ),
+          eq(
+            txCounts.functionId,
+            analysisSchema.processedTransaction.functionId,
+          ),
+          eq(txCounts.chainId, analysisSchema.processedTransaction.chainId),
+          eq(
+            txCounts.deploymentId,
+            analysisSchema.processedTransaction.deploymentId,
+          ),
+          eq(
+            txCounts.processedBatchId,
+            analysisSchema.processedTransaction.processedBatchId,
+          ),
+        ),
+      )
+      .as("processedTransactions");
+
+    const recentTransactions = await analysisDb
+      .selectDistinctOn([analysisSchema.ethTransaction.id], {
+        id: analysisSchema.ethTransaction.id,
+        transactionHash: analysisSchema.ethTransaction.transactionHash,
+        createdAt: analysisSchema.ethTransaction.createdAt,
+        functionId: analysisSchema.ethTransaction.functionId,
+        deploymentId: analysisSchema.ethTransaction.deploymentId,
+        successCount: sql<number>`COALESCE(${txCounts.successCount}, 0)`.as(
+          "successCount",
+        ),
+        txConfigs: analysisSchema.ethTransaction.txConfigs,
+        status: processedTransactions.status,
+      })
+      .from(analysisSchema.ethTransaction)
+      .leftJoin(
+        processedTransactions,
+        and(
+          eq(
+            processedTransactions.transactionHash,
             analysisSchema.ethTransaction.transactionHash,
           ),
-          eq(txCounts.functionId, analysisSchema.ethTransaction.functionId),
-          eq(txCounts.chainId, analysisSchema.ethTransaction.chainId),
-          eq(txCounts.deploymentId, analysisSchema.ethTransaction.deploymentId),
+          eq(
+            processedTransactions.functionId,
+            analysisSchema.ethTransaction.functionId,
+          ),
+          eq(
+            processedTransactions.chainId,
+            analysisSchema.ethTransaction.chainId,
+          ),
+          eq(
+            processedTransactions.deploymentId,
+            analysisSchema.ethTransaction.deploymentId,
+          ),
         ),
       )
       .where(getFilter())
-      .orderBy(desc(analysisSchema.ethTransaction.id))
+      .orderBy(
+        desc(analysisSchema.ethTransaction.id),
+        desc(processedTransactions.timestamp),
+      )
       .limit(input.limit + 1);
 
     return {
       transactions: recentTransactions.map((tx) => ({
         id: tx.id,
         transactionHash: tx.transactionHash,
-        status: "SUCCESS",
         timestamp: tx.createdAt.getTime(),
-        successCount: tx.successCount,
-        failureCount: tx.failureCount,
+        txConfigs: tx.txConfigs ?? [],
+        result: tx.status
+          ? {
+              status: tx.status as "SUCCESS" | "FAILED",
+              successCount: tx.successCount,
+            }
+          : undefined,
       })),
       nextCursor: recentTransactions.at(-1)?.id,
     };

@@ -162,16 +162,17 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
             }));
 
             for result in results.into_iter() {
-                let id = uuid::Uuid::new_v4().to_string();
+                let processed_batch_id = uuid::Uuid::new_v4().to_string();
                 rows.push(ExtractedRequest::Batch(ProcessedBatch {
-                    id: id.clone(),
+                    id: processed_batch_id.clone(),
                     timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
                     function_id: function_id.clone(),
                     batch_id: result.batch_id.clone(),
                     deployment_id: deployment_id.clone(),
                     status: match &result.status {
                         reporting_sdk::BatchStatus::Success => "SUCCESS",
-                        reporting_sdk::BatchStatus::Failure => "FAILURE",
+                        reporting_sdk::BatchStatus::Failure => "FAILED",
+                        reporting_sdk::BatchStatus::Failed => "FAILED",
                     }
                     .to_string(),
                     chain_id: chain_id.clone().parse().unwrap(),
@@ -181,12 +182,17 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
                     rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
                         function_id: function_id.clone(),
                         deployment_id: deployment_id.clone(),
-                        processed_batch_id: id.clone(),
+                        processed_batch_id: processed_batch_id.clone(),
                         transaction_hash: tx.transaction_hash,
                         chain_id: chain_id.clone().parse().unwrap(),
                         handler: tx.handler,
                         processed_log_indices: vec![],
                         timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
+                        status: match &tx.status {
+                            reporting_sdk::ProcessedTransactionStatus::Success => "SUCCESS",
+                            reporting_sdk::ProcessedTransactionStatus::Failed => "FAILED",
+                        }
+                        .to_string(),
                     }))
                 }
             }
