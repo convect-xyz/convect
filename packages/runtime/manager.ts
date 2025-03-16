@@ -77,6 +77,7 @@ export class ResultsManager {
       status: "FAILED",
     });
 
+    console.error(opts.error);
     throw opts.error;
   }
 
