@@ -94,23 +94,17 @@ export const getInvocations = protectedProcedure
     const invocations = await analysisDb
       .select()
       .from(analysisSchema.processedTransaction)
-      .leftJoin(
-        analysisSchema.processedBatch,
-        eq(
-          analysisSchema.processedBatch.id,
-          analysisSchema.processedTransaction.processedBatchId,
-        ),
-      )
+
       .where(getFilter());
 
     console.log(invocations);
     return {
       invocations: invocations.map((tx) => ({
-        id: tx.processed_transaction.id,
-        transactionHash: tx.processed_transaction.transactionHash,
-        status: tx.processed_batch!.status as "SUCCESS" | "FAILED",
-        timestamp: tx.processed_transaction.timestamp.getTime(),
-        label: tx.processed_transaction.handler,
+        id: tx.id,
+        transactionHash: tx.transactionHash,
+        status: tx.status as "SUCCESS" | "FAILED",
+        timestamp: tx.timestamp.getTime(),
+        label: tx.handler,
       })),
     };
   });
