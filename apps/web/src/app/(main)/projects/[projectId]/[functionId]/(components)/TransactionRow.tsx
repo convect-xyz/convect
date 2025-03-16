@@ -29,7 +29,7 @@ export default function TransactionRow(props: {
       ></span>
       <div className="flex-1 text-left">{tx.transactionHash}</div>
       <div className="flex items-center justify-center rounded-full border px-2 text-sm text-xs text-muted-foreground">
-        {tx.result?.successCount ?? "0"}/{tx.txConfigs.length}
+        {tx.result?.successCount ?? "0"} / {tx.txConfigs.length}
       </div>
       <div className="text-sm text-muted-foreground">
         <ForceRerender>

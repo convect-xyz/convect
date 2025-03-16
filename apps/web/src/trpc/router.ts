@@ -8,6 +8,7 @@ import { addEnv } from "./routers/function/addEnv";
 import { createFunction } from "./routers/function/create";
 import { deleteFunction } from "./routers/function/delete";
 import { deleteEnv } from "./routers/function/deleteEnv";
+import { getBatches } from "./routers/function/getBatches";
 import { getDeployments } from "./routers/function/getDeployments";
 import { getEnvs } from "./routers/function/getEnvs";
 import { getEnvValue } from "./routers/function/getEnvValue";
@@ -49,6 +50,7 @@ export const functionRouter = createTRPCRouter({
   getLogs,
   getOverview,
   getTransactions,
+  getBatches,
 });
 
 export const producersRouter = createTRPCRouter({
