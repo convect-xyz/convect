@@ -1,5 +1,6 @@
 use lambda_extension::{
-    service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, SharedService,
+    service_fn, tracing, Error, Extension, LambdaTelemetry, LambdaTelemetryRecord, LogBuffering,
+    SharedService,
 };
 use regex::Regex;
 use serde_json::json;
@@ -111,6 +112,12 @@ async fn main() -> Result<(), Error> {
 
     Extension::new()
         .with_telemetry_processor(telemetry_processor)
+        .with_log_buffering(LogBuffering {
+            timeout_ms: 25,
+            max_bytes: 262_144,
+            max_items: 1_000,
+        })
+        .w
         .run()
         .await?;
 
