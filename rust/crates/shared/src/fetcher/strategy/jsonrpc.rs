@@ -34,12 +34,24 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
         let chain_id = self.web3_client.chain_id();
         let eligible_tx_cfgs: Vec<_> =
             super::utils::get_eligible_tx_configs(manifest, chain_id, range_start);
-        let filter = get_web3_client_filter(&eligible_tx_cfgs, chain_id, range_start, range_end);
-        println!("Filter: {:?}", filter);
+        println!("Eligible Tx Cfgs: {:?}", eligible_tx_cfgs);
 
         let fetched_logs = Retry::spawn(
             ExponentialBackoff::from_millis(15).map(jitter).take(3),
-            || async { Ok::<_, Web3ClientError>(self.web3_client.get_logs(filter.clone()).await?) },
+            || async {
+                Ok::<_, Web3ClientError>(
+                    self.web3_client
+                        .get_logs_batch(
+                            eligible_tx_cfgs
+                                .iter()
+                                .map(|tx_cfg| {
+                                    get_web3_client_filter(tx_cfg, chain_id, range_start, range_end)
+                                })
+                                .collect(),
+                        )
+                        .await?,
+                )
+            },
         )
         .await?;
 
@@ -90,16 +102,12 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
   the remove_extranous_logs function.
 */
 pub fn get_web3_client_filter(
-    tx_configs: &Vec<(TransactionConfig, Vec<LogConfig>)>,
+    tx_config: &(TransactionConfig, Vec<LogConfig>),
     chain_id: u64,
     range_start: u64,
     range_end: u64,
 ) -> Filter {
-    let all_log_configs: Vec<&LogConfig> = tx_configs
-        .iter()
-        .map(|(_, log_configs)| log_configs)
-        .flatten()
-        .collect();
+    let all_log_configs = tx_config.1.clone();
 
     let mut addresses: Vec<H160> = all_log_configs
         .iter()
@@ -115,11 +123,7 @@ pub fn get_web3_client_filter(
     topics.sort();
     topics.dedup();
 
-    let smallest_tx_cfg_start_block = tx_configs
-        .iter()
-        .map(|tx_cfg| tx_cfg.0.get_start_block(chain_id).unwrap_or(0))
-        .min()
-        .unwrap_or(0);
+    let smallest_tx_cfg_start_block = tx_config.0.get_start_block(chain_id).unwrap_or(0);
 
     let start_block = max(
         u64::try_from(smallest_tx_cfg_start_block).expect("Could not convert to u64"),
