@@ -39,16 +39,55 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
         println!("Chain Id: {:?}", &chain_id);
         println!("Range Start: {:?}", &range_start);
         println!("Range End: {:?}", &range_end);
+
+        let mut address_to_topics: HashMap<String, Vec<String>> = HashMap::new();
+        let mut address_to_min_start_block: HashMap<String, u64> = HashMap::new();
+
+        for (tx_cfg, log_cfgs) in eligible_tx_cfgs.iter() {
+            for log_cfg in log_cfgs {
+                let address = log_cfg
+                    .address
+                    .get_address(chain_id)
+                    .unwrap()
+                    .to_lowercase();
+                let start_block = tx_cfg.get_start_block(chain_id).unwrap_or(0);
+
+                let topics = log_cfg.topics.clone();
+
+                if !address_to_topics.contains_key(&address) {
+                    address_to_topics.insert(address.to_string(), Vec::new());
+                }
+                if !address_to_min_start_block.contains_key(&address) {
+                    address_to_min_start_block.insert(address.to_string(), start_block);
+                }
+
+                let current_topics = address_to_topics.get_mut(&address).unwrap();
+                current_topics.extend(topics.into_iter());
+
+                let min_start_block = address_to_min_start_block.get(&address).unwrap();
+                if start_block < *min_start_block {
+                    address_to_min_start_block.insert(address.to_string(), start_block);
+                }
+            }
+        }
+
         let fetched_logs = Retry::spawn(
             ExponentialBackoff::from_millis(15).map(jitter).take(3),
             || async {
                 Ok::<_, Web3ClientError>(
                     self.web3_client
                         .get_logs_batch(
-                            eligible_tx_cfgs
+                            address_to_topics
                                 .iter()
-                                .map(|tx_cfg| {
-                                    get_web3_client_filter(tx_cfg, chain_id, range_start, range_end)
+                                .map(|(address, topics)| {
+                                    get_web3_client_filter(
+                                        address.clone(),
+                                        topics.clone(),
+                                        *address_to_min_start_block.get(address).unwrap_or(&0),
+                                        chain_id,
+                                        range_start,
+                                        range_end,
+                                    )
                                 })
                                 .collect(),
                         )
@@ -105,36 +144,24 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
   the remove_extranous_logs function.
 */
 pub fn get_web3_client_filter(
-    tx_config: &(TransactionConfig, Vec<LogConfig>),
+    address: String,
+    topics: Vec<String>,
+    min_start_block: u64,
     chain_id: u64,
     range_start: u64,
     range_end: u64,
 ) -> Filter {
-    let all_log_configs = tx_config.1.clone();
-
-    let mut addresses: Vec<H160> = all_log_configs
-        .iter()
-        .map(|c| H160::from_str(c.address.get_address(chain_id).unwrap().as_str()).unwrap())
-        .collect();
-    addresses.sort();
-    addresses.dedup();
-
-    let mut topics: Vec<H256> = all_log_configs
-        .iter()
-        .map(|c| H256::from_str(c.topics[0].as_str()).unwrap())
-        .collect();
+    let mut topics: Vec<H256> = topics.iter().map(|c| H256::from_str(c).unwrap()).collect();
     topics.sort();
     topics.dedup();
 
-    let smallest_tx_cfg_start_block = tx_config.0.get_start_block(chain_id).unwrap_or(0);
-
     let start_block = max(
-        u64::try_from(smallest_tx_cfg_start_block).expect("Could not convert to u64"),
+        u64::try_from(min_start_block).expect("Could not convert to u64"),
         range_start,
     );
 
     FilterBuilder::default()
-        .address(addresses)
+        .address(vec![H160::from_str(address.as_str()).unwrap()])
         .topics(Some(topics), None, None, None)
         .from_block(web3::types::BlockNumber::Number(start_block.into()))
         .to_block(web3::types::BlockNumber::Number(range_end.into()))
