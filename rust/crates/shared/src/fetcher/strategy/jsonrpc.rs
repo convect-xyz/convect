@@ -33,7 +33,7 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
     ) -> Result<Vec<LogResult>, super::errors::FetchStrategyError> {
         let chain_id = self.web3_client.chain_id();
         let eligible_tx_cfgs: Vec<_> =
-            super::utils::get_eligible_tx_configs(manifest, chain_id, range_start);
+            super::utils::get_eligible_tx_configs(manifest, chain_id, range_start, range_end);
         println!("Eligible Tx Cfgs: {:?}", &eligible_tx_cfgs);
         println!("Manifest: {:?}", &manifest);
         println!("Chain Id: {:?}", &chain_id);
