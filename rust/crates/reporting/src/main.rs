@@ -125,10 +125,10 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
             .execute(conn)
     );
 
-    invocations_result?;
-    processed_batch_result?;
-    transactions_result?;
-    metrics_result?;
+    invocations_result.unwrap();
+    processed_batch_result.unwrap();
+    transactions_result.unwrap();
+    metrics_result.unwrap();
 
     join_all(
         stored_reports
