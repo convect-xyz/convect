@@ -19,6 +19,11 @@ pub trait Web3Client: Sync + Send {
 
     async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, errors::Web3ClientError>;
 
+    async fn get_logs_batch(
+        &self,
+        filters: Vec<Filter>,
+    ) -> Result<Vec<Log>, errors::Web3ClientError>;
+
     async fn get_transaction_receipt(
         &self,
         tx_hash: String,
@@ -135,6 +140,42 @@ impl Web3Client for Web3ClientImpl {
         Ok(self
             .with_retry(|web3| web3.eth().logs(filter.clone()))
             .await?)
+    }
+
+    async fn get_logs_batch(
+        &self,
+        filters: Vec<Filter>,
+    ) -> Result<Vec<Log>, errors::Web3ClientError> {
+        let chunks: std::slice::Chunks<'_, Filter> = filters.chunks(500);
+        let results = join_all(chunks.into_iter().map(|chunk| {
+            self.batch_with_retry(move |web3| {
+                let web3 = web3.clone();
+                async move {
+                    let filters: Vec<_> = chunk
+                        .into_iter()
+                        .map(|filter| web3.eth().logs(filter.clone()))
+                        .collect();
+
+                    web3.transport().submit_batch().await.unwrap();
+
+                    let logs = join_all(filters)
+                        .await
+                        .into_iter()
+                        .collect::<Result<Vec<Vec<Log>>, web3::Error>>()?
+                        .into_iter()
+                        .flatten()
+                        .collect();
+
+                    println!("Logs: {:?}", &logs);
+                    Ok::<Vec<Log>, web3::Error>(logs)
+                }
+            })
+        }))
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(results.into_iter().flatten().collect())
     }
 
     #[tracing::instrument(skip_all, err)]
