@@ -166,6 +166,7 @@ impl Web3Client for Web3ClientImpl {
                         .flatten()
                         .collect();
 
+                    println!("Logs: {:?}", &logs);
                     Ok::<Vec<Log>, web3::Error>(logs)
                 }
             })
