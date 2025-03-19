@@ -47,7 +47,6 @@ export class EtherscanProvider {
         },
       });
 
-      console.log(response.data);
       for (const result of schema.parse(response.data).result) {
         results.set(result.contractAddress, result.txHash);
       }
