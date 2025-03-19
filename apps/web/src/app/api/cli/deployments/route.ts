@@ -54,13 +54,10 @@ export const POST = async (req: NextRequest) => {
   }
 
   const manifest = parseManifest(await data.manifest.text());
-  console.log(manifest);
-
   const validator = new ManifestValidationService(db);
 
   try {
     await validator.validate(manifest);
-    console.log("manifest validated");
   } catch (e) {
     if (e instanceof AppError) {
       return NextResponse.json({ message: e.message }, { status: 400 });
