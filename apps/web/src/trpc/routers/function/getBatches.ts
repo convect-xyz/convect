@@ -74,6 +74,16 @@ export const getBatches = protectedProcedure
       })
       .from(analysisSchema.ethTransaction)
       .groupBy(analysisSchema.ethTransaction.batchId)
+      .where(
+        and(
+          eq(analysisSchema.ethTransaction.deploymentId, input.deploymentId),
+          eq(
+            analysisSchema.ethTransaction.functionId,
+            input.functionId.toString(),
+          ),
+          eq(analysisSchema.ethTransaction.chainId, input.chainId),
+        ),
+      )
       .as("txCounts");
 
     const statusInfo = analysisDb
@@ -95,6 +105,13 @@ export const getBatches = protectedProcedure
         eq(analysisSchema.batch.batchId, analysisSchema.processedBatch.batchId),
       )
       .groupBy(analysisSchema.processedBatch.batchId)
+      .where(
+        and(
+          eq(analysisSchema.batch.deploymentId, input.deploymentId),
+          eq(analysisSchema.batch.functionId, input.functionId.toString()),
+          eq(analysisSchema.batch.chainId, input.chainId),
+        ),
+      )
       .as("statusInfo");
 
     const recentBatches = await analysisDb
