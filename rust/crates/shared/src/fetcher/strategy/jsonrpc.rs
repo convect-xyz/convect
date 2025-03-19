@@ -35,6 +35,7 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
         let eligible_tx_cfgs: Vec<_> =
             super::utils::get_eligible_tx_configs(manifest, chain_id, range_start);
         let filter = get_web3_client_filter(&eligible_tx_cfgs, chain_id, range_start, range_end);
+        println!("Filter: {:?}", filter);
 
         let fetched_logs = Retry::spawn(
             ExponentialBackoff::from_millis(15).map(jitter).take(3),
