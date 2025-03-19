@@ -39,10 +39,13 @@ pub fn get_eligible_tx_configs<'a>(
     manifest: &'a Manifest,
     chain_id: u64,
     range_start: u64,
+    range_end: u64,
 ) -> Vec<(TransactionConfig, Vec<LogConfig>)> {
     let is_tx_config_after_start =
         |tx_config: &TransactionConfig| match tx_config.get_start_block(chain_id) {
-            Some(tx_cfg_start_block) => range_start >= tx_cfg_start_block,
+            Some(tx_cfg_start_block) => {
+                range_start >= tx_cfg_start_block || range_end >= tx_cfg_start_block
+            }
             None => true,
         };
 
