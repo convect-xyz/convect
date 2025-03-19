@@ -117,7 +117,6 @@ async fn main() -> Result<(), Error> {
             max_bytes: 262_144,
             max_items: 1_000,
         })
-        .w
         .run()
         .await?;
 
