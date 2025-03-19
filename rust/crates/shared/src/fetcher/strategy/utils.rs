@@ -54,7 +54,15 @@ pub fn get_eligible_tx_configs<'a>(
     manifest
         .get_tx_configs_with_log_configs()
         .into_iter()
-        .filter(|(tx_cfg, _)| is_tx_config_after_start(tx_cfg) && should_run_on_chain(tx_cfg))
+        .filter(|(tx_cfg, _)| {
+            println!(
+                "Is Tx Config After Start: {:?}",
+                is_tx_config_after_start(tx_cfg)
+            );
+            println!("Should Run On Chain: {:?}", should_run_on_chain(tx_cfg));
+
+            is_tx_config_after_start(tx_cfg) && should_run_on_chain(tx_cfg)
+        })
         .collect()
 }
 
