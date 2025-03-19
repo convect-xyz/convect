@@ -12,23 +12,28 @@ import { env } from "../../app/env.mjs";
   <Step>
     ### Create a Convect Function
 
-    In your preferred project, <Link href={`${env.NEXT_PUBLIC_APP_URL}/projects`}>create a new Convect Function</Link>.
+    In the preferred project, <Link href={`${env.NEXT_PUBLIC_APP_URL}/projects`}>create a new Convect Function</Link>.
 
   </Step>
   <Step>
     ### Write your handler
-    This example uses <Link href="https://wagmi.sh/cli/getting-started">Wagmi CLI</Link> to generate the ABI and token address. Using Wagmi and ABIs is entirely optional. Alternatively, you can specify the event signature in string format by replacing `eventName` and `abi` with the `signature` property.
-    
+    The `transaction` API is used to define a handler for transactions that contain any of the specified logs. When your Convect Function runs, it receives these transactions in batches (max 60 transactions per batch).
+
+    For the example below, the `transfer` handler will be called for all transactions that contain a `Transfer` log originating from the USDC contract.
+
+    You can read the [API reference](/docs/api-reference) for detailed information on what you can do with the `transaction` API.
+
     ```ts title="src/convect/transfer.ts"
     import { tokenABI, tokenAddress } from './abis/token'
     import { log, transaction } from "convect-xyz";
-    
+
+    const usdc = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+
     export const transfer = transaction({
       logs: [
         log({
-          origin: tokenAddress,
-          abi: tokenABI,
-          eventName: "Transfer"
+          origin: usdc,
+          signature: "event Transfer(address from, address to, uint256 value)"
         })
       ],
       handler: async (transactions) => {
@@ -48,13 +53,16 @@ import { env } from "../../app/env.mjs";
 
   </Step>
   <Step>
-    ### Export a convect function
+    ### Export a Convect Function
+
+    The `convect` API is used to export a Convect Function. This ties all your handlers together. Handlers run in the order they are specified in the `handlers` array.
 
     ```ts title="src/convect/example.convect.ts"
     import { transfer } from "./transfer";
-    import { convect } from "convect-xyz";
+    import { convect, ethMainnet } from "convect-xyz";
 
     export default convect({
+      chains: [ethMainnet],
       handlers: [transfer]
     });
     ```
@@ -63,7 +71,7 @@ import { env } from "../../app/env.mjs";
 
   </Step>
   <Step>
-    ### Authenticate & Upload a new deployment
+    ### Authenticate & Deploy
 
     Authenticate with the command below.
     ```bash title="terminal"
@@ -72,8 +80,10 @@ import { env } from "../../app/env.mjs";
 
     Create a new deployment with the command below.
     ```bash title="terminal"
-    npx convect-xyz deploy -s <project name>/<function name>
+    npx convect-xyz deploy -s [project]/[function]
     ```
+
+    The new deployment should be available in the <Link href={`${env.NEXT_PUBLIC_APP_URL}/projects`}>Projects</Link> page.
 
   </Step>
 </Steps>
