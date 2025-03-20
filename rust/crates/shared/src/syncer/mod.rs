@@ -56,7 +56,8 @@ impl<'a> ChainSyncer<'a> {
         let configs = utils::get_block_configs(start_block, end_block, BATCH_SIZE);
 
         for chunk in configs.chunks(100) {
-            let batched_transactions: Vec<Vec<IngestTransaction>> =
+            println!("chunk {:?}", chunk);
+            let batched_transactions: Vec<IngestTransaction> =
                 join_all(chunk.iter().map(|range| {
                     self.fetcher.get_transactions_in_range(
                         &self.manifest,
@@ -66,12 +67,18 @@ impl<'a> ChainSyncer<'a> {
                 }))
                 .await
                 .into_iter()
-                .collect::<Result<Vec<_>, _>>()?;
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect();
 
-            self.enqueuer
-                .enqueue_transactions(state, &batched_transactions.into_iter().flatten().collect())
-                .await?;
+            if !batched_transactions.is_empty() {
+                self.enqueuer
+                    .enqueue_transactions(state, &batched_transactions)
+                    .await?;
+            }
 
+            println!("last block {}", chunk.last().unwrap().end_block);
             state
                 .update()
                 .set_last_block(chunk.last().unwrap().end_block)
