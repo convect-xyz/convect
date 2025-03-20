@@ -176,6 +176,7 @@ impl<'a> UpdateStateFluentBuilder<'a> {
         Retry::spawn(
             tokio_retry::strategy::ExponentialBackoff::from_millis(15).take(3),
             || async {
+                println!("mset {:?}", params);
                 redis_client.mset(&params).await?;
                 Ok::<(), RedisClientError>(())
             },
