@@ -1,8 +1,8 @@
 import { Context, SQSEvent } from "aws-lambda";
 import { decodeEventLog } from "viem";
-import { ResultsManager } from "./manager";
 import { parseSqsEvent } from "./parser";
 import { BatchQueue } from "./processing";
+import { ResultsManager } from "./results";
 import { IngestBatch, IngestBatchTransaction } from "./types";
 
 const USER_ENVS = (
@@ -38,12 +38,7 @@ export async function handler(event: SQSEvent, context: Context) {
   });
 
   for (const batch of await BatchQueue.fromBatches(batches)) {
-    try {
-      await processBatch(resultsManager, batch);
-    } catch (e) {
-      console.error(e);
-      break;
-    }
+    await processBatch(resultsManager, batch).catch(() => {});
   }
 
   await resultsManager.uploadResults();
