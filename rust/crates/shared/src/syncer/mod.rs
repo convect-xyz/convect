@@ -56,6 +56,7 @@ impl<'a> ChainSyncer<'a> {
         let configs = utils::get_block_configs(start_block, end_block, BATCH_SIZE);
 
         for chunk in configs.chunks(100) {
+            println!("chunk {:?}", chunk);
             let batched_transactions: Vec<IngestTransaction> =
                 join_all(chunk.iter().map(|range| {
                     self.fetcher.get_transactions_in_range(
