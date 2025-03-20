@@ -64,7 +64,6 @@ export = async () => {
       {
         name: "syncer",
         image: `730335604495.dkr.ecr.eu-west-1.amazonaws.com/syncer:${GITHUB_SHA}`,
-        cpu: 0,
         portMappings: [
           {
             name: "syncer-80-tcp",
@@ -109,8 +108,8 @@ export = async () => {
         systemControls: [],
       },
     ]),
-    cpu: "512",
-    memory: "1024",
+    cpu: "1024",
+    memory: "2048",
     volumes: [],
     placementConstraints: [],
     requiresCompatibilities: ["FARGATE"],
