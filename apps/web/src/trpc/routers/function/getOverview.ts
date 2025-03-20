@@ -240,7 +240,7 @@ const getTxCount = async (
 ) => {
   const result = await analysisDb
     .select({
-      numTransactions: count(analysisSchema.ethTransaction.id),
+      numTransactions: count(analysisSchema.ethTransaction.deploymentId),
     })
     .from(analysisSchema.ethTransaction)
     .where(
