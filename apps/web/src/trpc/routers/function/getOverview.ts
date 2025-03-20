@@ -101,11 +101,12 @@ export const getOverview = protectedProcedure
         input.chainId,
         input.deploymentId,
       ),
-      getSuccessfulTxCount(
-        input.functionId.toString(),
-        input.chainId,
-        input.deploymentId,
-      ),
+      Promise.resolve(0),
+      // getSuccessfulTxCount(
+      //   input.functionId.toString(),
+      //   input.chainId,
+      //   input.deploymentId,
+      // ),
     ]);
 
     const producer = await ctx.db.query.producers.findFirst({
