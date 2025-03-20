@@ -91,11 +91,11 @@ export const getOverview = protectedProcedure
         input.chainId,
         input.deploymentId,
       ),
-      getTxCount(
-        input.functionId.toString(),
-        input.chainId,
-        input.deploymentId,
-      ),
+      Promise.resolve(0), // getTxCount(
+      //   input.functionId.toString(),
+      //   input.chainId,
+      //   input.deploymentId,
+      // ),
       getAvgDuration(
         input.functionId.toString(),
         input.chainId,
@@ -240,7 +240,7 @@ const getTxCount = async (
 ) => {
   const result = await analysisDb
     .select({
-      numTransactions: count(analysisSchema.ethTransaction.id),
+      numTransactions: count(analysisSchema.ethTransaction.deploymentId),
     })
     .from(analysisSchema.ethTransaction)
     .where(
