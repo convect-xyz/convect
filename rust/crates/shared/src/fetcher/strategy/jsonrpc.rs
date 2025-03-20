@@ -72,23 +72,6 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
                             address_to_topics
                                 .iter()
                                 .map(|(address, topics)| {
-                                    if address.eq_ignore_ascii_case(
-                                        "0x77862E4fcD5aB4c9126F7dB7df36AB1872873B8d",
-                                    ) && range_end >= 7936600
-                                    {
-                                        println!(
-                                            "Filter: {:?}",
-                                            get_web3_client_filter(
-                                                address.clone(),
-                                                topics.clone(),
-                                                *address_to_min_start_block
-                                                    .get(address)
-                                                    .unwrap_or(&0),
-                                                range_start,
-                                                range_end,
-                                            )
-                                        );
-                                    }
                                     get_web3_client_filter(
                                         address.clone(),
                                         topics.clone(),
@@ -104,6 +87,10 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
             },
         )
         .await?;
+
+        if range_start <= 7936687 && range_end >= 7936687 {
+            println!("Fetched logs: {:?}", fetched_logs);
+        }
 
         let mut transaction_hashes = fetched_logs
             .iter()
