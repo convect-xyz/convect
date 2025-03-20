@@ -169,9 +169,23 @@ const getSuccessfulTxCount = async (
     .from(analysisSchema.processedTransaction)
     .leftJoin(
       analysisSchema.processedBatch,
-      eq(
-        analysisSchema.processedBatch.id,
-        analysisSchema.processedTransaction.processedBatchId,
+      and(
+        eq(
+          analysisSchema.processedBatch.id,
+          analysisSchema.processedTransaction.processedBatchId,
+        ),
+        eq(
+          analysisSchema.processedBatch.deploymentId,
+          analysisSchema.processedTransaction.deploymentId,
+        ),
+        eq(
+          analysisSchema.processedBatch.functionId,
+          analysisSchema.processedTransaction.functionId,
+        ),
+        eq(
+          analysisSchema.processedBatch.chainId,
+          analysisSchema.processedTransaction.chainId,
+        ),
       ),
     )
     .where(eq(analysisSchema.processedBatch.status, "SUCCESS"))

@@ -6,7 +6,6 @@ use super::{FetchStrategy, LogResult};
 use crate::fetcher::web3::client::errors::Web3ClientError;
 use crate::fetcher::web3::client::Web3Client;
 use crate::manifest::Manifest;
-use crate::manifest::{LogConfig, TransactionConfig};
 use std::cmp::max;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -79,7 +78,6 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
                                         address.clone(),
                                         topics.clone(),
                                         *address_to_min_start_block.get(address).unwrap_or(&0),
-                                        chain_id,
                                         range_start,
                                         range_end,
                                     )
@@ -142,7 +140,6 @@ pub fn get_web3_client_filter(
     address: String,
     topics: Vec<String>,
     min_start_block: u64,
-    chain_id: u64,
     range_start: u64,
     range_end: u64,
 ) -> Filter {
