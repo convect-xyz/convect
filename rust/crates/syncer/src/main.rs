@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    sync_result?;
+    sync_result.unwrap();
 
     Ok(())
 }
