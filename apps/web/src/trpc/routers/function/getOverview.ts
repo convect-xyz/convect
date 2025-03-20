@@ -96,11 +96,12 @@ export const getOverview = protectedProcedure
       //   input.chainId,
       //   input.deploymentId,
       // ),
-      getAvgDuration(
-        input.functionId.toString(),
-        input.chainId,
-        input.deploymentId,
-      ),
+      Promise.resolve(0),
+      // getAvgDuration(
+      //   input.functionId.toString(),
+      //   input.chainId,
+      //   input.deploymentId,
+      // ),
       Promise.resolve(0),
       // getSuccessfulTxCount(
       //   input.functionId.toString(),
