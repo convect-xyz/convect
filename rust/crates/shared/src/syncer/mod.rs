@@ -6,7 +6,7 @@ use futures::future::join_all;
 
 mod utils;
 
-const BATCH_SIZE: u64 = 500;
+const BATCH_SIZE: u64 = 300;
 
 pub struct ChainSyncer<'a> {
     manifest: &'a Manifest,
