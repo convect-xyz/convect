@@ -46,8 +46,6 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
                     .to_lowercase();
                 let start_block = tx_cfg.get_start_block(chain_id).unwrap_or(0);
 
-                let topics = log_cfg.topics.clone();
-
                 if !address_to_topics.contains_key(&address) {
                     address_to_topics.insert(address.to_string(), Vec::new());
                 }
@@ -56,7 +54,7 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
                 }
 
                 let current_topics = address_to_topics.get_mut(&address).unwrap();
-                current_topics.extend(topics.into_iter());
+                current_topics.extend(log_cfg.topics.clone().into_iter());
 
                 let min_start_block = address_to_min_start_block.get(&address).unwrap();
                 if start_block < *min_start_block {
@@ -74,6 +72,23 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
                             address_to_topics
                                 .iter()
                                 .map(|(address, topics)| {
+                                    if address.eq_ignore_ascii_case(
+                                        "0x77862E4fcD5aB4c9126F7dB7df36AB1872873B8d",
+                                    ) && range_end >= 7936600
+                                    {
+                                        println!(
+                                            "Filter: {:?}",
+                                            get_web3_client_filter(
+                                                address.clone(),
+                                                topics.clone(),
+                                                *address_to_min_start_block
+                                                    .get(address)
+                                                    .unwrap_or(&0),
+                                                range_start,
+                                                range_end,
+                                            )
+                                        );
+                                    }
                                     get_web3_client_filter(
                                         address.clone(),
                                         topics.clone(),
