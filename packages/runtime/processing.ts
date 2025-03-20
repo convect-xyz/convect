@@ -29,12 +29,7 @@ export class BatchQueue
   static async fromBatches(
     batches: Array<IngestBatch & { messageId: string }>
   ) {
-    const failureId = await getFailureId();
-    const startIdx = failureId
-      ? batches.findIndex((b) => b.batchId === failureId)
-      : 0;
-
-    return new BatchQueue(batches, startIdx);
+    return new BatchQueue(batches, 0);
   }
 }
 
