@@ -88,25 +88,6 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
         )
         .await?;
 
-        if range_start <= 7936687 && range_end >= 7936687 {
-            println!(
-                "Filters {:?}",
-                address_to_topics
-                    .iter()
-                    .map(|(address, topics)| {
-                        get_web3_client_filter(
-                            address.clone(),
-                            topics.clone(),
-                            *address_to_min_start_block.get(address).unwrap_or(&0),
-                            range_start,
-                            range_end,
-                        )
-                    })
-                    .collect::<Vec<_>>(),
-            );
-            println!("Fetched logs: {:?}", fetched_logs);
-        }
-
         let mut transaction_hashes = fetched_logs
             .iter()
             .filter_map(|log| {

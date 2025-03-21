@@ -1,12 +1,89 @@
 use crate::{
-    enqueuer::TransactionEnqueuer, fetcher::TransactionFetcher, manifest::Manifest, syncing::State,
-    types::transactions::IngestTransaction,
+    enqueuer::{TransactionEnqueuer, UploadMethod},
+    fetcher::TransactionFetcher,
+    manifest::Manifest,
+    syncing::State,
+    types::{batch::IngestBatchTransaction, transactions::IngestTransaction},
 };
 use futures::future::join_all;
 
 mod utils;
 
-const BATCH_SIZE: u64 = 300;
+const BATCH_SIZE: u64 = 500;
+
+#[derive(Debug, Clone)]
+struct TransactionBufferEntry {
+    transactions: Vec<IngestBatchTransaction>,
+    byte_size: usize,
+    upload_method: UploadMethod,
+}
+
+impl TransactionBufferEntry {
+    fn is_full(&self) -> bool {
+        self.transactions.len() >= 60 || self.byte_size >= 220000
+    }
+
+    fn is_at_raw_upload_byte_capacity(&self) -> bool {
+        self.byte_size >= 220000
+    }
+
+    fn is_at_transaction_capacity(&self) -> bool {
+        self.transactions.len() >= 60
+    }
+}
+
+struct TransactionBuffer {
+    entry: Option<TransactionBufferEntry>,
+}
+
+impl TransactionBuffer {
+    pub fn new() -> Self {
+        Self { entry: None }
+    }
+
+    fn add_transaction(&mut self, tx: IngestBatchTransaction) -> Option<TransactionBufferEntry> {
+        let tx_byte_size = serde_json::to_string(&tx).unwrap().len();
+
+        let is_at_capacity = self
+            .entry
+            .as_ref()
+            .is_some_and(|e| e.is_at_transaction_capacity());
+
+        if is_at_capacity {
+            let upload_method = if tx_byte_size > 220000 {
+                UploadMethod::S3
+            } else {
+                UploadMethod::Raw
+            };
+
+            let new_entry = TransactionBufferEntry {
+                transactions: vec![tx],
+                byte_size: tx_byte_size,
+                upload_method,
+            };
+
+            let old_entry = self.entry.replace(new_entry);
+
+            return old_entry;
+        }
+
+        let current_entry = self.entry.get_or_insert(TransactionBufferEntry {
+            transactions: Vec::new(),
+            byte_size: 0,
+            upload_method: UploadMethod::Raw,
+        });
+
+        let new_entry_byte_size = current_entry.byte_size + tx_byte_size;
+        if new_entry_byte_size > 220000 {
+            current_entry.upload_method = UploadMethod::S3;
+        }
+
+        current_entry.transactions.push(tx);
+        current_entry.byte_size += tx_byte_size;
+
+        return None;
+    }
+}
 
 pub struct ChainSyncer<'a> {
     manifest: &'a Manifest,
@@ -54,39 +131,50 @@ impl<'a> ChainSyncer<'a> {
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {
         let configs = utils::get_block_configs(start_block, end_block, BATCH_SIZE);
+        let mut buffer = TransactionBuffer::new();
 
         for chunk in configs.chunks(100) {
-            println!("chunk {:?}", chunk);
-            let batched_transactions: Vec<IngestTransaction> =
-                join_all(chunk.iter().map(|range| {
-                    self.fetcher.get_transactions_in_range(
-                        &self.manifest,
-                        range.start_block,
-                        range.end_block,
-                    )
-                }))
-                .await
-                .into_iter()
-                .collect::<Result<Vec<_>, _>>()?
-                .into_iter()
-                .flatten()
-                .collect();
+            let transactions: Vec<IngestTransaction> = join_all(chunk.iter().map(|range| {
+                self.fetcher.get_transactions_in_range(
+                    &self.manifest,
+                    range.start_block,
+                    range.end_block,
+                )
+            }))
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
+            .collect();
 
-            println!("Num transactions: {}", batched_transactions.len());
-            
-            if !batched_transactions.is_empty() {
-                self.enqueuer
-                    .enqueue_transactions(state, &batched_transactions)
-                    .await?;
+            for tx in transactions.into_iter() {
+                let maybe_buffer_entry = buffer.add_transaction(
+                    IngestBatchTransaction::from_transaction(&self.manifest, state.chain_id(), tx),
+                );
+
+                if let Some(buffer_entry) = maybe_buffer_entry {
+                    self.enqueuer
+                        .enqueue_transactions(
+                            state,
+                            buffer_entry.transactions,
+                            buffer_entry.upload_method,
+                        )
+                        .await?;
+                }
             }
 
-            println!("last block {}", chunk.last().unwrap().end_block);
             state
                 .update()
                 .set_last_block(chunk.last().unwrap().end_block)
                 .send()
-                .await
-                .unwrap();
+                .await?;
+        }
+
+        if let Some(buffer_entry) = buffer.entry {
+            self.enqueuer
+                .enqueue_transactions(state, buffer_entry.transactions, buffer_entry.upload_method)
+                .await?;
         }
 
         Ok(())
