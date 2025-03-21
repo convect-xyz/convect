@@ -117,7 +117,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
 
                 // check that tx size will not make this entry over 256kb
                 let tx_size = serde_json::to_string(current_tx).unwrap().len();
-                if tx_size + group_byte_size > 20000 {
+                if tx_size + group_byte_size > 200000 {
                     break;
                 }
 
