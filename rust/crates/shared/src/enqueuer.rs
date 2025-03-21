@@ -254,51 +254,45 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
     ) -> Result<(), errors::TransactionEnqueuerError> {
         let conn = &mut self.pool.get().await?;
 
-        conn.transaction(|conn| {
-            let function_id = state.function_id();
-            let deployment_id = state.deployment_id();
-            let chain_id = state.chain_id();
+        let function_id = state.function_id();
+        let deployment_id = state.deployment_id();
+        let chain_id = state.chain_id();
 
-            async move {
-                diesel::insert_into(batch::table)
-                    .values(models::Batch {
+        diesel::insert_into(batch::table)
+            .values(models::Batch {
+                batch_id: batch_id.clone(),
+                function_id: function_id.clone(),
+                deployment_id: deployment_id.clone(),
+                chain_id: chain_id.clone() as i32,
+                timestamp_ms: Utc::now(),
+            })
+            .execute(conn)
+            .await?;
+
+        let chunked_txs = txs.iter().chunks(200);
+        let futures = chunked_txs.into_iter().map(|txs| {
+            diesel::insert_into(eth_transaction::table)
+                .values(
+                    txs.map(|tx| models::EthTransaction {
+                        project_id: state.project_id(),
                         batch_id: batch_id.clone(),
+                        transaction_hash: tx.transaction.transaction_hash.clone(),
                         function_id: function_id.clone(),
                         deployment_id: deployment_id.clone(),
+                        created_at: Utc::now(),
                         chain_id: chain_id.clone() as i32,
-                        timestamp_ms: Utc::now(),
+                        block_timestamp: DateTime::from_timestamp_millis(0).unwrap(),
+                        tx_configs: tx.tx_configs.clone(),
                     })
-                    .execute(conn)
-                    .await?;
+                    .collect::<Vec<_>>(),
+                )
+                .execute(conn)
+        });
 
-                let chunked_txs = txs.iter().chunks(200);
-                let futures = chunked_txs.into_iter().map(|txs| {
-                    diesel::insert_into(eth_transaction::table)
-                        .values(
-                            txs.map(|tx| models::EthTransaction {
-                                project_id: state.project_id(),
-                                batch_id: batch_id.clone(),
-                                transaction_hash: tx.transaction.transaction_hash.clone(),
-                                function_id: function_id.clone(),
-                                deployment_id: deployment_id.clone(),
-                                created_at: Utc::now(),
-                                chain_id: chain_id.clone() as i32,
-                                block_timestamp: DateTime::from_timestamp_millis(0).unwrap(),
-                                tx_configs: tx.tx_configs.clone(),
-                            })
-                            .collect::<Vec<_>>(),
-                        )
-                        .execute(conn)
-                });
-
-                join_all(futures)
-                    .await
-                    .into_iter()
-                    .collect::<Result<Vec<_>, _>>()
-            }
-            .scope_boxed()
-        })
-        .await?;
+        join_all(futures)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>();
 
         Ok(())
     }
