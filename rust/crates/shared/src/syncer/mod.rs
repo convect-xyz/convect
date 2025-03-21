@@ -72,6 +72,8 @@ impl<'a> ChainSyncer<'a> {
                 .flatten()
                 .collect();
 
+            println!("Num transactions: {}", batched_transactions.len());
+            
             if !batched_transactions.is_empty() {
                 self.enqueuer
                     .enqueue_transactions(state, &batched_transactions)
