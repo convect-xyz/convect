@@ -83,6 +83,10 @@ impl TransactionBuffer {
 
         return None;
     }
+
+    fn drain(&mut self) -> Option<TransactionBufferEntry> {
+        self.entry.take()
+    }
 }
 
 pub struct ChainSyncer<'a> {
@@ -171,7 +175,8 @@ impl<'a> ChainSyncer<'a> {
                 .await?;
         }
 
-        if let Some(buffer_entry) = buffer.entry {
+        // Drain the buffer.
+        if let Some(buffer_entry) = buffer.drain() {
             self.enqueuer
                 .enqueue_transactions(state, buffer_entry.transactions, buffer_entry.upload_method)
                 .await?;
