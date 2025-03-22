@@ -7,27 +7,29 @@ import {
   SelectItem,
   SelectTrigger,
 } from "~/components/ui/select";
-import { useOverview } from "../hooks/useOverview";
 import { useParams } from "../hooks/useParams";
+import { useSelectedDeployment } from "../hooks/useSelectedDeployment";
 
 export function ChainFull() {
-  const { chainId, projectId, functionId } = useParams();
+  const { chainId } = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { data: overview } = useOverview();
+  const { data: overview } = useSelectedDeployment();
 
   useEffect(() => {
-    if (!overview?.chains) {
+    if (!overview?.deployment.manifest.chains) {
       return;
     }
 
     if (
       !searchParams.get("chainId") &&
       overview &&
-      overview.chains.length > 0
+      overview?.deployment.manifest.chains.length > 0
     ) {
-      handleValueChange(overview.chains.at(0)!.chainId.toString());
+      handleValueChange(
+        overview?.deployment.manifest.chains.at(0)!.chainId.toString(),
+      );
     }
   }, [searchParams, overview]);
 
@@ -39,7 +41,7 @@ export function ChainFull() {
     router.replace(pathname + "?" + params.toString());
   };
 
-  if (!overview?.chains) {
+  if (!overview?.deployment.manifest.chains) {
     return null;
   }
 
@@ -49,16 +51,20 @@ export function ChainFull() {
         <div className="flex items-center gap-2">
           <ChainIcon
             chainId={
-              overview?.chains.find((f) => f.chainId === chainId)?.chainId ?? 0
+              overview?.deployment.manifest.chains.find(
+                (f) => f.chainId === chainId,
+              )?.chainId ?? 0
             }
           />
           <div>
-            {overview?.chains.find((f) => f.chainId === chainId)?.name ?? ""}
+            {overview?.deployment.manifest.chains.find(
+              (f) => f.chainId === chainId,
+            )?.name ?? ""}
           </div>
         </div>
       </SelectTrigger>
       <SelectContent>
-        {overview?.chains.map((h) => (
+        {overview?.deployment.manifest.chains.map((h) => (
           <SelectItem value={h.chainId.toString()}>
             <div className="flex items-center gap-2">
               <ChainIcon chainId={h.chainId} />
