@@ -107,7 +107,7 @@ function RecentBatches(props: {
 
         {(!maybeBatches || isFetchingNextPage) &&
           times(25).map((v) => (
-            <div className="flex items-center gap-2 py-4" key={v}>
+            <div className="flex items-center gap-2 p-4" key={v}>
               <Skeleton className="h-2 w-2 rounded-full" />
               <Skeleton className="h-6 flex-1" />
               <Skeleton className="h-6 w-24" />
