@@ -21,9 +21,11 @@ type LogRow = RouterOutputs["functions"]["getLogs"][0];
 
 export default function Page() {
   return (
-    <LogFilters>
-      <Content />
-    </LogFilters>
+    <div className="mx-auto max-w-screen-lg">
+      <LogFilters>
+        <Content />
+      </LogFilters>
+    </div>
   );
 }
 

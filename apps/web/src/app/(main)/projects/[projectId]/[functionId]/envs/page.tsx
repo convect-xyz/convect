@@ -46,9 +46,11 @@ export default function Page() {
   const { data } = useEnvs();
 
   return (
-    <div className="flex flex-col gap-4 overflow-hidden">
-      <AddEnvSection />
-      {data && <EnvironmentVariables />}
+    <div className="mx-auto max-w-screen-lg py-4">
+      <div className="flex flex-col gap-4 overflow-hidden">
+        <AddEnvSection />
+        {data && <EnvironmentVariables />}
+      </div>
     </div>
   );
 }

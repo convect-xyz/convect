@@ -33,10 +33,12 @@ import { useParams } from "../hooks/useParams";
 
 export default function Page() {
   return (
-    <div className="flex flex-col gap-4 overflow-hidden">
-      <FunctionName />
-      <FunctionDescription />
-      <DeleteHandler />
+    <div className="mx-auto max-w-screen-lg px-2 py-4">
+      <div className="flex flex-col gap-4 overflow-hidden">
+        <FunctionName />
+        <FunctionDescription />
+        <DeleteHandler />
+      </div>
     </div>
   );
 }
