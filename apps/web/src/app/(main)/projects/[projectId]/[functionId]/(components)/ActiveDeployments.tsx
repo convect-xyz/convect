@@ -7,6 +7,7 @@ import {
 } from "~/components/ui/select";
 import { api } from "~/trpc/react";
 import { useParams } from "../hooks/useParams";
+import { useSelectedDeploymentId } from "../hooks/useSelectedDeploymentId";
 
 export function ActiveDeployments() {
   const { projectId, functionId } = useParams();
@@ -17,6 +18,7 @@ export function ActiveDeployments() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const deploymentId = useSelectedDeploymentId();
 
   const handleValueChange = (v: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -27,7 +29,7 @@ export function ActiveDeployments() {
   };
 
   const selectedDeployment = fn?.activeDeployments.find(
-    (d) => d.id === searchParams.get("deploymentId"),
+    (d) => d.id === deploymentId,
   );
 
   return (
