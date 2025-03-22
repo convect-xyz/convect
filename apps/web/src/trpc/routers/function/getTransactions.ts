@@ -121,18 +121,11 @@ export const getTransactions = protectedProcedure
           ),
       })
       .from(analysisSchema.processedTransaction)
-      .leftJoin(
-        analysisSchema.processedBatch,
-        eq(
-          analysisSchema.processedBatch.id,
-          analysisSchema.processedTransaction.processedBatchId,
-        ),
-      )
       .groupBy(
-        analysisSchema.processedTransaction.transactionHash,
         analysisSchema.processedTransaction.deploymentId,
         analysisSchema.processedTransaction.functionId,
         analysisSchema.processedTransaction.chainId,
+        analysisSchema.processedTransaction.transactionHash,
         analysisSchema.processedTransaction.processedBatchId,
       )
       .as("txCounts");
@@ -155,8 +148,8 @@ export const getTransactions = protectedProcedure
         txCounts,
         and(
           eq(
-            txCounts.transactionHash,
-            analysisSchema.processedTransaction.transactionHash,
+            txCounts.deploymentId,
+            analysisSchema.processedTransaction.deploymentId,
           ),
           eq(
             txCounts.functionId,
@@ -164,12 +157,12 @@ export const getTransactions = protectedProcedure
           ),
           eq(txCounts.chainId, analysisSchema.processedTransaction.chainId),
           eq(
-            txCounts.deploymentId,
-            analysisSchema.processedTransaction.deploymentId,
-          ),
-          eq(
             txCounts.processedBatchId,
             analysisSchema.processedTransaction.processedBatchId,
+          ),
+          eq(
+            txCounts.transactionHash,
+            analysisSchema.processedTransaction.transactionHash,
           ),
         ),
       )
@@ -193,8 +186,8 @@ export const getTransactions = protectedProcedure
         processedTransactions,
         and(
           eq(
-            processedTransactions.transactionHash,
-            analysisSchema.ethTransaction.transactionHash,
+            processedTransactions.deploymentId,
+            analysisSchema.ethTransaction.deploymentId,
           ),
           eq(
             processedTransactions.functionId,
@@ -205,8 +198,8 @@ export const getTransactions = protectedProcedure
             analysisSchema.ethTransaction.chainId,
           ),
           eq(
-            processedTransactions.deploymentId,
-            analysisSchema.ethTransaction.deploymentId,
+            processedTransactions.transactionHash,
+            analysisSchema.ethTransaction.transactionHash,
           ),
         ),
       )
