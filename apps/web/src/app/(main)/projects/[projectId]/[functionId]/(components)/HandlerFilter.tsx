@@ -11,12 +11,12 @@ export function HandlerFilter() {
 
   return (
     <div>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         {selectedDeployment.deployment.manifest.tx_configs.map(
           (txConfig, idx) => (
             <div className="flex items-center space-x-2">
               <Checkbox
-                className="h-5 w-5 border-muted-foreground"
+                className="border-muted-foreground"
                 id={`txConfig-${idx}`}
                 onCheckedChange={() => {
                   if (filters.txConfigs.includes(idx)) {
@@ -30,7 +30,7 @@ export function HandlerFilter() {
               />
               <label
                 htmlFor={`txConfig-${idx}`}
-                className="text-sm leading-none text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-xs leading-none text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 {txConfig.name}
               </label>
