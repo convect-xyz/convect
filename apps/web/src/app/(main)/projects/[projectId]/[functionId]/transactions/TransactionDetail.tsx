@@ -1,8 +1,11 @@
 import { formatDistanceToNow } from "date-fns";
-import { HelpCircleIcon } from "lucide-react";
+import { CopyIcon, HelpCircleIcon } from "lucide-react";
+import CopyButton from "~/components/core/CopyButton";
 import InfoTooltip from "~/components/core/InfoTooltip";
 import { ForceRerender } from "~/components/ui/force-rerender";
+import { getExplorerTxUrl } from "~/lib/shared/utils/chains";
 import { cn } from "~/lib/utils";
+import { useParams } from "../hooks/useParams";
 import { useSelectedDeployment } from "../hooks/useSelectedDeployment";
 import { useTransaction } from "../hooks/useTransaction";
 
@@ -35,6 +38,9 @@ export function TransactionDetail(props: { transactionHash?: string }) {
             timeStyle: "medium",
           }).format(transaction.transaction.timestamp)}
         </div>
+      </div>
+      <div className="mt-4">
+        <TransactionInformation transactionHash={props.transactionHash} />
       </div>
       <div className="mt-4">
         <ProcessedInformation transactionHash={props.transactionHash} />
@@ -99,6 +105,53 @@ function ProcessedInformation(props: { transactionHash: string }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function TransactionInformation(props: { transactionHash: string }) {
+  const { data: transaction } = useTransaction({
+    transactionHash: props.transactionHash,
+  });
+  const { chainId } = useParams();
+  const { data: deployment } = useSelectedDeployment();
+
+  if (!transaction || !deployment || !chainId) {
+    return null;
+  }
+
+  const transactionUrl = getExplorerTxUrl(chainId, props.transactionHash);
+  return (
+    <div className="px-4">
+      <div className="flex items-center justify-between">
+        <div>Transaction Information</div>
+      </div>
+      <div className="mt-4 flex flex-col gap-4 rounded-md border p-4">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold">Transaction Hash</div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-muted-foreground">
+              {props.transactionHash.substring(0, 10)}...
+              {props.transactionHash.substring(
+                props.transactionHash.length - 10,
+              )}
+            </div>
+            <CopyButton text={props.transactionHash}>
+              <CopyIcon size={14} />
+            </CopyButton>
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold">Explorer Link</div>
+          <div className="text-sm text-muted-foreground">
+            {transactionUrl && (
+              <a href={transactionUrl} target="_blank" rel="noreferrer">
+                View on Explorer
+              </a>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
