@@ -47,7 +47,7 @@ export function ChainFull() {
 
   return (
     <Select value={chainId?.toString()} onValueChange={handleValueChange}>
-      <SelectTrigger className="w-full bg-muted">
+      <SelectTrigger className="w-full bg-muted text-sm">
         <div className="flex items-center gap-2">
           <ChainIcon
             chainId={
