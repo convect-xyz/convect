@@ -16,6 +16,17 @@ import { env } from "../../app/env.mjs";
 
   </Step>
   <Step>
+    ### Initialise Convect
+
+    Initialise Convect in your project directory.
+
+
+    ```bash title="terminal"
+    npx convect-xyz init
+    ```
+
+  </Step>
+  <Step>
     ### Write your handler
     The `transaction` API is used to define a handler for transactions that contain any of the specified logs. When your Convect Function runs, it receives these transactions in batches (max 60 transactions per batch).
 
@@ -23,7 +34,7 @@ import { env } from "../../app/env.mjs";
 
     You can read the [API reference](/docs/api-reference) for detailed information on what you can do with the `transaction` API.
 
-    ```ts title="src/convect/transfer.ts"
+    ```ts title="src/convect/handlers/transfer.ts"
     import { tokenABI, tokenAddress } from './abis/token'
     import { log, transaction } from "convect-xyz";
 
@@ -57,7 +68,7 @@ import { env } from "../../app/env.mjs";
 
     The `convect` API is used to export a Convect Function. This ties all your handlers together. Handlers run in the order they are specified in the `handlers` array.
 
-    ```ts title="src/convect/example.convect.ts"
+    ```ts title="src/convect/[project-name]/[function-name].convect.ts"
     import { transfer } from "./transfer";
     import { convect, ethMainnet } from "convect-xyz";
 
