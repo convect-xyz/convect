@@ -58,10 +58,12 @@ export function TransactionList(props: {
 
         {(!maybeTransactions || isFetchingNextPage) &&
           times(25).map((v) => (
-            <div className="flex items-center gap-2 py-4" key={v}>
-              <Skeleton className="h-2 w-2 rounded-full" />
-              <Skeleton className="h-6 flex-1" />
-              <Skeleton className="h-6 w-24" />
+            <div className="flex flex-col items-stretch gap-2 p-4" key={v}>
+              <Skeleton className="h-4 w-full" />
+              <div className="flex justify-between">
+                <Skeleton className="h-4 w-16 rounded-full" />
+                <Skeleton className="h-4 w-20" />
+              </div>
             </div>
           ))}
       </div>
