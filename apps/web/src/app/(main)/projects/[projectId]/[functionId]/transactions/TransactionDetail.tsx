@@ -15,11 +15,17 @@ export function TransactionDetail(props: { transactionHash?: string }) {
   });
 
   if (!props.transactionHash) {
-    return <div>No Transaction Selected.</div>;
+    return (
+      <div className="flex h-full items-center justify-center">
+        Select a transaction to view details.
+      </div>
+    );
   }
 
   if (!transaction) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-full items-center justify-center">Loading...</div>
+    );
   }
 
   return (
