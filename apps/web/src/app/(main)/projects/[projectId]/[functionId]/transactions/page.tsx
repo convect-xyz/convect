@@ -21,7 +21,7 @@ export default function Page() {
             setTransactionId={setTransactionId}
           />
         </div>
-        <div className="flex-1">
+        <div className="min-h-[calc(100vh-100px)] flex-1">
           <TransactionDetail transactionHash={transactionId} />
         </div>
       </div>
