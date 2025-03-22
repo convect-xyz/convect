@@ -47,31 +47,35 @@ export function TransactionList(props: {
       <div className="border-b px-4 py-2">
         <TransactionSearch />
       </div>
-      <div className="flex h-full flex-1 flex-col items-stretch divide-y overflow-y-auto rounded-md">
-        {maybeTransactions?.map((tx, idx) => (
-          <TransactionRow
-            tx={tx}
-            key={tx.id}
-            onRowSelected={(tx) => props?.setTransactionId(tx.transactionHash)}
-          />
-        ))}
-
-        {(!maybeTransactions || isFetchingNextPage) &&
-          times(25).map((v) => (
-            <div className="flex flex-col items-stretch gap-2 p-4" key={v}>
-              <Skeleton className="h-4 w-full" />
-              <div className="flex justify-between">
-                <Skeleton className="h-4 w-16 rounded-full" />
-                <Skeleton className="h-4 w-20" />
-              </div>
-            </div>
+      <div className="h-full flex-1 overflow-y-auto">
+        {maybeTransactions?.length === 0 && (
+          <div className="py-10 text-center">
+            <p>No transactions processed</p>
+          </div>
+        )}
+        <div className="flex flex-col items-stretch divide-y rounded-md">
+          {maybeTransactions?.map((tx, idx) => (
+            <TransactionRow
+              tx={tx}
+              key={tx.id}
+              onRowSelected={(tx) =>
+                props?.setTransactionId(tx.transactionHash)
+              }
+            />
           ))}
-      </div>
-      {maybeTransactions?.length === 0 && (
-        <div className="py-10 text-center">
-          <p>No transactions processed</p>
+
+          {(!maybeTransactions || isFetchingNextPage) &&
+            times(25).map((v) => (
+              <div className="flex flex-col items-stretch gap-2 p-4" key={v}>
+                <Skeleton className="h-4 w-full" />
+                <div className="flex justify-between">
+                  <Skeleton className="h-4 w-16 rounded-full" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              </div>
+            ))}
         </div>
-      )}
+      </div>
 
       {maybeTransactions?.length !== 0 && <div ref={scrollRef} />}
     </div>
