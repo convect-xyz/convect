@@ -28,7 +28,7 @@ export default function Page() {
 
 function Content() {
   return (
-    <div className="flex flex-col gap-2 overflow-hidden p-1">
+    <div className="mt-8 flex flex-col gap-2 overflow-hidden p-1">
       <div className="overflow-hidden rounded-md border">
         <DeploymentsTable />
       </div>
@@ -67,7 +67,7 @@ function DeploymentsTable() {
             <div key={deployment.id} className=" p-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="flex flex-1 items-center gap-2">
-                  <div className="bg-chip mr-4 basis-[70px] truncate rounded-full border px-2 text-center">
+                  <div className="mr-4 basis-[70px] truncate rounded-full border bg-chip px-2 text-center">
                     {deployment.id.slice(0, 6)}
                   </div>
                   <RenderStatusIcon status={deployment.status} />
