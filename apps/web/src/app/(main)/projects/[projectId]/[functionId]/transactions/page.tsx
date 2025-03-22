@@ -68,7 +68,9 @@ function Filters() {
           <AccordionItem value={filters.handler}>
             <AccordionTrigger className="w-full">Handlers</AccordionTrigger>
             <AccordionContent>
-              <HandlerFilter />
+              <div className="max-h-[200px] overflow-y-auto">
+                <HandlerFilter />
+              </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
