@@ -10,6 +10,7 @@ use futures::future::join_all;
 mod utils;
 
 const BATCH_SIZE: u64 = 500;
+const MAX_SQS_MESSAGE_SIZE: usize = 220000;
 
 #[derive(Debug, Clone)]
 struct TransactionBufferEntry {
@@ -19,12 +20,8 @@ struct TransactionBufferEntry {
 }
 
 impl TransactionBufferEntry {
-    fn is_full(&self) -> bool {
-        self.transactions.len() >= 60 || self.byte_size >= 220000
-    }
-
     fn is_at_raw_upload_byte_capacity(&self) -> bool {
-        self.byte_size >= 220000
+        self.byte_size >= MAX_SQS_MESSAGE_SIZE
     }
 
     fn is_at_transaction_capacity(&self) -> bool {
@@ -50,7 +47,7 @@ impl TransactionBuffer {
             .is_some_and(|e| e.is_at_transaction_capacity());
 
         if is_at_capacity {
-            let upload_method = if tx_byte_size > 220000 {
+            let upload_method = if tx_byte_size > MAX_SQS_MESSAGE_SIZE {
                 UploadMethod::S3
             } else {
                 UploadMethod::Raw
@@ -62,9 +59,7 @@ impl TransactionBuffer {
                 upload_method,
             };
 
-            let old_entry = self.entry.replace(new_entry);
-
-            return old_entry;
+            return self.entry.replace(new_entry);
         }
 
         let current_entry = self.entry.get_or_insert(TransactionBufferEntry {
@@ -74,7 +69,7 @@ impl TransactionBuffer {
         });
 
         let new_entry_byte_size = current_entry.byte_size + tx_byte_size;
-        if new_entry_byte_size > 220000 {
+        if new_entry_byte_size > MAX_SQS_MESSAGE_SIZE {
             current_entry.upload_method = UploadMethod::S3;
         }
 

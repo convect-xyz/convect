@@ -124,16 +124,6 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
     }
 }
 
-/**
-  Returns a Filter that covers all the logs that are relevant to the given range.
-  The Filter is constructed by:
-
-  * taking all log config addresses and topics that are relevant to the current range.
-  * taking the smallest start block of all the tx_configs as the start block that are relevant to the current range.
-
-  After a response is returned from the web3 client, any extraneous logs that are not relevant to the Manifest should be removed with
-  the remove_extranous_logs function.
-*/
 pub fn get_web3_client_filter(
     address: String,
     topics: Vec<String>,

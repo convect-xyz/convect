@@ -156,7 +156,7 @@ impl Web3Client for Web3ClientImpl {
                         .map(|filter| web3.eth().logs(filter.clone()))
                         .collect();
 
-                    web3.transport().submit_batch().await.unwrap();
+                    web3.transport().submit_batch().await?;
 
                     let logs = join_all(filters)
                         .await
@@ -221,7 +221,7 @@ impl Web3Client for Web3ClientImpl {
                         .map(|hash| web3.eth().transaction(hash))
                         .collect();
 
-                    web3.transport().submit_batch().await.unwrap();
+                    web3.transport().submit_batch().await?;
 
                     let transactions = join_all(transactions).await.into_iter().collect::<Result<
                         Vec<_>,

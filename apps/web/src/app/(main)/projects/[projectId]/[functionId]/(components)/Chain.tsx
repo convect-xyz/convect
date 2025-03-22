@@ -11,7 +11,7 @@ import { useOverview } from "../hooks/useOverview";
 import { useParams } from "../hooks/useParams";
 
 export function Chain() {
-  const { chainId, projectId, functionId } = useParams();
+  const { chainId } = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();

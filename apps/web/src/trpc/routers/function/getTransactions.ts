@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ilike, lt, sql } from "drizzle-orm";
+import { and, arrayOverlaps, desc, eq, ilike, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -12,10 +12,12 @@ export const getTransactions = protectedProcedure
       limit: z.number().min(1).max(25).default(25),
       cursor: z.number().nullish(),
       search: z.string().nullish(),
-      status: z.enum(["FAILED", "SUCCESS"]).nullish(),
+      status: z.array(z.enum(["FAILED", "SUCCESS", "PENDING"])).default([]),
+      batchId: z.string().nullish(),
       functionId: z.number(),
       chainId: z.number(),
       deploymentId: z.string(),
+      txConfigs: z.array(z.number()).default([]),
     }),
   )
   .output(
@@ -76,6 +78,27 @@ export const getTransactions = protectedProcedure
         baseFilter = and(
           baseFilter,
           lt(analysisSchema.ethTransaction.id, input.cursor),
+        );
+      }
+      if (input.status.length > 0) {
+        const statusFilter = input.status.map((status) =>
+          eq(txCounts.status, status),
+        );
+        baseFilter = and(baseFilter, or(...statusFilter));
+      }
+      if (input.batchId) {
+        baseFilter = and(
+          baseFilter,
+          eq(analysisSchema.ethTransaction.batchId, input.batchId),
+        );
+      }
+      if (input.txConfigs.length > 0) {
+        baseFilter = and(
+          baseFilter,
+          arrayOverlaps(
+            analysisSchema.ethTransaction.txConfigs,
+            input.txConfigs.map((txConfig) => txConfig),
+          ),
         );
       }
       return baseFilter;

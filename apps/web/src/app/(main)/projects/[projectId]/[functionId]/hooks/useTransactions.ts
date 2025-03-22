@@ -5,7 +5,7 @@ import { useParams } from "./useParams";
 import { useSelectedChainId } from "./useSelectedChainId";
 import { useSelectedDeploymentId } from "./useSelectedDeploymentId";
 
-export function useTransactions() {
+export function useTransactions(options?: { batchId?: string }) {
   const filters = useTransactionFilters();
   const { functionId } = useParams();
   const deploymentId = useSelectedDeploymentId();
@@ -18,6 +18,8 @@ export function useTransactions() {
       deploymentId: deploymentId ?? "",
       search: filters.debouncedSearch,
       status: filters.status,
+      batchId: options?.batchId,
+      txConfigs: filters.txConfigs,
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,

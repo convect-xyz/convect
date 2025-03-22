@@ -1,157 +1,84 @@
 "use client";
 
-import { TabsContent } from "@radix-ui/react-tabs";
 import { times } from "lodash";
 import { HelpCircleIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
+import InfoTooltip from "~/components/core/InfoTooltip";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
-import { api } from "~/trpc/react";
-import { ActiveDeployments } from "./(components)/ActiveDeployments";
 import BatchRow from "./(components)/BatchRow";
-import { Chain } from "./(components)/Chain";
-import InvocationDialog from "./(components)/InvocationDialog";
 import ManifestDialog from "./(components)/ManifestDialog";
-import { StillDeployingAlert } from "./(components)/StillDeployingAlert";
-import TransactionRow from "./(components)/TransactionRow";
-import TransactionFilters, { useTransactionFilters } from "./filters";
 import { useBatches } from "./hooks/useBatches";
 import { useOverview } from "./hooks/useOverview";
 import { useParams } from "./hooks/useParams";
-import { useSelectedDeployment } from "./hooks/useSelectedDeployment";
-import { useTransactions } from "./hooks/useTransactions";
-
-const code = (id: string) => `import { log, transaction } from "convect-xyz";
-
-export const handleTransfers = transaction({
-  startBlock: BigInt(198160),
-  logs: [
-    log({
-      origin: "0x10fe37bac405b209f83ff523fb8d00c0c3f508a8",
-      signature: "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-    }),
-  ],
-  handler: async (txs) => {
-    // Implement your handler
-  },
-});
-
-export default ingest({
-  id: "${id}",
-  handlers: [handleTransfers],
-});`;
 
 export default function Main() {
-  const { data: overview } = useOverview();
-  const { data: selectedDeployment } = useSelectedDeployment();
+  const [batchId, setBatchId] = useState<string>();
 
   return (
-    <div className="overflow-hidden px-1">
-      {(selectedDeployment?.status === "RUNNING" ||
-        selectedDeployment?.status === "PENDING") && (
-        <div className="mb-4">
-          <StillDeployingAlert />
-        </div>
-      )}
-      <div className="flex items-center justify-between">
-        <div className="flex items-stretch gap-2">
-          <div className="mr-4">
-            <ActiveDeployments />
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Chain />
-          <ManifestSection />
-        </div>
-      </div>
-      <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-2">
-        {!overview &&
-          times(3).map((v) => <Skeleton key={v} className="h-20" />)}
-
-        {overview && (
-          <>
-            <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-              <div className="text-sm uppercase text-muted-foreground">
-                Processed Transactions
-              </div>
-              <div className="text-xl">
-                {overview.processedTransactionsCount} /{" "}
-                {overview.transactionCount}
-              </div>
-            </div>
-            <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="uppercase text-muted-foreground">
-                  Average DPI
-                </span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircleIcon size={14} />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Average duration per invocation
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="text-xl">
-                {overview && (
-                  <>
-                    {overview.avgDurationParsed.mins > 0 && (
-                      <>{overview.avgDurationParsed.mins}m </>
-                    )}
-                    {overview.avgDurationParsed.secs}s
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="rounded-md border border-[#191B1F] bg-muted p-4">
-              <div className="text-sm uppercase text-muted-foreground">
-                Last Fetched Block
-              </div>
-              <div className="text-xl">{overview.lastFetchedBlock}</div>
-            </div>
-          </>
-        )}
-      </div>
-      <div className="my-6">
-        <Tabs defaultValue="batches">
-          <TabsList>
-            <TabsTrigger value="batches">Batches</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          </TabsList>
-          <TabsContent value="batches">
-            <RecentBatches />
-          </TabsContent>
-          <TabsContent value="transactions">
-            <TransactionFilters>
-              <RecentTransactions />
-            </TransactionFilters>
-          </TabsContent>
-        </Tabs>
+    <div className="mx-auto max-w-screen-lg py-4">
+      <div>
+        <Overview />
+        <RecentBatches batchId={batchId} setBatchId={setBatchId} />
       </div>
     </div>
   );
 }
 
-function RecentBatches() {
+function Overview() {
+  const { data: overview } = useOverview();
+
+  return (
+    <div className="mt-2 grid w-full grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-2 px-4">
+      {!overview && times(3).map((v) => <Skeleton key={v} className="h-20" />)}
+
+      {overview && (
+        <>
+          <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+            <div className="text-xs uppercase text-muted-foreground">
+              Total Transactions
+            </div>
+            <div className="text-xl">
+              {overview.processedTransactionsCount} /{" "}
+              {overview.transactionCount}
+            </div>
+          </div>
+          <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="uppercase text-muted-foreground">
+                Average DPI
+              </span>
+              <InfoTooltip text="Average duration per invocation">
+                <HelpCircleIcon size={14} />
+              </InfoTooltip>
+            </div>
+            <div className="text-xl">
+              {overview && (
+                <>
+                  {overview.avgDurationParsed.mins > 0 && (
+                    <>{overview.avgDurationParsed.mins}m </>
+                  )}
+                  {overview.avgDurationParsed.secs}s
+                </>
+              )}
+            </div>
+          </div>
+          <div className="rounded-md border border-[#191B1F] bg-muted p-4">
+            <div className="text-xs uppercase text-muted-foreground">
+              Last Fetched Block
+            </div>
+            <div className="text-xl">{overview.lastFetchedBlock}</div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+function RecentBatches(props: {
+  batchId?: string;
+  setBatchId: (v: string) => void;
+}) {
   const { ref: scrollRef, inView } = useInView();
   const {
     data: maybeBatchesPages,
@@ -167,13 +94,14 @@ function RecentBatches() {
   }, [inView, isFetchingNextPage, fetchNextPage]);
 
   return (
-    <div>
-      <div className="my-2 flex flex-col divide-y rounded-md border px-4">
+    <div className="mt-4 px-4">
+      <div>Recent Batches</div>
+      <div className="my-2 flex flex-col divide-y rounded-md border">
         {maybeBatches?.map((batch, idx) => (
           <BatchRow
             batch={batch}
             key={batch.id}
-            onRowSelected={(batch) => {}}
+            onRowSelected={(batch) => props.setBatchId(batch.batchId)}
           />
         ))}
 
@@ -196,149 +124,9 @@ function RecentBatches() {
   );
 }
 
-function RecentTransactions() {
-  const { ref: scrollRef, inView } = useInView();
-
-  const filters = useTransactionFilters();
-  const [selectedTransactionHash, setSelectedTransactionHash] =
-    useState<string>();
-
-  const {
-    data: maybeTransactionsPages,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useTransactions();
-  const { data: overview } = useOverview();
-  const maybeTransactions = maybeTransactionsPages?.pages.flatMap(
-    (p) => p.transactions,
-  );
-
-  useEffect(() => {
-    if (inView && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, isFetchingNextPage, fetchNextPage]);
-
-  return (
-    <div>
-      <div className="my-2">
-        <div className="flex gap-2">
-          <Input
-            className="flex-1 bg-background"
-            placeholder="Search transactions by hash"
-            value={filters.search}
-            onChange={(e) => filters.setSearch(e.target.value)}
-          />
-          <StatusFilter />
-        </div>
-      </div>
-      <div className="flex flex-col divide-y rounded-md border px-4">
-        {maybeTransactions?.map((tx, idx) => (
-          <TransactionRow
-            tx={tx}
-            key={tx.id}
-            onRowSelected={(tx) =>
-              setSelectedTransactionHash(tx.transactionHash)
-            }
-          />
-        ))}
-
-        {(!maybeTransactions || isFetchingNextPage) &&
-          times(25).map((v) => (
-            <div className="flex items-center gap-2 py-4" key={v}>
-              <Skeleton className="h-2 w-2 rounded-full" />
-              <Skeleton className="h-6 flex-1" />
-              <Skeleton className="h-6 w-24" />
-            </div>
-          ))}
-        {maybeTransactions?.length === 0 && (
-          <div className="py-10 text-center">
-            <p>No transactions processed</p>
-          </div>
-        )}
-
-        {selectedTransactionHash && (
-          <InvocationDialog
-            open
-            onOpenChange={(open) => {
-              if (!open) {
-                setSelectedTransactionHash(undefined);
-              }
-            }}
-            manifest={overview!.manifest}
-            transactionHash={selectedTransactionHash}
-          />
-        )}
-
-        {maybeTransactions?.length !== 0 && <div ref={scrollRef} />}
-      </div>
-    </div>
-  );
-}
-
-function StatusFilter() {
-  const filters = useTransactionFilters();
-
-  const renderStatusText = (status: typeof filters.status) => {
-    if (status === "FAILED") return "Failed";
-    if (status === "SUCCESS") return "Success";
-
-    return "All";
-  };
-
-  const handleValueChange = (v: string) => {
-    switch (v) {
-      case "ALL":
-        filters.setStatus();
-        return;
-      case "SUCCESS":
-        filters.setStatus("SUCCESS");
-        return;
-      case "FAILED":
-        filters.setStatus("FAILED");
-        return;
-      default:
-        throw new Error("Unsupported status: " + v);
-    }
-  };
-
-  return (
-    <Select value={filters.status ?? "ALL"} onValueChange={handleValueChange}>
-      <SelectTrigger className="w-[120px] bg-background">
-        <SelectValue placeholder="Status" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="ALL">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-gray-800"></div>
-            {renderStatusText(undefined)}
-          </div>
-        </SelectItem>
-        <SelectItem value="SUCCESS">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-green-400"></div>
-            {renderStatusText("SUCCESS")}
-          </div>
-        </SelectItem>
-        <SelectItem value="FAILED">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-red-400"></div>
-            {renderStatusText("FAILED")}
-          </div>
-        </SelectItem>
-      </SelectContent>
-    </Select>
-  );
-}
-
 function ManifestSection() {
   const [isOpen, setIsOpen] = useState(false);
-  const { functionId, projectId, chainId } = useParams();
-  const { data: fn } = api.functions.get.useQuery({
-    projectId: projectId,
-    functionId: functionId,
-  });
-
+  const { chainId } = useParams();
   const { data: overview } = useOverview();
 
   if (!overview) {
