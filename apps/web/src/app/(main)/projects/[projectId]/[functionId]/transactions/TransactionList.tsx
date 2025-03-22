@@ -43,11 +43,11 @@ export function TransactionList(props: {
   }, [inView, isFetchingNextPage, fetchNextPage]);
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <div className="border-b px-4 py-2">
         <TransactionSearch />
       </div>
-      <div className="flex flex-col items-stretch divide-y rounded-md">
+      <div className="flex h-full flex-1 flex-col items-stretch divide-y overflow-y-auto rounded-md">
         {maybeTransactions?.map((tx, idx) => (
           <TransactionRow
             tx={tx}

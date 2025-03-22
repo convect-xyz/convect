@@ -56,7 +56,7 @@ function Main(props: PropsWithChildren) {
 
   return (
     <>
-      <nav className="sticky top-[var(--navbar-height)] z-10 flex max-w-[100vw] gap-4 overflow-x-auto border-b bg-background px-2 text-sm text-muted-foreground md:px-5">
+      <nav className="sticky top-[var(--navbar-height)] z-10 flex h-[50px] max-w-[100vw] gap-4 overflow-x-auto border-b bg-background px-2 text-sm text-muted-foreground md:px-5">
         <Link {...getLinkProps(`/projects/${projectId}/${functionId}`)}>
           Overview
         </Link>
