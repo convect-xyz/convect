@@ -69,7 +69,7 @@ import { env } from "../../app/env.mjs";
     The `convect` API is used to export a Convect Function. This ties all your handlers together. Handlers run in the order they are specified in the `handlers` array.
 
     ```ts title="src/convect/[project-name]/[function-name].convect.ts"
-    import { transfer } from "./transfer";
+    import { transfer } from "../../handlers/transfer";
     import { convect, ethMainnet } from "convect-xyz";
 
     export default convect({
@@ -91,7 +91,7 @@ import { env } from "../../app/env.mjs";
 
     Create a new deployment with the command below.
     ```bash title="terminal"
-    npx convect-xyz deploy -s [project]/[function]
+    npx convect-xyz deploy -s [project-name]/[function-name]
     ```
 
     The new deployment should be available in the <Link href={`${env.NEXT_PUBLIC_APP_URL}/projects`}>Projects</Link> page.
