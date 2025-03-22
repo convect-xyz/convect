@@ -4,7 +4,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "~/components/ui/select";
 import { api } from "~/trpc/react";
 import { useParams } from "../hooks/useParams";
@@ -27,13 +26,17 @@ export function ActiveDeployments() {
     router.replace(pathname + "?" + params.toString());
   };
 
+  const selectedDeployment = fn?.activeDeployments.find(
+    (d) => d.id === searchParams.get("deploymentId"),
+  );
+
   return (
     <Select
       value={searchParams.get("deploymentId") ?? fn?.activeDeployments[0]?.id}
       onValueChange={handleValueChange}
     >
       <SelectTrigger className="w-full bg-background">
-        <SelectValue />
+        <div>Deployment &bull; {selectedDeployment?.id.slice(0, 6)}</div>
       </SelectTrigger>
       <SelectContent>
         {fn?.activeDeployments.map((deployment) => (
