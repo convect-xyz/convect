@@ -1,0 +1,77 @@
+"use client";
+
+import { times } from "lodash";
+import { useEffect } from "react";
+import { useInView } from "react-intersection-observer";
+import { Input } from "~/components/ui/input";
+import { Skeleton } from "~/components/ui/skeleton";
+import TransactionRow from "../(components)/TransactionRow";
+import { useTransactionFilters } from "../filters";
+import { useTransactions } from "../hooks/useTransactions";
+
+export function TransactionSearch() {
+  const filters = useTransactionFilters();
+  return (
+    <Input
+      className="flex-1 bg-background"
+      placeholder="Search transactions by hash"
+      value={filters.search}
+      onChange={(e) => filters.setSearch(e.target.value)}
+    />
+  );
+}
+
+export function TransactionList(props: {
+  transactionId?: string;
+  setTransactionId: (v: string) => void;
+}) {
+  const { ref: scrollRef, inView } = useInView();
+
+  const {
+    data: maybeTransactionsPages,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useTransactions();
+  const maybeTransactions = maybeTransactionsPages?.pages.flatMap(
+    (p) => p.transactions,
+  );
+
+  useEffect(() => {
+    if (inView && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, isFetchingNextPage, fetchNextPage]);
+
+  return (
+    <div>
+      <div className="border-b px-4 py-2">
+        <TransactionSearch />
+      </div>
+      <div className="flex flex-col items-stretch divide-y rounded-md">
+        {maybeTransactions?.map((tx, idx) => (
+          <TransactionRow
+            tx={tx}
+            key={tx.id}
+            onRowSelected={(tx) => props?.setTransactionId(tx.transactionHash)}
+          />
+        ))}
+
+        {(!maybeTransactions || isFetchingNextPage) &&
+          times(25).map((v) => (
+            <div className="flex items-center gap-2 py-4" key={v}>
+              <Skeleton className="h-2 w-2 rounded-full" />
+              <Skeleton className="h-6 flex-1" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+          ))}
+      </div>
+      {maybeTransactions?.length === 0 && (
+        <div className="py-10 text-center">
+          <p>No transactions processed</p>
+        </div>
+      )}
+
+      {maybeTransactions?.length !== 0 && <div ref={scrollRef} />}
+    </div>
+  );
+}
