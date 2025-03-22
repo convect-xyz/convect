@@ -12,7 +12,6 @@ import { HandlerFilter } from "../(components)/HandlerFilter";
 
 export function Filters() {
   const filters = {
-    deployment: "deployment",
     chain: "chain",
     handler: "handler",
   };
@@ -22,16 +21,13 @@ export function Filters() {
       <div className="font-semibold">Filters</div>
 
       <div className="mt-4">
-        <Accordion
-          defaultValue={[filters.deployment, filters.chain]}
-          type="multiple"
-        >
-          <AccordionItem value={filters.deployment}>
-            <AccordionTrigger className="w-full">Deployment</AccordionTrigger>
-            <AccordionContent>
-              <ActiveDeployments />
-            </AccordionContent>
-          </AccordionItem>
+        <div className="mb-4">
+          <div className="mt-2">
+            <ActiveDeployments />
+          </div>
+        </div>
+        <hr />
+        <Accordion type="multiple">
           <AccordionItem value={filters.chain}>
             <AccordionTrigger className="w-full">Chain</AccordionTrigger>
             <AccordionContent>
