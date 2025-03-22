@@ -32,7 +32,7 @@ export function ActiveDeployments() {
       value={searchParams.get("deploymentId") ?? fn?.activeDeployments[0]?.id}
       onValueChange={handleValueChange}
     >
-      <SelectTrigger className="w-[100px] bg-background">
+      <SelectTrigger className="w-full bg-background">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

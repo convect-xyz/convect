@@ -1,6 +1,7 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
+import { ChevronRightIcon } from "lucide-react";
 import { ForceRerender } from "~/components/ui/force-rerender";
 import { cn } from "~/lib/utils";
 import { RouterOutputs } from "~/trpc/shared";
@@ -16,25 +17,36 @@ export default function TransactionRow(props: {
 
   return (
     <button
-      className="flex items-center gap-2 py-4 hover:bg-muted active:bg-muted/80"
+      className="flex w-full items-center gap-2 p-4 hover:bg-background active:bg-muted/80"
       onClick={() => onRowSelected?.(tx)}
     >
-      <span
-        className={cn(
-          "h-2 w-2 rounded-full",
-          tx.result?.status === "SUCCESS" && "bg-green-400",
-          tx.result?.status === "FAILED" && "bg-red-400",
-          !tx.result && "bg-gray-400",
-        )}
-      ></span>
-      <div className="flex-1 text-left">{tx.transactionHash}</div>
-      <div className="flex items-center justify-center rounded-full border px-2 text-sm text-xs text-muted-foreground">
-        {tx.result?.successCount ?? "0"} / {tx.txConfigs.length}
+      <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+        <div className="flex-1 truncate text-left text-sm">
+          {tx.transactionHash}
+        </div>
+        <div className="flex justify-between gap-2">
+          <div className="flex items-center justify-center gap-2 rounded-full border px-2 text-xs text-muted-foreground">
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full",
+                tx.result?.status === "SUCCESS" && "bg-green-400",
+                tx.result?.status === "FAILED" && "bg-red-400",
+                !tx.result && "bg-gray-400",
+              )}
+            ></span>
+            <span>
+              {tx.result?.successCount ?? "0"} / {tx.txConfigs.length}
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <ForceRerender>
+              {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
+            </ForceRerender>
+          </div>
+        </div>
       </div>
-      <div className="text-sm text-muted-foreground">
-        <ForceRerender>
-          {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
-        </ForceRerender>
+      <div>
+        <ChevronRightIcon className="text-muted-foreground" size={16} />
       </div>
     </button>
   );
