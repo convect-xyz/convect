@@ -15,7 +15,7 @@ export default function BatchRow(props: {
 
   return (
     <button
-      className="flex items-center gap-2 px-4 py-4 hover:bg-muted active:bg-muted/80"
+      className="flex items-center gap-2 px-4 py-4 active:bg-muted/80"
       onClick={() => onRowSelected?.(batch)}
     >
       <span
