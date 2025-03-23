@@ -149,10 +149,6 @@ export const getTransactions = protectedProcedure
     const txCounts = analysisDb
       .select({
         transactionHash: analysisSchema.processedTransaction.transactionHash,
-        processedBatchId: analysisSchema.processedTransaction.processedBatchId,
-        functionId: analysisSchema.processedTransaction.functionId,
-        chainId: analysisSchema.processedTransaction.chainId,
-        deploymentId: analysisSchema.processedTransaction.deploymentId,
         timestamp: max(analysisSchema.processedTransaction.timestamp),
         status:
           sql<string>`CASE WHEN BOOL_AND(${analysisSchema.processedTransaction.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
@@ -184,13 +180,7 @@ export const getTransactions = protectedProcedure
           eq(analysisSchema.processedTransaction.chainId, input.chainId),
         ),
       )
-      .groupBy(
-        analysisSchema.processedTransaction.functionId,
-        analysisSchema.processedTransaction.chainId,
-        analysisSchema.processedTransaction.deploymentId,
-        analysisSchema.processedTransaction.transactionHash,
-        analysisSchema.processedTransaction.processedBatchId,
-      )
+      .groupBy(analysisSchema.processedTransaction.transactionHash)
       .as("txCounts");
 
     const recentTransactions = await explainAnalyze(
@@ -213,6 +203,10 @@ export const getTransactions = protectedProcedure
             txCounts.transactionHash,
             analysisSchema.ethTransaction.transactionHash,
           ),
+        )
+        .orderBy(
+          desc(analysisSchema.ethTransaction.id),
+          desc(analysisSchema.ethTransaction.createdAt),
         )
         .where(getFilter())
         .limit(input.limit + 1),
