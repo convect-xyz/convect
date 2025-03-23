@@ -214,7 +214,8 @@ export const getTransactions = protectedProcedure
             analysisSchema.ethTransaction.transactionHash,
           ),
         )
-        .where(getFilter()),
+        .where(getFilter())
+        .limit(input.limit + 1),
     );
 
     return {
