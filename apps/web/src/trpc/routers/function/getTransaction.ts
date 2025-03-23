@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, max, sql } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -72,118 +72,107 @@ export const getTransaction = protectedProcedure
       return baseFilter;
     };
 
-    const txCounts = analysisDb
-      .select({
-        transactionHash: analysisSchema.processedTransaction.transactionHash,
-        processedBatchId: analysisSchema.processedTransaction.processedBatchId,
-        functionId: analysisSchema.processedTransaction.functionId,
-        chainId: analysisSchema.processedTransaction.chainId,
-        deploymentId: analysisSchema.processedTransaction.deploymentId,
-        successCount:
-          sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.processedTransaction.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
-            "successCount",
-          ),
-        status:
-          sql<string>`CASE WHEN BOOL_AND(${analysisSchema.processedTransaction.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
-            "txStatus",
-          ),
-      })
-      .from(analysisSchema.processedTransaction)
-      .leftJoin(
-        analysisSchema.processedBatch,
-        eq(
-          analysisSchema.processedBatch.id,
-          analysisSchema.processedTransaction.processedBatchId,
-        ),
-      )
-      .groupBy(
-        analysisSchema.processedTransaction.transactionHash,
-        analysisSchema.processedTransaction.deploymentId,
-        analysisSchema.processedTransaction.functionId,
-        analysisSchema.processedTransaction.chainId,
-        analysisSchema.processedTransaction.processedBatchId,
-      )
-      .as("txCounts");
-
-    const processedTransactions = analysisDb
-      .select({
-        transactionHash: analysisSchema.processedTransaction.transactionHash,
-        functionId: analysisSchema.processedTransaction.functionId,
-        chainId: analysisSchema.processedTransaction.chainId,
-        deploymentId: analysisSchema.processedTransaction.deploymentId,
-        processedBatchId: analysisSchema.processedTransaction.processedBatchId,
-        successCount: sql<number>`COALESCE(${txCounts.successCount}, 0)`.as(
-          "successCount",
-        ),
-        status: txCounts.status,
-        timestamp: analysisSchema.processedTransaction.timestamp,
-      })
-      .from(analysisSchema.processedTransaction)
-      .leftJoin(
-        txCounts,
-        and(
-          eq(
-            txCounts.transactionHash,
-            analysisSchema.processedTransaction.transactionHash,
-          ),
-          eq(
-            txCounts.functionId,
-            analysisSchema.processedTransaction.functionId,
-          ),
-          eq(txCounts.chainId, analysisSchema.processedTransaction.chainId),
-          eq(
-            txCounts.deploymentId,
-            analysisSchema.processedTransaction.deploymentId,
-          ),
-          eq(
-            txCounts.processedBatchId,
-            analysisSchema.processedTransaction.processedBatchId,
-          ),
-        ),
-      )
-      .as("processedTransactions");
-
     const transaction = await analysisDb
-      .selectDistinctOn([analysisSchema.ethTransaction.id], {
+      .select({
         id: analysisSchema.ethTransaction.id,
         transactionHash: analysisSchema.ethTransaction.transactionHash,
         createdAt: analysisSchema.ethTransaction.createdAt,
         functionId: analysisSchema.ethTransaction.functionId,
         deploymentId: analysisSchema.ethTransaction.deploymentId,
-        successCount: sql<number>`COALESCE(${txCounts.successCount}, 0)`.as(
-          "successCount",
-        ),
         txConfigs: analysisSchema.ethTransaction.txConfigs,
-        status: processedTransactions.status,
       })
       .from(analysisSchema.ethTransaction)
-      .leftJoin(
-        processedTransactions,
+
+      .where(getFilter())
+      .limit(1);
+
+    const processedTransactions = analysisDb
+      .select({
+        timestamp: analysisSchema.processedTransaction.timestamp,
+        batchId: analysisSchema.processedBatch.batchId,
+        processedBatchId: analysisSchema.processedTransaction.processedBatchId,
+        transactionHash: analysisSchema.processedTransaction.transactionHash,
+        status: analysisSchema.processedTransaction.status,
+      })
+      .from(analysisSchema.processedTransaction)
+      .where(
         and(
           eq(
-            processedTransactions.transactionHash,
-            analysisSchema.ethTransaction.transactionHash,
+            analysisSchema.processedTransaction.deploymentId,
+            input.deploymentId,
           ),
           eq(
-            processedTransactions.functionId,
-            analysisSchema.ethTransaction.functionId,
+            analysisSchema.processedTransaction.functionId,
+            input.functionId.toString(),
           ),
+          eq(analysisSchema.processedTransaction.chainId, input.chainId),
           eq(
-            processedTransactions.chainId,
-            analysisSchema.ethTransaction.chainId,
-          ),
-          eq(
-            processedTransactions.deploymentId,
-            analysisSchema.ethTransaction.deploymentId,
+            analysisSchema.processedTransaction.transactionHash,
+
+            input.transactionHash,
           ),
         ),
       )
-      .where(getFilter())
-      .orderBy(
-        desc(analysisSchema.ethTransaction.id),
-        desc(processedTransactions.timestamp),
+      .leftJoin(
+        analysisSchema.processedBatch,
+        and(
+          eq(
+            analysisSchema.processedBatch.id,
+            analysisSchema.processedTransaction.processedBatchId,
+          ),
+          eq(
+            analysisSchema.processedBatch.deploymentId,
+            analysisSchema.processedTransaction.deploymentId,
+          ),
+          eq(
+            analysisSchema.processedBatch.functionId,
+            analysisSchema.processedTransaction.functionId,
+          ),
+          eq(
+            analysisSchema.processedBatch.chainId,
+            analysisSchema.processedTransaction.chainId,
+          ),
+        ),
       )
-      .limit(1);
+      .as("processedTransactions");
+
+    const txCounts = analysisDb
+      .select({
+        processedBatchId: processedTransactions.processedBatchId,
+        batchId: processedTransactions.batchId,
+        timestamp: max(processedTransactions.timestamp).as("txCountsTimestamp"),
+        transactionHash: processedTransactions.transactionHash,
+        status:
+          sql<string>`CASE WHEN BOOL_AND(${processedTransactions.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
+            "status",
+          ),
+        successCount:
+          sql<number>`CAST(SUM(CASE WHEN ${processedTransactions.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
+            "successCount",
+          ),
+      })
+      .from(processedTransactions)
+      .groupBy(
+        processedTransactions.transactionHash,
+        processedTransactions.batchId,
+        processedTransactions.processedBatchId,
+      )
+      .as("txCounts");
+
+    const txStats = await analysisDb
+      .selectDistinctOn([txCounts.batchId, txCounts.transactionHash], {
+        transactionHash: txCounts.transactionHash,
+        status: txCounts.status,
+        successCount: txCounts.successCount,
+      })
+      .from(txCounts)
+      .orderBy(
+        desc(txCounts.batchId),
+        desc(txCounts.transactionHash),
+        desc(txCounts.timestamp),
+      );
+
+    const stat = txStats[0];
 
     const mostRecentAttempts = await getMostRecentAttempts({
       transactionHash: input.transactionHash,
@@ -206,10 +195,10 @@ export const getTransaction = protectedProcedure
         transactionHash: tx.transactionHash,
         timestamp: tx.createdAt.getTime(),
         txConfigs: tx.txConfigs ?? [],
-        result: tx.status
+        result: stat
           ? {
-              status: tx.status as "SUCCESS" | "FAILED",
-              successCount: tx.successCount,
+              status: stat.status as "SUCCESS" | "FAILED",
+              successCount: stat.successCount,
             }
           : undefined,
         mostRecentAttempts: mostRecentAttempts.map((attempt) => ({
