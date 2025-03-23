@@ -154,6 +154,9 @@ export const getTransactions = protectedProcedure
         ),
       )
       .groupBy(
+        analysisSchema.processedTransaction.functionId,
+        analysisSchema.processedTransaction.chainId,
+        analysisSchema.processedTransaction.deploymentId,
         analysisSchema.processedTransaction.transactionHash,
         analysisSchema.processedTransaction.processedBatchId,
       )
