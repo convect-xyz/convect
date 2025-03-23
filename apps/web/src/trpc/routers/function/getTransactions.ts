@@ -127,16 +127,13 @@ export const getTransactions = protectedProcedure
       .select({
         transactionHash: analysisSchema.processedTransaction.transactionHash,
         processedBatchId: analysisSchema.processedTransaction.processedBatchId,
-        functionId: analysisSchema.processedTransaction.functionId,
-        chainId: analysisSchema.processedTransaction.chainId,
-        deploymentId: analysisSchema.processedTransaction.deploymentId,
+        status:
+          sql<string>`CASE WHEN BOOL_AND(${analysisSchema.processedTransaction.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
+            "status",
+          ),
         successCount:
           sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.processedTransaction.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
             "successCount",
-          ),
-        status:
-          sql<string>`CASE WHEN BOOL_AND(${analysisSchema.processedTransaction.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
-            "txStatus",
           ),
       })
       .from(analysisSchema.processedTransaction)
@@ -154,64 +151,10 @@ export const getTransactions = protectedProcedure
         ),
       )
       .groupBy(
-        analysisSchema.processedTransaction.deploymentId,
-        analysisSchema.processedTransaction.functionId,
-        analysisSchema.processedTransaction.chainId,
         analysisSchema.processedTransaction.transactionHash,
         analysisSchema.processedTransaction.processedBatchId,
       )
       .as("txCounts");
-
-    const processedTransactions = analysisDb
-      .select({
-        transactionHash: analysisSchema.processedTransaction.transactionHash,
-        functionId: analysisSchema.processedTransaction.functionId,
-        chainId: analysisSchema.processedTransaction.chainId,
-        deploymentId: analysisSchema.processedTransaction.deploymentId,
-        processedBatchId: analysisSchema.processedTransaction.processedBatchId,
-        successCount: sql<number>`COALESCE(${txCounts.successCount}, 0)`.as(
-          "successCount",
-        ),
-        status: txCounts.status,
-        timestamp: analysisSchema.processedTransaction.timestamp,
-      })
-      .from(analysisSchema.processedTransaction)
-      .leftJoin(
-        txCounts,
-        and(
-          eq(
-            txCounts.deploymentId,
-            analysisSchema.processedTransaction.deploymentId,
-          ),
-          eq(
-            txCounts.functionId,
-            analysisSchema.processedTransaction.functionId,
-          ),
-          eq(txCounts.chainId, analysisSchema.processedTransaction.chainId),
-          eq(
-            txCounts.processedBatchId,
-            analysisSchema.processedTransaction.processedBatchId,
-          ),
-          eq(
-            txCounts.transactionHash,
-            analysisSchema.processedTransaction.transactionHash,
-          ),
-        ),
-      )
-      .where(
-        and(
-          eq(
-            analysisSchema.processedTransaction.deploymentId,
-            input.deploymentId,
-          ),
-          eq(
-            analysisSchema.processedTransaction.functionId,
-            input.functionId.toString(),
-          ),
-          eq(analysisSchema.processedTransaction.chainId, input.chainId),
-        ),
-      )
-      .as("processedTransactions");
 
     const recentTransactions = await explainAnalyze(
       analysisDb,
@@ -222,38 +165,24 @@ export const getTransactions = protectedProcedure
           createdAt: analysisSchema.ethTransaction.createdAt,
           functionId: analysisSchema.ethTransaction.functionId,
           deploymentId: analysisSchema.ethTransaction.deploymentId,
-          successCount: sql<number>`COALESCE(${txCounts.successCount}, 0)`.as(
-            "successCount",
-          ),
           txConfigs: analysisSchema.ethTransaction.txConfigs,
-          status: processedTransactions.status,
+          status: txCounts.status,
+          // Add a timestamp column from eth_transaction or another related table
+          timestamp: analysisSchema.ethTransaction.createdAt,
+          successCount: txCounts.successCount,
         })
         .from(analysisSchema.ethTransaction)
         .leftJoin(
-          processedTransactions,
-          and(
-            eq(
-              processedTransactions.deploymentId,
-              analysisSchema.ethTransaction.deploymentId,
-            ),
-            eq(
-              processedTransactions.functionId,
-              analysisSchema.ethTransaction.functionId,
-            ),
-            eq(
-              processedTransactions.chainId,
-              analysisSchema.ethTransaction.chainId,
-            ),
-            eq(
-              processedTransactions.transactionHash,
-              analysisSchema.ethTransaction.transactionHash,
-            ),
+          txCounts,
+          eq(
+            txCounts.transactionHash,
+            analysisSchema.ethTransaction.transactionHash,
           ),
         )
         .where(getFilter())
         .orderBy(
           desc(analysisSchema.ethTransaction.id),
-          desc(processedTransactions.timestamp),
+          desc(analysisSchema.ethTransaction.createdAt),
         )
         .limit(input.limit + 1),
     );
