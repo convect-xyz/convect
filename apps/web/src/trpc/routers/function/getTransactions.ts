@@ -3,10 +3,10 @@ import { TRPCError } from "@trpc/server";
 import {
   and,
   arrayOverlaps,
-  desc,
   eq,
   ilike,
   lt,
+  max,
   or,
   sql,
   SQLWrapper,
@@ -130,6 +130,7 @@ export const getTransactions = protectedProcedure
         functionId: analysisSchema.processedTransaction.functionId,
         chainId: analysisSchema.processedTransaction.chainId,
         deploymentId: analysisSchema.processedTransaction.deploymentId,
+        timestamp: max(analysisSchema.processedTransaction.timestamp),
         status:
           sql<string>`CASE WHEN BOOL_AND(${analysisSchema.processedTransaction.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
             "status",
@@ -162,41 +163,50 @@ export const getTransactions = protectedProcedure
       )
       .as("txCounts");
 
+    const _rt = analysisDb
+      .select({
+        id: analysisSchema.ethTransaction.id,
+        transactionHash: analysisSchema.ethTransaction.transactionHash,
+        createdAt: analysisSchema.ethTransaction.createdAt,
+        functionId: analysisSchema.ethTransaction.functionId,
+        deploymentId: analysisSchema.ethTransaction.deploymentId,
+        txConfigs: analysisSchema.ethTransaction.txConfigs,
+        status: txCounts.status,
+        successCount: txCounts.successCount,
+        rowNum:
+          sql<number>`ROW_NUMBER() over (partition by ${analysisSchema.ethTransaction.id} order by ${analysisSchema.ethTransaction.createdAt} desc)`.as(
+            "row_num",
+          ),
+      })
+      .from(analysisSchema.ethTransaction)
+      .leftJoin(
+        txCounts,
+        and(
+          eq(txCounts.functionId, analysisSchema.ethTransaction.functionId),
+          eq(txCounts.chainId, analysisSchema.ethTransaction.chainId),
+          eq(txCounts.deploymentId, analysisSchema.ethTransaction.deploymentId),
+          eq(
+            txCounts.transactionHash,
+            analysisSchema.ethTransaction.transactionHash,
+          ),
+        ),
+      )
+      .where(getFilter())
+      .as("rt");
+
     const recentTransactions = await explainAnalyze(
       analysisDb,
       analysisDb
-        .selectDistinctOn([analysisSchema.ethTransaction.id], {
-          id: analysisSchema.ethTransaction.id,
-          transactionHash: analysisSchema.ethTransaction.transactionHash,
-          createdAt: analysisSchema.ethTransaction.createdAt,
-          functionId: analysisSchema.ethTransaction.functionId,
-          deploymentId: analysisSchema.ethTransaction.deploymentId,
-          txConfigs: analysisSchema.ethTransaction.txConfigs,
-          status: txCounts.status,
-          timestamp: analysisSchema.ethTransaction.createdAt,
-          successCount: txCounts.successCount,
+        .select({
+          id: _rt.id,
+          transactionHash: _rt.transactionHash,
+          createdAt: _rt.createdAt,
+          txConfigs: _rt.txConfigs,
+          status: _rt.status,
+          successCount: _rt.successCount,
         })
-        .from(analysisSchema.ethTransaction)
-        .leftJoin(
-          txCounts,
-          and(
-            eq(txCounts.functionId, analysisSchema.ethTransaction.functionId),
-            eq(txCounts.chainId, analysisSchema.ethTransaction.chainId),
-            eq(
-              txCounts.deploymentId,
-              analysisSchema.ethTransaction.deploymentId,
-            ),
-            eq(
-              txCounts.transactionHash,
-              analysisSchema.ethTransaction.transactionHash,
-            ),
-          ),
-        )
-        .where(getFilter())
-        .orderBy(
-          desc(analysisSchema.ethTransaction.id),
-          desc(analysisSchema.ethTransaction.createdAt),
-        )
+        .from(_rt)
+        .where(eq(_rt.rowNum, 1))
         .limit(input.limit + 1),
     );
 
