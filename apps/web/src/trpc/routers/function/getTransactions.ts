@@ -173,7 +173,6 @@ export const getTransactions = protectedProcedure
           deploymentId: analysisSchema.ethTransaction.deploymentId,
           txConfigs: analysisSchema.ethTransaction.txConfigs,
           status: txCounts.status,
-          // Add a timestamp column from eth_transaction or another related table
           timestamp: analysisSchema.ethTransaction.createdAt,
           successCount: txCounts.successCount,
         })
