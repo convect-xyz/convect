@@ -1,12 +1,21 @@
 import { manifestSchema, parseManifest } from "@convect-xyz/lib";
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, sql, SQLWrapper } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
 import { throwIfNotProjectCollaborator } from "../permissions";
+
+export const explainAnalyze = async <T extends SQLWrapper>(
+  db: typeof analysisDb,
+  query: T,
+) => {
+  const debugResult = await db.execute(sql`EXPLAIN ANALYZE ${query.getSQL()}`);
+  console.debug(debugResult);
+  return await query;
+};
 
 const redisClient = new Redis(
   25061,
@@ -91,19 +100,16 @@ export const getOverview = protectedProcedure
         input.chainId,
         input.deploymentId,
       ),
-      // Promise.resolve(0),
       getTxCount(
         input.functionId.toString(),
         input.chainId,
         input.deploymentId,
       ),
-      // Promise.resolve(0),
       getAvgDuration(
         input.functionId.toString(),
         input.chainId,
         input.deploymentId,
       ),
-      // Promise.resolve(0),
       getSuccessfulTxCount(
         input.functionId.toString(),
         input.chainId,
@@ -170,28 +176,7 @@ const getSuccessfulTxCount = async (
       deploymentId: analysisSchema.processedTransaction.deploymentId,
     })
     .from(analysisSchema.processedTransaction)
-    .leftJoin(
-      analysisSchema.processedBatch,
-      and(
-        eq(
-          analysisSchema.processedBatch.id,
-          analysisSchema.processedTransaction.processedBatchId,
-        ),
-        eq(
-          analysisSchema.processedBatch.deploymentId,
-          analysisSchema.processedTransaction.deploymentId,
-        ),
-        eq(
-          analysisSchema.processedBatch.functionId,
-          analysisSchema.processedTransaction.functionId,
-        ),
-        eq(
-          analysisSchema.processedBatch.chainId,
-          analysisSchema.processedTransaction.chainId,
-        ),
-      ),
-    )
-    .where(eq(analysisSchema.processedBatch.status, "SUCCESS"))
+    .where(eq(analysisSchema.processedTransaction.status, "SUCCESS"))
     .groupBy(
       analysisSchema.processedTransaction.transactionHash,
       analysisSchema.processedTransaction.deploymentId,
@@ -241,18 +226,21 @@ const getTxCount = async (
   chainId: number,
   deploymentId: string,
 ) => {
-  const result = await analysisDb
-    .select({
-      numTransactions: count(analysisSchema.ethTransaction.deploymentId),
-    })
-    .from(analysisSchema.ethTransaction)
-    .where(
-      and(
-        eq(analysisSchema.ethTransaction.functionId, functionId),
-        eq(analysisSchema.ethTransaction.deploymentId, deploymentId),
-        eq(analysisSchema.ethTransaction.chainId, chainId),
+  const result = await explainAnalyze(
+    analysisDb,
+    analysisDb
+      .select({
+        numTransactions: count(analysisSchema.ethTransaction.deploymentId),
+      })
+      .from(analysisSchema.ethTransaction)
+      .where(
+        and(
+          eq(analysisSchema.ethTransaction.functionId, functionId),
+          eq(analysisSchema.ethTransaction.deploymentId, deploymentId),
+          eq(analysisSchema.ethTransaction.chainId, chainId),
+        ),
       ),
-    );
+  );
 
   return result.length > 0 ? result[0]?.numTransactions : null;
 };
