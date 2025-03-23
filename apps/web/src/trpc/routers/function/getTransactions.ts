@@ -144,6 +144,7 @@ export const getTransactions = protectedProcedure
       .select({
         timestamp: analysisSchema.processedTransaction.timestamp,
         batchId: analysisSchema.processedBatch.batchId,
+        processedBatchId: analysisSchema.processedTransaction.processedBatchId,
         transactionHash: analysisSchema.processedTransaction.transactionHash,
         status: analysisSchema.processedTransaction.status,
       })
@@ -190,6 +191,7 @@ export const getTransactions = protectedProcedure
 
     const txCounts = analysisDb
       .select({
+        processedBatchId: processedTransactions.processedBatchId,
         batchId: processedTransactions.batchId,
         timestamp: max(processedTransactions.timestamp).as("txCountsTimestamp"),
         transactionHash: processedTransactions.transactionHash,
@@ -206,6 +208,7 @@ export const getTransactions = protectedProcedure
       .groupBy(
         processedTransactions.transactionHash,
         processedTransactions.batchId,
+        processedTransactions.processedBatchId,
       )
       .as("txCounts");
 
