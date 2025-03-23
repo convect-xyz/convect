@@ -60,7 +60,6 @@ export const getOverview = protectedProcedure
   )
   .query(async (opts) => {
     const { input, ctx } = opts;
-
     const fn = await ctx.db.query.convectFunctions.findFirst({
       where(fields, { eq }) {
         return eq(fields.id, input.functionId);
