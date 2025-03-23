@@ -127,6 +127,9 @@ export const getTransactions = protectedProcedure
       .select({
         transactionHash: analysisSchema.processedTransaction.transactionHash,
         processedBatchId: analysisSchema.processedTransaction.processedBatchId,
+        functionId: analysisSchema.processedTransaction.functionId,
+        chainId: analysisSchema.processedTransaction.chainId,
+        deploymentId: analysisSchema.processedTransaction.deploymentId,
         status:
           sql<string>`CASE WHEN BOOL_AND(${analysisSchema.processedTransaction.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
             "status",
@@ -174,9 +177,17 @@ export const getTransactions = protectedProcedure
         .from(analysisSchema.ethTransaction)
         .leftJoin(
           txCounts,
-          eq(
-            txCounts.transactionHash,
-            analysisSchema.ethTransaction.transactionHash,
+          and(
+            eq(txCounts.functionId, analysisSchema.ethTransaction.functionId),
+            eq(txCounts.chainId, analysisSchema.ethTransaction.chainId),
+            eq(
+              txCounts.deploymentId,
+              analysisSchema.ethTransaction.deploymentId,
+            ),
+            eq(
+              txCounts.transactionHash,
+              analysisSchema.ethTransaction.transactionHash,
+            ),
           ),
         )
         .where(getFilter())
