@@ -231,7 +231,6 @@ export const getTransactions = protectedProcedure
           )
         : [];
 
-    console.log(txStats);
     const a = (tx: string) => {
       return txStats.find((t) => t.transactionHash === tx);
     };
