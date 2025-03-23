@@ -164,18 +164,11 @@ export const getTransactions = protectedProcedure
           ),
       })
       .from(analysisSchema.processedTransaction)
-      .leftJoin(
+      .innerJoin(
         latestBatchIds,
-        and(
-          eq(
-            analysisSchema.processedTransaction.processedBatchId,
-            latestBatchIds.batchId,
-          ),
-          eq(
-            analysisSchema.processedTransaction.functionId,
-            input.functionId.toString(),
-          ),
-          eq(analysisSchema.processedTransaction.chainId, input.chainId),
+        eq(
+          analysisSchema.processedTransaction.processedBatchId,
+          latestBatchIds.id,
         ),
       )
       .where(
@@ -216,17 +209,9 @@ export const getTransactions = protectedProcedure
         .from(analysisSchema.ethTransaction)
         .leftJoin(
           txCounts,
-          and(
-            eq(txCounts.functionId, analysisSchema.ethTransaction.functionId),
-            eq(txCounts.chainId, analysisSchema.ethTransaction.chainId),
-            eq(
-              txCounts.deploymentId,
-              analysisSchema.ethTransaction.deploymentId,
-            ),
-            eq(
-              txCounts.transactionHash,
-              analysisSchema.ethTransaction.transactionHash,
-            ),
+          eq(
+            txCounts.transactionHash,
+            analysisSchema.ethTransaction.transactionHash,
           ),
         )
         .where(getFilter()),
