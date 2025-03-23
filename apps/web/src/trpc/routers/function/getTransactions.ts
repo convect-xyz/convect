@@ -120,28 +120,6 @@ export const getTransactions = protectedProcedure
       return baseFilter;
     };
 
-    const latestBatchIds = analysisDb
-      .selectDistinctOn([analysisSchema.processedBatch.batchId], {
-        batchId: analysisSchema.processedBatch.batchId,
-        id: analysisSchema.processedBatch.id,
-      })
-      .from(analysisSchema.processedBatch)
-      .where(
-        and(
-          eq(analysisSchema.processedBatch.deploymentId, input.deploymentId),
-          eq(
-            analysisSchema.processedBatch.functionId,
-            input.functionId.toString(),
-          ),
-          eq(analysisSchema.processedBatch.chainId, input.chainId),
-        ),
-      )
-      .orderBy(
-        desc(analysisSchema.processedBatch.batchId),
-        desc(analysisSchema.processedBatch.timestamp),
-      )
-      .as("latestBatchIds");
-
     const recentTransactions = await explainAnalyze(
       analysisDb,
       analysisDb
@@ -162,52 +140,99 @@ export const getTransactions = protectedProcedure
         .limit(input.limit + 1),
     );
 
-    const txCounts = await explainAnalyze(
-      analysisDb,
-      analysisDb
-        .select({
-          transactionHash: analysisSchema.processedTransaction.transactionHash,
-          timestamp: max(analysisSchema.processedTransaction.timestamp),
-          status:
-            sql<string>`CASE WHEN BOOL_AND(${analysisSchema.processedTransaction.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
-              "status",
-            ),
-          successCount:
-            sql<number>`CAST(SUM(CASE WHEN ${analysisSchema.processedTransaction.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
-              "successCount",
-            ),
-        })
-        .from(analysisSchema.processedTransaction)
-        .innerJoin(
-          latestBatchIds,
+    const processedTransactions = analysisDb
+      .select({
+        timestamp: analysisSchema.processedTransaction.timestamp,
+        batchId: analysisSchema.processedBatch.batchId,
+        transactionHash: analysisSchema.processedTransaction.transactionHash,
+        status: analysisSchema.processedTransaction.status,
+      })
+      .from(analysisSchema.processedTransaction)
+      .where(
+        and(
           eq(
+            analysisSchema.processedTransaction.deploymentId,
+            input.deploymentId,
+          ),
+          eq(
+            analysisSchema.processedTransaction.functionId,
+            input.functionId.toString(),
+          ),
+          eq(analysisSchema.processedTransaction.chainId, input.chainId),
+          inArray(
+            analysisSchema.processedTransaction.transactionHash,
+            recentTransactions.map((tx) => tx.transactionHash),
+          ),
+        ),
+      )
+      .leftJoin(
+        analysisSchema.processedBatch,
+        and(
+          eq(
+            analysisSchema.processedBatch.id,
             analysisSchema.processedTransaction.processedBatchId,
-            latestBatchIds.id,
           ),
-        )
-        .where(
-          and(
-            eq(
-              analysisSchema.processedTransaction.deploymentId,
-              input.deploymentId,
-            ),
-            eq(
-              analysisSchema.processedTransaction.functionId,
-              input.functionId.toString(),
-            ),
-            eq(analysisSchema.processedTransaction.chainId, input.chainId),
-            inArray(
-              analysisSchema.processedTransaction.transactionHash,
-              recentTransactions.map((tx) => tx.transactionHash),
-            ),
+          eq(
+            analysisSchema.processedBatch.deploymentId,
+            analysisSchema.processedTransaction.deploymentId,
           ),
-        )
-        .groupBy(analysisSchema.processedTransaction.transactionHash),
-    );
+          eq(
+            analysisSchema.processedBatch.functionId,
+            analysisSchema.processedTransaction.functionId,
+          ),
+          eq(
+            analysisSchema.processedBatch.chainId,
+            analysisSchema.processedTransaction.chainId,
+          ),
+        ),
+      )
+      .as("processedTransactions");
 
+    const txCounts = analysisDb
+      .select({
+        batchId: processedTransactions.batchId,
+        timestamp: max(processedTransactions.timestamp).as("txCountsTimestamp"),
+        transactionHash: processedTransactions.transactionHash,
+        status:
+          sql<string>`CASE WHEN BOOL_AND(${processedTransactions.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
+            "status",
+          ),
+        successCount:
+          sql<number>`CAST(SUM(CASE WHEN ${processedTransactions.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
+            "successCount",
+          ),
+      })
+      .from(processedTransactions)
+      .groupBy(
+        processedTransactions.transactionHash,
+        processedTransactions.batchId,
+      )
+      .as("txCounts");
+
+    const txStats =
+      recentTransactions.length > 0
+        ? await explainAnalyze(
+            analysisDb,
+            analysisDb
+              .selectDistinctOn([txCounts.batchId, txCounts.transactionHash], {
+                transactionHash: txCounts.transactionHash,
+                status: txCounts.status,
+                successCount: txCounts.successCount,
+              })
+              .from(txCounts)
+              .orderBy(
+                desc(txCounts.batchId),
+                desc(txCounts.transactionHash),
+                desc(txCounts.timestamp),
+              ),
+          )
+        : [];
+
+    console.log(txStats);
     const a = (tx: string) => {
-      return txCounts.find((t) => t.transactionHash === tx);
+      return txStats.find((t) => t.transactionHash === tx);
     };
+
     return {
       transactions: recentTransactions.map((tx) => ({
         id: tx.id,
