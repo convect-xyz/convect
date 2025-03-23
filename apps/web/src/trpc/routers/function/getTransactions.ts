@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import {
   and,
   arrayOverlaps,
+  desc,
   eq,
   ilike,
   lt,
@@ -123,6 +124,28 @@ export const getTransactions = protectedProcedure
       return baseFilter;
     };
 
+    const latestBatchIds = analysisDb
+      .selectDistinctOn([analysisSchema.processedBatch.batchId], {
+        batchId: analysisSchema.processedBatch.batchId,
+        id: analysisSchema.processedBatch.id,
+      })
+      .from(analysisSchema.processedBatch)
+      .where(
+        and(
+          eq(analysisSchema.processedBatch.deploymentId, input.deploymentId),
+          eq(
+            analysisSchema.processedBatch.functionId,
+            input.functionId.toString(),
+          ),
+          eq(analysisSchema.processedBatch.chainId, input.chainId),
+        ),
+      )
+      .orderBy(
+        desc(analysisSchema.processedBatch.batchId),
+        desc(analysisSchema.processedBatch.timestamp),
+      )
+      .as("latestBatchIds");
+
     const txCounts = analysisDb
       .select({
         transactionHash: analysisSchema.processedTransaction.transactionHash,
@@ -141,6 +164,20 @@ export const getTransactions = protectedProcedure
           ),
       })
       .from(analysisSchema.processedTransaction)
+      .leftJoin(
+        latestBatchIds,
+        and(
+          eq(
+            analysisSchema.processedTransaction.processedBatchId,
+            latestBatchIds.batchId,
+          ),
+          eq(
+            analysisSchema.processedTransaction.functionId,
+            input.functionId.toString(),
+          ),
+          eq(analysisSchema.processedTransaction.chainId, input.chainId),
+        ),
+      )
       .where(
         and(
           eq(
@@ -163,51 +200,36 @@ export const getTransactions = protectedProcedure
       )
       .as("txCounts");
 
-    const _rt = analysisDb
-      .select({
-        id: analysisSchema.ethTransaction.id,
-        transactionHash: analysisSchema.ethTransaction.transactionHash,
-        createdAt: analysisSchema.ethTransaction.createdAt,
-        functionId: analysisSchema.ethTransaction.functionId,
-        deploymentId: analysisSchema.ethTransaction.deploymentId,
-        txConfigs: analysisSchema.ethTransaction.txConfigs,
-        status: txCounts.status,
-        successCount: txCounts.successCount,
-        rowNum:
-          sql<number>`ROW_NUMBER() over (partition by ${analysisSchema.ethTransaction.id} order by ${analysisSchema.ethTransaction.createdAt} desc)`.as(
-            "row_num",
-          ),
-      })
-      .from(analysisSchema.ethTransaction)
-      .leftJoin(
-        txCounts,
-        and(
-          eq(txCounts.functionId, analysisSchema.ethTransaction.functionId),
-          eq(txCounts.chainId, analysisSchema.ethTransaction.chainId),
-          eq(txCounts.deploymentId, analysisSchema.ethTransaction.deploymentId),
-          eq(
-            txCounts.transactionHash,
-            analysisSchema.ethTransaction.transactionHash,
-          ),
-        ),
-      )
-      .where(getFilter())
-      .as("rt");
-
     const recentTransactions = await explainAnalyze(
       analysisDb,
       analysisDb
         .select({
-          id: _rt.id,
-          transactionHash: _rt.transactionHash,
-          createdAt: _rt.createdAt,
-          txConfigs: _rt.txConfigs,
-          status: _rt.status,
-          successCount: _rt.successCount,
+          id: analysisSchema.ethTransaction.id,
+          transactionHash: analysisSchema.ethTransaction.transactionHash,
+          createdAt: analysisSchema.ethTransaction.createdAt,
+          functionId: analysisSchema.ethTransaction.functionId,
+          deploymentId: analysisSchema.ethTransaction.deploymentId,
+          txConfigs: analysisSchema.ethTransaction.txConfigs,
+          status: txCounts.status,
+          successCount: txCounts.successCount,
         })
-        .from(_rt)
-        .where(eq(_rt.rowNum, 1))
-        .limit(input.limit + 1),
+        .from(analysisSchema.ethTransaction)
+        .leftJoin(
+          txCounts,
+          and(
+            eq(txCounts.functionId, analysisSchema.ethTransaction.functionId),
+            eq(txCounts.chainId, analysisSchema.ethTransaction.chainId),
+            eq(
+              txCounts.deploymentId,
+              analysisSchema.ethTransaction.deploymentId,
+            ),
+            eq(
+              txCounts.transactionHash,
+              analysisSchema.ethTransaction.transactionHash,
+            ),
+          ),
+        )
+        .where(getFilter()),
     );
 
     return {
