@@ -1,10 +1,29 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, arrayOverlaps, desc, eq, ilike, lt, or, sql } from "drizzle-orm";
+import {
+  and,
+  arrayOverlaps,
+  desc,
+  eq,
+  ilike,
+  lt,
+  or,
+  sql,
+  SQLWrapper,
+} from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
 import { throwIfNotProjectCollaborator } from "../permissions";
+
+export const explainAnalyze = async <T extends SQLWrapper>(
+  db: typeof analysisDb,
+  query: T,
+) => {
+  const debugResult = await db.execute(sql`EXPLAIN ANALYZE ${query.getSQL()}`);
+  console.debug(debugResult);
+  return await query;
+};
 
 export const getTransactions = protectedProcedure
   .input(
@@ -168,47 +187,50 @@ export const getTransactions = protectedProcedure
       )
       .as("processedTransactions");
 
-    const recentTransactions = await analysisDb
-      .selectDistinctOn([analysisSchema.ethTransaction.id], {
-        id: analysisSchema.ethTransaction.id,
-        transactionHash: analysisSchema.ethTransaction.transactionHash,
-        createdAt: analysisSchema.ethTransaction.createdAt,
-        functionId: analysisSchema.ethTransaction.functionId,
-        deploymentId: analysisSchema.ethTransaction.deploymentId,
-        successCount: sql<number>`COALESCE(${txCounts.successCount}, 0)`.as(
-          "successCount",
-        ),
-        txConfigs: analysisSchema.ethTransaction.txConfigs,
-        status: processedTransactions.status,
-      })
-      .from(analysisSchema.ethTransaction)
-      .leftJoin(
-        processedTransactions,
-        and(
-          eq(
-            processedTransactions.deploymentId,
-            analysisSchema.ethTransaction.deploymentId,
+    const recentTransactions = await explainAnalyze(
+      analysisDb,
+      analysisDb
+        .selectDistinctOn([analysisSchema.ethTransaction.id], {
+          id: analysisSchema.ethTransaction.id,
+          transactionHash: analysisSchema.ethTransaction.transactionHash,
+          createdAt: analysisSchema.ethTransaction.createdAt,
+          functionId: analysisSchema.ethTransaction.functionId,
+          deploymentId: analysisSchema.ethTransaction.deploymentId,
+          successCount: sql<number>`COALESCE(${txCounts.successCount}, 0)`.as(
+            "successCount",
           ),
-          eq(
-            processedTransactions.functionId,
-            analysisSchema.ethTransaction.functionId,
+          txConfigs: analysisSchema.ethTransaction.txConfigs,
+          status: processedTransactions.status,
+        })
+        .from(analysisSchema.ethTransaction)
+        .leftJoin(
+          processedTransactions,
+          and(
+            eq(
+              processedTransactions.deploymentId,
+              analysisSchema.ethTransaction.deploymentId,
+            ),
+            eq(
+              processedTransactions.functionId,
+              analysisSchema.ethTransaction.functionId,
+            ),
+            eq(
+              processedTransactions.chainId,
+              analysisSchema.ethTransaction.chainId,
+            ),
+            eq(
+              processedTransactions.transactionHash,
+              analysisSchema.ethTransaction.transactionHash,
+            ),
           ),
-          eq(
-            processedTransactions.chainId,
-            analysisSchema.ethTransaction.chainId,
-          ),
-          eq(
-            processedTransactions.transactionHash,
-            analysisSchema.ethTransaction.transactionHash,
-          ),
-        ),
-      )
-      .where(getFilter())
-      .orderBy(
-        desc(analysisSchema.ethTransaction.id),
-        desc(processedTransactions.timestamp),
-      )
-      .limit(input.limit + 1);
+        )
+        .where(getFilter())
+        .orderBy(
+          desc(analysisSchema.ethTransaction.id),
+          desc(processedTransactions.timestamp),
+        )
+        .limit(input.limit + 1),
+    );
 
     return {
       transactions: recentTransactions.map((tx) => ({
