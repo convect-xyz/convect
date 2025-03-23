@@ -140,6 +140,19 @@ export const getTransactions = protectedProcedure
           ),
       })
       .from(analysisSchema.processedTransaction)
+      .where(
+        and(
+          eq(
+            analysisSchema.processedTransaction.deploymentId,
+            input.deploymentId,
+          ),
+          eq(
+            analysisSchema.processedTransaction.functionId,
+            input.functionId.toString(),
+          ),
+          eq(analysisSchema.processedTransaction.chainId, input.chainId),
+        ),
+      )
       .groupBy(
         analysisSchema.processedTransaction.deploymentId,
         analysisSchema.processedTransaction.functionId,
@@ -183,6 +196,19 @@ export const getTransactions = protectedProcedure
             txCounts.transactionHash,
             analysisSchema.processedTransaction.transactionHash,
           ),
+        ),
+      )
+      .where(
+        and(
+          eq(
+            analysisSchema.processedTransaction.deploymentId,
+            input.deploymentId,
+          ),
+          eq(
+            analysisSchema.processedTransaction.functionId,
+            input.functionId.toString(),
+          ),
+          eq(analysisSchema.processedTransaction.chainId, input.chainId),
         ),
       )
       .as("processedTransactions");
