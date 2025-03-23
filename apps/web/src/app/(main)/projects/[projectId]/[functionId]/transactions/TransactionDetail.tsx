@@ -99,15 +99,22 @@ function ProcessedInformation(props: { transactionHash: string }) {
                   {txConfig?.name}
                 </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {attempt && (
-                  <ForceRerender>
-                    {formatDistanceToNow(attempt.timestamp, {
-                      addSuffix: true,
-                    })}
-                  </ForceRerender>
-                )}
-              </div>
+              <InfoTooltip
+                text={Intl.DateTimeFormat("en-US", {
+                  dateStyle: "full",
+                  timeStyle: "medium",
+                }).format(transaction.transaction.timestamp)}
+              >
+                <div className="text-xs text-muted-foreground underline decoration-dashed">
+                  {attempt && (
+                    <ForceRerender>
+                      {formatDistanceToNow(attempt.timestamp, {
+                        addSuffix: true,
+                      })}
+                    </ForceRerender>
+                  )}
+                </div>
+              </InfoTooltip>
             </div>
           );
         })}
