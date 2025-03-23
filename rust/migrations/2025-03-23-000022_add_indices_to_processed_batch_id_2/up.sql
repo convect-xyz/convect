@@ -9,10 +9,10 @@ BEGIN
     FOR partition IN
         SELECT tablename
         FROM pg_tables
-        WHERE tablename LIKE 'eth_processed_result_p%'
+        WHERE tablename LIKE 'eth_transaction_p%'
     LOOP
         EXECUTE format(
-            'CREATE INDEX idx_dep_id_func_id_chain_id_tx_hash_processed_batch_id%s ON %I (deployment_id, function_id, chain_id, transaction_hash, processed_batch_id);',
+            'CREATE INDEX idx_eth_tx_optimized_%s ON %I (deployment_id, function_id, chain_id, id DESC, created_at DESC);',
             partition.tablename,
             partition.tablename
         );
