@@ -99,8 +99,6 @@ export const getTransactions = protectedProcedure
           lt(analysisSchema.ethTransaction.id, input.cursor),
         );
       }
-      if (input.status.length > 0) {
-      }
       if (input.batchId) {
         baseFilter = and(
           baseFilter,
@@ -215,7 +213,7 @@ export const getTransactions = protectedProcedure
       )
       .as("processedTransactionsWithBatch");
 
-    const txCounts = analysisDb
+    const aggregatedStats = analysisDb
       .select({
         ethTransactionId: processedTransactionsWithBatch.ethTransactionId,
         processedBatchId: processedTransactionsWithBatch.processedBatchId,
@@ -246,29 +244,32 @@ export const getTransactions = protectedProcedure
       )
       .as("txCounts");
 
-    const txStats = await explainAnalyze(
+    const results = await explainAnalyze(
       analysisDb,
       analysisDb
-        .selectDistinctOn([txCounts.batchId, txCounts.transactionHash], {
-          id: txCounts.ethTransactionId,
-          transactionHash: txCounts.transactionHash,
-          status: txCounts.status,
-          successCount: txCounts.successCount,
-          timestamp: txCounts.timestamp,
-          txConfigs: txCounts.txConfigs,
-          createdAt: txCounts.createdAt,
-        })
-        .from(txCounts)
+        .selectDistinctOn(
+          [aggregatedStats.batchId, aggregatedStats.transactionHash],
+          {
+            ethTransactionId: aggregatedStats.ethTransactionId,
+            transactionHash: aggregatedStats.transactionHash,
+            status: aggregatedStats.status,
+            successCount: aggregatedStats.successCount,
+            timestamp: aggregatedStats.timestamp,
+            txConfigs: aggregatedStats.txConfigs,
+            createdAt: aggregatedStats.createdAt,
+          },
+        )
+        .from(aggregatedStats)
         .orderBy(
-          desc(txCounts.batchId),
-          desc(txCounts.transactionHash),
-          desc(txCounts.timestamp),
+          desc(aggregatedStats.batchId),
+          desc(aggregatedStats.transactionHash),
+          desc(aggregatedStats.timestamp),
         ),
     );
 
     return {
-      transactions: txStats.map((tx) => ({
-        id: tx.id,
+      transactions: results.map((tx) => ({
+        id: tx.ethTransactionId,
         transactionHash: tx.transactionHash,
         timestamp: tx.createdAt.getTime(),
         txConfigs: tx.txConfigs ?? [],
@@ -279,6 +280,6 @@ export const getTransactions = protectedProcedure
             }
           : undefined,
       })),
-      nextCursor: txStats.at(-1)?.id,
+      nextCursor: results.at(-1)?.ethTransactionId,
     };
   });
