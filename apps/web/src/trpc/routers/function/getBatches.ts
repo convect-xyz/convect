@@ -73,6 +73,7 @@ export const getBatches = protectedProcedure
       .from(analysisSchema.batch)
       .where(getFilter())
       .limit(input.limit + 1)
+      .orderBy(desc(analysisSchema.batch.id))
       .as("batches");
 
     const aggregatedFetchStats = analysisDb
@@ -142,7 +143,7 @@ export const getBatches = protectedProcedure
         aggregatedProcessStats,
         eq(batches.batchId, aggregatedProcessStats.batchId),
       )
-      .orderBy(desc(aggregatedProcessStats.batchId));
+      .orderBy(desc(batches.id));
 
     return {
       batches: recentBatches.map((batch) => ({
