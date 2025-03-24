@@ -9,11 +9,13 @@ import {
 import { ActiveDeployments } from "../(components)/ActiveDeployments";
 import { ChainFull } from "../(components)/ChainFull";
 import { HandlerFilter } from "../(components)/HandlerFilter";
+import { StatusFilter } from "../(components)/StatusFilter";
 
 export function Filters() {
   const filters = {
     chain: "chain",
     handler: "handler",
+    status: "status",
   };
 
   return (
@@ -39,6 +41,14 @@ export function Filters() {
             <AccordionContent>
               <div className="max-h-[200px] overflow-y-auto">
                 <HandlerFilter />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value={filters.handler}>
+            <AccordionTrigger className="w-full">Status</AccordionTrigger>
+            <AccordionContent>
+              <div className="max-h-[200px] overflow-y-auto">
+                <StatusFilter />
               </div>
             </AccordionContent>
           </AccordionItem>

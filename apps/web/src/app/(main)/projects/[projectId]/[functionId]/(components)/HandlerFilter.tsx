@@ -18,6 +18,7 @@ export function HandlerFilter() {
               <Checkbox
                 className="border-muted-foreground"
                 id={`txConfig-${idx}`}
+                checked={filters.txConfigs.includes(idx)}
                 onCheckedChange={() => {
                   if (filters.txConfigs.includes(idx)) {
                     filters.setTxConfigs(
