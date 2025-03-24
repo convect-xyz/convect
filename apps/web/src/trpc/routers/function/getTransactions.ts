@@ -2,13 +2,13 @@ import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import {
   and,
+  arrayOverlaps,
   desc,
   eq,
   ilike,
   inArray,
   lt,
   max,
-  or,
   sql,
   SQLWrapper,
 } from "drizzle-orm";
@@ -154,12 +154,7 @@ function getEthTransactions(input: z.infer<typeof inputSchema>) {
     }
     if (input.txConfigs.length > 0) {
       filters.push(
-        or(
-          ...input.txConfigs.map(
-            (txConfigIdx) =>
-              sql`${txConfigIdx} = ANY(${analysisSchema.ethTransaction.txConfigs})`,
-          ),
-        )!,
+        arrayOverlaps(analysisSchema.ethTransaction.txConfigs, input.txConfigs),
       );
     }
     return and(...filters);
@@ -175,10 +170,7 @@ function getEthTransactions(input: z.infer<typeof inputSchema>) {
       txConfigs: analysisSchema.ethTransaction.txConfigs,
     })
     .from(analysisSchema.ethTransaction)
-    .orderBy(
-      desc(analysisSchema.ethTransaction.id),
-      desc(analysisSchema.ethTransaction.createdAt),
-    )
+    .orderBy(desc(analysisSchema.ethTransaction.id))
     .limit(input.limit + 1)
     .where(getFilter())
     .as("ethTransactions");
