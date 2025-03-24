@@ -294,7 +294,7 @@ function getAggregatedStats(
   const getFilter = () => {
     let baseFilter = and(sql`1 = 1`);
 
-    if (input.status) {
+    if (input.status.length > 0) {
       baseFilter = and(
         baseFilter,
         inArray(processedTransactionsWithBatch.status, input.status),
