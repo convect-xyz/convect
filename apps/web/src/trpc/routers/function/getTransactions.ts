@@ -113,6 +113,7 @@ export const getTransactions = protectedProcedure
       analysisDb
         .select()
         .from(__results)
+        .limit(input.limit + 1)
         .orderBy(desc(__results.ethTransactionId), desc(__results.createdAt)),
     );
 
@@ -170,8 +171,6 @@ function getEthTransactions(input: z.infer<typeof inputSchema>) {
       txConfigs: analysisSchema.ethTransaction.txConfigs,
     })
     .from(analysisSchema.ethTransaction)
-    .orderBy(desc(analysisSchema.ethTransaction.id))
-    .limit(input.limit + 1)
     .where(getFilter())
     .as("ethTransactions");
 }
