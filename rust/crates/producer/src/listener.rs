@@ -35,7 +35,7 @@ impl<N: IssueNotifier + 'static, S: Sns + 'static> ListenerImpl<N, S> {
 #[async_trait]
 impl<N: IssueNotifier + 'static, S: Sns + 'static> Listener for ListenerImpl<N, S> {
     async fn listen(&self) -> Result<(), errors::ListenerError> {
-        let mut interval: time::Interval = time::interval(time::Duration::from_secs(3));
+        let mut interval: time::Interval = time::interval(time::Duration::from_secs(1));
 
         loop {
             interval.tick().await;

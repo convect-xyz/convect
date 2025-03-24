@@ -6,7 +6,6 @@ import {
   desc,
   eq,
   ilike,
-  inArray,
   lt,
   max,
   sql,
@@ -100,8 +99,6 @@ export const getTransactions = protectedProcedure
           lt(analysisSchema.ethTransaction.id, input.cursor),
         );
       }
-      if (input.status.length > 0) {
-      }
       if (input.batchId) {
         baseFilter = and(
           baseFilter,
@@ -120,33 +117,36 @@ export const getTransactions = protectedProcedure
       return baseFilter;
     };
 
-    const recentTransactions = await explainAnalyze(
-      analysisDb,
-      analysisDb
-        .select({
-          id: analysisSchema.ethTransaction.id,
-          transactionHash: analysisSchema.ethTransaction.transactionHash,
-          createdAt: analysisSchema.ethTransaction.createdAt,
-          functionId: analysisSchema.ethTransaction.functionId,
-          deploymentId: analysisSchema.ethTransaction.deploymentId,
-          txConfigs: analysisSchema.ethTransaction.txConfigs,
-        })
-        .from(analysisSchema.ethTransaction)
-        .orderBy(
-          desc(analysisSchema.ethTransaction.id),
-          desc(analysisSchema.ethTransaction.createdAt),
-        )
-        .where(getFilter())
-        .limit(input.limit + 1),
-    );
+    const recentTransactions = analysisDb
+      .select({
+        id: analysisSchema.ethTransaction.id,
+        transactionHash: analysisSchema.ethTransaction.transactionHash,
+        createdAt: analysisSchema.ethTransaction.createdAt,
+        functionId: analysisSchema.ethTransaction.functionId,
+        deploymentId: analysisSchema.ethTransaction.deploymentId,
+        txConfigs: analysisSchema.ethTransaction.txConfigs,
+      })
+      .from(analysisSchema.ethTransaction)
+      .orderBy(
+        desc(analysisSchema.ethTransaction.id),
+        desc(analysisSchema.ethTransaction.createdAt),
+      )
+      .where(getFilter())
+      .limit(input.limit + 1)
+      .as("recentTransactions");
 
     const processedTransactions = analysisDb
       .select({
+        ethTransactionId: recentTransactions.id,
         timestamp: analysisSchema.processedTransaction.timestamp,
-        batchId: analysisSchema.processedBatch.batchId,
         processedBatchId: analysisSchema.processedTransaction.processedBatchId,
-        transactionHash: analysisSchema.processedTransaction.transactionHash,
+        transactionHash: recentTransactions.transactionHash,
         status: analysisSchema.processedTransaction.status,
+        txConfigs: recentTransactions.txConfigs,
+        deploymentId: analysisSchema.processedTransaction.deploymentId,
+        functionId: analysisSchema.processedTransaction.functionId,
+        chainId: analysisSchema.processedTransaction.chainId,
+        createdAt: recentTransactions.createdAt,
       })
       .from(analysisSchema.processedTransaction)
       .where(
@@ -160,10 +160,34 @@ export const getTransactions = protectedProcedure
             input.functionId.toString(),
           ),
           eq(analysisSchema.processedTransaction.chainId, input.chainId),
-          inArray(
-            analysisSchema.processedTransaction.transactionHash,
-            recentTransactions.map((tx) => tx.transactionHash),
-          ),
+        ),
+      )
+      .rightJoin(
+        recentTransactions,
+        eq(
+          analysisSchema.processedTransaction.transactionHash,
+          recentTransactions.transactionHash,
+        ),
+      )
+      .as("processedTransactions");
+
+    const processedTransactionsWithBatch = analysisDb
+      .select({
+        ethTransactionId: processedTransactions.ethTransactionId,
+        timestamp: processedTransactions.timestamp,
+        batchId: analysisSchema.processedBatch.batchId,
+        processedBatchId: processedTransactions.processedBatchId,
+        transactionHash: processedTransactions.transactionHash,
+        status: processedTransactions.status,
+        txConfigs: processedTransactions.txConfigs,
+        createdAt: processedTransactions.createdAt,
+      })
+      .from(processedTransactions)
+      .where(
+        and(
+          eq(processedTransactions.deploymentId, input.deploymentId),
+          eq(processedTransactions.functionId, input.functionId.toString()),
+          eq(processedTransactions.chainId, input.chainId),
         ),
       )
       .leftJoin(
@@ -171,83 +195,91 @@ export const getTransactions = protectedProcedure
         and(
           eq(
             analysisSchema.processedBatch.id,
-            analysisSchema.processedTransaction.processedBatchId,
+            processedTransactions.processedBatchId,
           ),
           eq(
             analysisSchema.processedBatch.deploymentId,
-            analysisSchema.processedTransaction.deploymentId,
+            processedTransactions.deploymentId,
           ),
           eq(
             analysisSchema.processedBatch.functionId,
-            analysisSchema.processedTransaction.functionId,
+            processedTransactions.functionId,
           ),
           eq(
             analysisSchema.processedBatch.chainId,
-            analysisSchema.processedTransaction.chainId,
+            processedTransactions.chainId,
           ),
         ),
       )
-      .as("processedTransactions");
+      .as("processedTransactionsWithBatch");
 
-    const txCounts = analysisDb
+    const aggregatedStats = analysisDb
       .select({
-        processedBatchId: processedTransactions.processedBatchId,
-        batchId: processedTransactions.batchId,
-        timestamp: max(processedTransactions.timestamp).as("txCountsTimestamp"),
-        transactionHash: processedTransactions.transactionHash,
+        ethTransactionId: processedTransactionsWithBatch.ethTransactionId,
+        processedBatchId: processedTransactionsWithBatch.processedBatchId,
+        batchId: processedTransactionsWithBatch.batchId,
+        timestamp: max(processedTransactionsWithBatch.timestamp).as(
+          "txCountsTimestamp",
+        ),
+        transactionHash: processedTransactionsWithBatch.transactionHash,
+        txConfigs: processedTransactionsWithBatch.txConfigs,
         status:
-          sql<string>`CASE WHEN BOOL_AND(${processedTransactions.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
+          sql<string>`CASE WHEN BOOL_AND(${processedTransactionsWithBatch.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
             "status",
           ),
         successCount:
-          sql<number>`CAST(SUM(CASE WHEN ${processedTransactions.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
+          sql<number>`CAST(SUM(CASE WHEN ${processedTransactionsWithBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
             "successCount",
           ),
+        createdAt: processedTransactionsWithBatch.createdAt,
       })
-      .from(processedTransactions)
+      .from(processedTransactionsWithBatch)
       .groupBy(
-        processedTransactions.transactionHash,
-        processedTransactions.batchId,
-        processedTransactions.processedBatchId,
+        processedTransactionsWithBatch.transactionHash,
+        processedTransactionsWithBatch.batchId,
+        processedTransactionsWithBatch.processedBatchId,
+        processedTransactionsWithBatch.ethTransactionId,
+        processedTransactionsWithBatch.createdAt,
+        processedTransactionsWithBatch.txConfigs,
       )
       .as("txCounts");
 
-    const txStats =
-      recentTransactions.length > 0
-        ? await explainAnalyze(
-            analysisDb,
-            analysisDb
-              .selectDistinctOn([txCounts.batchId, txCounts.transactionHash], {
-                transactionHash: txCounts.transactionHash,
-                status: txCounts.status,
-                successCount: txCounts.successCount,
-              })
-              .from(txCounts)
-              .orderBy(
-                desc(txCounts.batchId),
-                desc(txCounts.transactionHash),
-                desc(txCounts.timestamp),
-              ),
-          )
-        : [];
-
-    const a = (tx: string) => {
-      return txStats.find((t) => t.transactionHash === tx);
-    };
+    const results = await explainAnalyze(
+      analysisDb,
+      analysisDb
+        .selectDistinctOn(
+          [aggregatedStats.batchId, aggregatedStats.transactionHash],
+          {
+            ethTransactionId: aggregatedStats.ethTransactionId,
+            transactionHash: aggregatedStats.transactionHash,
+            status: aggregatedStats.status,
+            successCount: aggregatedStats.successCount,
+            timestamp: aggregatedStats.timestamp,
+            txConfigs: aggregatedStats.txConfigs,
+            createdAt: aggregatedStats.createdAt,
+          },
+        )
+        .from(aggregatedStats)
+        .orderBy(
+          desc(aggregatedStats.batchId),
+          desc(aggregatedStats.transactionHash),
+          desc(aggregatedStats.timestamp),
+        ),
+    );
 
     return {
-      transactions: recentTransactions.map((tx) => ({
-        id: tx.id,
+      transactions: results.map((tx) => ({
+        id: tx.ethTransactionId,
         transactionHash: tx.transactionHash,
         timestamp: tx.createdAt.getTime(),
         txConfigs: tx.txConfigs ?? [],
-        result: a(tx.transactionHash)
+        result: tx.status
           ? {
-              status: a(tx.transactionHash)!.status as "SUCCESS" | "FAILED",
-              successCount: a(tx.transactionHash)!.successCount,
+              status: tx.status as "SUCCESS" | "FAILED",
+              successCount: tx.successCount,
             }
           : undefined,
       })),
-      nextCursor: recentTransactions.at(-1)?.id,
+      nextCursor: results.at(-1)?.ethTransactionId,
     };
   });
