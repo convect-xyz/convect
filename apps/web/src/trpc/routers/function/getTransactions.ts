@@ -2,7 +2,7 @@ import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import {
   and,
-  arrayOverlaps,
+  arrayContains,
   desc,
   eq,
   ilike,
@@ -154,7 +154,7 @@ function getEthTransactions(input: z.infer<typeof inputSchema>) {
     }
     if (input.txConfigs.length > 0) {
       filters.push(
-        arrayOverlaps(analysisSchema.ethTransaction.txConfigs, input.txConfigs),
+        arrayContains(analysisSchema.ethTransaction.txConfigs, input.txConfigs),
       );
     }
     return and(...filters);
