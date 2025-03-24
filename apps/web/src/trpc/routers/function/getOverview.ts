@@ -175,7 +175,14 @@ const getSuccessfulTxCount = async (
       deploymentId: analysisSchema.processedTransaction.deploymentId,
     })
     .from(analysisSchema.processedTransaction)
-    .where(eq(analysisSchema.processedTransaction.status, "SUCCESS"))
+    .where(
+      and(
+        eq(analysisSchema.processedTransaction.functionId, functionId),
+        eq(analysisSchema.processedTransaction.deploymentId, deploymentId),
+        eq(analysisSchema.processedTransaction.chainId, chainId),
+        eq(analysisSchema.processedTransaction.status, "SUCCESS"),
+      ),
+    )
     .groupBy(
       analysisSchema.processedTransaction.transactionHash,
       analysisSchema.processedTransaction.deploymentId,
@@ -195,18 +202,6 @@ const getSuccessfulTxCount = async (
         eq(
           processedTransactions.transactionHash,
           analysisSchema.ethTransaction.transactionHash,
-        ),
-        eq(
-          processedTransactions.functionId,
-          analysisSchema.ethTransaction.functionId,
-        ),
-        eq(
-          processedTransactions.chainId,
-          analysisSchema.ethTransaction.chainId,
-        ),
-        eq(
-          processedTransactions.deploymentId,
-          analysisSchema.ethTransaction.deploymentId,
         ),
       ),
     )
