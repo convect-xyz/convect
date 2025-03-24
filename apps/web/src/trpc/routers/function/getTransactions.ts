@@ -264,6 +264,7 @@ export const getTransactions = protectedProcedure
         desc(aggregatedStats.timestamp),
       )
       .as("results");
+
     const results = await explainAnalyze(
       analysisDb,
       analysisDb
