@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   ilike,
+  inArray,
   lt,
   max,
   sql,
@@ -25,20 +26,20 @@ export const explainAnalyze = async <T extends SQLWrapper>(
   return await query;
 };
 
+const inputSchema = z.object({
+  limit: z.number().min(1).max(25).default(25),
+  cursor: z.number().nullish(),
+  search: z.string().nullish(),
+  status: z.array(z.enum(["FAILED", "SUCCESS", "PENDING"])).default([]),
+  batchId: z.string().nullish(),
+  functionId: z.number(),
+  chainId: z.number(),
+  deploymentId: z.string(),
+  txConfigs: z.array(z.number()).default([]),
+});
+
 export const getTransactions = protectedProcedure
-  .input(
-    z.object({
-      limit: z.number().min(1).max(25).default(25),
-      cursor: z.number().nullish(),
-      search: z.string().nullish(),
-      status: z.array(z.enum(["FAILED", "SUCCESS", "PENDING"])).default([]),
-      batchId: z.string().nullish(),
-      functionId: z.number(),
-      chainId: z.number(),
-      deploymentId: z.string(),
-      txConfigs: z.array(z.number()).default([]),
-    }),
-  )
+  .input(inputSchema)
   .output(
     z.object({
       transactions: z.array(
@@ -60,7 +61,6 @@ export const getTransactions = protectedProcedure
   )
   .query(async (opts) => {
     const { input, ctx } = opts;
-
     const fn = await ctx.db.query.convectFunctions.findFirst({
       where(fields, { eq }) {
         return eq(fields.id, input.functionId);
@@ -75,176 +75,21 @@ export const getTransactions = protectedProcedure
       userId: ctx.session.user.id,
     });
 
-    const getFilter = () => {
-      let baseFilter = and(
-        eq(analysisSchema.ethTransaction.deploymentId, input.deploymentId),
-        eq(
-          analysisSchema.ethTransaction.functionId,
-          input.functionId.toString(),
-        ),
-        eq(analysisSchema.ethTransaction.chainId, input.chainId),
-      );
-      if (input.search) {
-        baseFilter = and(
-          baseFilter,
-          ilike(
-            analysisSchema.ethTransaction.transactionHash,
-            `%${input.search}%`,
-          ),
-        );
-      }
-      if (input.cursor) {
-        baseFilter = and(
-          baseFilter,
-          lt(analysisSchema.ethTransaction.id, input.cursor),
-        );
-      }
-      if (input.batchId) {
-        baseFilter = and(
-          baseFilter,
-          eq(analysisSchema.ethTransaction.batchId, input.batchId),
-        );
-      }
-      if (input.txConfigs.length > 0) {
-        baseFilter = and(
-          baseFilter,
-          arrayOverlaps(
-            analysisSchema.ethTransaction.txConfigs,
-            input.txConfigs.map((txConfig) => txConfig),
-          ),
-        );
-      }
-      return baseFilter;
-    };
+    const ethTransactions = getEthTransactions(input);
+    const processedTransactions = getProcessedTransactionsWithEthTransactions(
+      input,
+      ethTransactions,
+    );
+    const processedTransactionsWithBatch = getProcessedTransactionsWithBatch(
+      input,
+      processedTransactions,
+    );
+    const aggregatedStats = getAggregatedStats(
+      input,
+      processedTransactionsWithBatch,
+    );
 
-    const ethTransactions = analysisDb
-      .select({
-        id: analysisSchema.ethTransaction.id,
-        transactionHash: analysisSchema.ethTransaction.transactionHash,
-        createdAt: analysisSchema.ethTransaction.createdAt,
-        functionId: analysisSchema.ethTransaction.functionId,
-        deploymentId: analysisSchema.ethTransaction.deploymentId,
-        txConfigs: analysisSchema.ethTransaction.txConfigs,
-      })
-      .from(analysisSchema.ethTransaction)
-      .orderBy(
-        desc(analysisSchema.ethTransaction.id),
-        desc(analysisSchema.ethTransaction.createdAt),
-      )
-      .where(getFilter())
-      .limit(input.limit + 1)
-      .as("ethTransactions");
-
-    const processedTransactions = analysisDb
-      .select({
-        ethTransactionId: ethTransactions.id,
-        timestamp: analysisSchema.processedTransaction.timestamp,
-        processedBatchId: analysisSchema.processedTransaction.processedBatchId,
-        transactionHash: ethTransactions.transactionHash,
-        status: analysisSchema.processedTransaction.status,
-        txConfigs: ethTransactions.txConfigs,
-        deploymentId: analysisSchema.processedTransaction.deploymentId,
-        functionId: analysisSchema.processedTransaction.functionId,
-        chainId: analysisSchema.processedTransaction.chainId,
-        createdAt: ethTransactions.createdAt,
-      })
-      .from(analysisSchema.processedTransaction)
-      .where(
-        and(
-          eq(
-            analysisSchema.processedTransaction.deploymentId,
-            input.deploymentId,
-          ),
-          eq(
-            analysisSchema.processedTransaction.functionId,
-            input.functionId.toString(),
-          ),
-          eq(analysisSchema.processedTransaction.chainId, input.chainId),
-        ),
-      )
-      .rightJoin(
-        ethTransactions,
-        eq(
-          analysisSchema.processedTransaction.transactionHash,
-          ethTransactions.transactionHash,
-        ),
-      )
-      .as("processedTransactions");
-
-    const processedTransactionsWithBatch = analysisDb
-      .select({
-        ethTransactionId: processedTransactions.ethTransactionId,
-        timestamp: processedTransactions.timestamp,
-        batchId: analysisSchema.processedBatch.batchId,
-        processedBatchId: processedTransactions.processedBatchId,
-        transactionHash: processedTransactions.transactionHash,
-        status: processedTransactions.status,
-        txConfigs: processedTransactions.txConfigs,
-        createdAt: processedTransactions.createdAt,
-      })
-      .from(processedTransactions)
-      .where(
-        and(
-          eq(processedTransactions.deploymentId, input.deploymentId),
-          eq(processedTransactions.functionId, input.functionId.toString()),
-          eq(processedTransactions.chainId, input.chainId),
-        ),
-      )
-      .leftJoin(
-        analysisSchema.processedBatch,
-        and(
-          eq(
-            analysisSchema.processedBatch.id,
-            processedTransactions.processedBatchId,
-          ),
-          eq(
-            analysisSchema.processedBatch.deploymentId,
-            processedTransactions.deploymentId,
-          ),
-          eq(
-            analysisSchema.processedBatch.functionId,
-            processedTransactions.functionId,
-          ),
-          eq(
-            analysisSchema.processedBatch.chainId,
-            processedTransactions.chainId,
-          ),
-        ),
-      )
-      .as("processedTransactionsWithBatch");
-
-    const aggregatedStats = analysisDb
-      .select({
-        ethTransactionId: processedTransactionsWithBatch.ethTransactionId,
-        processedBatchId: processedTransactionsWithBatch.processedBatchId,
-        batchId: processedTransactionsWithBatch.batchId,
-        timestamp: max(processedTransactionsWithBatch.timestamp).as(
-          "txCountsTimestamp",
-        ),
-        transactionHash: processedTransactionsWithBatch.transactionHash,
-        txConfigs: processedTransactionsWithBatch.txConfigs,
-        status:
-          sql<string>`CASE WHEN BOOL_AND(${processedTransactionsWithBatch.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
-            "status",
-          ),
-        successCount:
-          sql<number>`CAST(SUM(CASE WHEN ${processedTransactionsWithBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
-            "successCount",
-          ),
-        createdAt: processedTransactionsWithBatch.createdAt,
-      })
-      .from(processedTransactionsWithBatch)
-      .groupBy(
-        processedTransactionsWithBatch.transactionHash,
-        processedTransactionsWithBatch.batchId,
-        processedTransactionsWithBatch.processedBatchId,
-        processedTransactionsWithBatch.ethTransactionId,
-        processedTransactionsWithBatch.createdAt,
-        processedTransactionsWithBatch.txConfigs,
-      )
-      .as("txCounts");
-
-    const results_ = analysisDb
+    const __results = analysisDb
       .selectDistinctOn(
         [aggregatedStats.batchId, aggregatedStats.transactionHash],
         {
@@ -269,8 +114,8 @@ export const getTransactions = protectedProcedure
       analysisDb,
       analysisDb
         .select()
-        .from(results_)
-        .orderBy(desc(results_.ethTransactionId), desc(results_.createdAt)),
+        .from(__results)
+        .orderBy(desc(__results.ethTransactionId), desc(__results.createdAt)),
     );
 
     return {
@@ -289,3 +134,205 @@ export const getTransactions = protectedProcedure
       nextCursor: results.at(-1)?.ethTransactionId,
     };
   });
+
+function getEthTransactions(input: z.infer<typeof inputSchema>) {
+  const getFilter = () => {
+    let baseFilter = and(
+      eq(analysisSchema.ethTransaction.deploymentId, input.deploymentId),
+      eq(analysisSchema.ethTransaction.functionId, input.functionId.toString()),
+      eq(analysisSchema.ethTransaction.chainId, input.chainId),
+    );
+    if (input.search) {
+      baseFilter = and(
+        baseFilter,
+        ilike(
+          analysisSchema.ethTransaction.transactionHash,
+          `%${input.search}%`,
+        ),
+      );
+    }
+    if (input.cursor) {
+      baseFilter = and(
+        baseFilter,
+        lt(analysisSchema.ethTransaction.id, input.cursor),
+      );
+    }
+    if (input.batchId) {
+      baseFilter = and(
+        baseFilter,
+        eq(analysisSchema.ethTransaction.batchId, input.batchId),
+      );
+    }
+    if (input.txConfigs.length > 0) {
+      baseFilter = and(
+        baseFilter,
+        arrayOverlaps(
+          analysisSchema.ethTransaction.txConfigs,
+          input.txConfigs.map((txConfig) => txConfig),
+        ),
+      );
+    }
+    return baseFilter;
+  };
+
+  return analysisDb
+    .select({
+      id: analysisSchema.ethTransaction.id,
+      transactionHash: analysisSchema.ethTransaction.transactionHash,
+      createdAt: analysisSchema.ethTransaction.createdAt,
+      functionId: analysisSchema.ethTransaction.functionId,
+      deploymentId: analysisSchema.ethTransaction.deploymentId,
+      txConfigs: analysisSchema.ethTransaction.txConfigs,
+    })
+    .from(analysisSchema.ethTransaction)
+    .orderBy(
+      desc(analysisSchema.ethTransaction.id),
+      desc(analysisSchema.ethTransaction.createdAt),
+    )
+    .limit(input.limit + 1)
+    .where(getFilter())
+    .as("ethTransactions");
+}
+
+function getProcessedTransactionsWithEthTransactions(
+  input: z.infer<typeof inputSchema>,
+  ethTransactions: ReturnType<typeof getEthTransactions>,
+) {
+  const getFilter = () => {
+    let baseFilter = and(
+      eq(analysisSchema.processedTransaction.deploymentId, input.deploymentId),
+      eq(
+        analysisSchema.processedTransaction.functionId,
+        input.functionId.toString(),
+      ),
+      eq(analysisSchema.processedTransaction.chainId, input.chainId),
+    );
+
+    return baseFilter;
+  };
+
+  return analysisDb
+    .select({
+      ethTransactionId: ethTransactions.id,
+      timestamp: analysisSchema.processedTransaction.timestamp,
+      processedBatchId: analysisSchema.processedTransaction.processedBatchId,
+      transactionHash: ethTransactions.transactionHash,
+      status: analysisSchema.processedTransaction.status,
+      txConfigs: ethTransactions.txConfigs,
+      deploymentId: analysisSchema.processedTransaction.deploymentId,
+      functionId: analysisSchema.processedTransaction.functionId,
+      chainId: analysisSchema.processedTransaction.chainId,
+      createdAt: ethTransactions.createdAt,
+    })
+    .from(analysisSchema.processedTransaction)
+    .where(getFilter())
+    .rightJoin(
+      ethTransactions,
+      eq(
+        analysisSchema.processedTransaction.transactionHash,
+        ethTransactions.transactionHash,
+      ),
+    )
+    .as("processedTransactions");
+}
+
+function getProcessedTransactionsWithBatch(
+  input: z.infer<typeof inputSchema>,
+  processedTransactions: ReturnType<
+    typeof getProcessedTransactionsWithEthTransactions
+  >,
+) {
+  return analysisDb
+    .select({
+      ethTransactionId: processedTransactions.ethTransactionId,
+      timestamp: processedTransactions.timestamp,
+      batchId: analysisSchema.processedBatch.batchId,
+      processedBatchId: processedTransactions.processedBatchId,
+      transactionHash: processedTransactions.transactionHash,
+      status: processedTransactions.status,
+      txConfigs: processedTransactions.txConfigs,
+      createdAt: processedTransactions.createdAt,
+    })
+    .from(processedTransactions)
+    .where(
+      and(
+        eq(processedTransactions.deploymentId, input.deploymentId),
+        eq(processedTransactions.functionId, input.functionId.toString()),
+        eq(processedTransactions.chainId, input.chainId),
+      ),
+    )
+    .leftJoin(
+      analysisSchema.processedBatch,
+      and(
+        eq(
+          analysisSchema.processedBatch.id,
+          processedTransactions.processedBatchId,
+        ),
+        eq(
+          analysisSchema.processedBatch.deploymentId,
+          processedTransactions.deploymentId,
+        ),
+        eq(
+          analysisSchema.processedBatch.functionId,
+          processedTransactions.functionId,
+        ),
+        eq(
+          analysisSchema.processedBatch.chainId,
+          processedTransactions.chainId,
+        ),
+      ),
+    )
+    .as("processedTransactionsWithBatch");
+}
+
+function getAggregatedStats(
+  input: z.infer<typeof inputSchema>,
+  processedTransactionsWithBatch: ReturnType<
+    typeof getProcessedTransactionsWithBatch
+  >,
+) {
+  const getFilter = () => {
+    let baseFilter = and(sql`1 = 1`);
+
+    if (input.status) {
+      baseFilter = and(
+        baseFilter,
+        inArray(processedTransactionsWithBatch.status, input.status),
+      );
+    }
+
+    return baseFilter;
+  };
+
+  return analysisDb
+    .select({
+      ethTransactionId: processedTransactionsWithBatch.ethTransactionId,
+      processedBatchId: processedTransactionsWithBatch.processedBatchId,
+      batchId: processedTransactionsWithBatch.batchId,
+      timestamp: max(processedTransactionsWithBatch.timestamp).as(
+        "txCountsTimestamp",
+      ),
+      transactionHash: processedTransactionsWithBatch.transactionHash,
+      txConfigs: processedTransactionsWithBatch.txConfigs,
+      status:
+        sql<string>`CASE WHEN BOOL_AND(${processedTransactionsWithBatch.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
+          "status",
+        ),
+      successCount:
+        sql<number>`CAST(SUM(CASE WHEN ${processedTransactionsWithBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
+          "successCount",
+        ),
+      createdAt: processedTransactionsWithBatch.createdAt,
+    })
+    .from(processedTransactionsWithBatch)
+    .where(getFilter())
+    .groupBy(
+      processedTransactionsWithBatch.transactionHash,
+      processedTransactionsWithBatch.batchId,
+      processedTransactionsWithBatch.processedBatchId,
+      processedTransactionsWithBatch.ethTransactionId,
+      processedTransactionsWithBatch.createdAt,
+      processedTransactionsWithBatch.txConfigs,
+    )
+    .as("aggregatedStats");
+}
