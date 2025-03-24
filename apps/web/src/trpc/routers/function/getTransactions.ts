@@ -133,14 +133,13 @@ export const getTransactions = protectedProcedure
 
 function getEthTransactions(input: z.infer<typeof inputSchema>) {
   const getFilter = () => {
-    let baseFilter = and(
+    const filters = [
       eq(analysisSchema.ethTransaction.deploymentId, input.deploymentId),
       eq(analysisSchema.ethTransaction.functionId, input.functionId.toString()),
       eq(analysisSchema.ethTransaction.chainId, input.chainId),
-    );
+    ];
     if (input.search) {
-      baseFilter = and(
-        baseFilter,
+      filters.push(
         ilike(
           analysisSchema.ethTransaction.transactionHash,
           `%${input.search}%`,
@@ -148,29 +147,22 @@ function getEthTransactions(input: z.infer<typeof inputSchema>) {
       );
     }
     if (input.cursor) {
-      baseFilter = and(
-        baseFilter,
-        lt(analysisSchema.ethTransaction.id, input.cursor),
-      );
+      filters.push(lt(analysisSchema.ethTransaction.id, input.cursor));
     }
     if (input.batchId) {
-      baseFilter = and(
-        baseFilter,
-        eq(analysisSchema.ethTransaction.batchId, input.batchId),
-      );
+      filters.push(eq(analysisSchema.ethTransaction.batchId, input.batchId));
     }
     if (input.txConfigs.length > 0) {
-      baseFilter = and(
-        baseFilter,
+      filters.push(
         or(
           ...input.txConfigs.map(
             (txConfigIdx) =>
               sql`${txConfigIdx} = ANY(${analysisSchema.ethTransaction.txConfigs})`,
           ),
-        ),
+        )!,
       );
     }
-    return baseFilter;
+    return and(...filters);
   };
 
   return analysisDb
