@@ -183,12 +183,7 @@ const getSuccessfulTxCount = async (
         eq(analysisSchema.processedTransaction.status, "SUCCESS"),
       ),
     )
-    .groupBy(
-      analysisSchema.processedTransaction.transactionHash,
-      analysisSchema.processedTransaction.deploymentId,
-      analysisSchema.processedTransaction.functionId,
-      analysisSchema.processedTransaction.chainId,
-    )
+    .groupBy(analysisSchema.processedTransaction.transactionHash)
     .as("processedTransactions");
 
   return analysisDb
@@ -198,11 +193,9 @@ const getSuccessfulTxCount = async (
     .from(analysisSchema.ethTransaction)
     .leftJoin(
       processedTransactions,
-      and(
-        eq(
-          processedTransactions.transactionHash,
-          analysisSchema.ethTransaction.transactionHash,
-        ),
+      eq(
+        processedTransactions.transactionHash,
+        analysisSchema.ethTransaction.transactionHash,
       ),
     )
     .where(

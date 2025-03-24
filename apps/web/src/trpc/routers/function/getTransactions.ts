@@ -2,13 +2,13 @@ import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import {
   and,
-  arrayOverlaps,
   desc,
   eq,
   ilike,
   inArray,
   lt,
   max,
+  or,
   sql,
   SQLWrapper,
 } from "drizzle-orm";
@@ -166,9 +166,11 @@ function getEthTransactions(input: z.infer<typeof inputSchema>) {
     if (input.txConfigs.length > 0) {
       baseFilter = and(
         baseFilter,
-        arrayOverlaps(
-          analysisSchema.ethTransaction.txConfigs,
-          input.txConfigs.map((txConfig) => txConfig),
+        or(
+          ...input.txConfigs.map(
+            (txConfigIdx) =>
+              sql`${txConfigIdx} = ANY(${analysisSchema.ethTransaction.txConfigs})`,
+          ),
         ),
       );
     }
