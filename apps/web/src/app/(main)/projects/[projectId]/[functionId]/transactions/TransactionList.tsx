@@ -75,9 +75,11 @@ export function TransactionList(props: {
               </div>
             ))}
         </div>
-      </div>
 
-      {maybeTransactions?.length !== 0 && <div ref={scrollRef} />}
+        {maybeTransactions?.length !== 0 && (
+          <div className="-my-4" ref={scrollRef} />
+        )}
+      </div>
     </div>
   );
 }
