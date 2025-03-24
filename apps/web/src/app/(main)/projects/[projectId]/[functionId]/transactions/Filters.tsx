@@ -44,7 +44,7 @@ export function Filters() {
               </div>
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value={filters.handler}>
+          <AccordionItem value={filters.status}>
             <AccordionTrigger className="w-full">Status</AccordionTrigger>
             <AccordionContent>
               <div className="max-h-[200px] overflow-y-auto">
