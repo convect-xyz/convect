@@ -65,7 +65,17 @@ export const getBatches = protectedProcedure
       return baseFilter;
     };
 
-    const txCounts = analysisDb
+    const batches = analysisDb
+      .select({
+        id: analysisSchema.batch.id,
+        batchId: analysisSchema.batch.batchId,
+      })
+      .from(analysisSchema.batch)
+      .where(getFilter())
+      .limit(input.limit + 1)
+      .as("batches");
+
+    const aggregatedFetchStats = analysisDb
       .select({
         batchId: analysisSchema.ethTransaction.batchId,
         numTransactions: count(analysisSchema.ethTransaction.id).as(
@@ -73,7 +83,10 @@ export const getBatches = protectedProcedure
         ),
       })
       .from(analysisSchema.ethTransaction)
-      .groupBy(analysisSchema.ethTransaction.batchId)
+      .rightJoin(
+        batches,
+        eq(analysisSchema.ethTransaction.batchId, batches.batchId),
+      )
       .where(
         and(
           eq(analysisSchema.ethTransaction.deploymentId, input.deploymentId),
@@ -84,14 +97,15 @@ export const getBatches = protectedProcedure
           eq(analysisSchema.ethTransaction.chainId, input.chainId),
         ),
       )
-      .as("txCounts");
+      .groupBy(analysisSchema.ethTransaction.batchId)
+      .as("aggregatedFetchStats");
 
-    const statusInfo = analysisDb
+    const aggregatedProcessStats = analysisDb
       .select({
         batchId: analysisSchema.processedBatch.batchId,
         numAttempts: count(analysisSchema.processedBatch.id).as("numAttempts"),
         status: sql<"SUCCESS" | "FAILED" | null>`CASE 
-              WHEN BOOL_AND(${analysisSchema.processedBatch.status} = 'SUCCESS') THEN 'SUCCESS' 
+              WHEN BOOL_OR(${analysisSchema.processedBatch.status} = 'SUCCESS') THEN 'SUCCESS' 
               WHEN BOOL_OR(${analysisSchema.processedBatch.status} = 'FAILED') THEN 'FAILED' 
               ELSE NULL 
           END`.as("statusInfoStatus"),
@@ -99,54 +113,51 @@ export const getBatches = protectedProcedure
           analysisSchema.processedBatch.timestamp,
         ).as("mostRecentAttemptTimestamp"),
       })
-      .from(analysisSchema.batch)
-      .leftJoin(
-        analysisSchema.processedBatch,
-        eq(analysisSchema.batch.batchId, analysisSchema.processedBatch.batchId),
+      .from(analysisSchema.processedBatch)
+      .rightJoin(
+        batches,
+        eq(analysisSchema.processedBatch.batchId, batches.batchId),
       )
       .groupBy(analysisSchema.processedBatch.batchId)
       .where(
         and(
-          eq(analysisSchema.batch.deploymentId, input.deploymentId),
-          eq(analysisSchema.batch.functionId, input.functionId.toString()),
-          eq(analysisSchema.batch.chainId, input.chainId),
+          eq(analysisSchema.processedBatch.deploymentId, input.deploymentId),
+          eq(
+            analysisSchema.processedBatch.functionId,
+            input.functionId.toString(),
+          ),
+          eq(analysisSchema.processedBatch.chainId, input.chainId),
         ),
       )
-      .as("statusInfo");
+      .as("aggregatedStats");
 
     const recentBatches = await analysisDb
-      .select({
-        id: analysisSchema.batch.id,
-        batchId: analysisSchema.batch.batchId,
-        numTransactions: txCounts.numTransactions,
-        status: statusInfo.status,
-        mostRecentAttemptTimestamp: statusInfo.mostRecentAttemptTimestamp,
-        numAttempts: statusInfo.numAttempts,
-      })
-      .from(analysisSchema.batch)
-      .leftJoin(txCounts, eq(analysisSchema.batch.batchId, txCounts.batchId))
+      .select()
+      .from(batches)
       .leftJoin(
-        statusInfo,
-        eq(analysisSchema.batch.batchId, statusInfo.batchId),
+        aggregatedFetchStats,
+        eq(batches.batchId, aggregatedFetchStats.batchId),
       )
-      .where(getFilter())
-      .orderBy(desc(analysisSchema.batch.id))
-      .limit(input.limit + 1);
+      .leftJoin(
+        aggregatedProcessStats,
+        eq(batches.batchId, aggregatedProcessStats.batchId),
+      )
+      .orderBy(desc(aggregatedProcessStats.batchId));
 
     return {
       batches: recentBatches.map((batch) => ({
-        id: batch.id,
-        batchId: batch.batchId,
-        numTransactions: batch.numTransactions,
-        result: batch.status
+        id: batch.batches.id,
+        batchId: batch.batches.batchId,
+        numTransactions: batch.aggregatedFetchStats?.numTransactions ?? 0,
+        result: batch.aggregatedStats
           ? {
-              numAttempts: batch.numAttempts,
-              status: batch.status,
+              numAttempts: batch.aggregatedStats.numAttempts,
+              status: batch.aggregatedStats.status as "SUCCESS" | "FAILED",
               mostRecentAttemptTimestampMs:
-                batch.mostRecentAttemptTimestamp!.getTime(),
+                batch.aggregatedStats.mostRecentAttemptTimestamp!.getTime(),
             }
           : undefined,
       })),
-      nextCursor: recentBatches.at(-1)?.id,
+      nextCursor: recentBatches.at(-1)?.batches.id,
     };
   });
