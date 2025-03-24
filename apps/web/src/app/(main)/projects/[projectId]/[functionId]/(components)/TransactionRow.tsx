@@ -29,13 +29,13 @@ export default function TransactionRow(props: {
             <span
               className={cn(
                 "h-2 w-2 rounded-full",
-                tx.result?.status === "SUCCESS" && "bg-green-400",
-                tx.result?.status === "FAILED" && "bg-red-400",
-                !tx.result && "bg-gray-400",
+                tx.result.status === "SUCCESS" && "bg-green-400",
+                tx.result.status === "FAILED" && "bg-red-400",
+                tx.result.status === "PENDING" && "bg-gray-400",
               )}
             ></span>
             <span>
-              {tx.result?.successCount ?? "0"} / {tx.txConfigs.length}
+              {tx.result.successCount} / {tx.txConfigs.length}
             </span>
           </div>
           <div className="text-xs text-muted-foreground">
