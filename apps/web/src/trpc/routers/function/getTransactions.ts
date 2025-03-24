@@ -48,12 +48,10 @@ export const getTransactions = protectedProcedure
           transactionHash: z.string(),
           timestamp: z.number(),
           txConfigs: z.array(z.number()),
-          result: z
-            .object({
-              successCount: z.number(),
-              status: z.enum(["SUCCESS", "FAILED"]),
-            })
-            .optional(),
+          result: z.object({
+            successCount: z.number(),
+            status: z.enum(["SUCCESS", "FAILED", "PENDING"]),
+          }),
         }),
       ),
       nextCursor: z.number().optional(),
@@ -124,12 +122,10 @@ export const getTransactions = protectedProcedure
         transactionHash: tx.transactionHash,
         timestamp: tx.createdAt.getTime(),
         txConfigs: tx.txConfigs ?? [],
-        result: tx.status
-          ? {
-              status: tx.status as "SUCCESS" | "FAILED",
-              successCount: tx.successCount,
-            }
-          : undefined,
+        result: {
+          status: tx.status,
+          successCount: tx.successCount,
+        },
       })),
       nextCursor: results.at(-1)?.ethTransactionId,
     };
@@ -316,12 +312,13 @@ function getAggregatedStats(
       ),
       transactionHash: processedTransactionsWithBatch.transactionHash,
       txConfigs: processedTransactionsWithBatch.txConfigs,
-      status:
-        sql<string>`CASE WHEN BOOL_AND(${processedTransactionsWithBatch.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
-          "status",
-        ),
+      status: sql<
+        "SUCCESS" | "FAILED" | "PENDING"
+      >`COALESCE(CASE WHEN BOOL_AND(${processedTransactionsWithBatch.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END, 'PENDING')`.as(
+        "status",
+      ),
       successCount:
-        sql<number>`CAST(SUM(CASE WHEN ${processedTransactionsWithBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
+        sql<number>`COALESCE(CAST(SUM(CASE WHEN ${processedTransactionsWithBatch.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT), 0)`.as(
           "successCount",
         ),
       createdAt: processedTransactionsWithBatch.createdAt,
