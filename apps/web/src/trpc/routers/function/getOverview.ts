@@ -170,9 +170,6 @@ const getSuccessfulTxCount = async (
   const processedTransactions = analysisDb
     .select({
       transactionHash: analysisSchema.processedTransaction.transactionHash,
-      functionId: analysisSchema.processedTransaction.functionId,
-      chainId: analysisSchema.processedTransaction.chainId,
-      deploymentId: analysisSchema.processedTransaction.deploymentId,
     })
     .from(analysisSchema.processedTransaction)
     .where(
