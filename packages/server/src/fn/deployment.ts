@@ -1,6 +1,6 @@
 import { ECS, RunTaskCommand } from "@aws-sdk/client-ecs";
 import { Manifest } from "@convect-xyz/lib";
-import { eq, isNotNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { Db } from "../db/db";
 import * as schema from "../db/schema";
 import {
@@ -31,7 +31,7 @@ export class _DeploymentService {
       id: options.deploymentId,
       functionId: options.functionId,
       ecsTaskId: "",
-      status: "PENDING",
+      status: "WAITING_FOR_APPROVAL",
       manifest: JSON.stringify(options.manifest),
       manifestBucket: getManifestBucket(),
       manifestKey: getManifestPrefix(options.functionId, options.deploymentId),
@@ -67,10 +67,7 @@ export class _DeploymentService {
         where(fields, { eq, and, or }) {
           return and(
             eq(fields.functionId, options.functionId),
-            or(
-              and(eq(fields.status, "PENDING"), isNotNull(fields.approvedAt)),
-              eq(fields.status, "RUNNING")
-            )
+            or(and(eq(fields.status, "PENDING")), eq(fields.status, "RUNNING"))
           );
         },
       });
@@ -78,6 +75,7 @@ export class _DeploymentService {
       await this.config.db
         .update(schema.deployment)
         .set({
+          status: "PENDING",
           approvedAt: new Date(),
         })
         .where(eq(schema.deployment.id, options.deploymentId));
