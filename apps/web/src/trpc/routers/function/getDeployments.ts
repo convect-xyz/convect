@@ -63,7 +63,7 @@ export const getDeployments = protectedProcedure
       where: (fields, { eq, and, lt }) => {
         let baseFilter = and(
           eq(fields.functionId, convectFn.id),
-          inArray(fields.status, ["SUCCESS", "PENDING", "FAILED"]),
+          inArray(fields.status, ["SUCCESS", "RUNNING", "PENDING", "FAILED"]),
         );
         if (input.cursor) {
           baseFilter = and(

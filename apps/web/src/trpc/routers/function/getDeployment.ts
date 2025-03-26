@@ -8,7 +8,6 @@ import { throwIfNotProjectCollaborator } from "../permissions";
 export const getDeployment = protectedProcedure
   .input(
     z.object({
-      functionId: z.number(),
       deploymentId: z.string(),
     }),
   )
@@ -16,35 +15,32 @@ export const getDeployment = protectedProcedure
     z.object({
       deployment: z.object({
         id: z.string(),
-        status: z.enum(["PENDING", "RUNNING", "SUCCESS", "FAILED"]),
+        status: z.enum([
+          "WAITING_FOR_APPROVAL",
+          "PENDING",
+          "RUNNING",
+          "SUCCESS",
+          "FAILED",
+        ]),
         createdAt: z.number(),
         manifest: manifestSchema,
         runningAt: z.number().nullish(),
         finishedAt: z.number().nullish(),
       }),
+      function: z.object({
+        id: z.number(),
+        name: z.string(),
+        project: z.object({
+          id: z.number(),
+          name: z.string(),
+        }),
+      }),
     }),
   )
   .query(async ({ input, ctx }) => {
-    const convectFn = await ctx.db.query.convectFunctions.findFirst({
-      where(fields, { eq }) {
-        return eq(fields.id, input.functionId);
-      },
-    });
-    if (!convectFn) {
-      throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
-    }
-
-    await throwIfNotProjectCollaborator({
-      projectId: convectFn.projectId,
-      userId: ctx.session.user.id,
-    });
-
     const deployment = await db.query.deployment.findFirst({
-      where: (fields, { eq, and, lt }) => {
-        let baseFilter = and(
-          eq(fields.functionId, convectFn.id),
-          eq(fields.id, input.deploymentId),
-        );
+      where: (fields, { eq, and }) => {
+        let baseFilter = and(eq(fields.id, input.deploymentId));
         return baseFilter;
       },
       orderBy(fields, { desc }) {
@@ -59,6 +55,22 @@ export const getDeployment = protectedProcedure
       });
     }
 
+    const convectFn = await ctx.db.query.convectFunctions.findFirst({
+      where(fields, { eq }) {
+        return eq(fields.id, deployment.functionId);
+      },
+      with: {
+        project: true,
+      },
+    });
+    if (!convectFn) {
+      throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
+    }
+    await throwIfNotProjectCollaborator({
+      projectId: convectFn.projectId,
+      userId: ctx.session.user.id,
+    });
+
     return {
       deployment: {
         id: deployment.id,
@@ -67,6 +79,14 @@ export const getDeployment = protectedProcedure
         manifest: parseManifest(deployment.manifest),
         runningAt: deployment.runningAt?.getTime(),
         finishedAt: deployment.finishedAt?.getTime(),
+      },
+      function: {
+        id: deployment.functionId,
+        name: convectFn.name,
+        project: {
+          id: convectFn.projectId,
+          name: convectFn.project.name,
+        },
       },
     };
   });

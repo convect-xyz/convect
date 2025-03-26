@@ -4,7 +4,7 @@ import { useParams } from "./useParams";
 export function usePendingDeployment() {
   const { deploymentId } = useParams();
 
-  return api.functions.getPendingDeployment.useQuery({
+  return api.functions.getDeployment.useQuery({
     deploymentId,
   });
 }

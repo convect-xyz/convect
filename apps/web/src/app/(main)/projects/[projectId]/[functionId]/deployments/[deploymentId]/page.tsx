@@ -28,7 +28,7 @@ export default function Page(props: {}) {
   return (
     <div>
       <Header />
-      <div className="mx-auto w-full max-w-screen-md px-4">
+      <div className="mx-auto w-full max-w-screen-md px-4 pb-10">
         <Main />
       </div>
     </div>
@@ -36,10 +36,11 @@ export default function Page(props: {}) {
 }
 
 function Header() {
-  const { data: deployment } = usePendingDeployment();
-  const { mutateAsync: confirmDeploymentAsync } =
+  const { data: deployment, refetch } = usePendingDeployment();
+  const { mutateAsync: confirmDeploymentAsync, isPending } =
     api.functions.confirmDeployment.useMutation({
       onSuccess: () => {
+        refetch();
         toast("Deployment confirmed");
       },
     });
@@ -55,16 +56,19 @@ function Header() {
           <div className="text-3xl">
             {deployment.function.project.name}/{deployment.function.name}
           </div>
-          <Button
-            onClick={() =>
-              confirmDeploymentAsync({
-                deploymentId: deployment.deployment.id,
-                manifest: deployment.deployment.manifest,
-              })
-            }
-          >
-            Deploy
-          </Button>
+          {deployment.deployment.status === "WAITING_FOR_APPROVAL" && (
+            <Button
+              isLoading={isPending}
+              onClick={() =>
+                confirmDeploymentAsync({
+                  deploymentId: deployment.deployment.id,
+                  manifest: deployment.deployment.manifest,
+                })
+              }
+            >
+              Deploy
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -226,7 +230,7 @@ function RenderTransactionConfigs(props: {
   );
   return (
     <div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4">
         {validTxConfigs.map((txConfig) => (
           <TxConfigCard
             key={txConfig.name}
@@ -274,9 +278,11 @@ function TxConfigCard(props: {
   const startBlock = getStartBlock();
 
   return (
-    <div className="rounded-md border bg-card p-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="rounded-ful py-1 text-white">{txConfig.name}</div>
+    <div className="overflow-hidden rounded-md border bg-card">
+      <div className="flex items-center justify-between gap-2 bg-black p-4">
+        <div className="rounded-ful rounded-full border bg-muted px-2 py-1 text-xs text-white">
+          {txConfig.name}
+        </div>
         <div className="flex items-center gap-1 rounded-full py-1 pl-2 text-xs">
           <span className="text-muted-foreground">Start Block / </span>
           <Input
@@ -286,46 +292,50 @@ function TxConfigCard(props: {
         </div>
       </div>
       <Separator />
-      <div className="mt-4">Events</div>
-      <div className="mt-1 flex flex-col gap-1 divide-y">
-        {txConfig.logConfigs.map((logConfig) => {
-          const getAddress = (address: string | Record<string, string>) => {
-            if (!selectedChainId) {
-              return undefined;
-            }
 
-            if (typeof address === "string") {
-              return address;
-            }
+      <div className="p-4 text-sm">Events</div>
+      <Separator />
+      <div className="px-4">
+        <div className="mt-1 flex flex-col divide-y">
+          {txConfig.logConfigs.map((logConfig) => {
+            const getAddress = (address: string | Record<string, string>) => {
+              if (!selectedChainId) {
+                return undefined;
+              }
 
-            return address[selectedChainId.toString()];
-          };
+              if (typeof address === "string") {
+                return address;
+              }
 
-          return (
-            <div className="flex w-auto items-center justify-between py-3 text-xs text-muted-foreground">
-              <div>{logConfig.abi.name}</div>
-              <div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="underline decoration-dashed">
-                      {getAddress(logConfig.address)}
-                    </button>
-                  </TooltipTrigger>
-                  <Portal>
-                    <TooltipContent>
-                      <div className="text-xs text-muted-foreground">
+              return address[selectedChainId.toString()];
+            };
+
+            return (
+              <div className="flex w-auto items-center justify-between py-3 text-xs text-muted-foreground">
+                <div>{logConfig.abi.name}</div>
+                <div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="underline decoration-dashed">
                         {getAddress(logConfig.address)}
-                      </div>
-                      <div className="text-md mt-1">
-                        {formatAbiItem(logConfig.abi)}
-                      </div>
-                    </TooltipContent>
-                  </Portal>
-                </Tooltip>
+                      </button>
+                    </TooltipTrigger>
+                    <Portal>
+                      <TooltipContent>
+                        <div className="text-xs text-muted-foreground">
+                          {getAddress(logConfig.address)}
+                        </div>
+                        <div className="text-md mt-1">
+                          {formatAbiItem(logConfig.abi)}
+                        </div>
+                      </TooltipContent>
+                    </Portal>
+                  </Tooltip>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
