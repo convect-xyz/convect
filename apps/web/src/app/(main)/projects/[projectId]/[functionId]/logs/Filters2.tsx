@@ -6,9 +6,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "~/components/ui/accordion";
-import { ActiveDeployments } from "../(components)/ActiveDeployments";
-import { ChainFull } from "../(components)/ChainFull";
-import { HandlerFilter } from "../(components)/HandlerFilter";
+import { ActiveDeployments } from "../(components)/ActiveDeployments.js";
+import { ChainFull } from "../(components)/ChainFull.js";
+import { HandlerFilter } from "../(components)/HandlerFilter.js";
 
 export function Filters() {
   const filters = {
