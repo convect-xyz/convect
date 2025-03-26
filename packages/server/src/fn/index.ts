@@ -55,4 +55,16 @@ export class ConvectFunctionFacade {
       functionId: this.functionId,
     });
   }
+
+  confirmDeployment(
+    options: Omit<
+      Parameters<typeof _DeploymentService.prototype.confirm>[0],
+      "functionId"
+    >
+  ) {
+    return this.deploymentService.confirm({
+      ...options,
+      functionId: this.functionId,
+    });
+  }
 }
