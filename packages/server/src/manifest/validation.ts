@@ -71,13 +71,17 @@ export class ManifestValidationService {
     for (const chain of structuredManifest.chains) {
       const publicClient = getPublicClient(chain.chainId);
 
-      const allAddresses = structuredManifest.txConfigs
-        .filter(
-          (txConfig) =>
-            !txConfig.chains || txConfig.chains.includes(chain.chainId)
-        )
-        .flatMap((txConfig) => txConfig.logConfigs)
-        .map((logConfig) => getAddress(chain.chainId, logConfig)!);
+      const allAddresses = [
+        ...new Set(
+          structuredManifest.txConfigs
+            .filter(
+              (txConfig) =>
+                !txConfig.chains || txConfig.chains.includes(chain.chainId)
+            )
+            .flatMap((txConfig) => txConfig.logConfigs)
+            .map((logConfig) => getAddress(chain.chainId, logConfig)!)
+        ),
+      ];
 
       const etherscanProvider = new EtherscanProvider(chain.chainId, this.db);
       console.log(`[${chain.chainId}] allAddresses: ${allAddresses}`);
