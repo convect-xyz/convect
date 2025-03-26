@@ -15,7 +15,13 @@ export const getPendingDeployment = protectedProcedure
     z.object({
       deployment: z.object({
         id: z.string(),
-        status: z.enum(["PENDING", "RUNNING", "SUCCESS", "FAILED"]),
+        status: z.enum([
+          "WAITING_FOR_APPROVAL",
+          "PENDING",
+          "RUNNING",
+          "SUCCESS",
+          "FAILED",
+        ]),
         createdAt: z.number(),
         manifest: manifestSchema,
         runningAt: z.number().nullish(),

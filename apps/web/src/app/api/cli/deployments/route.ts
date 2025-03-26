@@ -91,5 +91,7 @@ export const POST = async (req: NextRequest) => {
   });
   console.log("deployment created");
 
-  return NextResponse.json({});
+  return NextResponse.json({
+    deploymentId,
+  });
 };
