@@ -276,6 +276,7 @@ export const handlerEnvRelations = relations(functionEnv, ({ one }) => ({
 }));
 
 export const deploymentStatus = pgEnum("deployment_status", [
+  "WAITING_FOR_APPROVAL",
   "PENDING",
   "RUNNING",
   "SUCCESS",
@@ -309,6 +310,7 @@ export const deployment = createTable(
     sourceKey: varchar("sourceKey", { length: 255 }).notNull(),
     version: varchar("version", { length: 255 }).notNull(),
     mode: deploymentMode("mode").notNull(),
+    approvedAt: timestamp("approvedAt"),
   },
   (deployment) => ({
     functionIdIdx: index("deployment_functionId_idx").on(deployment.functionId),
