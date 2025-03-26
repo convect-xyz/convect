@@ -12,6 +12,12 @@ import { PropsWithChildren, useState } from "react";
 import { toast } from "sonner";
 import InfoTooltip from "~/components/core/InfoTooltip";
 import ChainIcon from "~/components/icons/ChainIcon";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
@@ -50,13 +56,13 @@ function Header() {
   }
 
   return (
-    <div className="border-b py-10">
+    <div className="border-b bg-black py-10">
       <div className="mx-auto w-full max-w-screen-md px-4">
         <div className="flex items-center justify-between">
           <div className="text-3xl">
-            {deployment.function.project.name}/{deployment.function.name}
+            Deployment {deployment.deployment.id.slice(0, 6)}
           </div>
-          {deployment.deployment.status === "WAITING_FOR_APPROVAL" && (
+          {deployment.deployment.isWaitingForApproval && (
             <Button
               isLoading={isPending}
               onClick={() =>
@@ -136,7 +142,7 @@ function ChainCard(props: {
 }) {
   const structuredManifest = getStructuredManifest(props.manifest);
   return (
-    <div className="rounded-md border bg-card p-2">
+    <div className="rounded-md border bg-black p-2 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ChainIcon chainId={props.chain.chainId} />
@@ -265,6 +271,7 @@ function TxConfigCard(props: {
   txConfig: StructuredManifest["txConfigs"][0];
   selectedChainId: number | undefined;
 }) {
+  const { data: deployment } = usePendingDeployment();
   const { txConfig, selectedChainId } = props;
 
   const getStartBlock = () => {
@@ -277,66 +284,89 @@ function TxConfigCard(props: {
 
   const startBlock = getStartBlock();
 
+  if (!deployment) {
+    return null;
+  }
+
   return (
-    <div className="overflow-hidden rounded-md border bg-card">
-      <div className="flex items-center justify-between gap-2 bg-black p-4">
-        <div className="rounded-ful rounded-full border bg-muted px-2 py-1 text-xs text-white">
-          {txConfig.name}
-        </div>
-        <div className="flex items-center gap-1 rounded-full py-1 pl-2 text-xs">
-          <span className="text-muted-foreground">Start Block / </span>
-          <Input
-            placeholder={new Intl.NumberFormat("en-US").format(startBlock!)}
-            className="h-auto w-full max-w-[80px] p-1 text-xs"
-          />
-        </div>
-      </div>
-      <Separator />
-
-      <div className="p-4 text-sm">Events</div>
-      <Separator />
-      <div className="px-4">
-        <div className="mt-1 flex flex-col divide-y">
-          {txConfig.logConfigs.map((logConfig) => {
-            const getAddress = (address: string | Record<string, string>) => {
-              if (!selectedChainId) {
-                return undefined;
-              }
-
-              if (typeof address === "string") {
-                return address;
-              }
-
-              return address[selectedChainId.toString()];
-            };
-
-            return (
-              <div className="flex w-auto items-center justify-between py-3 text-xs text-muted-foreground">
-                <div>{logConfig.abi.name}</div>
-                <div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="underline decoration-dashed">
-                        {getAddress(logConfig.address)}
-                      </button>
-                    </TooltipTrigger>
-                    <Portal>
-                      <TooltipContent>
-                        <div className="text-xs text-muted-foreground">
-                          {getAddress(logConfig.address)}
-                        </div>
-                        <div className="text-md mt-1">
-                          {formatAbiItem(logConfig.abi)}
-                        </div>
-                      </TooltipContent>
-                    </Portal>
-                  </Tooltip>
-                </div>
+    <Accordion
+      type="single"
+      collapsible
+      className="w-full overflow-hidden rounded-md border bg-black"
+    >
+      <AccordionItem value="item-1" className="border-none">
+        <AccordionTrigger className="p-4">
+          <div className="w-full pr-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="rounded-full border bg-muted px-2 py-1 text-xs text-white">
+                {txConfig.name}
               </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+              <div className="flex items-center gap-1 rounded-full py-1 pl-2 text-xs">
+                <span className="text-muted-foreground">Start Block / </span>
+                {deployment.deployment.isWaitingForApproval ? (
+                  <Input
+                    placeholder={new Intl.NumberFormat("en-US").format(
+                      startBlock!,
+                    )}
+                    className="h-auto w-full max-w-[80px] p-1 text-xs"
+                  />
+                ) : (
+                  new Intl.NumberFormat("en-US").format(startBlock!)
+                )}
+              </div>
+            </div>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="bg-card p-0">
+          <Separator />
+
+          <div className="border-b p-4 text-sm">Events</div>
+          <div className="bg-black px-4">
+            <div className="flex flex-col divide-y">
+              {txConfig.logConfigs.map((logConfig) => {
+                const getAddress = (
+                  address: string | Record<string, string>,
+                ) => {
+                  if (!selectedChainId) {
+                    return undefined;
+                  }
+
+                  if (typeof address === "string") {
+                    return address;
+                  }
+
+                  return address[selectedChainId.toString()];
+                };
+
+                return (
+                  <div className="flex w-auto items-center justify-between py-3 text-xs text-muted-foreground">
+                    <div>{logConfig.abi.name}</div>
+                    <div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="underline decoration-dashed">
+                            {getAddress(logConfig.address)}
+                          </button>
+                        </TooltipTrigger>
+                        <Portal>
+                          <TooltipContent>
+                            <div className="text-xs text-muted-foreground">
+                              {getAddress(logConfig.address)}
+                            </div>
+                            <div className="text-md mt-1">
+                              {formatAbiItem(logConfig.abi)}
+                            </div>
+                          </TooltipContent>
+                        </Portal>
+                      </Tooltip>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
