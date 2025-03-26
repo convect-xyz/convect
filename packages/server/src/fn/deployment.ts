@@ -21,43 +21,64 @@ export class _DeploymentService {
   }
 
   async create(options: {
-    builderTaskDefinition: string;
     version: string;
     deploymentId: string;
     functionId: number;
     manifest: Manifest;
+    mode: "init" | "update";
+  }) {
+    await this.config.db.insert(schema.deployment).values({
+      id: options.deploymentId,
+      functionId: options.functionId,
+      ecsTaskId: "",
+      status: "WAITING_FOR_APPROVAL",
+      manifest: JSON.stringify(options.manifest),
+      manifestBucket: getManifestBucket(),
+      manifestKey: getManifestPrefix(options.functionId, options.deploymentId),
+      mode: options.mode,
+      sourceKey: getCodePrefix(options.functionId, options.deploymentId),
+      sourceBucket: getCodeBucket(),
+      version: options.version,
+    });
+  }
+
+  async confirm(options: {
+    deploymentId: string;
+    functionId: number;
+    manifest: Manifest;
+    builderTaskDefinition: string;
     dbUrl: string;
     encryptionKey: string;
-    mode: "init" | "update";
     reportingDbUrl: string;
     redisUrl: string;
   }) {
+    const deployment = await this.config.db.query.deployment.findFirst({
+      where(fields, { eq }) {
+        return eq(fields.id, options.deploymentId);
+      },
+    });
+
+    if (!deployment) {
+      throw new Error("Deployment not found");
+    }
+
     const hasPendingOrRunning = await this.config.db.transaction(async (tx) => {
       const hasPendingOrRunning = await tx.query.deployment.findFirst({
         where(fields, { eq, and, or }) {
           return and(
             eq(fields.functionId, options.functionId),
-            or(eq(fields.status, "PENDING"), eq(fields.status, "RUNNING"))
+            or(and(eq(fields.status, "PENDING")), eq(fields.status, "RUNNING"))
           );
         },
       });
 
-      await this.config.db.insert(schema.deployment).values({
-        id: options.deploymentId,
-        functionId: options.functionId,
-        ecsTaskId: "",
-        status: "PENDING",
-        manifest: JSON.stringify(options.manifest),
-        manifestBucket: getManifestBucket(),
-        manifestKey: getManifestPrefix(
-          options.functionId,
-          options.deploymentId
-        ),
-        mode: options.mode,
-        sourceKey: getCodePrefix(options.functionId, options.deploymentId),
-        sourceBucket: getCodeBucket(),
-        version: options.version,
-      });
+      await this.config.db
+        .update(schema.deployment)
+        .set({
+          status: "PENDING",
+          approvedAt: new Date(),
+        })
+        .where(eq(schema.deployment.id, options.deploymentId));
 
       return !!hasPendingOrRunning;
     });

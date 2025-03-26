@@ -5,6 +5,7 @@ import { deleteApiKey } from "./routers/apiKey/deleteApiKey";
 import { getApiKeys } from "./routers/apiKey/getApiKeys";
 import { switchPlan } from "./routers/billing/switchPlan";
 import { addEnv } from "./routers/function/addEnv";
+import { confirmDeployment } from "./routers/function/confirmDeployment";
 import { createFunction } from "./routers/function/create";
 import { deleteFunction } from "./routers/function/delete";
 import { deleteEnv } from "./routers/function/deleteEnv";
@@ -49,6 +50,7 @@ export const functionRouter = createTRPCRouter({
   updateDescription,
   getInvocations,
   getDeployment,
+  confirmDeployment,
   getDeployments,
   getLogs,
   getOverview,

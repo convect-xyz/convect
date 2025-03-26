@@ -28,7 +28,7 @@ export default function Page() {
 
 function Content() {
   return (
-    <div className="mt-8 flex flex-col gap-2 overflow-hidden p-1">
+    <div className="mx-auto mt-8 flex max-w-screen-lg flex-col gap-2 overflow-hidden p-1">
       <div className="overflow-hidden rounded-md border">
         <DeploymentsTable />
       </div>

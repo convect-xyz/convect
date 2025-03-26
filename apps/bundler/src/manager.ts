@@ -15,7 +15,10 @@ var deploymentTask: DeploymentManager;
 async function getPendingDeployment(deploymentId: string) {
   const deployment = await db.query.deployment.findFirst({
     where(fields, { eq, and }) {
-      return and(eq(fields.id, deploymentId), eq(fields.status, "PENDING"));
+      return and(
+        eq(fields.id, deploymentId),
+        and(eq(fields.status, "PENDING"))
+      );
     },
     with: {
       function: {
@@ -70,7 +73,7 @@ export class DeploymentManager {
             },
           },
         },
-        orderBy: desc(schema.deployment.createdAt),
+        orderBy: desc(schema.deployment.approvedAt),
       });
     });
 
