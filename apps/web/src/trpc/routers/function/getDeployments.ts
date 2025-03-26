@@ -1,6 +1,6 @@
 import { manifestSchema, parseManifest } from "@convect-xyz/lib";
 import { TRPCError } from "@trpc/server";
-import { or } from "drizzle-orm";
+import { inArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -23,7 +23,13 @@ export const getDeployments = protectedProcedure
       deployments: z.array(
         z.object({
           id: z.string(),
-          status: z.enum(["PENDING", "RUNNING", "SUCCESS", "FAILED"]),
+          status: z.enum([
+            "WAITING_FOR_APPROVAL",
+            "PENDING",
+            "RUNNING",
+            "SUCCESS",
+            "FAILED",
+          ]),
           createdAt: z.number(),
           manifest: manifestSchema,
           runningAt: z.number().nullish(),
@@ -55,7 +61,10 @@ export const getDeployments = protectedProcedure
 
     const deployments = await db.query.deployment.findMany({
       where: (fields, { eq, and, lt }) => {
-        let baseFilter = and(eq(fields.functionId, convectFn.id));
+        let baseFilter = and(
+          eq(fields.functionId, convectFn.id),
+          inArray(fields.status, ["SUCCESS", "PENDING", "FAILED"]),
+        );
         if (input.cursor) {
           baseFilter = and(
             baseFilter,
