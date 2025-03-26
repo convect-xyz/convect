@@ -11,8 +11,8 @@ import {
 } from "~/components/ui/sheet";
 import { Skeleton } from "~/components/ui/skeleton";
 import { RouterOutputs } from "~/trpc/shared";
-import { Filters } from "./Filters";
-import LogFilters from "./filters_";
+import { Filters } from "./Filters2";
+import LogFilters from "./filtersContext";
 import { useLogs } from "./hooks/useLogs";
 
 type LogRow = RouterOutputs["functions"]["getLogs"][0];
