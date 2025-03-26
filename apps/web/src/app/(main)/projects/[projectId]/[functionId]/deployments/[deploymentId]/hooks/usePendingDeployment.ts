@@ -4,7 +4,21 @@ import { useParams } from "./useParams";
 export function usePendingDeployment() {
   const { deploymentId } = useParams();
 
-  return api.functions.getDeployment.useQuery({
-    deploymentId,
-  });
+  return api.functions.getDeployment.useQuery(
+    {
+      deploymentId,
+    },
+    {
+      select: (data) => {
+        return {
+          ...data,
+          deployment: {
+            ...data.deployment,
+            isWaitingForApproval:
+              data.deployment.status === "WAITING_FOR_APPROVAL",
+          },
+        };
+      },
+    },
+  );
 }

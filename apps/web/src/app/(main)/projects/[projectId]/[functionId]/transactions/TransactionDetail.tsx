@@ -30,19 +30,23 @@ export function TransactionDetail(props: { transactionHash?: string }) {
 
   return (
     <div>
-      <div className="border-b p-4 pb-3">
-        <div className="flex items-center justify-between">
-          <div className="text-xl font-semibold">
-            {props.transactionHash.substring(0, 10)}...
-            {props.transactionHash.substring(props.transactionHash.length - 10)}
+      <div className="flex h-[60px] items-center border-b bg-black p-4 py-2">
+        <div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">
+              {props.transactionHash.substring(0, 10)}...
+              {props.transactionHash.substring(
+                props.transactionHash.length - 10,
+              )}
+            </div>
           </div>
-        </div>
-        <div className="mt-1 text-xs text-muted-foreground">
-          Queued on{" "}
-          {Intl.DateTimeFormat("en-US", {
-            dateStyle: "full",
-            timeStyle: "medium",
-          }).format(transaction.transaction.timestamp)}
+          <div className="mt-1 text-xs text-muted-foreground">
+            Queued on{" "}
+            {Intl.DateTimeFormat("en-US", {
+              dateStyle: "full",
+              timeStyle: "medium",
+            }).format(transaction.transaction.timestamp)}
+          </div>
         </div>
       </div>
       <div className="mt-4">
