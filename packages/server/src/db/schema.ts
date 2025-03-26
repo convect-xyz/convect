@@ -276,6 +276,7 @@ export const handlerEnvRelations = relations(functionEnv, ({ one }) => ({
 }));
 
 export const deploymentStatus = pgEnum("deployment_status", [
+  "WAITING_FOR_APPROVAL",
   "PENDING",
   "RUNNING",
   "SUCCESS",
