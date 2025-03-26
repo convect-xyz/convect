@@ -1,4 +1,4 @@
-import { desc, eq, InferSelectModel } from "drizzle-orm";
+import { desc, eq, InferSelectModel, isNotNull } from "drizzle-orm";
 import path from "path";
 import { db } from "./db";
 import schema from "./db/schema";
@@ -15,7 +15,10 @@ var deploymentTask: DeploymentManager;
 async function getPendingDeployment(deploymentId: string) {
   const deployment = await db.query.deployment.findFirst({
     where(fields, { eq, and }) {
-      return and(eq(fields.id, deploymentId), eq(fields.status, "PENDING"));
+      return and(
+        eq(fields.id, deploymentId),
+        and(eq(fields.status, "PENDING"), isNotNull(fields.approvedAt))
+      );
     },
     with: {
       function: {
@@ -60,7 +63,8 @@ export class DeploymentManager {
         where: (fields, { eq, and }) => {
           return and(
             eq(fields.functionId, this.functionId),
-            eq(fields.status, "PENDING")
+            eq(fields.status, "PENDING"),
+            isNotNull(fields.approvedAt)
           );
         },
         with: {
@@ -70,7 +74,7 @@ export class DeploymentManager {
             },
           },
         },
-        orderBy: desc(schema.deployment.createdAt),
+        orderBy: desc(schema.deployment.approvedAt),
       });
     });
 

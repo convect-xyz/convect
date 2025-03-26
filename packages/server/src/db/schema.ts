@@ -309,6 +309,7 @@ export const deployment = createTable(
     sourceKey: varchar("sourceKey", { length: 255 }).notNull(),
     version: varchar("version", { length: 255 }).notNull(),
     mode: deploymentMode("mode").notNull(),
+    approvedAt: timestamp("approvedAt"),
   },
   (deployment) => ({
     functionIdIdx: index("deployment_functionId_idx").on(deployment.functionId),
