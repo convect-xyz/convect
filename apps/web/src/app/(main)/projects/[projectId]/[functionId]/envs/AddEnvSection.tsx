@@ -52,7 +52,7 @@ export function AddEnvSection() {
   };
 
   return (
-    <div className="rounded-md border bg-muted p-4">
+    <div className="p-4">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className="flex gap-2">
@@ -63,11 +63,7 @@ export function AddEnvSection() {
                 <FormItem className="flex-1">
                   <FormLabel>Key</FormLabel>
                   <FormControl>
-                    <Input
-                      className="bg-background"
-                      placeholder="Key"
-                      {...field}
-                    />
+                    <Input placeholder="Key" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -80,11 +76,7 @@ export function AddEnvSection() {
                 <FormItem className="flex-1">
                   <FormLabel>Value</FormLabel>
                   <FormControl>
-                    <Input
-                      className="bg-background"
-                      placeholder="Value"
-                      {...field}
-                    />
+                    <Input placeholder="Value" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

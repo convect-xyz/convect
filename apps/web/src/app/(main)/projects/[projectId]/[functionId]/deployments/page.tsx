@@ -4,6 +4,7 @@ import { Manifest } from "@convect-xyz/lib";
 import { formatDistanceToNow } from "date-fns";
 import { capitalize, times } from "lodash";
 import { LoaderIcon, MoreHorizontalIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { Button } from "~/components/ui/button";
@@ -28,15 +29,33 @@ export default function Page() {
 
 function Content() {
   return (
-    <div className="mx-auto mt-8 flex max-w-screen-lg flex-col gap-2 overflow-hidden p-1">
-      <div className="overflow-hidden rounded-md border">
-        <DeploymentsTable />
+    <div>
+      <Header />
+      <div>
+        <div className="mx-auto mt-8 flex max-w-screen-md flex-col gap-2 overflow-hidden">
+          <div className="overflow-hidden rounded-md border">
+            <DeploymentsTable />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <div className="border-b bg-black py-10">
+      <div className="mx-auto w-full max-w-screen-md">
+        <div className="flex items-center justify-between">
+          <div className="text-3xl">Deployments</div>
+        </div>
       </div>
     </div>
   );
 }
 
 function DeploymentsTable() {
+  const router = useRouter();
   const { ref, inView } = useInView();
   const {
     data: deploymentPages,
@@ -95,7 +114,9 @@ function DeploymentsTable() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem
-                        onClick={() => setCurrentManifest(deployment.manifest)}
+                        onClick={() =>
+                          router.push(`deployments/${deployment.id}`)
+                        }
                       >
                         View Manifest
                       </DropdownMenuItem>

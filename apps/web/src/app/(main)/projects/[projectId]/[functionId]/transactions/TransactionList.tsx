@@ -13,7 +13,7 @@ export function TransactionSearch() {
   const filters = useTransactionFilters();
   return (
     <Input
-      className="flex-1 bg-background"
+      className="flex-1"
       placeholder="Search transactions by hash"
       value={filters.search}
       onChange={(e) => filters.setSearch(e.target.value)}
@@ -44,7 +44,7 @@ export function TransactionList(props: {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b px-4 py-2">
+      <div className="flex h-[60px] items-center border-b bg-black px-4 py-2">
         <TransactionSearch />
       </div>
       <div className="h-full flex-1 overflow-y-auto">
