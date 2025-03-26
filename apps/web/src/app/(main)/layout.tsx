@@ -19,7 +19,7 @@ export default function Layout(props: PropsWithChildren) {
   return (
     <Auth>
       <div className="flex min-h-screen w-full flex-col">
-        <header className="sticky top-0 z-10 flex flex-col gap-4 bg-background">
+        <header className="sticky top-0 z-10 flex flex-col gap-4 bg-black">
           <div className="flex h-[var(--navbar-height)] items-center justify-between gap-4 px-2 py-2 md:px-4">
             <NavbarLeading />
             <Profile />

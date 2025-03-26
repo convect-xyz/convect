@@ -2,7 +2,7 @@ import { api } from "~/trpc/react";
 import { useParams } from "../../hooks/useParams";
 import { useSelectedChainId } from "../../hooks/useSelectedChainId";
 import { useSelectedDeploymentId } from "../../hooks/useSelectedDeploymentId";
-import { useFilters } from "../filters";
+import { useFilters } from "../filters_";
 
 export function useLogs() {
   const { functionId } = useParams();

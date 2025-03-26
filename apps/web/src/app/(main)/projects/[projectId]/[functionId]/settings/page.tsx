@@ -33,11 +33,26 @@ import { useParams } from "../hooks/useParams";
 
 export default function Page() {
   return (
-    <div className="mx-auto max-w-screen-lg px-2 py-4">
-      <div className="flex flex-col gap-4 overflow-hidden">
-        <FunctionName />
-        <FunctionDescription />
-        <DeleteHandler />
+    <div>
+      <Header />
+      <div className="mx-auto max-w-screen-md py-4">
+        <div className="flex flex-col gap-4 overflow-hidden">
+          <FunctionName />
+          <FunctionDescription />
+          <DeleteHandler />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <div className="border-b bg-black py-10">
+      <div className="mx-auto w-full max-w-screen-md">
+        <div className="flex items-center justify-between">
+          <div className="text-3xl">Settings</div>
+        </div>
       </div>
     </div>
   );
@@ -89,11 +104,7 @@ function FunctionName() {
                       The display name of your function.
                     </FormDescription>
                     <FormControl>
-                      <Input
-                        className="bg-background"
-                        placeholder={"abc"}
-                        {...field}
-                      />
+                      <Input placeholder={"abc"} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -161,7 +172,7 @@ function FunctionDescription() {
                     <FormControl>
                       <Textarea
                         placeholder="Provide a useful description of your Convect Function"
-                        className="h-24 resize-none bg-background"
+                        className="h-24 resize-none"
                         {...field}
                       />
                     </FormControl>
@@ -235,5 +246,5 @@ function DeleteHandler() {
 }
 
 function Section(props: PropsWithChildren) {
-  return <div className="rounded-md border bg-muted p-4">{props.children}</div>;
+  return <div className="rounded-md border p-4">{props.children}</div>;
 }

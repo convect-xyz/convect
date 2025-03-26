@@ -10,52 +10,32 @@ import {
   SheetTitle,
 } from "~/components/ui/sheet";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { RouterOutputs } from "~/trpc/shared";
-import { ActiveDeployments } from "../(components)/ActiveDeployments";
-import { Chain } from "../(components)/Chain";
-import LogFilters, { useFilters } from "./filters";
+import { Filters } from "./Filters";
+import LogFilters from "./filters_";
 import { useLogs } from "./hooks/useLogs";
 
 type LogRow = RouterOutputs["functions"]["getLogs"][0];
 
 export default function Page() {
   return (
-    <div className="mx-auto max-w-screen-lg">
-      <LogFilters>
-        <Content />
-      </LogFilters>
-    </div>
+    <LogFilters>
+      <div className="flex divide-x">
+        <div className="sticky top-[100px] h-[calc(100vh-100px)] basis-1/6 overflow-y-auto bg-black">
+          <Filters />
+        </div>
+        <div className="min-h-[calc(100vh-100px)] flex-1">
+          <Content />
+        </div>
+      </div>
+    </LogFilters>
   );
 }
 
 function Content() {
-  const { logLevel, setLogLevel } = useFilters();
-
   return (
-    <div className="flex flex-col gap-2 overflow-hidden p-1">
-      <div className="flex items-stretch justify-between gap-2">
-        <ActiveDeployments />
-        <div className="flex h-full items-center gap-2">
-          <Chain />
-          <Tabs value={logLevel}>
-            <TabsList className="h-auto border bg-muted">
-              <TabsTrigger value="INFO" onClick={() => setLogLevel("INFO")}>
-                Info
-              </TabsTrigger>
-              <TabsTrigger value="ERROR" onClick={() => setLogLevel("ERROR")}>
-                Error
-              </TabsTrigger>
-              <TabsTrigger value="DEBUG" onClick={() => setLogLevel("DEBUG")}>
-                Debug
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
-      <div className="overflow-hidden rounded-md border">
-        <LogsTable />
-      </div>
+    <div className="flex flex-col gap-2 overflow-hidden">
+      <LogsTable />
     </div>
   );
 }
@@ -63,7 +43,7 @@ function Content() {
 function LogsTable() {
   const [selectedLog, setSelectedLog] = useState<LogRow>();
   const { data: logs } = useLogs();
-  console.log(logs);
+
   return (
     <>
       <div className="w-full border-spacing-x-2">
@@ -101,8 +81,8 @@ function LogsTable() {
               <div className="basis-36 truncate">{row.invocation_id}</div>
               <div className="basis-56 truncate">{row.time}</div>
               <div className="basis-16 truncate">{row.log_level}</div>
-              <div className="min-w-0 flex-1 overflow-hidden">
-                <div className="min-w-0 truncate">{row.log_message}</div>
+              <div className="w-full min-w-0 flex-1 overflow-hidden">
+                {/* <div className="min-w-0 truncate">{row.log_message}</div> */}
               </div>
             </div>
           ))}

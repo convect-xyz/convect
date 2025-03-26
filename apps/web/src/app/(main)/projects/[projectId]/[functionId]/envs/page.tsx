@@ -29,6 +29,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
+import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -46,10 +47,26 @@ export default function Page() {
   const { data } = useEnvs();
 
   return (
-    <div className="mx-auto max-w-screen-lg py-4">
-      <div className="flex flex-col gap-4 overflow-hidden">
-        <AddEnvSection />
-        {data && <EnvironmentVariables />}
+    <div>
+      <Header />
+      <div className="mx-auto max-w-screen-md py-4">
+        <div className="flex flex-col overflow-hidden rounded-md border">
+          <AddEnvSection />
+          <Separator />
+          {data && <EnvironmentVariables />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <div className="border-b bg-black py-10">
+      <div className="mx-auto w-full max-w-screen-md">
+        <div className="flex items-center justify-between">
+          <div className="text-3xl">Environment Variables</div>
+        </div>
       </div>
     </div>
   );
@@ -59,7 +76,7 @@ function EnvironmentVariables() {
   const { data: envs } = useEnvs();
 
   return (
-    <div className="divide-y rounded-sm border bg-muted">
+    <div className="divide-y rounded-sm">
       {envs && envs.length === 0 && <NoEnvs />}
       {envs?.map((env) => <EnvRow key={env.id} env={env} />)}
     </div>
