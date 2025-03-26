@@ -18,7 +18,6 @@ import { getFunction } from "./routers/function/getFunction";
 import { getInvocations } from "./routers/function/getInvocations";
 import { getLogs } from "./routers/function/getLogs";
 import { getOverview } from "./routers/function/getOverview";
-import { getPendingDeployment } from "./routers/function/getPendingDeployment";
 import { getTransaction } from "./routers/function/getTransaction";
 import { getTransactions } from "./routers/function/getTransactions";
 import { updateDescription } from "./routers/function/updateDescription";
@@ -51,7 +50,6 @@ export const functionRouter = createTRPCRouter({
   updateDescription,
   getInvocations,
   getDeployment,
-  getPendingDeployment,
   confirmDeployment,
   getDeployments,
   getLogs,

@@ -4,6 +4,7 @@ import {
   ConvectFunctionFacade,
   ManifestValidationService,
 } from "@convect-xyz/server";
+import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { v4 } from "uuid";
 import { z } from "zod";
@@ -91,7 +92,12 @@ export const POST = async (req: NextRequest) => {
   });
   console.log("deployment created");
 
+  const projectId = fn.project.id;
+  const functionId = fn.convectFunction.id;
   return NextResponse.json({
-    deploymentId,
+    deploymentUrl:
+      (req.headers.get("x-forwarded-proto") ? "https://" : "http://") +
+      headers().get("host") +
+      `/projects/${projectId}/${functionId}/deployments/${deploymentId}`,
   });
 };
