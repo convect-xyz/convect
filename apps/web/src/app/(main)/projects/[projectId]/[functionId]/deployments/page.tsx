@@ -3,17 +3,11 @@
 import { Manifest } from "@convect-xyz/lib";
 import { formatDistanceToNow } from "date-fns";
 import { capitalize, times } from "lodash";
-import { LoaderIcon, MoreHorizontalIcon } from "lucide-react";
+import { ChevronRightIcon, LoaderIcon } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
-import { Button } from "~/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import { Skeleton } from "~/components/ui/skeleton";
 import { RouterOutputs } from "~/trpc/shared";
 import ManifestDialog from "../(components)/ManifestDialog";
@@ -83,48 +77,42 @@ function DeploymentsTable() {
         )}
         <div className="flex flex-col divide-y">
           {deployments?.map((deployment) => (
-            <div key={deployment.id} className=" p-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="flex flex-1 items-center gap-2">
-                  <div className="mr-4 basis-[70px] truncate rounded-full border bg-chip px-2 text-center">
-                    {deployment.id.slice(0, 6)}
-                  </div>
-                  <RenderStatusIcon status={deployment.status} />
-                  <div className="flex-1 truncate">
-                    {capitalize(deployment.status)}
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      <RunningLabel
-                        runningAt={deployment.runningAt}
-                        finishedAt={deployment.finishedAt}
-                      />
+            <Link
+              key={deployment.id}
+              href={`deployments/${deployment.id}`}
+              className="p-4 text-sm"
+            >
+              <div className="text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-1 items-center gap-2">
+                    <div className="mr-4 basis-[70px] truncate rounded-full border bg-chip px-2 text-center">
+                      {deployment.id.slice(0, 6)}
+                    </div>
+                    <RenderStatusIcon status={deployment.status} />
+                    <div className="flex-1 truncate">
+                      {capitalize(deployment.status)}
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        <RunningLabel
+                          runningAt={deployment.runningAt}
+                          finishedAt={deployment.finishedAt}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="truncate">
-                  {formatDistanceToNow(deployment.createdAt, {
-                    addSuffix: true,
-                  })}
-                </div>
-                <div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <Button variant="ghost">
-                        <MoreHorizontalIcon size={14} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          router.push(`deployments/${deployment.id}`)
-                        }
-                      >
-                        View Manifest
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="truncate text-xs">
+                    {formatDistanceToNow(deployment.createdAt, {
+                      addSuffix: true,
+                    })}
+                  </div>
+                  <div>
+                    <ChevronRightIcon
+                      className="text-muted-foreground opacity-40"
+                      size={20}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
 
           {(!deployments || isFetchingNextPage) &&
