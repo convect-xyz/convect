@@ -22,7 +22,10 @@ export const getLogs = protectedProcedure
       functionId: z.number(),
       chainId: z.number(),
       deploymentId: z.string(),
-      logLevel: z.enum(["INFO", "DEBUG", "ERROR"]),
+      logLevel: z
+        .array(z.enum(["INFO", "DEBUG", "ERROR"]))
+        .optional()
+        .default(["INFO", "DEBUG", "ERROR"]),
     }),
   )
   .output(
@@ -56,7 +59,7 @@ export const getLogs = protectedProcedure
         "https://api.eu-central-1.aws.tinybird.co/v0/sql",
         {
           q: `%
-        SELECT * FROM ingest_logs WHERE function_id = {{String(function_id)}} AND chain_id = {{String(chain_id)}} AND log_level = {{String(log_level)}} AND deployment_id = {{String(deployment_id)}} ORDER BY parseDateTimeBestEffortOrNull(time) DESC LIMIT 50 FORMAT JSON`,
+        SELECT * FROM ingest_logs WHERE function_id = {{String(function_id)}} AND chain_id = {{String(chain_id)}} AND  log_level IN {{Array(log_level)}} AND deployment_id = {{String(deployment_id)}} ORDER BY parseDateTimeBestEffortOrNull(time) DESC LIMIT 50 FORMAT JSON`,
           function_id: input.functionId,
           chain_id: input.chainId.toString(),
           deployment_id: input.deploymentId,
