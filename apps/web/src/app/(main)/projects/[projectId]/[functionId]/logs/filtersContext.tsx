@@ -3,7 +3,7 @@ import { RouterInputs } from "~/trpc/shared";
 
 type AllowedLevels = RouterInputs["functions"]["getLogs"]["logLevel"];
 type LogFilters = {
-  logLevel: AllowedLevels;
+  logLevel?: AllowedLevels;
   setLogLevel: (v: AllowedLevels) => void;
 };
 
@@ -14,7 +14,11 @@ export function useFilters() {
 }
 
 export default function LogFilters(props: PropsWithChildren) {
-  const [logLevel, setLogLevel] = useState<LogFilters["logLevel"]>("INFO");
+  const [logLevel, setLogLevel] = useState<LogFilters["logLevel"]>([
+    "INFO",
+    "DEBUG",
+    "ERROR",
+  ]);
 
   return (
     <LogFiltersContext.Provider

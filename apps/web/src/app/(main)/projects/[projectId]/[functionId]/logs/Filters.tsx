@@ -8,7 +8,7 @@ import {
 } from "~/components/ui/accordion";
 import { ActiveDeployments } from "../(components)/ActiveDeployments";
 import { ChainFull } from "../(components)/ChainFull";
-import { HandlerFilter } from "../(components)/HandlerFilter";
+import { LogLevelFilter } from "./(components)/LogLevelFilter";
 
 export function Filters() {
   const filters = {
@@ -35,10 +35,10 @@ export function Filters() {
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value={filters.level}>
-            <AccordionTrigger className="w-full">Handlers</AccordionTrigger>
+            <AccordionTrigger className="w-full">Log Level</AccordionTrigger>
             <AccordionContent>
               <div className="max-h-[200px] overflow-y-auto">
-                <HandlerFilter />
+                <LogLevelFilter />
               </div>
             </AccordionContent>
           </AccordionItem>
