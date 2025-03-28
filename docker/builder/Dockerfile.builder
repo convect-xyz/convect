@@ -31,7 +31,7 @@ RUN yarn esbuild ./packages/runtime/runtime.ts --external:'./pipeline' --bundle 
 
 FROM node:21-alpine
 
-RUN yarn global add esbuild @pulumi/pulumi @sentry/profiling-node
+RUN yarn global add esbuild@0.25.0 @pulumi/pulumi @sentry/profiling-node
 RUN apk update
 RUN apk --no-cache add curl
 WORKDIR /scripts
