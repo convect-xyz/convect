@@ -114,39 +114,61 @@ function RenderManifest(props: {
   manifest: Manifest;
   initialChainId?: number;
 }) {
+  const structuredManifest = getStructuredManifest(props.manifest);
+  const [selectedChainId, setSelectedChainId] = useState<string | undefined>(
+    structuredManifest.chains[0]?.chainId.toString(),
+  );
   return (
     <div className="mt-4 flex flex-col gap-2">
-      <ChainsSection manifest={props.manifest} />
+      <Tabs onValueChange={setSelectedChainId} value={selectedChainId}>
+        <TabsList className="h-auto rounded-full border">
+          {structuredManifest.chains.map((chain) => (
+            <TabsTrigger
+              key={chain.chainId}
+              value={chain.chainId.toString()}
+              className="gap-2 rounded-full px-2 text-xs"
+            >
+              <ChainIcon chainId={chain.chainId} />
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+      <ChainsSection
+        manifest={props.manifest}
+        selectedChainId={selectedChainId}
+      />
       <TransactionConfigsSection
         manifest={props.manifest}
-        initialChainId={props.initialChainId}
+        selectChainId={selectedChainId}
       />
     </div>
   );
 }
 
-function ChainsSection(props: { manifest: Manifest }) {
+function ChainsSection(props: {
+  manifest: Manifest;
+  selectedChainId?: string;
+}) {
   const structuredManifest = getStructuredManifest(props.manifest);
-
+  const chain = structuredManifest.chains.find(
+    (chain) => chain.chainId.toString() === props.selectedChainId,
+  );
+  if (!chain) {
+    return null;
+  }
   return (
     <div className="mt-2 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground">Chains</div>
+          <div className="text-sm text-muted-foreground">
+            Chain Configuration
+          </div>
           <InfoTooltip text="These are all the chains that you intend to index.">
             <InfoIcon size={14} className="text-muted-foreground" />
           </InfoTooltip>
         </div>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-2">
-        {structuredManifest.chains.map((chain) => (
-          <ChainCard
-            key={chain.chainId}
-            chain={chain}
-            manifest={props.manifest}
-          />
-        ))}
-      </div>
+      <ChainCard key={chain.chainId} chain={chain} manifest={props.manifest} />
     </div>
   );
 }
@@ -158,36 +180,43 @@ function ChainCard(props: {
   const structuredManifest = getStructuredManifest(props.manifest);
 
   return (
-    <div className="rounded-md border bg-black p-2 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <ChainIcon chainId={props.chain.chainId} />
-          <div className="flex flex-col gap-2">
-            <div className="rounded-ful text-sm text-white">
-              {props.chain.name} ({props.chain.chainId})
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex flex-col gap-2">
-                <span className="text-xs text-muted-foreground">
-                  Start Block /{" "}
-                  {structuredManifest.txConfigs
-                    .reduce(
-                      (acc, txConfig) => {
-                        const startBlock =
-                          txConfig.startBlock[props.chain.chainId.toString()]!;
-                        if (!acc || startBlock < acc) {
-                          acc = startBlock;
-                        }
-                        return acc;
-                      },
-                      null as number | null,
-                    )
-                    ?.toString() ?? 0}
-                </span>
+    <div className="rounded-md border bg-muted px-4 shadow-sm">
+      <div className="flex flex-col divide-y">
+        {[
+          {
+            label: "Chain",
+            value: (
+              <div className="flex items-center gap-2">
+                <ChainIcon chainId={props.chain.chainId} />
+                <div className="flex flex-col gap-2">
+                  <div>{props.chain.name}</div>
+                </div>
               </div>
-            </div>
+            ),
+          },
+          {
+            label: "Start Block",
+            value:
+              structuredManifest.txConfigs
+                .reduce(
+                  (acc, txConfig) => {
+                    const startBlock =
+                      txConfig.startBlock[props.chain.chainId.toString()]!;
+                    if (!acc || startBlock < acc) {
+                      acc = startBlock;
+                    }
+                    return acc;
+                  },
+                  null as number | null,
+                )
+                ?.toString() ?? 0,
+          },
+        ].map(({ label, value }) => (
+          <div key={label} className="flex justify-between py-4 text-xs">
+            <span className="text-muted-foreground">{label}</span>
+            <span>{value}</span>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );
@@ -195,14 +224,8 @@ function ChainCard(props: {
 
 function TransactionConfigsSection(props: {
   manifest: Manifest;
-  initialChainId?: number;
+  selectChainId?: string;
 }) {
-  const structuredManifest = getStructuredManifest(props.manifest);
-  const [selectedChainId, setSelectedChainId] = useState<string | undefined>(
-    props.initialChainId?.toString() ??
-      structuredManifest.chains[0]?.chainId.toString(),
-  );
-
   return (
     <div className="mt-2 flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -214,23 +237,10 @@ function TransactionConfigsSection(props: {
             <InfoIcon size={14} className="text-muted-foreground" />
           </InfoTooltip>
         </div>
-        <Tabs onValueChange={setSelectedChainId} value={selectedChainId}>
-          <TabsList className="h-auto rounded-full border">
-            {structuredManifest.chains.map((chain) => (
-              <TabsTrigger
-                key={chain.chainId}
-                value={chain.chainId.toString()}
-                className="gap-2 rounded-full px-2 text-xs"
-              >
-                <ChainIcon chainId={chain.chainId} />
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
       </div>
       <RenderTransactionConfigs
         manifest={props.manifest}
-        selectedChainId={selectedChainId}
+        selectedChainId={props.selectChainId}
       />
     </div>
   );
