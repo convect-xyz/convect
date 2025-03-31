@@ -7,27 +7,30 @@ import {
   SelectItem,
   SelectTrigger,
 } from "~/components/ui/select";
-import { useOverview } from "../hooks/useOverview";
+import { cn } from "~/lib/utils";
 import { useParams } from "../hooks/useParams";
+import { useSelectedDeployment } from "../hooks/useSelectedDeployment";
 
-export function Chain() {
+export function Chain(props: { withLabel?: boolean }) {
   const { chainId } = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { data: overview } = useOverview();
+  const { data: overview } = useSelectedDeployment();
 
   useEffect(() => {
-    if (!overview?.chains) {
+    if (!overview?.deployment.manifest.chains) {
       return;
     }
 
     if (
       !searchParams.get("chainId") &&
       overview &&
-      overview.chains.length > 0
+      overview?.deployment.manifest.chains.length > 0
     ) {
-      handleValueChange(overview.chains.at(0)!.chainId.toString());
+      handleValueChange(
+        overview?.deployment.manifest.chains.at(0)!.chainId.toString(),
+      );
     }
   }, [searchParams, overview]);
 
@@ -39,21 +42,34 @@ export function Chain() {
     router.replace(pathname + "?" + params.toString());
   };
 
-  if (!overview?.chains) {
+  if (!overview?.deployment.manifest.chains) {
     return null;
   }
 
   return (
     <Select value={chainId?.toString()} onValueChange={handleValueChange}>
-      <SelectTrigger className="h-auto w-[55px] bg-muted">
-        <ChainIcon
-          chainId={
-            overview?.chains.find((f) => f.chainId === chainId)?.chainId ?? 0
-          }
-        />
+      <SelectTrigger
+        className={cn("w-full bg-muted text-sm", !props.withLabel && "w-auto")}
+      >
+        <div className="flex flex-1 items-center gap-2 overflow-hidden text-left">
+          <ChainIcon
+            chainId={
+              overview?.deployment.manifest.chains.find(
+                (f) => f.chainId === chainId,
+              )?.chainId ?? 0
+            }
+          />
+          {props.withLabel && (
+            <div className="flex-1 truncate">
+              {overview?.deployment.manifest.chains.find(
+                (f) => f.chainId === chainId,
+              )?.name ?? ""}
+            </div>
+          )}
+        </div>
       </SelectTrigger>
       <SelectContent>
-        {overview?.chains.map((h) => (
+        {overview?.deployment.manifest.chains.map((h) => (
           <SelectItem value={h.chainId.toString()}>
             <div className="flex items-center gap-2">
               <ChainIcon chainId={h.chainId} />

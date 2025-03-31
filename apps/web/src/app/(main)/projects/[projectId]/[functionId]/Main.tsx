@@ -7,7 +7,9 @@ import { useInView } from "react-intersection-observer";
 import InfoTooltip from "~/components/core/InfoTooltip";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
+import { ActiveDeployments } from "./(components)/ActiveDeployments";
 import BatchRow from "./(components)/BatchRow";
+import { Chain } from "./(components)/Chain";
 import ManifestDialog from "./(components)/ManifestDialog";
 import { useBatches } from "./hooks/useBatches";
 import { useOverview } from "./hooks/useOverview";
@@ -19,6 +21,14 @@ export default function Main() {
   return (
     <div className="mx-auto max-w-screen-lg py-4">
       <div>
+        <div className="ml-auto flex w-min gap-2 px-4">
+          <div className="max-w-[160px]">
+            <Chain />
+          </div>
+          <div className="max-w-[220px]">
+            <ActiveDeployments />
+          </div>
+        </div>
         <Overview />
         <RecentBatches batchId={batchId} setBatchId={setBatchId} />
       </div>
