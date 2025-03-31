@@ -7,7 +7,7 @@ import {
   AccordionTrigger,
 } from "~/components/ui/accordion";
 import { ActiveDeployments } from "../(components)/ActiveDeployments";
-import { ChainFull } from "../(components)/ChainFull";
+import { Chain } from "../(components)/Chain";
 import { HandlerFilter } from "../(components)/HandlerFilter";
 import { StatusFilter } from "../(components)/StatusFilter";
 
@@ -33,7 +33,7 @@ export function Filters() {
           <AccordionItem value={filters.chain}>
             <AccordionTrigger className="w-full">Chain</AccordionTrigger>
             <AccordionContent>
-              <ChainFull />
+              <Chain withLabel />
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value={filters.handler}>

@@ -20,12 +20,14 @@ type LogRow = RouterOutputs["functions"]["getLogs"][0];
 export default function Page() {
   return (
     <LogFilters>
-      <div className="flex divide-x">
-        <div className="sticky top-[100px] h-[calc(100vh-100px)] basis-1/6 overflow-y-auto bg-black">
-          <Filters />
-        </div>
-        <div className="min-h-[calc(100vh-100px)] flex-1">
-          <Content />
+      <div className="max-w-[100vw] overflow-hidden">
+        <div className="flex divide-x">
+          <div className="sticky top-[100px] h-[calc(100vh-100px)] basis-1/6 overflow-y-auto bg-black">
+            <Filters />
+          </div>
+          <div className="min-h-[calc(100vh-100px)] min-w-0 flex-1">
+            <Content />
+          </div>
         </div>
       </div>
     </LogFilters>
@@ -47,11 +49,11 @@ function LogsTable() {
   return (
     <>
       <div className="w-full border-spacing-x-2">
-        <div className="flex gap-2 bg-muted p-4 text-muted-foreground">
+        <div className="flex gap-2 bg-muted px-4 py-2 text-sm text-muted-foreground">
           <div className="basis-36">ID</div>
           <div className="basis-56">Timestamp</div>
           <div className="basis-16">Level</div>
-          <div className="flex-1">Message</div>
+          <div className="min-w-9 flex-0">Message</div>
         </div>
 
         {logs?.length === 0 && (
@@ -75,15 +77,13 @@ function LogsTable() {
           {logs?.map((row) => (
             <div
               key={row.time + row.log_level}
-              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted"
+              className="flex items-center gap-2 px-4 py-2 text-xs hover:bg-muted"
               onClick={() => setSelectedLog(row)}
             >
               <div className="basis-36 truncate">{row.invocation_id}</div>
               <div className="basis-56 truncate">{row.time}</div>
               <div className="basis-16 truncate">{row.log_level}</div>
-              <div className="w-full min-w-0 flex-1 overflow-hidden">
-                {/* <div className="min-w-0 truncate">{row.log_message}</div> */}
-              </div>
+              <div className="min-w-0 flex-1 truncate">{row.log_message}</div>
             </div>
           ))}
         </div>

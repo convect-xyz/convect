@@ -7,7 +7,7 @@ import {
   AccordionTrigger,
 } from "~/components/ui/accordion";
 import { ActiveDeployments } from "../(components)/ActiveDeployments";
-import { ChainFull } from "../(components)/ChainFull";
+import { Chain } from "../(components)/Chain";
 import { LogLevelFilter } from "./(components)/LogLevelFilter";
 
 export function Filters() {
@@ -31,7 +31,7 @@ export function Filters() {
           <AccordionItem value={filters.chain}>
             <AccordionTrigger className="w-full">Chain</AccordionTrigger>
             <AccordionContent>
-              <ChainFull />
+              <Chain withLabel />
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value={filters.level}>
