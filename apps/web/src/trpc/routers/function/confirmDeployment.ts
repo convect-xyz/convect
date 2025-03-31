@@ -72,14 +72,13 @@ export const confirmDeployment = protectedProcedure
     });
 
     console.log("writing code and manifest");
-    await fnFacade.writeManifest(input.manifest, input.deploymentId);
+    await fnFacade.updateManifest(input.manifest, input.deploymentId);
     console.log("code and manifest written");
 
     const stackOutputs = await getStackOutputs();
     console.log("stack outputs", stackOutputs);
     await fnFacade.confirmDeployment({
       deploymentId: input.deploymentId,
-      manifest: input.manifest,
       builderTaskDefinition: stackOutputs.builderTaskDefinition,
       dbUrl: env.DATABASE_URL,
       encryptionKey: env.ENCRYPTION_KEY,
