@@ -38,7 +38,11 @@ export function ActiveDeployments() {
       onValueChange={handleValueChange}
     >
       <SelectTrigger className="w-full">
-        <div>Deployment &bull; {selectedDeployment?.id.slice(0, 6)}</div>
+        <div className="flex-1 overflow-hidden text-left">
+          <div className="truncate">
+            Deployment &bull; {selectedDeployment?.id.slice(0, 6)}
+          </div>
+        </div>
       </SelectTrigger>
       <SelectContent>
         {fn?.activeDeployments.map((deployment) => (
