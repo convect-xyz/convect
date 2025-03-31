@@ -1,3 +1,4 @@
+import { times } from "lodash";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import ChainIcon from "~/components/icons/ChainIcon";
@@ -7,6 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "~/components/ui/select";
+import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import { useParams } from "../hooks/useParams";
 import { useSelectedDeployment } from "../hooks/useSelectedDeployment";
@@ -18,8 +20,10 @@ export function Chain(props: { withLabel?: boolean }) {
   const pathname = usePathname();
   const { data: overview } = useSelectedDeployment();
 
+  const chains = overview?.deployment.manifest.chains;
+
   useEffect(() => {
-    if (!overview?.deployment.manifest.chains) {
+    if (!chains) {
       return;
     }
 
@@ -41,10 +45,6 @@ export function Chain(props: { withLabel?: boolean }) {
     params.toString();
     router.replace(pathname + "?" + params.toString());
   };
-
-  if (!overview?.deployment.manifest.chains) {
-    return null;
-  }
 
   return (
     <Select value={chainId?.toString()} onValueChange={handleValueChange}>
@@ -69,7 +69,18 @@ export function Chain(props: { withLabel?: boolean }) {
         </div>
       </SelectTrigger>
       <SelectContent>
-        {overview?.deployment.manifest.chains.map((h) => (
+        {!chains &&
+          times(3).map((v) => (
+            <SelectItem value={v.toString()} disabled>
+              <div className="flex flex-1 items-center gap-2">
+                <Skeleton className="h-4 w-4" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              </div>
+            </SelectItem>
+          ))}
+        {chains?.map((h) => (
           <SelectItem value={h.chainId.toString()}>
             <div className="flex items-center gap-2">
               <ChainIcon chainId={h.chainId} />
