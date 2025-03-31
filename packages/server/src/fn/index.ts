@@ -24,16 +24,27 @@ export class ConvectFunctionFacade {
       db: this.config.db,
       ecs: this.config.ecs,
     });
-    this.manifestService = new _ManifestService({ s3: this.config.s3 });
+    this.manifestService = new _ManifestService({
+      s3: this.config.s3,
+      db: this.config.db,
+    });
     this.codeService = new _CodeService({ s3: this.config.s3 });
   }
 
   async getManifest(deploymentId: string) {
-    return this.manifestService.read(this.functionId, deploymentId);
+    return this.manifestService.readFromS3(this.functionId, deploymentId);
   }
 
-  async writeManifest(manifest: Manifest, deploymentId: string) {
-    return this.manifestService.write(this.functionId, deploymentId, manifest);
+  async writeManifestToS3(manifest: Manifest, deploymentId: string) {
+    return this.manifestService.writeToS3(
+      this.functionId,
+      deploymentId,
+      manifest
+    );
+  }
+
+  async updateManifest(manifest: Manifest, deploymentId: string) {
+    return this.manifestService.update(this.functionId, deploymentId, manifest);
   }
 
   writeCode(options: { deploymentId: string; bundledCode: string }) {

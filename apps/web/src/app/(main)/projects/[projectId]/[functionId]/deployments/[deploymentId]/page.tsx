@@ -19,6 +19,7 @@ import {
   AccordionTrigger,
 } from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
+import { Form } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -28,21 +29,31 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { api } from "~/trpc/react";
+import {
+  useManifestForm,
+  useManifestFormContext,
+  useManifestFormHelpers,
+} from "./hooks/useManifestForm";
 import { usePendingDeployment } from "./hooks/usePendingDeployment";
 
 export default function Page(props: {}) {
+  const manifestForm = useManifestForm();
+
   return (
-    <div>
-      <Header />
-      <div className="mx-auto w-full max-w-screen-md px-4 pb-10">
-        <Main />
+    <Form {...manifestForm}>
+      <div>
+        <Header />
+        <div className="mx-auto w-full max-w-screen-md px-4 pb-10">
+          <Main />
+        </div>
       </div>
-    </div>
+    </Form>
   );
 }
 
 function Header() {
   const { data: deployment, refetch } = usePendingDeployment();
+  const manifest = useManifestFormContext();
   const { mutateAsync: confirmDeploymentAsync, isPending } =
     api.functions.confirmDeployment.useMutation({
       onSuccess: () => {
@@ -50,7 +61,6 @@ function Header() {
         toast("Deployment confirmed");
       },
     });
-
   if (!deployment) {
     return null;
   }
@@ -68,7 +78,7 @@ function Header() {
               onClick={() =>
                 confirmDeploymentAsync({
                   deploymentId: deployment.deployment.id,
-                  manifest: deployment.deployment.manifest,
+                  manifest: manifest.getValues(),
                 })
               }
             >
@@ -83,14 +93,15 @@ function Header() {
 
 function Main(props: PropsWithChildren) {
   const { data: deployment } = usePendingDeployment();
+  const manifestForm = useManifestFormContext();
 
-  if (!deployment) {
+  if (!deployment || !manifestForm.getValues()) {
     return <div>Loading...</div>;
   }
 
   return (
     <div>
-      <RenderManifest manifest={deployment.deployment.manifest} />
+      <RenderManifest manifest={manifestForm.getValues()} />
     </div>
   );
 }
@@ -141,6 +152,7 @@ function ChainCard(props: {
   manifest: Manifest;
 }) {
   const structuredManifest = getStructuredManifest(props.manifest);
+
   return (
     <div className="rounded-md border bg-black p-2 shadow-sm">
       <div className="flex items-center justify-between gap-2">
@@ -237,9 +249,10 @@ function RenderTransactionConfigs(props: {
   return (
     <div>
       <div className="flex flex-col gap-4">
-        {validTxConfigs.map((txConfig) => (
+        {validTxConfigs.map((txConfig, index) => (
           <TxConfigCard
-            key={txConfig.name}
+            key={index}
+            index={index}
             txConfig={txConfig}
             selectedChainId={
               selectedChainId ? Number(selectedChainId) : undefined
@@ -250,9 +263,10 @@ function RenderTransactionConfigs(props: {
           <div className="mt-4 flex flex-col gap-2">
             <div className="text-sm text-muted-foreground">Ignored</div>
             <div className="opacity-50">
-              {ignoredTxConfigs.map((txConfig) => (
+              {ignoredTxConfigs.map((txConfig, index) => (
                 <TxConfigCard
-                  key={txConfig.name}
+                  key={index}
+                  index={index}
                   txConfig={txConfig}
                   selectedChainId={
                     selectedChainId ? Number(selectedChainId) : undefined
@@ -268,11 +282,13 @@ function RenderTransactionConfigs(props: {
 }
 
 function TxConfigCard(props: {
+  index: number;
   txConfig: StructuredManifest["txConfigs"][0];
   selectedChainId: number | undefined;
 }) {
   const { data: deployment } = usePendingDeployment();
   const { txConfig, selectedChainId } = props;
+  const helpers = useManifestFormHelpers();
 
   const getStartBlock = () => {
     if (!selectedChainId) {
@@ -308,6 +324,17 @@ function TxConfigCard(props: {
                     placeholder={new Intl.NumberFormat("en-US").format(
                       startBlock!,
                     )}
+                    value={helpers.txConfigs.watchStartBlock(
+                      props.index,
+                      selectedChainId!,
+                    )}
+                    onChange={(e) => {
+                      helpers.txConfigs.setStartBlock(
+                        props.index,
+                        selectedChainId!,
+                        e.target.value,
+                      );
+                    }}
                     className="h-auto w-full max-w-[80px] p-1 text-xs"
                   />
                 ) : (
