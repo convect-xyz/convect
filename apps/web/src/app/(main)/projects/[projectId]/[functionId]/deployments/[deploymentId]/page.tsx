@@ -95,7 +95,11 @@ function Main(props: PropsWithChildren) {
   const { data: deployment } = usePendingDeployment();
   const manifestForm = useManifestFormContext();
 
-  if (!deployment || !manifestForm.getValues()) {
+  if (
+    !deployment ||
+    !manifestForm.getValues() ||
+    Object.keys(manifestForm.getValues()).length === 0
+  ) {
     return <div>Loading...</div>;
   }
 
@@ -366,7 +370,10 @@ function TxConfigCard(props: {
                 };
 
                 return (
-                  <div className="flex w-auto items-center justify-between py-3 text-xs text-muted-foreground">
+                  <div
+                    key={logConfig.abi.name}
+                    className="flex w-auto items-center justify-between py-3 text-xs text-muted-foreground"
+                  >
                     <div>{logConfig.abi.name}</div>
                     <div>
                       <Tooltip>

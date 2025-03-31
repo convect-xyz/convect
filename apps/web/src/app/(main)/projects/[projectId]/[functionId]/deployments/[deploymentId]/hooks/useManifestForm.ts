@@ -8,9 +8,12 @@ export function useManifestForm() {
   return useForm<Manifest>({
     resolver: zodResolver(manifestSchema),
     async defaultValues() {
-      return refetch().then(
-        (deployment) => deployment.data!.deployment.manifest,
-      );
+      const result = await refetch();
+      if (!result.data) {
+        throw new Error("Failed to fetch deployment");
+      }
+
+      return result.data.deployment.manifest;
     },
   });
 }
