@@ -45,7 +45,6 @@ export class _DeploymentService {
   async confirm(options: {
     deploymentId: string;
     functionId: number;
-    manifest: Manifest;
     builderTaskDefinition: string;
     dbUrl: string;
     encryptionKey: string;
