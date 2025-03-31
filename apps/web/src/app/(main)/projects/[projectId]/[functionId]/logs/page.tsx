@@ -20,7 +20,7 @@ type LogRow = RouterOutputs["functions"]["getLogs"][0];
 export default function Page() {
   return (
     <LogFilters>
-      <div className="max-w-[100vw] overflow-hidden">
+      <div className="max-w-[100vw]">
         <div className="flex divide-x">
           <div className="sticky top-[100px] h-[calc(100vh-100px)] basis-1/6 overflow-y-auto bg-black">
             <Filters />
@@ -67,10 +67,10 @@ function LogsTable() {
             times(20).map((v) => (
               <div key={v} className="p-4 py-5 text-sm">
                 <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 basis-36" />
-                  <Skeleton className="h-4 basis-56" />
-                  <Skeleton className="h-4 basis-14" />
-                  <Skeleton className="h-4 flex-1" />
+                  <Skeleton className="h-2 basis-36" />
+                  <Skeleton className="h-2 basis-56" />
+                  <Skeleton className="h-2 basis-14" />
+                  <Skeleton className="h-2 flex-1" />
                 </div>
               </div>
             ))}
