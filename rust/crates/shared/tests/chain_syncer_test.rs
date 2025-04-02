@@ -3,7 +3,7 @@ use std::{fs::File, path::Path, sync::Arc};
 use expectations::{Expectations, ExpectedTransaction};
 use futures::{future::join_all, FutureExt};
 use shared::{
-    configuration::SharedConfig,
+    configuration::EnvironmentConfig,
     enqueuer::{Payload, SQSTransactionEnqueuer},
     fetcher::TransactionFetcherImpl,
     manifest::{Manifest, ManifestChainConfig},
@@ -19,14 +19,14 @@ mod expectations;
 struct Test {
     name: &'static str,
     path: &'static str,
-    shared_config: SharedConfig,
+    shared_config: EnvironmentConfig,
     manifest: Manifest,
     sqs_client: aws_sdk_sqs::Client,
 }
 
 impl Test {
     pub async fn new(name: &'static str, path: &'static str) -> Self {
-        let shared_config = SharedConfig::new().unwrap();
+        let shared_config = EnvironmentConfig::new().unwrap();
         let manifest = Manifest::from_file(&Self::manifest_path(path))
             .await
             .unwrap();

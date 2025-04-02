@@ -97,7 +97,7 @@ impl<S: S3> StoredReportService<S> {
         stored_report: &StoredReport,
     ) -> Result<(), errors::DeleteStoredReportError> {
         let s3 = self.s3.lock().await;
-        s3.delete_s3_object(stored_report.bucket.as_str(), stored_report.key.as_str())
+        s3.delete_object(stored_report.bucket.as_str(), stored_report.key.as_str())
             .await?;
 
         Ok(())
@@ -109,7 +109,7 @@ impl<S: S3> StoredReportService<S> {
     ) -> Result<Report, errors::GetReportError> {
         let s3 = self.s3.lock().await;
         let body = s3
-            .get_s3_object(stored_report.bucket.as_str(), stored_report.key.as_str())
+            .get_object(stored_report.bucket.as_str(), stored_report.key.as_str())
             .await?;
 
         Ok(serde_json::from_str(&body)?)
@@ -123,7 +123,7 @@ impl<S: S3> StoredReportService<S> {
         let bucket = String::from("ingest-fetch-logs");
         let key = format!("convect-results/{}.json", format!("{}", Uuid::new_v4()));
 
-        s3.put_s3_object(
+        s3.put_object(
             bucket.as_str(),
             key.as_str(),
             serde_json::to_string(report)?,

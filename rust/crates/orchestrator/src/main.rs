@@ -11,7 +11,7 @@ use config::{ChainConfig, Config};
 use futures::future::join_all;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
-use shared::configuration::SharedConfig;
+use shared::configuration::EnvironmentConfig;
 use shared::syncer::ChainSyncer;
 use shared::syncing::State;
 use std::collections::BTreeMap;
@@ -246,7 +246,7 @@ fn get_task_override(
         .find(|c| c.chain_id == chain_id)
         .unwrap();
 
-    let shared_config = SharedConfig::new().unwrap();
+    let shared_config = EnvironmentConfig::new().unwrap();
     TaskOverride::builder()
         .container_overrides(
             ContainerOverride::builder()

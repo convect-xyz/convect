@@ -1,6 +1,6 @@
 use lambda_runtime::tracing;
 use shared::{
-    configuration::SharedConfig,
+    configuration::EnvironmentConfig,
     connection::establish_connection_pool,
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{web3::client::Web3ClientImpl, TransactionFetcher, TransactionFetcherImpl},
@@ -23,7 +23,7 @@ async fn get_manifest() -> &'static Manifest {
 }
 
 pub struct AppService {
-    pub settings: SharedConfig,
+    pub settings: EnvironmentConfig,
     pub config: Config,
     pub ecs_client: aws_sdk_ecs::Client,
     pub s3_client: aws_sdk_s3::Client,
@@ -38,7 +38,7 @@ impl AppService {
         let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
         let s3_client = aws_sdk_s3::Client::new(&sdk_config);
         let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
-        let settings = SharedConfig::new().unwrap();
+        let settings = EnvironmentConfig::new().unwrap();
         let redis_client = RedisClientImpl::new(&settings.redis.url).await;
 
         Self {

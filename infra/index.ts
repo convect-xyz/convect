@@ -1,6 +1,10 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import * as AWS from "aws-sdk";
+import * as crypto from "crypto";
 import config from "./config/config";
+
+const s3 = new AWS.S3();
 
 export = async () => {
   const stackName = pulumi.getStack();
@@ -20,12 +24,6 @@ export = async () => {
     role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
     s3Bucket: "ingest-functions",
     s3Key: `reporting/${GITHUB_SHA}.zip`,
-    environment: {
-      variables: {
-        DATABASE_URL: config.reportingDbUrl,
-        STRIPE_API_KEY: config.stripeApiKey,
-      },
-    },
     timeout: 300,
     memorySize: 512,
     handler: "bootstrap",
@@ -81,10 +79,6 @@ export = async () => {
         ],
         essential: true,
         environment: [
-          {
-            name: "PULUMI_ACCESS_TOKEN",
-            value: config.pulumiAccessToken,
-          },
           {
             name: "VERSION",
             value: stackName,
@@ -147,7 +141,7 @@ export = async () => {
           environment: [
             {
               name: "PULUMI_ACCESS_TOKEN",
-              value: config.pulumiAccessToken,
+              value: config.pulumi.accessToken,
             },
             {
               name: "VERSION",
@@ -188,11 +182,7 @@ export = async () => {
     { dependsOn: [syncer] }
   );
 
-  const serverConfig = new aws.s3.BucketObject("config", {
-    bucket: "convect-pzecvtjr9v",
-    key: "config/config.json",
-    source: new pulumi.asset.StringAsset(JSON.stringify(config)),
-  });
+  const { bucket: configBucket, key: configKey } = await uploadConfig();
 
   return {
     handlerExtensionArn: extension.arn,
@@ -202,7 +192,38 @@ export = async () => {
     reportingHandlerArn: reportingHandler.arn,
     reportingQueueUrl: reportingQueue.url,
     githubSha: pulumi.output(GITHUB_SHA),
-    configBucket: pulumi.secret(serverConfig.bucket),
-    configKey: pulumi.secret(serverConfig.key),
+    configBucket: pulumi.secret(configBucket),
+    configKey: pulumi.secret(configKey),
+  };
+};
+
+const uploadConfig = async () => {
+  const bucketName = "convect-pzecvtjr9v";
+  const objectKey = `config/${process.env.INFRA_VERSION}-config.json`;
+  const configData = JSON.stringify(config);
+
+  // Generate a 32-byte encryption key
+  const encryptionKey = process.env.CONFIG_ENCRYPTION_PRIVATE_KEY!;
+  const encryptionAlgorithm = process.env.CONFIG_ENCRYPTION_ALGORITHM!;
+
+  const encryptionKeyMd5 = crypto
+    .createHash("md5")
+    .update(encryptionAlgorithm)
+    .digest("base64");
+
+  await s3
+    .putObject({
+      Bucket: bucketName,
+      Key: objectKey,
+      Body: configData,
+      SSECustomerAlgorithm: "AES256",
+      SSECustomerKey: encryptionKey,
+      SSECustomerKeyMD5: encryptionKeyMd5,
+    })
+    .promise();
+
+  return {
+    bucket: bucketName,
+    key: objectKey,
   };
 };
