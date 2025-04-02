@@ -48,8 +48,8 @@ jobs:
           echo "Generated Encryption Key: $encryption_key"
 
           # Store the key as an environment variable to use in the next steps
-          echo "CONFIG_ENCRYPTION_PRIVATE_KEY=$encryption_key" >> $GITHUB_ENV
-          echo "CONFIG_ENCRYPTION_ALGORITHM=AES256" >> $GITHUB_ENV
+          echo "CONFIG_ENCRYPTION_PRIVATE_KEY=$encryption_key" >> $GITHUB_OUTPUT
+          echo "CONFIG_ENCRYPTION_ALGORITHM=AES256" >> $GITHUB_OUTPUT
       - name: Set up node cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -72,6 +72,9 @@ jobs:
 
   build_all_and_cache:
     needs: [deploy_config]
+    env:
+      CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ needs.deploy_config.outputs.config_encryption_private_key }}
+      CONFIG_ENCRYPTION_ALGORITHM: ${{ needs.deploy_config.outputs.config_encryption_algorithm }}
     runs-on: ubuntu-latest
     steps:
       - name: Install Rust toolchain
@@ -121,6 +124,9 @@ jobs:
 
   build_images:
     needs: [deploy_config]
+    env:
+      CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ needs.deploy_config.outputs.config_encryption_private_key }}
+      CONFIG_ENCRYPTION_ALGORITHM: ${{ needs.deploy_config.outputs.config_encryption_algorithm }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
