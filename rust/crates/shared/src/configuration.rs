@@ -17,9 +17,30 @@ pub struct Redis {
     pub url: String,
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub enum FetchStrategyType {
+    #[serde(rename = "graphql")]
+    Graphql,
+    #[serde(rename = "jsonrpc")]
+    Jsonrpc,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct SupportedNetwork {
+    pub id: u64,
+    pub name: String,
+    pub polling_urls: Vec<String>,
+    pub ws_url: String,
+    pub sns_topic: String,
+    pub etherscan_api_key: String,
+    pub etherscan_like: String,
+    pub fetch_strategy: FetchStrategyType,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct EnvironmentConfig {
     pub redis: Redis,
+    pub chains: Vec<SupportedNetwork>,
 }
 
 impl EnvironmentConfig {
