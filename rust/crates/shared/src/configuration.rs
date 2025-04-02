@@ -10,6 +10,7 @@ use tokio::sync::OnceCell;
 const REFRESH_INTERVAL_SECS: u64 = 60 * 5; // 5 minutes
 const DECRYPTION_PRIVATE_KEY: &str = env!("CONFIG_ENCRYPTION_PRIVATE_KEY");
 const DECRYPTION_ALGORITHM: &str = env!("CONFIG_ENCRYPTION_ALGORITHM");
+const INFRA_VERSION: &str = env!("INFRA_VERSION");
 
 static REFRESHING_ENVIRONMENT_CONFIG: OnceCell<Arc<RefreshingEnvironmentConfig>> =
     OnceCell::const_new();
@@ -53,8 +54,8 @@ impl EnvironmentConfig {
 
         Config::builder()
             .add_async_source(S3ConfigSource::new(
-                "my-bucket".to_string(),
-                "config.json".to_string(),
+                "convect-pzecvtjr9v".to_string(),
+                format!("config/{INFRA_VERSION}-config.json"),
                 Arc::new(s3),
             ))
             .build()
