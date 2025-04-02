@@ -16,7 +16,6 @@ const main = async () => {
   );
   const encryptionAlgorithm = process.env.CONFIG_ENCRYPTION_ALGORITHM!;
 
-  console.log("Encryption Key:", encryptionKey);
   const encryptionKeyMd5 = crypto
     .createHash("md5")
     .update(encryptionKey)
