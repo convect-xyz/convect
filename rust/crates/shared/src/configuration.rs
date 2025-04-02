@@ -23,7 +23,10 @@ pub struct EnvironmentConfig {
 }
 
 impl EnvironmentConfig {
-    pub async fn new(s3: Arc<dyn S3>) -> Result<Self, ConfigError> {
+    pub async fn new() -> Result<Self, ConfigError> {
+        let aws_config = aws_config::load_from_env().await;
+        let s3 = aws_sdk_s3::Client::new(&aws_config);
+
         let s = Config::builder()
             .add_async_source(S3ConfigSource::new(
                 "my-bucket".to_string(),
