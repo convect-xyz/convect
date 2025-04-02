@@ -1,15 +1,18 @@
 use std::sync::Arc;
 
+use crate::s3::{EncryptionConfig, S3};
 use async_trait::async_trait;
 use config::{AsyncSource, Config, ConfigError};
 use futures::lock::Mutex;
 use serde::Deserialize;
-
-use crate::s3::{EncryptionConfig, S3};
+use tokio::sync::OnceCell;
 
 const REFRESH_INTERVAL_SECS: u64 = 60 * 5; // 5 minutes
 const DECRYPTION_PRIVATE_KEY: &str = env!("CONFIG_ENCRYPTION_PRIVATE_KEY");
 const DECRYPTION_ALGORITHM: &str = env!("CONFIG_ENCRYPTION_ALGORITHM");
+
+static REFRESHING_ENVIRONMENT_CONFIG: OnceCell<Arc<RefreshingEnvironmentConfig>> =
+    OnceCell::const_new();
 
 #[derive(Debug, Deserialize, Clone)]
 
@@ -66,10 +69,15 @@ pub struct RefreshingEnvironmentConfig {
 
 impl RefreshingEnvironmentConfig {
     pub async fn new() -> Arc<Self> {
-        let config = Mutex::new(EnvironmentConfig::new().await.unwrap());
-        let refreshing_config = Arc::new(Self { config });
-        Self::start_refreshing(refreshing_config.clone());
-        refreshing_config.clone()
+        REFRESHING_ENVIRONMENT_CONFIG
+            .get_or_init(|| async {
+                let config = Mutex::new(EnvironmentConfig::new().await.unwrap());
+                let refreshing_config = Arc::new(Self { config });
+                Self::start_refreshing(refreshing_config.clone());
+                refreshing_config.clone()
+            })
+            .await
+            .clone()
     }
 
     pub async fn get_config(&self) -> EnvironmentConfig {
