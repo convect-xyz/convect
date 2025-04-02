@@ -11,7 +11,7 @@ use config::{ChainConfig, Config};
 use futures::future::join_all;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
-use shared::configuration::EnvironmentConfig;
+use shared::configuration::RefreshingEnvironmentConfig;
 use shared::syncer::ChainSyncer;
 use shared::syncing::State;
 use std::collections::BTreeMap;
@@ -234,7 +234,7 @@ fn get_network_configuration(subnets: Vec<String>) -> NetworkConfiguration {
         .build()
 }
 
-fn get_task_override(
+async fn get_task_override(
     chain_id: u64,
     config: &Config,
     start_block: u64,
@@ -246,7 +246,11 @@ fn get_task_override(
         .find(|c| c.chain_id == chain_id)
         .unwrap();
 
-    let shared_config = EnvironmentConfig::new().unwrap();
+    let shared_config = RefreshingEnvironmentConfig::new()
+        .await
+        .as_ref()
+        .get_config()
+        .await;
     TaskOverride::builder()
         .container_overrides(
             ContainerOverride::builder()

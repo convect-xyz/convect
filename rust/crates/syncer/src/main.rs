@@ -1,8 +1,13 @@
 use config::load_config_from_env;
 use shared::{
-    configuration::EnvironmentConfig, connection::establish_connection_pool,
-    enqueuer::SQSTransactionEnqueuer, fetcher::TransactionFetcherImpl, manifest::Manifest,
-    networks::get_supported_network, redis_client::RedisClientImpl, syncer::ChainSyncer,
+    configuration::{EnvironmentConfig, RefreshingEnvironmentConfig},
+    connection::establish_connection_pool,
+    enqueuer::SQSTransactionEnqueuer,
+    fetcher::TransactionFetcherImpl,
+    manifest::Manifest,
+    networks::get_supported_network,
+    redis_client::RedisClientImpl,
+    syncer::ChainSyncer,
     syncing::State,
 };
 use std::{error::Error, sync::Arc};
@@ -12,7 +17,11 @@ mod config;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
-    let configuration = EnvironmentConfig::new()?;
+    let configuration = RefreshingEnvironmentConfig::new()
+        .await
+        .as_ref()
+        .get_config()
+        .await;
     let redis_client = RedisClientImpl::new(&configuration.redis.url).await;
     let mut pipeline = State::load(
         syncer_config.project_id.clone(),
