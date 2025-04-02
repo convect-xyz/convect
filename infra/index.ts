@@ -1,7 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import * as AWS from "aws-sdk";
-import * as crypto from "crypto";
 import config from "./config/config";
 
 const s3 = new AWS.S3();
@@ -182,8 +181,6 @@ export = async () => {
     { dependsOn: [syncer] }
   );
 
-  const { bucket: configBucket, key: configKey } = await uploadConfig();
-
   return {
     handlerExtensionArn: extension.arn,
     handlerServerArn: handler_server.arn,
@@ -192,38 +189,5 @@ export = async () => {
     reportingHandlerArn: reportingHandler.arn,
     reportingQueueUrl: reportingQueue.url,
     githubSha: pulumi.output(GITHUB_SHA),
-    configBucket: pulumi.secret(configBucket),
-    configKey: pulumi.secret(configKey),
-  };
-};
-
-const uploadConfig = async () => {
-  const bucketName = "convect-pzecvtjr9v";
-  const objectKey = `config/${process.env.INFRA_VERSION}-config.json`;
-  const configData = JSON.stringify(config);
-
-  // Generate a 32-byte encryption key
-  const encryptionKey = process.env.CONFIG_ENCRYPTION_PRIVATE_KEY!;
-  const encryptionAlgorithm = process.env.CONFIG_ENCRYPTION_ALGORITHM!;
-
-  const encryptionKeyMd5 = crypto
-    .createHash("md5")
-    .update(encryptionAlgorithm)
-    .digest("base64");
-
-  await s3
-    .putObject({
-      Bucket: bucketName,
-      Key: objectKey,
-      Body: configData,
-      SSECustomerAlgorithm: "AES256",
-      SSECustomerKey: encryptionKey,
-      SSECustomerKeyMD5: encryptionKeyMd5,
-    })
-    .promise();
-
-  return {
-    bucket: bucketName,
-    key: objectKey,
   };
 };
