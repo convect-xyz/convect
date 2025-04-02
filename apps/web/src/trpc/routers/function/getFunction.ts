@@ -69,7 +69,10 @@ export const getFunction = protectedProcedure
 
     const activeDeployments = await ctx.db.query.deployment.findMany({
       where(fields, { eq }) {
-        return eq(fields.functionId, input.functionId);
+        return and(
+          eq(fields.functionId, input.functionId),
+          eq(fields.status, "SUCCESS"),
+        );
       },
       limit: 3,
       orderBy(fields, { desc }) {
