@@ -27,6 +27,7 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   CONFIG__REDIS__URL: ${{ secrets.CONFIG__REDIS__URL }}
   TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
+  INFRA_VERSION: ${{ github.event.inputs.version || github.event.release.tag_name || github.ref_name }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -49,6 +50,15 @@ jobs:
           repo: cargo-lambda/cargo-lambda
           platform: linux
           arch: x86_64
+      - name: Generate AES-256 Key for SSE-C
+        run: |
+          # Generate a 32-byte key and base64 encode it
+          encryption_key=$(openssl rand -base64 32)
+          echo "Generated Encryption Key: $encryption_key"
+
+          # Store the key as an environment variable to use in the next steps
+          echo "CONFIG_ENCRYPTION_PRIVATE_KEY=$encryption_key" >> $GITHUB_ENV
+          echo "CONFIG_ENCRYPTION_ALGORITHM=AES256" >> $GITHUB_ENV
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2

@@ -58,10 +58,12 @@ rustc-hex = "2.1.0"
 resend-rs = "0.9.1"
 tracing = "0.1.40"
 graphql_client = "0.14.0"
-config = "0.15.4"
+config = { version = "0.15.4", features = ["async"] }
 serde_yaml = "0.9.34"
 itertools = "0.13.0"
 lazy_static = "1.5.0"
+md5 = "0.7.0"
+base64 = "0.22.1"
 
 [dev-dependencies]
 mockall = "0.12.1"

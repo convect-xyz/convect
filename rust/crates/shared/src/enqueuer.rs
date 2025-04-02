@@ -134,7 +134,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         );
 
         self.s3_client
-            .put_s3_object(
+            .put_object(
                 "ingest-fetch-logs",
                 key.as_str(),
                 serde_json::to_string(&batch).unwrap(),
