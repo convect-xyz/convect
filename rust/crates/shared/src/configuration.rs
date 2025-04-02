@@ -31,7 +31,7 @@ impl EnvironmentConfig {
             .add_async_source(S3ConfigSource::new(
                 "my-bucket".to_string(),
                 "config.json".to_string(),
-                s3,
+                s3: Arc::new(s3),
             ))
             .build()
             .await?;
