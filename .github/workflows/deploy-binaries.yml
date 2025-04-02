@@ -34,7 +34,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  deploy_config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3.5.0
+        with:
+          node-version-file: package.json
+      - name: Generate AES-256 Key for SSE-C
+        run: |
+          # Generate a 32-byte key and base64 encode it
+          encryption_key=$(openssl rand)
+          echo "Generated Encryption Key: $encryption_key"
+
+          # Store the key as an environment variable to use in the next steps
+          echo "CONFIG_ENCRYPTION_PRIVATE_KEY=$encryption_key" >> $GITHUB_ENV
+          echo "CONFIG_ENCRYPTION_ALGORITHM=AES256" >> $GITHUB_ENV
+      - name: Set up node cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            node_modules
+            infra/node_modules
+          key: ${{ runner.os }}-deploy-config-${{ hashFiles('infra/yarn.lock') }}-
+          restore-keys: ${{ runner.os }}-deploy-config-
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Installing dependencies 📦️
+        run: cd infra && yarn
+      - name: Deploy config
+        run: cd infra && yarn deploy:config
+
   build_all_and_cache:
+    needs: [deploy_config]
     runs-on: ubuntu-latest
     steps:
       - name: Install Rust toolchain
@@ -50,15 +87,6 @@ jobs:
           repo: cargo-lambda/cargo-lambda
           platform: linux
           arch: x86_64
-      - name: Generate AES-256 Key for SSE-C
-        run: |
-          # Generate a 32-byte key and base64 encode it
-          encryption_key=$(openssl rand -base64 32)
-          echo "Generated Encryption Key: $encryption_key"
-
-          # Store the key as an environment variable to use in the next steps
-          echo "CONFIG_ENCRYPTION_PRIVATE_KEY=$encryption_key" >> $GITHUB_ENV
-          echo "CONFIG_ENCRYPTION_ALGORITHM=AES256" >> $GITHUB_ENV
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
@@ -92,6 +120,7 @@ jobs:
           aws s3api put-object --bucket ingest-functions --key handler-server/$GITHUB_SHA.zip --body "./target/lambda/extensions/handler-server.zip"
 
   build_images:
+    needs: [deploy_config]
     runs-on: ubuntu-latest
     strategy:
       matrix:

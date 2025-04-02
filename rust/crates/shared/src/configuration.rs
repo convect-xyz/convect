@@ -122,6 +122,9 @@ impl S3ConfigSource {
 #[async_trait]
 impl AsyncSource for S3ConfigSource {
     async fn collect(&self) -> Result<config::Map<String, config::Value>, ConfigError> {
+        println!("Decryption key: {DECRYPTION_PRIVATE_KEY}");
+        println!("Decryption algorithm: {DECRYPTION_ALGORITHM}");
+
         let result = self
             .s3
             .get_object_encrypted(
