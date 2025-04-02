@@ -27,32 +27,34 @@ impl EnvironmentConfig {
         let aws_config = aws_config::load_from_env().await;
         let s3 = aws_sdk_s3::Client::new(&aws_config);
 
-        let s = Config::builder()
+        Config::builder()
             .add_async_source(S3ConfigSource::new(
                 "my-bucket".to_string(),
                 "config.json".to_string(),
-                s3: Arc::new(s3),
+                Arc::new(s3),
             ))
             .build()
-            .await?;
-
-        s.try_deserialize()
+            .await?
+            .try_deserialize()
     }
 }
 
 pub struct RefreshingEnvironmentConfig {
     config: Mutex<EnvironmentConfig>,
-    s3: Arc<dyn S3>,
 }
 
 impl RefreshingEnvironmentConfig {
-    pub async fn new(s3: Arc<dyn S3>) -> Arc<Self> {
-        let config = Mutex::new(EnvironmentConfig::new(s3.clone()).await.unwrap());
-        let refreshing_config = Arc::new(Self { config, s3 });
+    pub async fn new() -> Arc<Self> {
+        let config = Mutex::new(EnvironmentConfig::new().await.unwrap());
+        let refreshing_config = Arc::new(Self { config });
         Self::start_refreshing(refreshing_config.clone());
         refreshing_config.clone()
     }
 
+    pub async fn get_config(&self) -> EnvironmentConfig {
+        let config = self.config.lock().await;
+        config.clone()
+    }
     fn start_refreshing(refreshing_config: Arc<Self>) {
         tokio::spawn(async move {
             loop {
@@ -69,13 +71,8 @@ impl RefreshingEnvironmentConfig {
 
     async fn refresh(&self) -> Result<(), ConfigError> {
         let mut config = self.config.lock().await;
-        *config = EnvironmentConfig::new(self.s3.clone()).await?;
+        *config = EnvironmentConfig::new().await?;
         Ok(())
-    }
-
-    async fn get_config(&self) -> EnvironmentConfig {
-        let config = self.config.lock().await;
-        config.clone()
     }
 }
 
