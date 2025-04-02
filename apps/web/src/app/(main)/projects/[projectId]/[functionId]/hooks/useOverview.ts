@@ -1,4 +1,4 @@
-import { millisecondsToMinutes } from "date-fns";
+import { millisecondsToMinutes, minutesToMilliseconds } from "date-fns";
 import { api } from "~/trpc/react";
 import { DASHBOARD_REFETCH_INTERVAL } from "./constants";
 import { useParams } from "./useParams";
@@ -23,7 +23,10 @@ export function useOverview() {
       refetchOnWindowFocus: true,
       select(data) {
         const mins = millisecondsToMinutes(data.avgDuration);
-        const secs = (data.avgDuration / 1000).toFixed(1);
+        const secs = (
+          (minutesToMilliseconds(mins) - data.avgDuration) /
+          1000
+        ).toFixed(1);
 
         return {
           ...data,
