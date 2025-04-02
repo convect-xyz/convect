@@ -26,7 +26,7 @@ struct Test {
 
 impl Test {
     pub async fn new(name: &'static str, path: &'static str) -> Self {
-        let shared_config = EnvironmentConfig::new().unwrap();
+        let shared_config = EnvironmentConfig::new().await.unwrap();
         let manifest = Manifest::from_file(&Self::manifest_path(path))
             .await
             .unwrap();
