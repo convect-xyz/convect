@@ -205,7 +205,7 @@ async fn sync_with_ecs(
         .task_definition(&config.syncer_task_definition_arn)
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(get_network_configuration(config.syncer_subnets.clone()))
-        .overrides(get_task_override(chain_id, &config, start_block, end_block))
+        .overrides(get_task_override(chain_id, &config, start_block, end_block).await)
         .send()
         .await;
 
@@ -251,6 +251,7 @@ async fn get_task_override(
         .as_ref()
         .get_config()
         .await;
+
     TaskOverride::builder()
         .container_overrides(
             ContainerOverride::builder()
