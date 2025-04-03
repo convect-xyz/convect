@@ -14,7 +14,7 @@ export default {
     apiKey: process.env.TINYBIRD_API_KEY!,
   },
   redis: {
-    url: process.env.REDIS_URL!,
+    url: process.env.CONFIG__REDIS__URL!,
   },
   chains,
 };
