@@ -24,7 +24,7 @@ impl AppState {
         let function_id = handler_server_config.function_id.clone();
         let chain_id = handler_server_config.chain_id.clone();
         let deployment_id = handler_server_config.deployment_id.clone();
-        let shared_config = EnvironmentConfig::new().unwrap();
+        let shared_config = EnvironmentConfig::new().await.unwrap();
         let pipeline = Arc::new(Mutex::new(
             processing::State::load(
                 function_id,
