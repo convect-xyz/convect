@@ -109,12 +109,16 @@ jobs:
         working-directory: rust
         env:
           DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
+          CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ needs.deploy_config.outputs.config_encryption_private_key }}
+          CONFIG_ENCRYPTION_ALGORITHM: ${{ needs.deploy_config.outputs.config_encryption_algorithm }}
         run: |
           cargo nextest run -p shared --features=pg
       - name: Build and Upload All Binaries
         working-directory: rust
         env:
           GITHUB_SHA: ${{ github.sha }}
+          CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ needs.deploy_config.outputs.config_encryption_private_key }}
+          CONFIG_ENCRYPTION_ALGORITHM: ${{ needs.deploy_config.outputs.config_encryption_algorithm }}
         run: |
           cargo lambda build --output-format zip -p orchestrator -p reporting --release
           cargo lambda build --extension --output-format zip -p extension -p handler-server --release
