@@ -1,3 +1,7 @@
+ARG CONFIG_ENCRYPTION_PRIVATE_KEY
+ARG CONFIG_ENCRYPTION_ALGORITHM
+ARG INFRA_VERSION
+
 FROM --platform=linux/amd64 lukemathwalker/cargo-chef:latest as chef
 WORKDIR /app
 
@@ -9,6 +13,11 @@ WORKDIR /app/rust
 RUN cargo chef prepare --bin=syncer --recipe-path recipe.json
 
 FROM --platform=linux/amd64 chef AS builder
+
+ENV CONFIG_ENCRYPTION_PRIVATE_KEY=${CONFIG_ENCRYPTION_PRIVATE_KEY}
+ENV CONFIG_ENCRYPTION_ALGORITHM=${CONFIG_ENCRYPTION_ALGORITHM}
+ENV INFRA_VERSION=${INFRA_VERSION}
+
 WORKDIR /app/rust
 COPY --from=planner /app/rust/recipe.json ./recipe.json
 RUN cargo chef cook --release --recipe-path ./recipe.json --bin=syncer
