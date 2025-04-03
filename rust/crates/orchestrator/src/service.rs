@@ -1,6 +1,6 @@
 use lambda_runtime::tracing;
 use shared::{
-    configuration::EnvironmentConfig,
+    configuration::{EnvironmentConfig, RefreshingEnvironmentConfig},
     connection::establish_connection_pool,
     enqueuer::{SQSTransactionEnqueuer, TransactionEnqueuer},
     fetcher::{web3::client::Web3ClientImpl, TransactionFetcher, TransactionFetcherImpl},
@@ -23,7 +23,7 @@ async fn get_manifest() -> &'static Manifest {
 }
 
 pub struct AppService {
-    pub settings: EnvironmentConfig,
+    pub refreshing_env: RefreshingEnvironmentConfig,
     pub config: Config,
     pub ecs_client: aws_sdk_ecs::Client,
     pub s3_client: aws_sdk_s3::Client,
@@ -38,8 +38,8 @@ impl AppService {
         let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
         let s3_client = aws_sdk_s3::Client::new(&sdk_config);
         let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
-        let settings = EnvironmentConfig::new().unwrap();
-        let redis_client = RedisClientImpl::new(&settings.redis.url).await;
+        let refreshing_env = RefreshingEnvironmentConfig::new().await;
+        let redis_client = RedisClientImpl::new(&refreshing_env.get_config().await.redis.url).await;
 
         Self {
             config: Config::new(),
@@ -48,7 +48,7 @@ impl AppService {
             s3_client,
             sqs_client,
             redis_client: Arc::new(redis_client),
-            settings,
+            refreshing_env,
         }
     }
 }

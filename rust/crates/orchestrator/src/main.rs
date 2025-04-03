@@ -246,11 +246,7 @@ async fn get_task_override(
         .find(|c| c.chain_id == chain_id)
         .unwrap();
 
-    let shared_config = RefreshingEnvironmentConfig::new()
-        .await
-        .as_ref()
-        .get_config()
-        .await;
+    let shared_config = RefreshingEnvironmentConfig::new().await.get_config().await;
 
     TaskOverride::builder()
         .container_overrides(

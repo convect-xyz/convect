@@ -17,11 +17,7 @@ mod config;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let syncer_config = load_config_from_env();
-    let configuration = RefreshingEnvironmentConfig::new()
-        .await
-        .as_ref()
-        .get_config()
-        .await;
+    let configuration = RefreshingEnvironmentConfig::new().await.get_config().await;
     let redis_client = RedisClientImpl::new(&configuration.redis.url).await;
     let mut pipeline = State::load(
         syncer_config.project_id.clone(),
