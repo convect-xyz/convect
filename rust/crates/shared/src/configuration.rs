@@ -8,8 +8,8 @@ use serde::Deserialize;
 use tokio::sync::OnceCell;
 
 const REFRESH_INTERVAL_SECS: u64 = 60 * 5; // 5 minutes
-const DECRYPTION_PRIVATE_KEY: &str = env!("CONFIG_ENCRYPTION_PRIVATE_KEY");
-const DECRYPTION_ALGORITHM: &str = env!("CONFIG_ENCRYPTION_ALGORITHM");
+const CONFIG_ENCRYPTION_PRIVATE_KEY: &str = env!("CONFIG_ENCRYPTION_PRIVATE_KEY");
+const CONFIG_ENCRYPTION_ALGORITHM: &str = env!("CONFIG_ENCRYPTION_ALGORITHM");
 const INFRA_VERSION: &str = env!("INFRA_VERSION");
 
 static REFRESHING_ENVIRONMENT_CONFIG: OnceCell<Arc<RefreshingEnvironmentConfig>> =
@@ -122,8 +122,8 @@ impl S3ConfigSource {
 #[async_trait]
 impl AsyncSource for S3ConfigSource {
     async fn collect(&self) -> Result<config::Map<String, config::Value>, ConfigError> {
-        println!("Decryption key: {DECRYPTION_PRIVATE_KEY}");
-        println!("Decryption algorithm: {DECRYPTION_ALGORITHM}");
+        println!("Decryption key: {CONFIG_ENCRYPTION_PRIVATE_KEY}");
+        println!("Decryption algorithm: {CONFIG_ENCRYPTION_ALGORITHM}");
 
         let result = self
             .s3
@@ -131,8 +131,8 @@ impl AsyncSource for S3ConfigSource {
                 &self.bucket,
                 &self.key,
                 &EncryptionConfig {
-                    key: DECRYPTION_PRIVATE_KEY.to_string(),
-                    algorithm: DECRYPTION_ALGORITHM.to_string(),
+                    key: CONFIG_ENCRYPTION_PRIVATE_KEY.to_string(),
+                    algorithm: CONFIG_ENCRYPTION_ALGORITHM.to_string(),
                 },
             )
             .await
