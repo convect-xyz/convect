@@ -57,7 +57,10 @@ impl S3 for aws_sdk_s3::Client {
         prefix: &str,
         encryption_config: &EncryptionConfig,
     ) -> Result<String, errors::GetS3ObjectError> {
-        let key_md5_hash = md5::compute(encryption_config.key.clone());
+        let encryption_key_as_bytes = general_purpose::STANDARD
+            .decode(encryption_config.key.clone())
+            .unwrap();
+        let key_md5_hash = md5::compute(encryption_key_as_bytes);
         let encoded_key_md5_hash = general_purpose::STANDARD.encode(key_md5_hash.0);
 
         let output = self
