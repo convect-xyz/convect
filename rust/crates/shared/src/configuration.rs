@@ -12,8 +12,7 @@ const CONFIG_ENCRYPTION_PRIVATE_KEY: &str = env!("CONFIG_ENCRYPTION_PRIVATE_KEY"
 const CONFIG_ENCRYPTION_ALGORITHM: &str = env!("CONFIG_ENCRYPTION_ALGORITHM");
 const INFRA_VERSION: &str = env!("INFRA_VERSION");
 
-static REFRESHING_ENVIRONMENT_CONFIG: OnceCell<Arc<RefreshingEnvironmentConfig>> =
-    OnceCell::const_new();
+static REFRESHING_ENVIRONMENT_CONFIG: OnceCell<RefreshingEnvironmentConfig> = OnceCell::const_new();
 
 #[derive(Debug, Deserialize, Clone)]
 
@@ -64,16 +63,17 @@ impl EnvironmentConfig {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct RefreshingEnvironmentConfig {
-    config: Mutex<EnvironmentConfig>,
+    config: Arc<Mutex<EnvironmentConfig>>,
 }
 
 impl RefreshingEnvironmentConfig {
-    pub async fn new() -> Arc<Self> {
+    pub async fn new() -> Self {
         REFRESHING_ENVIRONMENT_CONFIG
             .get_or_init(|| async {
-                let config = Mutex::new(EnvironmentConfig::new().await.unwrap());
-                let refreshing_config = Arc::new(Self { config });
+                let config = Arc::new(Mutex::new(EnvironmentConfig::new().await.unwrap()));
+                let refreshing_config = Self { config };
                 Self::start_refreshing(refreshing_config.clone());
                 refreshing_config.clone()
             })
@@ -85,7 +85,8 @@ impl RefreshingEnvironmentConfig {
         let config = self.config.lock().await;
         config.clone()
     }
-    fn start_refreshing(refreshing_config: Arc<Self>) {
+
+    fn start_refreshing(refreshing_config: Self) {
         tokio::spawn(async move {
             loop {
                 match refreshing_config.refresh().await {
