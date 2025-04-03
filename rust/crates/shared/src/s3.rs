@@ -74,7 +74,6 @@ impl S3 for aws_sdk_s3::Client {
             .await?;
 
         let data = output.body.collect().await?;
-
         return Ok(String::from_utf8(data.into_bytes().to_vec())?);
     }
 
