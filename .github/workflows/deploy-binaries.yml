@@ -147,6 +147,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
           file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
           outputs: type=oci,dest=/tmp/image.tar
+          build-args: |
+            CONFIG_ENCRYPTION_PRIVATE_KEY=${{ secrets.CONFIG_ENCRYPTION_PRIVATE_KEY }}
+            CONFIG_ENCRYPTION_ALGORITHM=${{ secrets.CONFIG_ENCRYPTION_ALGORITHM }}
+            INFRA_VERSION=${{ env.INFRA_VERSION }}
 
       - name: Import image in containerd
         env:
