@@ -28,6 +28,8 @@ env:
   CONFIG__REDIS__URL: ${{ secrets.CONFIG__REDIS__URL }}
   TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
   INFRA_VERSION: ${{ github.event.inputs.version || github.event.release.tag_name || github.ref_name }}
+  CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ secrets.CONFIG_ENCRYPTION_PRIVATE_KEY }}
+  CONFIG_ENCRYPTION_ALGORITHM: ${{ secrets.CONFIG_ENCRYPTION_ALGORITHM }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,17 +43,6 @@ jobs:
       - uses: actions/setup-node@v3.5.0
         with:
           node-version-file: package.json
-      - name: Generate AES-256 Key for SSE-C
-        run: |
-          # Generate a 32-byte key and base64 encode it
-          encryption_key=$(openssl rand -base64 32)
-          echo "Generated Encryption Key: $encryption_key"
-
-          # Store the key as an environment variable to use in the next steps
-          echo "CONFIG_ENCRYPTION_PRIVATE_KEY=$encryption_key" >> $GITHUB_OUTPUT
-          echo "CONFIG_ENCRYPTION_ALGORITHM=AES256" >> $GITHUB_OUTPUT
-          echo "CONFIG_ENCRYPTION_PRIVATE_KEY=$encryption_key" >> $GITHUB_ENV
-          echo "CONFIG_ENCRYPTION_ALGORITHM=AES256" >> $GITHUB_ENV
       - name: Set up node cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -74,9 +65,6 @@ jobs:
 
   build_all_and_cache:
     needs: [deploy_config]
-    env:
-      CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ needs.deploy_config.outputs.CONFIG_ENCRYPTION_PRIVATE_KEY }}
-      CONFIG_ENCRYPTION_ALGORITHM: ${{ needs.deploy_config.outputs.CONFIG_ENCRYPTION_ALGORITHM }}
     runs-on: ubuntu-latest
     steps:
       - name: Install Rust toolchain
@@ -109,16 +97,12 @@ jobs:
         working-directory: rust
         env:
           DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
-          CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ needs.deploy_config.outputs.CONFIG_ENCRYPTION_PRIVATE_KEY }}
-          CONFIG_ENCRYPTION_ALGORITHM: ${{ needs.deploy_config.outputs.CONFIG_ENCRYPTION_ALGORITHM }}
         run: |
           cargo nextest run -p shared --features=pg
       - name: Build and Upload All Binaries
         working-directory: rust
         env:
           GITHUB_SHA: ${{ github.sha }}
-          CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ needs.deploy_config.outputs.CONFIG_ENCRYPTION_PRIVATE_KEY }}
-          CONFIG_ENCRYPTION_ALGORITHM: ${{ needs.deploy_config.outputs.CONFIG_ENCRYPTION_ALGORITHM }}
         run: |
           cargo lambda build --output-format zip -p orchestrator -p reporting --release
           cargo lambda build --extension --output-format zip -p extension -p handler-server --release
@@ -130,9 +114,6 @@ jobs:
 
   build_images:
     needs: [deploy_config]
-    env:
-      CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ needs.deploy_config.outputs.CONFIG_ENCRYPTION_PRIVATE_KEY }}
-      CONFIG_ENCRYPTION_ALGORITHM: ${{ needs.deploy_config.outputs.CONFIG_ENCRYPTION_ALGORITHM }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
