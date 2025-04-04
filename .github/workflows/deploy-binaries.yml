@@ -30,6 +30,11 @@ env:
   INFRA_VERSION: ${{ github.event.inputs.version || github.event.release.tag_name || github.ref_name }}
   CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ secrets.CONFIG_ENCRYPTION_PRIVATE_KEY }}
   CONFIG_ENCRYPTION_ALGORITHM: ${{ secrets.CONFIG_ENCRYPTION_ALGORITHM }}
+  DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
+  PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+  TEST_STRIPE_API_KEY: ${{ secrets.TEST_STRIPE_API_KEY }}
+  PROD_STRIPE_API_KEY: ${{ secrets.PROD_STRIPE_API_KEY }}
+  PROD_REPORTING_DB_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -95,8 +100,6 @@ jobs:
           sudo apt-get install -y libpq-dev postgresql
       - name: Run integration tests
         working-directory: rust
-        env:
-          DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
         run: |
           cargo nextest run -p shared --features=pg
       - name: Build and Upload All Binaries
@@ -212,9 +215,3 @@ jobs:
           work-dir: ./infra
           stack-name: ${{ env.VERSION }}
           upsert: true
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          TEST_STRIPE_API_KEY: ${{ secrets.TEST_STRIPE_API_KEY }}
-          PROD_STRIPE_API_KEY: ${{ secrets.PROD_STRIPE_API_KEY }}
-          TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
-          PROD_REPORTING_DB_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
