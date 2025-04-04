@@ -15,7 +15,7 @@
     "@types/aws-lambda": "^8.10.137",
     "axios": "^1.6.8",
     "axios-retry": "^4.5.0",
-    "viem": "^2.9.18",
+    "viem": "2.25.0",
     "typescript": "5.5.2"
   },
   "devDependencies": {
