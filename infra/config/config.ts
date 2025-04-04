@@ -1,6 +1,17 @@
 import { chains } from "./chains";
 import { configSchema } from "./schema";
 
+function getStripeApiKey(): string {
+  switch (process.env.INFRA_VERSION) {
+    case "infra-v1":
+      return process.env.PROD_STRIPE_API_KEY!;
+    case "infra-dev":
+      return process.env.TEST_STRIPE_API_KEY!;
+    default:
+      throw new Error("Unknown infra version");
+  }
+}
+
 export default configSchema.parse({
   reporting: {
     dbUrl: process.env.PROD_REPORTING_DB_URL!,
@@ -9,7 +20,7 @@ export default configSchema.parse({
     accessToken: process.env.PULUMI_ACCESS_TOKEN!,
   },
   stripe: {
-    apiKey: process.env.STRIPE_API_KEY!,
+    apiKey: getStripeApiKey(),
   },
   tinybird: {
     apiKey: process.env.TINYBIRD_API_KEY!,

@@ -1,9 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import * as AWS from "aws-sdk";
 import config from "./config/config";
-
-const s3 = new AWS.S3();
 
 export = async () => {
   const stackName = pulumi.getStack();
