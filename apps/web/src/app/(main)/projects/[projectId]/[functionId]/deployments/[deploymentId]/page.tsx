@@ -252,18 +252,22 @@ function RenderTransactionConfigs(props: {
   const structuredManifest = getStructuredManifest(props.manifest);
   const { selectedChainId } = props;
 
-  const validTxConfigs = structuredManifest.txConfigs.filter(
-    (txConfig) =>
-      !txConfig.chains || txConfig.chains.includes(Number(selectedChainId)),
-  );
-  const ignoredTxConfigs = structuredManifest.txConfigs.filter(
-    (txConfig) =>
-      txConfig.chains && !txConfig.chains.includes(Number(selectedChainId)),
-  );
+  const validTxConfigs = structuredManifest.txConfigs
+    .map((txConfig, index) => ({ index, txConfig }))
+    .filter(
+      ({ txConfig }) =>
+        !txConfig.chains || txConfig.chains.includes(Number(selectedChainId)),
+    );
+  const ignoredTxConfigs = structuredManifest.txConfigs
+    .map((txConfig, index) => ({ index, txConfig }))
+    .filter(
+      ({ txConfig }) =>
+        txConfig.chains && !txConfig.chains.includes(Number(selectedChainId)),
+    );
   return (
     <div>
       <div className="flex flex-col gap-4">
-        {validTxConfigs.map((txConfig, index) => (
+        {validTxConfigs.map(({ txConfig, index }) => (
           <TxConfigCard
             key={index}
             index={index}
@@ -277,7 +281,7 @@ function RenderTransactionConfigs(props: {
           <div className="mt-4 flex flex-col gap-2">
             <div className="text-sm text-muted-foreground">Ignored</div>
             <div className="opacity-50">
-              {ignoredTxConfigs.map((txConfig, index) => (
+              {ignoredTxConfigs.map(({ txConfig, index }) => (
                 <TxConfigCard
                   key={index}
                   index={index}
