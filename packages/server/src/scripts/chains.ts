@@ -1,8 +1,8 @@
 import "dotenv/config";
 import { eq } from "drizzle-orm";
-import fs from "fs";
-import path, { dirname } from "path";
+import { dirname } from "path";
 import { fileURLToPath } from "url";
+import { chains } from "../../../../infra/config/chains";
 import { getConnection, getDb } from "../db/db";
 import { producers } from "../db/schema";
 
@@ -15,12 +15,6 @@ async function main() {
   const db = getDb({
     dbUrl: connection,
   });
-
-  const chains = JSON.parse(
-    fs
-      .readFileSync(path.join(__dirname, "../../../../config/chains.json"))
-      .toString()
-  );
 
   await db
     .insert(producers)

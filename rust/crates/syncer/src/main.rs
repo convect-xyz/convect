@@ -27,11 +27,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Arc::new(redis_client),
     )
     .await?;
-    let network = get_supported_network(syncer_config.chain_id).unwrap();
+    let network = get_supported_network(syncer_config.chain_id).await.unwrap();
     let config = aws_config::load_from_env().await;
     let s3_client = aws_sdk_s3::Client::new(&config);
     let sqs_client = aws_sdk_sqs::Client::new(&config);
-    let fetcher = TransactionFetcherImpl::with_defaults(network.id);
+    let fetcher = TransactionFetcherImpl::with_defaults(network.id).await;
     let pool = establish_connection_pool().await;
     let manifest = Manifest::from_env().await.unwrap();
 

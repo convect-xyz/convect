@@ -2,7 +2,7 @@ import { isNull, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "~/server/db";
-import chains from "../../../../../../../config/chains.json";
+import { chains } from "../../../../../../../infra/config/chains";
 import { getJsonData, getUserContext } from "../utils";
 
 console.log(chains);

@@ -25,9 +25,9 @@ impl<T: GethGraphqlClient> GraphqlFetchStrategyImpl<T> {
 }
 
 impl GraphqlFetchStrategyImpl<GethGraphqlClientImpl> {
-    pub fn with_defaults(chain_id: u64) -> Self {
+    pub async fn with_defaults(chain_id: u64) -> Self {
         Self {
-            graphql_client: GethGraphqlClientImpl::new(get_first_polling_url(chain_id)),
+            graphql_client: GethGraphqlClientImpl::new(get_first_polling_url(chain_id).await),
             chain_id,
         }
     }

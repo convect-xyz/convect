@@ -94,7 +94,7 @@ impl Test {
             self.manifest.clone(),
         )
         .await;
-        let fetcher = TransactionFetcherImpl::with_defaults(chain_id);
+        let fetcher = TransactionFetcherImpl::with_defaults(chain_id).await;
         let syncer = ChainSyncer::new(&self.manifest, &enqueuer, &fetcher);
         let mut pipeline = State::load(
             "integration-test".to_string(),

@@ -61,7 +61,7 @@ pub struct ChainService {
 
 impl ChainService {
     pub async fn with_defaults(app_service: &AppService, config: ChainConfig) -> Self {
-        let fetcher = TransactionFetcherImpl::with_defaults(config.chain_id);
+        let fetcher = TransactionFetcherImpl::with_defaults(config.chain_id).await;
         let pool = establish_connection_pool().await;
         let enqueuer = SQSTransactionEnqueuer::new(
             app_service.s3_client.clone(),
