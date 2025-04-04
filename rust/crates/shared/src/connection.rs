@@ -1,33 +1,32 @@
+use crate::configuration::RefreshingEnvironmentConfig;
 use diesel::prelude::*;
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
 use diesel_async::pooled_connection::{ManagerConfig, RecyclingMethod};
 use diesel_async::AsyncPgConnection;
-use dotenvy::dotenv;
 use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
 use postgres_openssl::MakeTlsConnector;
-use std::env;
 
 pub type DbPool = Pool<AsyncPgConnection>;
 
 pub async fn establish_connection_pool() -> DbPool {
-    dotenv().ok();
-
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let environment = RefreshingEnvironmentConfig::new().await;
+    let database_url = environment.get_config().await.database.url;
 
     let mut manager_config = ManagerConfig::default();
     manager_config.recycling_method = RecyclingMethod::Fast;
+
     manager_config.custom_setup = Box::new(|_| {
         Box::pin(async move {
+            let environment = RefreshingEnvironmentConfig::new().await;
+            let database_url = environment.get_config().await.database.url;
+
             let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
             builder.set_verify(SslVerifyMode::NONE);
 
             let connector = MakeTlsConnector::new(builder.build());
-            let (client, connection) = tokio_postgres::connect(
-                &env::var("DATABASE_URL").expect("DATABASE_URL must be set"),
-                connector,
-            )
-            .await
-            .map_err(|e| ConnectionError::BadConnection(e.to_string()))?;
+            let (client, connection) = tokio_postgres::connect(&database_url, connector)
+                .await
+                .map_err(|e| ConnectionError::BadConnection(e.to_string()))?;
 
             tokio::spawn(async move {
                 if let Err(e) = connection.await {
