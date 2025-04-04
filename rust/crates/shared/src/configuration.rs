@@ -21,8 +21,9 @@ pub struct Redis {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct Database {
-    pub url: String,
+pub struct Reporting {
+    #[serde(rename = "dbUrl")]
+    pub db_url: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -48,7 +49,7 @@ pub struct SupportedNetwork {
 #[derive(Debug, Deserialize, Clone)]
 pub struct EnvironmentConfig {
     pub redis: Redis,
-    pub database: Database,
+    pub reporting: Reporting,
     pub chains: Vec<SupportedNetwork>,
 }
 

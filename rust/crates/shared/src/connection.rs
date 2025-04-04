@@ -10,7 +10,7 @@ pub type DbPool = Pool<AsyncPgConnection>;
 
 pub async fn establish_connection_pool() -> DbPool {
     let environment = RefreshingEnvironmentConfig::new().await;
-    let database_url = environment.get_config().await.database.url;
+    let database_url = environment.get_config().await.reporting.db_url;
 
     let mut manager_config = ManagerConfig::default();
     manager_config.recycling_method = RecyclingMethod::Fast;
@@ -18,7 +18,7 @@ pub async fn establish_connection_pool() -> DbPool {
     manager_config.custom_setup = Box::new(|_| {
         Box::pin(async move {
             let environment = RefreshingEnvironmentConfig::new().await;
-            let database_url = environment.get_config().await.database.url;
+            let database_url = environment.get_config().await.reporting.db_url;
 
             let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
             builder.set_verify(SslVerifyMode::NONE);

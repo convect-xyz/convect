@@ -28,9 +28,9 @@ pub struct TransactionFetcherImpl {
 }
 
 impl TransactionFetcherImpl {
-    pub fn with_defaults(chain_id: u64) -> Self {
+    pub async fn with_defaults(chain_id: u64) -> Self {
         Self {
-            strategy: get_strategy_for_chain_id(chain_id),
+            strategy: get_strategy_for_chain_id(chain_id).await,
             chain_id,
         }
     }

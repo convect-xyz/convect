@@ -1,6 +1,7 @@
 import { chains } from "./chains";
+import { configSchema } from "./schema";
 
-export default {
+export default configSchema.parse({
   reporting: {
     dbUrl: process.env.PROD_REPORTING_DB_URL!,
   },
@@ -17,4 +18,4 @@ export default {
     url: process.env.CONFIG__REDIS__URL!,
   },
   chains,
-};
+});

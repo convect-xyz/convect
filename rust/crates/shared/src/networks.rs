@@ -1,40 +1,24 @@
-use serde::Deserialize;
+use crate::configuration::{RefreshingEnvironmentConfig, SupportedNetwork};
 
-#[derive(Deserialize, Debug, Clone)]
-pub enum FetchStrategyType {
-    #[serde(rename = "graphql")]
-    Graphql,
-    #[serde(rename = "jsonrpc")]
-    Jsonrpc,
+pub async fn get_supported_networks() -> Vec<SupportedNetwork> {
+    RefreshingEnvironmentConfig::new()
+        .await
+        .get_config()
+        .await
+        .chains
+        .clone()
 }
 
-#[derive(Deserialize, Debug, Clone)]
-pub struct SupportedNetwork {
-    pub id: u64,
-    pub name: String,
-    pub polling_urls: Vec<String>,
-    pub ws_url: String,
-    pub sns_topic: String,
-    pub etherscan_api_key: String,
-    pub etherscan_like: String,
-    pub fetch_strategy: FetchStrategyType,
-}
-
-const CHAINS_JSON: &str = include_str!("../../../../config/chains.json");
-
-pub fn get_supported_networks() -> Vec<SupportedNetwork> {
-    let networks: Vec<SupportedNetwork> = serde_json::from_str(CHAINS_JSON).unwrap();
-    return networks;
-}
-
-pub fn get_supported_network(chain_id: u64) -> Option<SupportedNetwork> {
+pub async fn get_supported_network(chain_id: u64) -> Option<SupportedNetwork> {
     return get_supported_networks()
+        .await
         .into_iter()
         .find(|n| n.id == chain_id);
 }
 
-pub fn get_first_polling_url(chain_id: u64) -> String {
+pub async fn get_first_polling_url(chain_id: u64) -> String {
     return get_supported_network(chain_id)
+        .await
         .map(|n| n.polling_urls.first().unwrap().to_string())
         .unwrap();
 }

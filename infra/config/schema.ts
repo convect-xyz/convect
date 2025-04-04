@@ -1,10 +1,18 @@
 import { z } from "zod";
 
 export const configSchema = z.object({
-  reportingDbUrl: z.string(),
-  pulumiAccessToken: z.string(),
-  stripeApiKey: z.string(),
-  tinybirdApiKey: z.string(),
+  reporting: z.object({
+    dbUrl: z.string(),
+  }),
+  pulumi: z.object({
+    accessToken: z.string(),
+  }),
+  stripe: z.object({
+    apiKey: z.string(),
+  }),
+  tinybird: z.object({
+    apiKey: z.string(),
+  }),
   chains: z.any(),
   redis: z.object({
     url: z.string(),
