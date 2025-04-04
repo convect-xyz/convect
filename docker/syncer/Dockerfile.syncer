@@ -18,7 +18,6 @@ ARG CONFIG_ENCRYPTION_PRIVATE_KEY
 ARG CONFIG_ENCRYPTION_ALGORITHM
 ARG INFRA_VERSION
 
-COPY ./config ./config
 COPY ./rust/Cargo.toml ./rust/Cargo.lock ./rust/
 COPY ./rust ./rust
 WORKDIR /app/rust
@@ -40,7 +39,6 @@ COPY --from=planner /app/rust/recipe.json ./recipe.json
 RUN cargo chef cook --release --recipe-path ./recipe.json --bin=syncer
 
 WORKDIR /app
-COPY ./config ./config
 WORKDIR /app/rust
 COPY ./rust ./
 RUN cargo build --release -p syncer
