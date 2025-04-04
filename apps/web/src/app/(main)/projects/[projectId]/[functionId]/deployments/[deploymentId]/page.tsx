@@ -22,6 +22,7 @@ import { Button } from "~/components/ui/button";
 import { Form } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
+import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   Tooltip,
@@ -137,6 +138,10 @@ function RenderManifest(props: {
         manifest={props.manifest}
         selectedChainId={selectedChainId}
       />
+      <BackfillSection
+        manifest={props.manifest}
+        selectedChainId={selectedChainId}
+      />
       <TransactionConfigsSection
         manifest={props.manifest}
         selectChainId={selectedChainId}
@@ -173,6 +178,59 @@ function ChainsSection(props: {
   );
 }
 
+function BackfillSection(props: {
+  selectedChainId?: string;
+  manifest: Manifest;
+}) {
+  const { selectedChainId, manifest } = props;
+  const { backfill } = useManifestFormHelpers();
+  return (
+    <div className="divide-y rounded-md border bg-muted p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="text-xs font-medium text-muted-foreground">
+            Backfill
+          </div>
+          <InfoTooltip text="Backfills allow you run your Convect Function on previously missed blocks.">
+            <InfoIcon size={14} className="text-muted-foreground" />
+          </InfoTooltip>
+        </div>
+
+        <div>
+          <Switch
+            checked={
+              selectedChainId
+                ? !!backfill.getBackfill(Number(selectedChainId))
+                : false
+            }
+            onCheckedChange={(checked) =>
+              selectedChainId &&
+              backfill.setBackfill(Number(selectedChainId), checked)
+            }
+          />
+        </div>
+      </div>
+
+      {selectedChainId && !!backfill.getBackfill(Number(selectedChainId)) && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-medium text-muted-foreground">
+              Start Block
+            </div>
+            <InfoTooltip text="Backfills allow you run your Convect Function on previously missed blocks.">
+              <InfoIcon size={14} className="text-muted-foreground" />
+            </InfoTooltip>
+          </div>
+
+          <div>
+            {backfill.getBackfill(Number(selectedChainId))!.start_block}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChainCard(props: {
   chain: StructuredManifest["chains"][0];
   manifest: Manifest;
@@ -193,23 +251,6 @@ function ChainCard(props: {
                 </div>
               </div>
             ),
-          },
-          {
-            label: "Start Block",
-            value:
-              structuredManifest.txConfigs
-                .reduce(
-                  (acc, txConfig) => {
-                    const startBlock =
-                      txConfig.startBlock[props.chain.chainId.toString()]!;
-                    if (!acc || startBlock < acc) {
-                      acc = startBlock;
-                    }
-                    return acc;
-                  },
-                  null as number | null,
-                )
-                ?.toString() ?? 0,
           },
         ].map(({ label, value }) => (
           <div key={label} className="flex justify-between py-4 text-xs">
@@ -245,6 +286,7 @@ function TransactionConfigsSection(props: {
     </div>
   );
 }
+
 function RenderTransactionConfigs(props: {
   manifest: Manifest;
   selectedChainId: string | undefined;
@@ -331,30 +373,35 @@ function TxConfigCard(props: {
               <div className="rounded-full border bg-muted px-2 py-1 text-xs text-white">
                 {txConfig.name}
               </div>
-              <div className="flex items-center gap-1 rounded-full py-1 pl-2 text-xs">
-                <span className="text-muted-foreground">Start Block / </span>
-                {deployment.deployment.isWaitingForApproval ? (
-                  <Input
-                    placeholder={new Intl.NumberFormat("en-US").format(
-                      startBlock!,
+              {selectedChainId &&
+                helpers.backfill.getBackfill(selectedChainId) && (
+                  <div className="flex items-center gap-1 rounded-full py-1 pl-2 text-xs">
+                    <span className="text-muted-foreground">
+                      Start Block /{" "}
+                    </span>
+                    {deployment.deployment.isWaitingForApproval ? (
+                      <Input
+                        placeholder={new Intl.NumberFormat("en-US").format(
+                          startBlock!,
+                        )}
+                        value={helpers.txConfigs.watchStartBlock(
+                          props.index,
+                          selectedChainId!,
+                        )}
+                        onChange={(e) => {
+                          helpers.txConfigs.setStartBlock(
+                            props.index,
+                            selectedChainId!,
+                            e.target.value,
+                          );
+                        }}
+                        className="h-auto w-full max-w-[80px] p-1 text-xs"
+                      />
+                    ) : (
+                      new Intl.NumberFormat("en-US").format(startBlock!)
                     )}
-                    value={helpers.txConfigs.watchStartBlock(
-                      props.index,
-                      selectedChainId!,
-                    )}
-                    onChange={(e) => {
-                      helpers.txConfigs.setStartBlock(
-                        props.index,
-                        selectedChainId!,
-                        e.target.value,
-                      );
-                    }}
-                    className="h-auto w-full max-w-[80px] p-1 text-xs"
-                  />
-                ) : (
-                  new Intl.NumberFormat("en-US").format(startBlock!)
+                  </div>
                 )}
-              </div>
             </div>
           </div>
         </AccordionTrigger>

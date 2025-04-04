@@ -26,6 +26,52 @@ export function useManifestFormHelpers() {
   const form = useFormContext<Manifest>();
 
   return {
+    backfill: {
+      getBackfill(chainId: number) {
+        return form.watch().chains?.find((c) => c.chainId === chainId)
+          ?.backfill;
+      },
+      setBackfill(chainId: number, value: boolean) {
+        const chainIdx = form
+          .getValues()
+          .chains.findIndex((c) => c.chainId === chainId);
+        if (chainIdx === -1) {
+          return;
+        }
+
+        if (value) {
+          form.setValue(`chains.${chainIdx}.backfill`, {
+            start_block:
+              form.getValues().tx_configs.reduce(
+                (acc, txConfig) => {
+                  const startBlock = txConfig.start_block[chainId.toString()]!;
+                  if (!acc || startBlock < acc) {
+                    acc = startBlock;
+                  }
+                  return acc;
+                },
+                null as number | null,
+              ) ?? 0,
+          });
+        } else {
+          form.setValue(`chains.${chainIdx}.backfill`, undefined);
+        }
+      },
+      getStartBlock(chainId: number) {
+        return form.watch().chains?.find((c) => c.chainId === chainId)?.backfill
+          ?.start_block;
+      },
+      setStartBlock(chainId: number, value: number | string) {
+        if (typeof value === "string" && Number.isNaN(Number(value))) {
+          return;
+        }
+
+        form.setValue(
+          `chains.${chainId}.backfill.start_block`,
+          typeof value === "string" ? Number(value) : value,
+        );
+      },
+    },
     txConfigs: {
       setStartBlock(index: number, chainId: number, value: number | string) {
         if (typeof value === "string" && Number.isNaN(Number(value))) {
