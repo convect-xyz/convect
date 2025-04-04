@@ -20,6 +20,11 @@ pub struct Redis {
     pub url: String,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct Database {
+    pub url: String,
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub enum FetchStrategyType {
     #[serde(rename = "graphql")]
@@ -43,6 +48,7 @@ pub struct SupportedNetwork {
 #[derive(Debug, Deserialize, Clone)]
 pub struct EnvironmentConfig {
     pub redis: Redis,
+    pub database: Database,
     pub chains: Vec<SupportedNetwork>,
 }
 
