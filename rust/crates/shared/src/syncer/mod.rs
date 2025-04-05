@@ -133,6 +133,13 @@ impl<'a> ChainSyncer<'a> {
         start_block: u64,
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {
+        if start_block > end_block {
+            return Err(errors::ChainSyncerError::InvalidBlockRange(
+                start_block,
+                end_block,
+            ));
+        }
+
         let configs = utils::get_block_configs(start_block, end_block, BATCH_SIZE);
         let mut buffer = TransactionBuffer::new();
 
@@ -196,5 +203,7 @@ pub mod errors {
         TransactionEnqueuerError(#[from] crate::enqueuer::errors::TransactionEnqueuerError),
         #[error("Failed to update pipeline: {0}")]
         StateError(#[from] crate::syncing::errors::StateError),
+        #[error("Invalid block range: {0} - {1}")]
+        InvalidBlockRange(u64, u64),
     }
 }

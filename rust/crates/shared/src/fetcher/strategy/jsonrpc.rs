@@ -34,34 +34,51 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
         let eligible_tx_cfgs: Vec<_> =
             manifest.get_eligible_tx_configs(chain_id, range_start, range_end);
 
-        let mut address_to_topics: HashMap<String, Vec<String>> = HashMap::new();
-        let mut address_to_min_start_block: HashMap<String, u64> = HashMap::new();
+        let address_to_topics: HashMap<String, Vec<String>> =
+            eligible_tx_cfgs
+                .iter()
+                .fold(HashMap::new(), |mut acc, (_, log_cfgs)| {
+                    for log_cfg in log_cfgs {
+                        let address = log_cfg
+                            .address
+                            .get_address(chain_id)
+                            .unwrap()
+                            .to_lowercase();
 
-        for (tx_cfg, log_cfgs) in eligible_tx_cfgs.iter() {
-            for log_cfg in log_cfgs {
-                let address = log_cfg
-                    .address
-                    .get_address(chain_id)
-                    .unwrap()
-                    .to_lowercase();
-                let start_block = tx_cfg.get_start_block(chain_id).unwrap_or(0);
+                        if !acc.contains_key(&address) {
+                            acc.insert(address.to_string(), Vec::new());
+                        }
 
-                if !address_to_topics.contains_key(&address) {
-                    address_to_topics.insert(address.to_string(), Vec::new());
-                }
-                if !address_to_min_start_block.contains_key(&address) {
-                    address_to_min_start_block.insert(address.to_string(), start_block);
-                }
+                        let current_topics = acc.get_mut(&address).unwrap();
+                        current_topics.extend(log_cfg.topics.clone().into_iter());
+                    }
 
-                let current_topics = address_to_topics.get_mut(&address).unwrap();
-                current_topics.extend(log_cfg.topics.clone().into_iter());
+                    acc
+                });
 
-                let min_start_block = address_to_min_start_block.get(&address).unwrap();
-                if start_block < *min_start_block {
-                    address_to_min_start_block.insert(address.to_string(), start_block);
-                }
-            }
-        }
+        let address_to_min_start_block: HashMap<String, u64> =
+            eligible_tx_cfgs
+                .iter()
+                .fold(HashMap::new(), |mut acc, (tx_cfg, log_cfgs)| {
+                    let start_block = tx_cfg.get_start_block(chain_id).unwrap_or(0);
+
+                    for log_cfg in log_cfgs {
+                        let address = log_cfg
+                            .address
+                            .get_address(chain_id)
+                            .unwrap()
+                            .to_lowercase();
+                        if !acc.contains_key(&address) {
+                            acc.insert(address.to_string(), start_block);
+                        }
+
+                        let min_start_block = acc.get(&address).unwrap();
+                        if start_block < *min_start_block {
+                            acc.insert(address.to_string(), start_block);
+                        }
+                    }
+                    acc
+                });
 
         let fetched_logs = Retry::spawn(
             ExponentialBackoff::from_millis(15).map(jitter).take(3),
@@ -135,15 +152,12 @@ pub fn get_web3_client_filter(
     topics.sort();
     topics.dedup();
 
-    let start_block = max(
-        u64::try_from(min_start_block).expect("Could not convert to u64"),
-        range_start,
-    );
+    let from_block = max(min_start_block, range_start);
 
     FilterBuilder::default()
         .address(vec![H160::from_str(address.as_str()).unwrap()])
         .topics(Some(topics), None, None, None)
-        .from_block(web3::types::BlockNumber::Number(start_block.into()))
+        .from_block(web3::types::BlockNumber::Number(from_block.into()))
         .to_block(web3::types::BlockNumber::Number(range_end.into()))
         .build()
 }
