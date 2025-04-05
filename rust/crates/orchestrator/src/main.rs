@@ -294,8 +294,6 @@ mod errors {
         RedisClientError(#[from] shared::redis_client::errors::RedisClientError),
         #[error("Syncer error: {0}")]
         SyncerError(#[from] shared::syncer::errors::ChainSyncerError),
-        #[error("Init block provider error: {0}")]
-        InitBlockProviderError(#[from] shared::manifest::providers::InitBlockProviderError),
         #[error("Sdk error: {0}")]
         SdkError(
             #[from] aws_sdk_ecs::error::SdkError<aws_sdk_ecs::operation::run_task::RunTaskError>,
