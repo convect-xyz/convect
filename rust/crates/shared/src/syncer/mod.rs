@@ -120,7 +120,11 @@ impl<'a> ChainSyncer<'a> {
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {
         let start_block = self.manifest.min_block(state.chain_id());
-        return Ok(self._sync(state, start_block, end_block).await?);
+        if let Some(start_block) = start_block {
+            return Ok(self._sync(state, start_block, end_block).await?);
+        }
+
+        return Ok(());
     }
 
     async fn _sync(
@@ -192,7 +196,5 @@ pub mod errors {
         TransactionEnqueuerError(#[from] crate::enqueuer::errors::TransactionEnqueuerError),
         #[error("Failed to update pipeline: {0}")]
         StateError(#[from] crate::syncing::errors::StateError),
-        #[error("Failed to get init block: {0}")]
-        InitBlockProviderError(#[from] crate::manifest::providers::InitBlockProviderError),
     }
 }
