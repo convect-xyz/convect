@@ -162,7 +162,7 @@ async fn sync_chain(
 
     let start_block = sync_state
         .next_block_to_fetch(&app_service.manifest)
-        .unwrap_or(latest_block); // If there's no min block, then we'll just sync latest.
+        .unwrap_or(latest_block); // If there's no next block, then we'll just sync latest.
 
     if latest_block - start_block > 10000 {
         return sync_with_ecs(

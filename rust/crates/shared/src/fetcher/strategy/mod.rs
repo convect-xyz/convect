@@ -114,7 +114,6 @@ trait IntoIngestLog {
 
 impl IntoIngestLog for ExampleQueryLogs {
     fn into_ingest_log(&self) -> IngestLog {
-        println!("{:?}", self.data.clone());
         IngestLog {
             address: self.account.address.clone(),
             topics: self.topics.clone(),
