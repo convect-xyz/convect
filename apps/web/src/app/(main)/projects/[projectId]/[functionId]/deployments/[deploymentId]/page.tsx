@@ -121,19 +121,24 @@ function RenderManifest(props: {
   );
   return (
     <div className="mt-4 flex flex-col gap-2">
-      <Tabs onValueChange={setSelectedChainId} value={selectedChainId}>
-        <TabsList className="h-auto rounded-full border">
-          {structuredManifest.chains.map((chain) => (
-            <TabsTrigger
-              key={chain.chainId}
-              value={chain.chainId.toString()}
-              className="gap-2 rounded-full px-2 text-xs"
-            >
-              <ChainIcon chainId={chain.chainId} />
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex items-center justify-end">
+        <Tabs onValueChange={setSelectedChainId} value={selectedChainId}>
+          <TabsList className="h-auto  rounded-full border">
+            {structuredManifest.chains.map((chain) => (
+              <TabsTrigger
+                key={chain.chainId}
+                value={chain.chainId.toString()}
+                className="gap-2 rounded-full border-none px-2 text-xs"
+              >
+                <ChainIcon chainId={chain.chainId} />
+                {selectedChainId === chain.chainId.toString() && (
+                  <div>{chain.name}</div>
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
       <ChainsSection
         manifest={props.manifest}
         selectedChainId={selectedChainId}
