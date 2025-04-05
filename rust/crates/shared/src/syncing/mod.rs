@@ -55,10 +55,10 @@ impl State {
         })
     }
 
-    pub fn next_block_to_fetch(&self, manifest: &Manifest) -> u64 {
+    pub fn next_block_to_fetch(&self, manifest: &Manifest) -> Option<u64> {
         self.last_fetched_block()
             .map(|l| l + 1)
-            .unwrap_or(manifest.min_block(self.chain_id()).unwrap())
+            .or(manifest.min_block(self.chain_id()))
     }
 
     pub fn has_synced(&self, incoming_block: u64) -> bool {

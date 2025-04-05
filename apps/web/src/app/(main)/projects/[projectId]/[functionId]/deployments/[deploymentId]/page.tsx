@@ -240,8 +240,6 @@ function ChainCard(props: {
   chain: StructuredManifest["chains"][0];
   manifest: Manifest;
 }) {
-  const structuredManifest = getStructuredManifest(props.manifest);
-
   return (
     <div className="rounded-md border bg-muted px-4 shadow-sm">
       <div className="flex flex-col divide-y">
@@ -400,6 +398,7 @@ function TxConfigCard(props: {
                             e.target.value,
                           );
                         }}
+                        onClick={(e) => e.stopPropagation()}
                         className="h-auto w-full max-w-[80px] p-1 text-xs"
                       />
                     ) : (
