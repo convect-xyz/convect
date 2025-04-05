@@ -97,6 +97,45 @@ impl Manifest {
             })
             .collect()
     }
+
+    pub fn min_block(&self, chain_id: u64) -> Option<u64> {
+        self.tx_configs
+            .iter()
+            .filter(|c| {
+                c.chains
+                    .as_ref()
+                    .is_none_or(|chains| chains.contains(&(chain_id as i64)))
+            })
+            .map(|c| c.get_start_block(chain_id))
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .min()
+    }
+
+    pub fn get_eligible_tx_configs(
+        &self,
+        chain_id: u64,
+        range_start: u64,
+        range_end: u64,
+    ) -> Vec<(TransactionConfig, Vec<LogConfig>)> {
+        let is_tx_config_after_start =
+            |tx_config: &TransactionConfig| match tx_config.get_start_block(chain_id) {
+                Some(tx_cfg_start_block) => {
+                    range_start >= tx_cfg_start_block || range_end >= tx_cfg_start_block
+                }
+                None => true,
+            };
+
+        let should_run_on_chain = |tx_config: &TransactionConfig| match &tx_config.chains {
+            Some(chains) => chains.contains(&(chain_id as i64)),
+            None => true,
+        };
+
+        self.get_tx_configs_with_log_configs()
+            .into_iter()
+            .filter(|(tx_cfg, _)| is_tx_config_after_start(tx_cfg) && should_run_on_chain(tx_cfg))
+            .collect()
+    }
 }
 
 pub mod errors {

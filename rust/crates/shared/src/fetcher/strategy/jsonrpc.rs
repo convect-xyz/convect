@@ -32,7 +32,7 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
     ) -> Result<Vec<LogResult>, super::errors::FetchStrategyError> {
         let chain_id = self.web3_client.chain_id();
         let eligible_tx_cfgs: Vec<_> =
-            super::utils::get_eligible_tx_configs(manifest, chain_id, range_start, range_end);
+            manifest.get_eligible_tx_configs(chain_id, range_start, range_end);
 
         let mut address_to_topics: HashMap<String, Vec<String>> = HashMap::new();
         let mut address_to_min_start_block: HashMap<String, u64> = HashMap::new();

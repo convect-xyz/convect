@@ -119,7 +119,7 @@ impl<'a> ChainSyncer<'a> {
         state: &mut State,
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {
-        let start_block = state.manifest_min_block(&self.manifest)?;
+        let start_block = self.manifest.min_block(state.chain_id());
         return Ok(self._sync(state, start_block, end_block).await?);
     }
 
