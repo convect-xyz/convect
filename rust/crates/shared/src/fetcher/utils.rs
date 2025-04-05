@@ -7,29 +7,6 @@ use crate::types::transactions::IngestTransaction;
 
 use super::strategy::LogResult;
 
-pub fn get_eligible_tx_configs<'a>(
-    manifest: &'a Manifest,
-    chain_id: u64,
-    range_start: u64,
-) -> Vec<(TransactionConfig, Vec<LogConfig>)> {
-    let is_tx_config_after_start =
-        |tx_config: &TransactionConfig| match tx_config.get_start_block(chain_id) {
-            Some(tx_cfg_start_block) => range_start >= tx_cfg_start_block,
-            None => true,
-        };
-
-    let should_run_on_chain = |tx_config: &TransactionConfig| match &tx_config.chains {
-        Some(chains) => chains.contains(&(chain_id as i64)),
-        None => true,
-    };
-
-    manifest
-        .get_tx_configs_with_log_configs()
-        .into_iter()
-        .filter(|(tx_cfg, _)| is_tx_config_after_start(tx_cfg) && should_run_on_chain(tx_cfg))
-        .collect()
-}
-
 pub fn group_logs_into_transactions(logs: Vec<LogResult>) -> Vec<IngestTransaction> {
     let mut tx_indices: HashMap<String, usize> = HashMap::new();
     let mut txs: Vec<IngestTransaction> = Vec::new();

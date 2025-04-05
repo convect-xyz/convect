@@ -79,10 +79,11 @@ impl RefreshingEnvironmentConfig {
     pub async fn new() -> Self {
         REFRESHING_ENVIRONMENT_CONFIG
             .get_or_init(|| async {
-                let config = Arc::new(Mutex::new(EnvironmentConfig::new().await.unwrap()));
-                let refreshing_config = Self { config };
-                Self::start_refreshing(refreshing_config.clone());
-                refreshing_config.clone()
+                let refreshing_config = Self {
+                    config: Arc::new(Mutex::new(EnvironmentConfig::new().await.unwrap())),
+                };
+                Self::perform_periodic_refresh(refreshing_config.clone());
+                refreshing_config
             })
             .await
             .clone()
@@ -93,7 +94,7 @@ impl RefreshingEnvironmentConfig {
         config.clone()
     }
 
-    fn start_refreshing(refreshing_config: Self) {
+    fn perform_periodic_refresh(refreshing_config: Self) {
         tokio::spawn(async move {
             loop {
                 match refreshing_config.refresh().await {
@@ -130,12 +131,6 @@ impl S3ConfigSource {
 #[async_trait]
 impl AsyncSource for S3ConfigSource {
     async fn collect(&self) -> Result<config::Map<String, config::Value>, ConfigError> {
-        println!("Config encryption key: {}", CONFIG_ENCRYPTION_PRIVATE_KEY);
-        println!(
-            "Config encryption algorithm: {}",
-            CONFIG_ENCRYPTION_ALGORITHM
-        );
-
         let result = self
             .s3
             .get_object_encrypted(
