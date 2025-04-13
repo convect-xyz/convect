@@ -171,7 +171,7 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
                     deployment_id: deployment_id.clone(),
                     status: match &result.status {
                         reporting_sdk::BatchStatus::Success => "SUCCESS",
-                        reporting_sdk::BatchStatus::Failed => "FAILED",
+                        reporting_sdk::BatchStatus::Failed { .. } => "FAILED",
                     }
                     .to_string(),
                     chain_id: chain_id.clone().parse().unwrap(),
