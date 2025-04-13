@@ -65,6 +65,8 @@ pub struct ProcessedBatch {
     pub deployment_id: String,
     pub timestamp: DateTime<Utc>,
     pub status: String,
+    pub error_message: Option<String>,
+    pub error_stacktrace: Option<String>,
 }
 
 #[derive(Insertable, Debug)]

@@ -175,6 +175,16 @@ fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
                     }
                     .to_string(),
                     chain_id: chain_id.clone().parse().unwrap(),
+                    error_message: match &result.status {
+                        reporting_sdk::BatchStatus::Failed { message, .. } => Some(message.clone()),
+                        _ => None,
+                    },
+                    error_stacktrace: match &result.status {
+                        reporting_sdk::BatchStatus::Failed { stacktrace, .. } => {
+                            Some(stacktrace.clone())
+                        }
+                        _ => None,
+                    },
                 }));
 
                 for tx in result.transactions.into_iter() {
