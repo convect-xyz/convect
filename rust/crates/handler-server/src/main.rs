@@ -135,7 +135,7 @@ mod results {
         failed_tx: &Option<ProcessedBatchResult>,
     ) -> Result<(), BoxError> {
         if let Some(failed_tx) = failed_tx {
-            return update_message_visibility(app_state, &failed_tx.message_id).await;
+            return update_message_visibility(app_state, &failed_tx.receipt_handle).await;
         }
 
         Ok(())
@@ -143,7 +143,7 @@ mod results {
 
     async fn update_message_visibility(
         app_state: &AppState,
-        message_id: &String,
+        receipt_handle: &String,
     ) -> Result<(), BoxError> {
         Ok(app_state
             .sqs_client
@@ -157,7 +157,7 @@ mod results {
             .set_entries(Some(vec![
                 ChangeMessageVisibilityBatchRequestEntry::builder()
                     .set_id(Some(uuid::Uuid::new_v4().to_string()))
-                    .set_receipt_handle(Some(message_id.to_string()))
+                    .set_receipt_handle(Some(receipt_handle.to_string()))
                     .set_visibility_timeout(Some(180))
                     .build()
                     .unwrap(),

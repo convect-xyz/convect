@@ -36,6 +36,8 @@ pub enum BatchStatus {
 pub struct ProcessedBatchResult {
     #[serde(rename = "batchId")]
     pub batch_id: String,
+    #[serde(rename = "receiptHandle")]
+    pub receipt_handle: String,
     #[serde(rename = "messageId")]
     pub message_id: String,
     #[serde(rename = "timestampMs")]

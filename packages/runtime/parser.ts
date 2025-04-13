@@ -22,6 +22,7 @@ type EventBody = z.infer<typeof eventBodySchema>;
 
 type ParsedRecord = {
   messageId: string;
+  receiptHandle: string;
   body: EventBody;
 };
 
@@ -29,6 +30,7 @@ export function parseSqsEvent(event: SQSEvent) {
   const records = event.Records.map((record) => {
     return {
       messageId: record.messageId,
+      receiptHandle: record.receiptHandle,
       body: eventBodySchema.parse(JSON.parse(record.body)),
     };
   });
@@ -39,7 +41,9 @@ export function parseSqsEvent(event: SQSEvent) {
 }
 
 async function parseBatches(records: Array<ParsedRecord>) {
-  const batches: Array<IngestBatch & { messageId: string }> = [];
+  const batches: Array<
+    IngestBatch & { messageId: string; receiptHandle: string }
+  > = [];
   const s3Results = await getS3Results(records);
   for (const record of records) {
     const batchData =
@@ -50,6 +54,7 @@ async function parseBatches(records: Array<ParsedRecord>) {
     batches.push({
       ...batchData,
       messageId: record.messageId,
+      receiptHandle: record.receiptHandle,
       transactions: batchData.transactions.map((tx) => ({
         ...tx,
         transaction: {
