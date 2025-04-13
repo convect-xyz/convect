@@ -1,10 +1,10 @@
 import { Manifest, manifestSchema } from "@convect-xyz/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFormContext } from "react-hook-form";
-import { usePendingDeployment } from "./usePendingDeployment";
+import { useDeployment } from "./usePendingDeployment";
 
 export function useManifestForm() {
-  const { refetch } = usePendingDeployment();
+  const { refetch } = useDeployment();
   return useForm<Manifest>({
     resolver: zodResolver(manifestSchema),
     async defaultValues() {

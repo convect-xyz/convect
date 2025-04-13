@@ -35,7 +35,7 @@ import {
   useManifestFormContext,
   useManifestFormHelpers,
 } from "./hooks/useManifestForm";
-import { usePendingDeployment } from "./hooks/usePendingDeployment";
+import { useDeployment } from "./hooks/usePendingDeployment";
 
 export default function Page(props: {}) {
   const manifestForm = useManifestForm();
@@ -53,7 +53,7 @@ export default function Page(props: {}) {
 }
 
 function Header() {
-  const { data: deployment, refetch } = usePendingDeployment();
+  const { data: deployment, refetch } = useDeployment();
   const manifest = useManifestFormContext();
   const { mutateAsync: confirmDeploymentAsync, isPending } =
     api.functions.confirmDeployment.useMutation({
@@ -93,7 +93,7 @@ function Header() {
 }
 
 function Main(props: PropsWithChildren) {
-  const { data: deployment } = usePendingDeployment();
+  const { data: deployment } = useDeployment();
   const manifestForm = useManifestFormContext();
 
   if (
@@ -168,7 +168,7 @@ function ChainsSection(props: {
     <div className="mt-2 flex flex-col gap-2">
       <ChainCard key={chain.chainId} chain={chain} manifest={props.manifest} />
 
-      <BackfillSection
+      <StartBlockSection
         selectedChainId={chain.chainId.toString()}
         manifest={props.manifest}
       />
@@ -211,24 +211,26 @@ function ChainCard(props: {
   );
 }
 
-function BackfillSection(props: {
+function StartBlockSection(props: {
   selectedChainId?: string;
   manifest: Manifest;
 }) {
   const { selectedChainId } = props;
   const { backfill } = useManifestFormHelpers();
+  const { data: manifest } = useDeployment();
 
   return (
     <div className="rounded-md border p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="text-sm">Backfill</div>
-          <InfoTooltip text="Backfills allow you run your Convect Function on previously missed blocks.">
+          <InfoTooltip text="Configure your handler to start at a specific block.">
             <InfoIcon size={14} className="text-muted-foreground" />
           </InfoTooltip>
         </div>
 
         <Switch
+          disabled={!manifest?.deployment.isWaitingForApproval}
           checked={
             backfill.watchStartBlock(Number(selectedChainId)) !== undefined
           }
@@ -247,12 +249,11 @@ function BackfillSection(props: {
 
             <div>
               <Input
+                disabled={!manifest?.deployment.isWaitingForApproval}
                 placeholder={new Intl.NumberFormat("en-US").format(
                   backfill.watchStartBlock(Number(selectedChainId)) ?? 0,
                 )}
-                value={backfill
-                  .watchStartBlock(Number(selectedChainId))
-                  ?.toString()}
+                value={backfill.watchStartBlock(Number(selectedChainId))}
                 onChange={(e) => {
                   backfill.setStartBlock(
                     Number(selectedChainId),
@@ -275,18 +276,20 @@ function EndBlockSection(props: {
 }) {
   const { selectedChainId } = props;
   const { backfill } = useManifestFormHelpers();
+  const { data: manifest } = useDeployment();
 
   return (
     <div className="rounded-md border p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="text-sm">End Block</div>
-          <InfoTooltip text="Backfills allow you run your Convect Function on previously missed blocks.">
+          <InfoTooltip text="Configure your handler to stop at a specific block.">
             <InfoIcon size={14} className="text-muted-foreground" />
           </InfoTooltip>
         </div>
 
         <Switch
+          disabled={!manifest?.deployment.isWaitingForApproval}
           checked={
             backfill.watchEndBlock(Number(selectedChainId)) !== undefined
           }
@@ -305,6 +308,7 @@ function EndBlockSection(props: {
 
             <div>
               <Input
+                disabled={!manifest?.deployment.isWaitingForApproval}
                 value={backfill
                   .watchEndBlock(Number(selectedChainId))
                   ?.toString()}
@@ -400,7 +404,7 @@ function TxConfigCard(props: {
   txConfig: StructuredManifest["txConfigs"][0];
   selectedChainId: number | undefined;
 }) {
-  const { data: deployment } = usePendingDeployment();
+  const { data: deployment } = useDeployment();
   const { txConfig, selectedChainId } = props;
   const helpers = useManifestFormHelpers();
 
