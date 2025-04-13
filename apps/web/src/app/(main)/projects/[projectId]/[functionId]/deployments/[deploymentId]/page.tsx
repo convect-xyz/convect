@@ -223,8 +223,8 @@ function StartBlockSection(props: {
     <div className="rounded-md border p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="text-sm">Backfill</div>
-          <InfoTooltip text="Configure your handler to start at a specific block.">
+          <div className="text-sm">Start Block</div>
+          <InfoTooltip text="Configure your handler to start at a specific block. When this toggle is not checked, it will start at the latest block.">
             <InfoIcon size={14} className="text-muted-foreground" />
           </InfoTooltip>
         </div>
@@ -283,7 +283,7 @@ function EndBlockSection(props: {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="text-sm">End Block</div>
-          <InfoTooltip text="Configure your handler to stop at a specific block.">
+          <InfoTooltip text="Configure your handler to stop at a specific block. When this value is not checked, it will follow the latest block.">
             <InfoIcon size={14} className="text-muted-foreground" />
           </InfoTooltip>
         </div>
