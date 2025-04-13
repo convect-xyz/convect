@@ -25,7 +25,17 @@ export const getTransaction = protectedProcedure
         result: z
           .object({
             successCount: z.number(),
-            status: z.enum(["SUCCESS", "FAILED"]),
+            status: z
+              .object({
+                status: z.literal("SUCCESS"),
+              })
+              .or(
+                z.object({
+                  status: z.literal("FAILED"),
+                  message: z.string(),
+                  stacktrace: z.string(),
+                }),
+              ),
           })
           .optional(),
         mostRecentAttempts: z.array(
@@ -82,7 +92,6 @@ export const getTransaction = protectedProcedure
         txConfigs: analysisSchema.ethTransaction.txConfigs,
       })
       .from(analysisSchema.ethTransaction)
-
       .where(getFilter())
       .limit(1);
 
@@ -93,6 +102,8 @@ export const getTransaction = protectedProcedure
         processedBatchId: analysisSchema.processedTransaction.processedBatchId,
         transactionHash: analysisSchema.processedTransaction.transactionHash,
         status: analysisSchema.processedTransaction.status,
+        errorMessage: analysisSchema.processedBatch.errorMessage,
+        errorStacktrace: analysisSchema.processedBatch.errorStacktrace,
       })
       .from(analysisSchema.processedTransaction)
       .where(
@@ -142,10 +153,13 @@ export const getTransaction = protectedProcedure
         batchId: processedTransactions.batchId,
         timestamp: max(processedTransactions.timestamp).as("txCountsTimestamp"),
         transactionHash: processedTransactions.transactionHash,
-        status:
-          sql<string>`CASE WHEN BOOL_AND(${processedTransactions.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
-            "status",
-          ),
+        errorMessage: processedTransactions.errorMessage,
+        errorStacktrace: processedTransactions.errorStacktrace,
+        status: sql<
+          "SUCCESS" | "FAILED"
+        >`CASE WHEN BOOL_AND(${processedTransactions.status} = 'SUCCESS') THEN 'SUCCESS' ELSE 'FAILED' END`.as(
+          "status",
+        ),
         successCount:
           sql<number>`CAST(SUM(CASE WHEN ${processedTransactions.status} = 'SUCCESS' THEN 1 ELSE 0 END) AS INT)`.as(
             "successCount",
@@ -156,6 +170,8 @@ export const getTransaction = protectedProcedure
         processedTransactions.transactionHash,
         processedTransactions.batchId,
         processedTransactions.processedBatchId,
+        processedTransactions.errorMessage,
+        processedTransactions.errorStacktrace,
       )
       .as("txCounts");
 
@@ -164,6 +180,8 @@ export const getTransaction = protectedProcedure
         transactionHash: txCounts.transactionHash,
         status: txCounts.status,
         successCount: txCounts.successCount,
+        errorMessage: txCounts.errorMessage,
+        errorStacktrace: txCounts.errorStacktrace,
       })
       .from(txCounts)
       .orderBy(
@@ -197,7 +215,16 @@ export const getTransaction = protectedProcedure
         txConfigs: tx.txConfigs ?? [],
         result: stat
           ? {
-              status: stat.status as "SUCCESS" | "FAILED",
+              status:
+                stat.status === "SUCCESS"
+                  ? {
+                      status: "SUCCESS",
+                    }
+                  : {
+                      status: "FAILED",
+                      message: stat.errorMessage ?? "",
+                      stacktrace: stat.errorStacktrace ?? "",
+                    },
               successCount: stat.successCount,
             }
           : undefined,

@@ -53,13 +53,16 @@ export function TransactionDetail(props: { transactionHash?: string }) {
         <TransactionInformation transactionHash={props.transactionHash} />
       </div>
       <div className="mt-4">
-        <ProcessedInformation transactionHash={props.transactionHash} />
+        <Handlers transactionHash={props.transactionHash} />
+      </div>
+      <div className="mt-4">
+        <ErrorInformation transactionHash={props.transactionHash} />
       </div>
     </div>
   );
 }
 
-function ProcessedInformation(props: { transactionHash: string }) {
+function Handlers(props: { transactionHash: string }) {
   const { data: transaction } = useTransaction({
     transactionHash: props.transactionHash,
   });
@@ -122,6 +125,41 @@ function ProcessedInformation(props: { transactionHash: string }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function ErrorInformation(props: { transactionHash: string }) {
+  const { data: transaction } = useTransaction({
+    transactionHash: props.transactionHash,
+  });
+  const { data: deployment } = useSelectedDeployment();
+
+  if (
+    !transaction ||
+    !deployment ||
+    transaction.transaction.result?.status.status !== "FAILED"
+  ) {
+    return null;
+  }
+
+  const status = transaction.transaction.result.status;
+  const getTxConfig = (txConfig: number) => {
+    return deployment.deployment.manifest.tx_configs[txConfig]!;
+  };
+
+  return (
+    <div className="px-4">
+      <div className="flex items-center justify-between">
+        <div>Error</div>
+
+        <InfoTooltip text="The error emmitted when processing the batch this transaction belongs to.">
+          <HelpCircleIcon size={18} />
+        </InfoTooltip>
+      </div>
+      <div className="mt-4 flex flex-col divide-y rounded-md border">
+        {status.message}
       </div>
     </div>
   );
