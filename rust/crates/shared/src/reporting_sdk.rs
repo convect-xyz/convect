@@ -27,10 +27,8 @@ pub struct ProcessedTransactionResult {
 pub enum BatchStatus {
     #[serde(rename = "SUCCESS")]
     Success,
-    #[serde(rename = "FAILURE")]
-    Failure,
     #[serde(rename = "FAILED")]
-    Failed,
+    Failed { stacktrace: String, message: String },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

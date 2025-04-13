@@ -15,7 +15,6 @@ export default async function Page(props: {
       .then((p) => p.id);
   }
 
-  console.log(firstProjectId);
   const p = new URLSearchParams(props.searchParams);
 
   return redirect(`/projects/${firstProjectId}?${p.toString()}`);
