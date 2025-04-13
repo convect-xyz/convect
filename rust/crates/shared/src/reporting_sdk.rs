@@ -24,6 +24,7 @@ pub struct ProcessedTransactionResult {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(tag = "label")]
 pub enum BatchStatus {
     #[serde(rename = "SUCCESS")]
     Success,
