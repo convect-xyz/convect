@@ -1,6 +1,6 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, gt, isNull, max, sql } from "drizzle-orm";
+import { and, desc, eq, max, sql } from "drizzle-orm";
 import { z } from "zod";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -243,43 +243,14 @@ async function getMostRecentAttempts(opts: {
   chainId: number;
   deploymentId: string;
 }) {
-  const other = analysisDb
-    .select({
-      id: analysisSchema.processedTransaction.id,
-      timestamp: analysisSchema.processedTransaction.timestamp,
-    })
-    .from(analysisSchema.processedTransaction)
-    .where(
-      and(
-        eq(
-          analysisSchema.processedTransaction.transactionHash,
-          opts.transactionHash,
-        ),
-        eq(
-          analysisSchema.processedTransaction.functionId,
-          opts.functionId.toString(),
-        ),
-        eq(analysisSchema.processedTransaction.chainId, opts.chainId),
-        eq(analysisSchema.processedTransaction.deploymentId, opts.deploymentId),
-      ),
-    )
-    .as("other");
-
   return analysisDb
-    .select({
+    .selectDistinctOn([analysisSchema.processedTransaction.handler], {
       id: analysisSchema.processedTransaction.id,
       mostRecentAttemptTimestamp: analysisSchema.processedTransaction.timestamp,
       status: analysisSchema.processedTransaction.status,
       handler: analysisSchema.processedTransaction.handler,
     })
     .from(analysisSchema.processedTransaction)
-    .leftJoin(
-      other,
-      and(
-        eq(analysisSchema.processedTransaction.id, other.id),
-        gt(analysisSchema.processedTransaction.timestamp, other.timestamp),
-      ),
-    )
     .where(
       and(
         eq(
@@ -292,7 +263,10 @@ async function getMostRecentAttempts(opts: {
         ),
         eq(analysisSchema.processedTransaction.chainId, opts.chainId),
         eq(analysisSchema.processedTransaction.deploymentId, opts.deploymentId),
-        isNull(other.id),
       ),
+    )
+    .orderBy(
+      analysisSchema.processedTransaction.handler,
+      desc(analysisSchema.processedTransaction.timestamp),
     );
 }

@@ -88,6 +88,7 @@ function Handlers(props: { transactionHash: string }) {
       <div className="mt-4 flex flex-col divide-y rounded-md border">
         {transaction.transaction.txConfigs.map((txConfigIdx) => {
           const txConfig = getTxConfig(txConfigIdx);
+          console.log(transaction.transaction.mostRecentAttempts);
           const attempt = transaction.transaction.mostRecentAttempts.find(
             (attempt) => attempt.handler === txConfigIdx.toString(),
           );
@@ -106,22 +107,23 @@ function Handlers(props: { transactionHash: string }) {
                   {txConfig?.name}
                 </div>
               </div>
-              <InfoTooltip
-                text={Intl.DateTimeFormat("en-US", {
-                  dateStyle: "full",
-                  timeStyle: "medium",
-                }).format(transaction.transaction.timestamp)}
-              >
-                <div className="text-xs text-muted-foreground underline decoration-dashed">
-                  {attempt && (
+
+              {attempt && (
+                <InfoTooltip
+                  text={Intl.DateTimeFormat("en-US", {
+                    dateStyle: "full",
+                    timeStyle: "medium",
+                  }).format(attempt.timestamp)}
+                >
+                  <div className="text-xs text-muted-foreground underline decoration-dashed">
                     <ForceRerender>
                       {formatDistanceToNow(attempt.timestamp, {
                         addSuffix: true,
                       })}
                     </ForceRerender>
-                  )}
-                </div>
-              </InfoTooltip>
+                  </div>
+                </InfoTooltip>
+              )}
             </div>
           );
         })}
@@ -145,9 +147,6 @@ function ErrorInformation(props: { transactionHash: string }) {
   }
 
   const status = transaction.transaction.result.status;
-  const getTxConfig = (txConfig: number) => {
-    return deployment.deployment.manifest.tx_configs[txConfig]!;
-  };
 
   return (
     <div className="px-4">
@@ -158,8 +157,8 @@ function ErrorInformation(props: { transactionHash: string }) {
           <HelpCircleIcon size={18} />
         </InfoTooltip>
       </div>
-      <div className="mt-4 flex flex-col divide-y rounded-md border">
-        {status.message}
+      <div className="mt-4 flex flex-col divide-y rounded-md border p-4 text-xs">
+        {status.stacktrace}
       </div>
     </div>
   );

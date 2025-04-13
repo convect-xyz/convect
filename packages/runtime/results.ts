@@ -3,6 +3,7 @@ import { handlerServerAxios } from "./axios";
 type ProcessedBatchResult = {
   batchId: string;
   messageId: string;
+  receiptHandle: string;
   timestampMs: number;
   transactions: Array<{
     transactionHash: string;
@@ -36,6 +37,7 @@ export class ResultsManager {
     opts: {
       batchId: string;
       messageId: string;
+      receiptHandle: string;
       transactions: ProcessedBatchResult["transactions"];
     } & ({ status: "SUCCESS" } | { status: "FAILED"; error: any })
   ) {
@@ -77,6 +79,7 @@ export class ResultsManager {
   addSuccess(opts: {
     batchId: string;
     messageId: string;
+    receiptHandle: string;
     transactions: ProcessedBatchResult["transactions"];
   }) {
     this._addWithStatus({
@@ -88,6 +91,7 @@ export class ResultsManager {
   fail(opts: {
     batchId: string;
     messageId: string;
+    receiptHandle: string;
     error: any;
     transactions: ProcessedBatchResult["transactions"];
   }) {
