@@ -74,7 +74,12 @@ export class ResultsManager {
     this._addWithStatus({
       ...opts,
       error: opts.error,
-      status: "FAILED",
+      status: {
+        FAILED: {
+          message: opts.error.message ?? "",
+          stacktrace: opts.error.stack ?? "",
+        },
+      },
     });
 
     console.error(opts.error);
