@@ -23,11 +23,8 @@ export const manifestSchema = z.object({
     z.object({
       chainId: z.number(),
       name: z.string(),
-      backfill: z
-        .object({
-          start_block: z.number(),
-        })
-        .optional(),
+      start_block: z.number().optional(),
+      end_block: z.number().optional(),
     })
   ),
   tx_configs: z.array(

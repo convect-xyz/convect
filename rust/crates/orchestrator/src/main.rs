@@ -134,12 +134,14 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), errors::Or
 async fn sync_chain(
     app_service: &service::AppService,
     chain_config: ChainConfig,
-    latest_block: u64,
+    incoming_block: u64,
 ) -> Result<(), errors::OrchestratorError> {
     let chain_service =
         service::ChainService::with_defaults(&app_service, chain_config.clone()).await;
 
     let chain_id = chain_service.config.chain_id;
+    let chain_config = app_service.manifest.get_chain_config(chain_id).unwrap();
+
     tracing::info!("Attempting to sync chain {:?}", chain_id);
 
     let mut sync_state = State::load(
@@ -150,27 +152,27 @@ async fn sync_chain(
         app_service.redis_client.clone(),
     )
     .await?;
+    let start_block = sync_state.next_block_to_fetch(&app_service.manifest, incoming_block);
+    let end_block = chain_config
+        .end_block
+        .map_or(incoming_block, |end_block| end_block.min(incoming_block));
 
-    if sync_state.has_synced(latest_block) || sync_state.is_batch_syncing() {
+    if sync_state.has_synced(end_block) || sync_state.is_batch_syncing() {
         tracing::info!(
           target: "orchestrator",
           is_batch_syncing=sync_state.is_batch_syncing(),
-          has_synced=sync_state.has_synced(latest_block)
+          has_synced=sync_state.has_synced(incoming_block)
         );
         return Ok(());
     }
 
-    let start_block = sync_state
-        .next_block_to_fetch(&app_service.manifest)
-        .unwrap_or(latest_block); // If there's no next block, then we'll just sync latest.
-
-    if latest_block - start_block > 10000 {
+    if incoming_block - start_block > 10000 {
         return sync_with_ecs(
             chain_id,
             &app_service.ecs_client,
             &mut sync_state,
             start_block,
-            latest_block,
+            end_block,
             &app_service.config,
         )
         .await;
@@ -181,7 +183,7 @@ async fn sync_chain(
         chain_service.transaction_enqueuer.as_ref(),
         chain_service.transaction_fetcher.as_ref(),
     )
-    .sync(&mut sync_state, start_block, latest_block)
+    .sync(&mut sync_state, start_block, end_block)
     .await?;
 
     Ok(())

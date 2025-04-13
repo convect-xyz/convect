@@ -50,7 +50,10 @@ pub struct LogConfig {
 pub struct ManifestChainConfig {
     #[serde(rename = "chainId")]
     pub chain_id: u64,
+    pub start_block: Option<u64>,
+    pub end_block: Option<u64>,
 }
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Manifest {
     pub chains: Vec<ManifestChainConfig>,
@@ -135,6 +138,10 @@ impl Manifest {
             .into_iter()
             .filter(|(tx_cfg, _)| is_tx_config_after_start(tx_cfg) && should_run_on_chain(tx_cfg))
             .collect()
+    }
+
+    pub fn get_chain_config(&self, chain_id: u64) -> Option<ManifestChainConfig> {
+        self.chains.iter().find(|c| c.chain_id == chain_id).cloned()
     }
 }
 

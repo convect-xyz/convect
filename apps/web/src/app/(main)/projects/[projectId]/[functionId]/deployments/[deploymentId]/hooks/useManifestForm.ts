@@ -25,49 +25,83 @@ export function useManifestFormContext() {
 export function useManifestFormHelpers() {
   const form = useFormContext<Manifest>();
 
+  function _findChain(chainId: number) {
+    const chainIdx = form
+      .watch()
+      .chains.findIndex((c) => c.chainId === chainId);
+
+    return {
+      chainIdx,
+      chain: form.watch().chains[chainIdx],
+    };
+  }
+
+  function _getMinContractCreationBlock(chainId: number) {
+    return form.watch().tx_configs.reduce(
+      (acc, txConfig) => {
+        const startBlock = txConfig.start_block[chainId.toString()]!;
+        if (!acc || startBlock < acc) {
+          acc = startBlock;
+        }
+        return acc;
+      },
+      null as number | null,
+    );
+  }
+
   return {
     backfill: {
-      getBackfill(chainId: number) {
-        return form.watch().chains?.find((c) => c.chainId === chainId)
-          ?.backfill;
-      },
-      setBackfill(chainId: number, value: boolean) {
-        const chainIdx = form
-          .getValues()
-          .chains.findIndex((c) => c.chainId === chainId);
-        if (chainIdx === -1) {
-          return;
-        }
+      toggleStartBlock(chainId: number) {
+        const { chain, chainIdx } = _findChain(chainId);
 
-        if (value) {
-          form.setValue(`chains.${chainIdx}.backfill`, {
-            start_block:
-              form.getValues().tx_configs.reduce(
-                (acc, txConfig) => {
-                  const startBlock = txConfig.start_block[chainId.toString()]!;
-                  if (!acc || startBlock < acc) {
-                    acc = startBlock;
-                  }
-                  return acc;
-                },
-                null as number | null,
-              ) ?? 0,
-          });
+        const currentStartBlock = chain?.start_block;
+        if (currentStartBlock === undefined) {
+          form.setValue(
+            `chains.${chainIdx}.start_block`,
+            _getMinContractCreationBlock(chainId) ?? 0,
+          );
         } else {
-          form.setValue(`chains.${chainIdx}.backfill`, undefined);
+          form.setValue(`chains.${chainIdx}.start_block`, undefined);
         }
       },
-      getStartBlock(chainId: number) {
-        return form.watch().chains?.find((c) => c.chainId === chainId)?.backfill
-          ?.start_block;
+      toggleEndBlock(chainId: number) {
+        const { chain, chainIdx } = _findChain(chainId);
+
+        const currentEndBlock = chain?.end_block;
+        if (currentEndBlock === undefined) {
+          form.setValue(
+            `chains.${chainIdx}.end_block`,
+            _getMinContractCreationBlock(chainId) ?? 0,
+          );
+        } else {
+          form.setValue(`chains.${chainIdx}.end_block`, undefined);
+        }
+      },
+      watchStartBlock(chainId: number) {
+        const { chain } = _findChain(chainId);
+        return chain?.start_block;
       },
       setStartBlock(chainId: number, value: number | string) {
+        const { chainIdx } = _findChain(chainId);
         if (typeof value === "string" && Number.isNaN(Number(value))) {
           return;
         }
-
         form.setValue(
-          `chains.${chainId}.backfill.start_block`,
+          `chains.${chainIdx}.start_block`,
+          typeof value === "string" ? Number(value) : value,
+        );
+      },
+      watchEndBlock(chainId: number) {
+        const { chain } = _findChain(chainId);
+        return chain?.end_block;
+      },
+      setEndBlock(chainId: number, value: number | string) {
+        const { chainIdx } = _findChain(chainId);
+        if (typeof value === "string" && Number.isNaN(Number(value))) {
+          return;
+        }
+        form.setValue(
+          `chains.${chainIdx}.end_block`,
           typeof value === "string" ? Number(value) : value,
         );
       },
