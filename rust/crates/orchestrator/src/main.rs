@@ -144,6 +144,14 @@ async fn sync_chain(
 
     tracing::info!("Attempting to sync chain {:?}", chain_id);
 
+    if chain_config
+        .end_block
+        .is_some_and(|end_block| incoming_block > end_block)
+    {
+        tracing::info!("Chain {chain_id} is already synced to the defined end block");
+        return Ok(());
+    }
+
     let mut sync_state = State::load(
         app_service.config.project_id.clone(),
         app_service.config.function_id.clone(),
