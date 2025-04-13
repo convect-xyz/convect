@@ -49,7 +49,15 @@ export class ResultsManager {
     result.transactions.push(
       ...opts.transactions.map((tx) => ({
         ...tx,
-        status: opts.status,
+        status:
+          opts.status === "SUCCESS"
+            ? "SUCCESS"
+            : {
+                FAILED: {
+                  message: opts.error.message ?? "",
+                  stacktrace: opts.error.stack ?? "",
+                },
+              },
       }))
     );
   }
@@ -74,12 +82,7 @@ export class ResultsManager {
     this._addWithStatus({
       ...opts,
       error: opts.error,
-      status: {
-        FAILED: {
-          message: opts.error.message ?? "",
-          stacktrace: opts.error.stack ?? "",
-        },
-      },
+      status: "FAILED",
     });
 
     console.error(opts.error);
