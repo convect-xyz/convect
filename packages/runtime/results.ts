@@ -27,7 +27,7 @@ export class ResultsManager {
 
   get failure() {
     for (const result of this.results.values()) {
-      if (result.status.label !== "FAILED") {
+      if (result.status.label === "FAILED") {
         return result;
       }
     }
