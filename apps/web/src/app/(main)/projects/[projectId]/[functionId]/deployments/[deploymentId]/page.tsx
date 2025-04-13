@@ -188,24 +188,17 @@ function ChainCard(props: {
   return (
     <div className="rounded-md border bg-muted px-4 shadow-sm">
       <div className="flex flex-col divide-y">
-        {[
-          {
-            label: "Chain",
-            value: (
-              <div className="flex items-center gap-2">
-                <ChainIcon chainId={props.chain.chainId} />
-                <div className="flex flex-col gap-2">
-                  <div>{props.chain.name}</div>
-                </div>
+        <div className="flex justify-between py-4 text-sm">
+          <span className="text-muted-foreground">Chain</span>
+          <span>
+            <div className="flex items-center gap-2">
+              <ChainIcon chainId={props.chain.chainId} />
+              <div className="flex flex-col gap-2">
+                <div>{props.chain.name}</div>
               </div>
-            ),
-          },
-        ].map(({ label, value }) => (
-          <div key={label} className="flex justify-between py-4 text-xs">
-            <span className="text-muted-foreground">{label}</span>
-            <span>{value}</span>
-          </div>
-        ))}
+            </div>
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -437,7 +430,7 @@ function TxConfigCard(props: {
               </div>
 
               <div className="flex items-center gap-1 rounded-full py-1 pl-2 text-xs">
-                <span className="text-muted-foreground">Start Block / </span>
+                <span className="text-muted-foreground">Min. Block / </span>
                 {new Intl.NumberFormat("en-US").format(startBlock!)}
               </div>
             </div>

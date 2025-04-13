@@ -14,17 +14,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { Skeleton } from "~/components/ui/skeleton";
 import { api } from "~/trpc/react";
 import { NewProjectDialog } from "./NewProject";
+
+function useFunctions() {
+  const { projectId } = useParams<{ projectId?: string }>();
+
+  return api.project.getFunctions.useQuery(
+    {
+      projectId: Number(projectId),
+    },
+    {
+      select: (data) => data.functions,
+    },
+  );
+}
+
+function useProjects() {
+  return api.project.getProjects.useQuery();
+}
 
 export function NavbarLeading() {
   const pathname = usePathname();
 
-  const { projectId, functionId } = useParams<{
-    projectId?: string;
-    functionId?: string;
-  }>();
   const isApiKeysRoute = pathname === "/account/api-keys";
   const isPendingInvitesRoute = pathname === "/account/invites";
 
@@ -50,6 +62,21 @@ export function NavbarLeading() {
     );
   }
 
+  return <ProjectsBreadcrumbs />;
+}
+
+function ProjectsBreadcrumbs() {
+  const { projectId, functionId } = useParams<{
+    projectId?: string;
+    functionId?: string;
+  }>();
+  const { data: projects } = useProjects();
+  const { data: functions } = useFunctions();
+
+  if (!projects || !functions) {
+    return <div></div>;
+  }
+
   return (
     <div className="flex items-center gap-2 px-4">
       <Link href="/projects">
@@ -68,8 +95,7 @@ export function NavbarLeading() {
 }
 
 export function ProjectsDropdown() {
-  const { data: projects, isLoading: isLoadingProjects } =
-    api.project.getProjects.useQuery();
+  const { data: projects } = api.project.getProjects.useQuery();
   const { projectId } = useParams<{ projectId?: string }>();
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const router = useRouter();
@@ -79,24 +105,21 @@ export function ProjectsDropdown() {
   return (
     <>
       <DropdownMenu>
-        {isLoadingProjects ? (
-          <Skeleton className="h-9 w-[180px]" />
-        ) : (
-          <DropdownMenuTrigger asChild className="border-none">
-            <Button
-              variant="outline"
-              className="min-w-[80px] max-w-[180px] items-center justify-between gap-2"
-            >
-              {currentProject ? (
-                <>{currentProject.name}</>
-              ) : (
-                <>Select a project</>
-              )}
+        <DropdownMenuTrigger asChild className="border-none">
+          <Button
+            variant="outline"
+            className="min-w-[80px] max-w-[180px] items-center justify-between gap-2"
+          >
+            {currentProject ? (
+              <>{currentProject.name}</>
+            ) : (
+              <>Select a project</>
+            )}
 
-              <ChevronsUpDownIcon className="h-3 w-3 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-        )}
+            <ChevronsUpDownIcon className="h-3 w-3 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+
         <DropdownMenuContent className="w-56">
           <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">
             Projects
@@ -132,39 +155,27 @@ export function FunctionsDropdown() {
     projectId: string;
     functionId?: string;
   }>();
-  const { data: functions, isLoading: isLoadingProjects } =
-    api.project.getFunctions.useQuery(
-      {
-        projectId: Number(projectId),
-      },
-      {
-        select: (data) => data.functions,
-      },
-    );
+  const { data: functions, isLoading: isLoadingProjects } = useFunctions();
   const router = useRouter();
   const currentProject = functions?.find((p) => functionId === p.id.toString());
 
   return (
     <>
       <DropdownMenu>
-        {isLoadingProjects ? (
-          <Skeleton className="h-9 w-[180px]" />
-        ) : (
-          <DropdownMenuTrigger asChild className="border-none">
-            <Button
-              variant="outline"
-              className="min-w-[80px] max-w-[180px] items-center justify-between gap-2"
-            >
-              {currentProject ? (
-                <>{currentProject.name}</>
-              ) : (
-                <>Select a Function</>
-              )}
+        <DropdownMenuTrigger asChild className="border-none">
+          <Button
+            variant="outline"
+            className="min-w-[80px] max-w-[180px] items-center justify-between gap-2"
+          >
+            {currentProject ? (
+              <>{currentProject.name}</>
+            ) : (
+              <>Select a Function</>
+            )}
 
-              <ChevronsUpDownIcon className="h-3 w-3 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-        )}
+            <ChevronsUpDownIcon className="h-3 w-3 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56">
           <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">
             Functions
@@ -186,8 +197,4 @@ export function FunctionsDropdown() {
       </DropdownMenu>
     </>
   );
-}
-
-export function ProjectsDropdownSkeletion() {
-  return <Skeleton className="h-9 w-[180px]" />;
 }
