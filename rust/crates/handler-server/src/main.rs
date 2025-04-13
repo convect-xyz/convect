@@ -94,7 +94,7 @@ mod results {
         let failed_batch: Option<ProcessedBatchResult> = payload
             .results
             .iter()
-            .find(|v| v.status.eq(&reporting_sdk::BatchStatus::Failed))
+            .find(|v| matches!(v.status, reporting_sdk::BatchStatus::Failed { .. }))
             .map(|v| v.clone());
 
         let reporting_request = reporting_sdk::Report::Results {
