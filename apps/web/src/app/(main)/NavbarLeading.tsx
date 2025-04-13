@@ -73,7 +73,7 @@ function ProjectsBreadcrumbs() {
   const { data: projects } = useProjects();
   const { data: functions } = useFunctions();
 
-  if (!projects || !functions) {
+  if ((projectId && !projects) || (functionId && !functions)) {
     return <div></div>;
   }
 
