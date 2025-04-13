@@ -326,7 +326,7 @@ function TransactionConfigsSection(props: {
     <div className="mt-2 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground">
             Transaction Configurations
           </div>
           <InfoTooltip text="A transaction is only processed by a configuration if it contains logs that match all the event signatures.">
