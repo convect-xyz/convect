@@ -55,10 +55,17 @@ impl State {
         })
     }
 
-    pub fn next_block_to_fetch(&self, manifest: &Manifest) -> Option<u64> {
-        self.last_fetched_block()
-            .map(|l| l + 1)
-            .or(manifest.min_block(self.chain_id()))
+    pub fn next_block_to_fetch(&self, manifest: &Manifest, latest_block: u64) -> u64 {
+        let chain_id = self.chain_id();
+        let chain_config = manifest.get_chain_config(chain_id).unwrap();
+
+        let default_block = chain_config.start_block.unwrap_or(latest_block);
+
+        self.last_fetched_block().map(|l| l + 1).unwrap_or(
+            manifest
+                .min_block(chain_id)
+                .map_or(latest_block, |min_block| min_block.max(default_block)),
+        )
     }
 
     pub fn has_synced(&self, incoming_block: u64) -> bool {
