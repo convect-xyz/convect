@@ -30,7 +30,7 @@ export const manifestSchema = z.object({
   tx_configs: z.array(
     z.object({
       name: z.string().default("default"),
-      start_block: z.record(z.number()),
+      start_block: z.record(z.number()).default({}),
       chains: z.array(z.number()).optional(),
     })
   ),

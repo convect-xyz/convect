@@ -97,10 +97,6 @@ function RenderTransactionConfigs(props: {
     (txConfig) =>
       !txConfig.chains || txConfig.chains.includes(Number(selectedChainId)),
   );
-  const ignoredTxConfigs = structuredManifest.txConfigs.filter(
-    (txConfig) =>
-      txConfig.chains && !txConfig.chains.includes(Number(selectedChainId)),
-  );
   return (
     <div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-2">
@@ -113,22 +109,6 @@ function RenderTransactionConfigs(props: {
             }
           />
         ))}
-        {ignoredTxConfigs.length > 0 && (
-          <div className="mt-4 flex flex-col gap-2">
-            <div className="text-sm text-muted-foreground">Ignored</div>
-            <div className="opacity-50">
-              {ignoredTxConfigs.map((txConfig) => (
-                <TxConfigCard
-                  key={txConfig.name}
-                  txConfig={txConfig}
-                  selectedChainId={
-                    selectedChainId ? Number(selectedChainId) : undefined
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

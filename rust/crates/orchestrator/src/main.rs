@@ -144,14 +144,6 @@ async fn sync_chain(
 
     tracing::info!("Attempting to sync chain {:?}", chain_id);
 
-    if chain_config
-        .end_block
-        .is_some_and(|end_block| incoming_block > end_block)
-    {
-        tracing::info!("Chain {chain_id} is already synced to the defined end block");
-        return Ok(());
-    }
-
     let mut sync_state = State::load(
         app_service.config.project_id.clone(),
         app_service.config.function_id.clone(),
@@ -161,6 +153,14 @@ async fn sync_chain(
     )
     .await?;
     let start_block = sync_state.next_block_to_fetch(&app_service.manifest, incoming_block);
+    if chain_config
+        .end_block
+        .is_some_and(|chain_end_block| start_block > chain_end_block)
+    {
+        tracing::info!("Chain {chain_id} is already synced to the chains defined end block");
+        return Ok(());
+    }
+
     let end_block = chain_config
         .end_block
         .map_or(incoming_block, |end_block| end_block.min(incoming_block));
