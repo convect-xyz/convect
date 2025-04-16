@@ -274,9 +274,7 @@ async fn get_task_override(
                     create_key_value_pair("MANIFEST_BUCKET", &config.manifest_bucket),
                     create_key_value_pair("MANIFEST_PREFIX", &config.manifest_prefix),
                     create_key_value_pair("DEPLOYMENT_ID", &config.deployment_id),
-                    create_key_value_pair("DATABASE_URL", &shared_config.reporting.db_url),
                     create_key_value_pair("PROJECT_ID", &config.project_id),
-                    create_key_value_pair("CONFIG__REDIS__URL", &shared_config.redis.url),
                 ]))
                 .build(),
         )
