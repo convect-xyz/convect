@@ -54,6 +54,7 @@ pub struct Metric {
     pub max_memory_used_mb: u64,
     pub init_duration_ms: Option<f64>,
     pub restore_duration_ms: Option<f64>,
+    pub request_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

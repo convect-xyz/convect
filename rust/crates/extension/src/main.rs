@@ -79,7 +79,7 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
             }
             LambdaTelemetryRecord::PlatformReport {
                 metrics,
-                request_id: _,
+                request_id,
                 status: _,
                 error_type: _,
                 spans: _,
@@ -91,6 +91,7 @@ async fn telemetry(events: Vec<LambdaTelemetry>) -> Result<(), Error> {
                 max_memory_used_mb: metrics.max_memory_used_mb,
                 init_duration_ms: metrics.init_duration_ms,
                 restore_duration_ms: metrics.restore_duration_ms,
+                request_id,
             }),
             _ => (),
         }

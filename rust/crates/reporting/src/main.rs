@@ -1,8 +1,9 @@
-use std::env;
+use std::{collections::HashSet, env};
 
 use aws_config::BehaviorVersion;
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
+use config::Config;
 use diesel_async::RunQueryDsl;
 use futures::{future::join_all, join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
@@ -13,6 +14,8 @@ use shared::{
     reporting_sdk,
     telemetry::{ProcessedTransactionTelemetry, StripeProcessedTransactionTelemetry},
 };
+
+mod config;
 
 #[derive(Debug)]
 enum ExtractedRequest {
@@ -41,8 +44,9 @@ fn main() -> Result<(), Error> {
 }
 
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
-    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    let s3_client = aws_sdk_s3::Client::new(&config);
+    let config = Config::new();
+    let s3_client =
+        aws_sdk_s3::Client::new(&aws_config::load_defaults(BehaviorVersion::latest()).await);
 
     let pool = establish_connection_pool().await;
     let telemetry = StripeProcessedTransactionTelemetry::new();
@@ -128,7 +132,6 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     transactions_result.unwrap();
     metrics_result.unwrap();
 
-    let customer_id = env::var("STRIPE_CUSTOMER_ID").unwrap();
     join_all(
         reports
             .iter()
@@ -137,12 +140,22 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
                     invocation_id,
                     results,
                     ..
-                } => Some(telemetry.record_invocation(
-                    customer_id.clone(),
-                    invocation_id.clone(),
-                    results.iter().map(|r| r.transactions.len() as u64).sum(),
-                )),
-                reporting_sdk::Report::Metrics { .. } => None,
+                } => {
+                    Some(telemetry.record_invocation(
+                        config.stripe_customer_id.clone(),
+                        invocation_id.clone(),
+                    ))
+                }
+                reporting_sdk::Report::Metrics { metrics, .. } => Some(
+                    telemetry.record_mb_secs(
+                        config.stripe_customer_id.clone(),
+                        invocation_id,
+                        metrics
+                            .iter()
+                            .map(|m| m.memory_size_mb * m.billed_duration_ms)
+                            .sum(),
+                    ),
+                ),
             })
             .filter(Option::is_some)
             .map(Option::unwrap)
