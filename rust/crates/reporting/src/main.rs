@@ -245,7 +245,7 @@ fn extract_transactions(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
                     handler_id: function_id.clone(),
                     handler_version: chain_id.clone(),
                     deployment_id: deployment_id.clone(),
-                    project_id,
+                    project_id: project_id.clone(),
                 }))
             }
         }
