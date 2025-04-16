@@ -137,16 +137,11 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
                     invocation_id,
                     results,
                     ..
-                } => Some(
-                    telemetry.record_invocation(
-                        customer_id.clone(),
-                        invocation_id.clone(),
-                        results
-                            .iter()
-                            .flat_map(|r| r.transactions.len() as u64)
-                            .sum(),
-                    ),
-                ),
+                } => Some(telemetry.record_invocation(
+                    customer_id.clone(),
+                    invocation_id.clone(),
+                    results.iter().map(|r| r.transactions.len() as u64).sum(),
+                )),
                 reporting_sdk::Report::Metrics { .. } => None,
             })
             .filter(Option::is_some)
