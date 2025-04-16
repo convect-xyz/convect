@@ -147,8 +147,6 @@ export default async () => {
             })
           )
         ),
-        DATABASE_URL: env.REPORTING_DB_URL,
-        CONFIG__REDIS__URL: env.CONFIG__REDIS__URL,
       },
     },
     timeout: 200,
