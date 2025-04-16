@@ -6,7 +6,7 @@ use futures::{future::join_all, join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
     connection::establish_connection_pool,
-    models::{Invocation, Metric, ProcessedBatch, ProcessedTransaction},
+    analytics_models::{Invocation, Metric, ProcessedBatch, ProcessedTransaction},
     reporting_sdk,
     schema::{invocation, processed_batch, processed_transaction, reported_metrics},
 };

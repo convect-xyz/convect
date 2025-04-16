@@ -1,8 +1,8 @@
 use std::env;
 
+use crate::analytics_models;
 use crate::connection::DbPool;
 use crate::manifest::Manifest;
-use crate::models;
 use crate::schema::{batch, eth_transaction};
 use crate::syncing::State;
 use crate::types::batch::{IngestBatch, IngestBatchTransaction};
@@ -178,7 +178,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         let chain_id = state.chain_id();
 
         diesel::insert_into(batch::table)
-            .values(models::Batch {
+            .values(analytics_models::Batch {
                 batch_id: batch_id.clone(),
                 function_id: function_id.clone(),
                 deployment_id: deployment_id.clone(),
@@ -192,7 +192,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         let futures = chunked_txs.into_iter().map(|txs| {
             diesel::insert_into(eth_transaction::table)
                 .values(
-                    txs.map(|tx| models::EthTransaction {
+                    txs.map(|tx| analytics_models::EthTransaction {
                         project_id: state.project_id(),
                         batch_id: batch_id.clone(),
                         transaction_hash: tx.transaction.transaction_hash.clone(),

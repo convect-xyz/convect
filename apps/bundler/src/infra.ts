@@ -25,6 +25,32 @@ export default async () => {
   const txQueueUrls: Array<pulumi.Output<string>> = [];
   const manifest = parseManifest(current.deployment.manifest);
 
+  const reportingQueue = new aws.sqs.Queue(
+    `reporting-queue`,
+    {
+      visibilityTimeoutSeconds: 300,
+    },
+    {
+      deleteBeforeReplace: false,
+    }
+  );
+
+  const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
+    role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+    s3Bucket: "ingest-functions",
+    s3Key: pulumi.interpolate`reporting/${githubSha}.zip`,
+    timeout: 300,
+    memorySize: 512,
+    handler: "bootstrap",
+    packageType: "Zip",
+    runtime: "provided.al2023",
+  });
+
+  new aws.lambda.EventSourceMapping("reporing-handler-source-mapping", {
+    eventSourceArn: reportingQueue.arn,
+    functionName: reportingHandler.arn,
+  });
+
   for (const chain of manifest.chains) {
     const queue = new aws.sqs.Queue(
       `tx-queue-${chain.chainId}-${current.deployment.id}`,
@@ -63,7 +89,7 @@ export default async () => {
           ),
           TRANSACTION_QUEUE_URL: queue.url,
           PROJECT_ID: current.deployment.function.projectId.toString(),
-          REPORTING_QUEUE_URL: stackRef.getOutput("reportingQueueUrl"),
+          REPORTING_QUEUE_URL: reportingQueue.url,
           DEPLOYMENT_ID: current.deployment.id,
           FUNCTION_ID: current.deployment.functionId.toString(),
         },

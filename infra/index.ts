@@ -6,32 +6,6 @@ export = async () => {
   const stackName = pulumi.getStack();
   const GITHUB_SHA = process.env.GITHUB_SHA!;
 
-  const reportingQueue = new aws.sqs.Queue(
-    `reporting-queue`,
-    {
-      visibilityTimeoutSeconds: 300,
-    },
-    {
-      deleteBeforeReplace: false,
-    }
-  );
-
-  const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
-    role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-    s3Bucket: "ingest-functions",
-    s3Key: `reporting/${GITHUB_SHA}.zip`,
-    timeout: 300,
-    memorySize: 512,
-    handler: "bootstrap",
-    packageType: "Zip",
-    runtime: "provided.al2023",
-  });
-
-  new aws.lambda.EventSourceMapping("reporing-handler-source-mapping", {
-    eventSourceArn: reportingQueue.arn,
-    functionName: reportingHandler.arn,
-  });
-
   const extension = new aws.lambda.LayerVersion("handler_extension", {
     layerName: `${stackName}_handler_extension`,
     compatibleArchitectures: ["x86_64"],
@@ -183,8 +157,6 @@ export = async () => {
     handlerServerArn: handler_server.arn,
     builderTaskDefinition: builder.arn,
     syncerTaskDefinition: syncer.arn,
-    reportingHandlerArn: reportingHandler.arn,
-    reportingQueueUrl: reportingQueue.url,
     githubSha: pulumi.output(GITHUB_SHA),
   };
 };

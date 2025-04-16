@@ -9,7 +9,7 @@ pub mod fetcher;
 pub mod macros;
 pub mod manifest;
 #[cfg(feature = "pg")]
-pub mod models;
+pub mod analytics_models;
 pub mod networks;
 pub mod processing;
 pub mod redis_client;
