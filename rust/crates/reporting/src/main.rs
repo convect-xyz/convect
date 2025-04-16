@@ -143,8 +143,8 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
                         invocation_id.clone(),
                         results
                             .iter()
-                            .flat_map(|r| r.transactions.len())
-                            .sum::<usize>() as u64,
+                            .flat_map(|r| r.transactions.len() as u64)
+                            .sum(),
                     ),
                 ),
                 reporting_sdk::Report::Metrics { .. } => None,
