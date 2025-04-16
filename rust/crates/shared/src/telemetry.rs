@@ -1,6 +1,8 @@
 use aws_sdk_s3::error::BoxError;
 use futures::Future;
-use std::{collections::HashMap, env};
+use std::collections::HashMap;
+
+use crate::configuration::RefreshingEnvironmentConfig;
 
 pub trait ProcessedTransactionTelemetry {
     fn record_invocation(
@@ -31,6 +33,8 @@ impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
         num_processed: u64,
     ) -> Result<(), BoxError> {
         let num_processed_as_string = num_processed.to_string();
+        let shared_config = RefreshingEnvironmentConfig::new().await.get_config().await;
+
         let mut form_data = HashMap::new();
         form_data.insert("event_name", "transactions_processed");
         form_data.insert("payload[transactions]", &num_processed_as_string);
@@ -41,10 +45,7 @@ impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
             .client
             .post("https://api.stripe.com/v1/billing/meter_events")
             .form(&form_data)
-            .basic_auth(
-                env::var("STRIPE_API_KEY").expect("STRIPE_API_KEY not set"),
-                None::<String>,
-            )
+            .basic_auth(shared_config.stripe.api_key, None::<String>)
             .send()
             .await?;
 

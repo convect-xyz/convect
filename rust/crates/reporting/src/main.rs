@@ -1,3 +1,5 @@
+use std::env;
+
 use aws_config::BehaviorVersion;
 use aws_lambda_events::event::sqs::SqsEvent;
 use chrono::{DateTime, Utc};
@@ -5,10 +7,11 @@ use diesel_async::RunQueryDsl;
 use futures::{future::join_all, join};
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use shared::{
-    connection::establish_connection_pool,
     analytics_models::{Invocation, Metric, ProcessedBatch, ProcessedTransaction},
+    analytics_schema::{invocation, processed_batch, processed_transaction, reported_metrics},
+    connection::establish_connection_pool,
     reporting_sdk,
-    schema::{invocation, processed_batch, processed_transaction, reported_metrics},
+    telemetry::{ProcessedTransactionTelemetry, StripeProcessedTransactionTelemetry},
 };
 
 #[derive(Debug)]
@@ -42,6 +45,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     let s3_client = aws_sdk_s3::Client::new(&config);
 
     let pool = establish_connection_pool().await;
+    let telemetry = StripeProcessedTransactionTelemetry::new();
 
     let stored_reports: Vec<reporting_sdk::StoredReport> = event
         .payload
@@ -60,13 +64,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     .into_iter()
     .collect::<Result<Vec<_>, _>>()?;
 
-    let extracted: Vec<_> = reports
-        .into_iter()
-        .map(extract_transactions)
-        .flatten()
-        .collect();
-
-    println!("Extracted: {:?}", extracted);
+    let extracted: Vec<_> = reports.iter().map(extract_transactions).flatten().collect();
 
     let invocations: Vec<_> = extracted
         .iter()
@@ -130,6 +128,28 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     transactions_result.unwrap();
     metrics_result.unwrap();
 
+    let customer_id = env::var("STRIPE_CUSTOMER_ID").unwrap();
+    join_all(
+        reports
+            .iter()
+            .map(|f| match f {
+                reporting_sdk::Report::Results {
+                    invocation_id,
+                    results,
+                    ..
+                } => Some(telemetry.record_invocation(
+                    customer_id.clone(),
+                    invocation_id.clone(),
+                    results.len() as u64,
+                )),
+                reporting_sdk::Report::Metrics { .. } => None,
+            })
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .collect::<Vec<_>>(),
+    )
+    .await;
+
     join_all(
         stored_reports
             .iter()
@@ -140,7 +160,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     Ok(())
 }
 
-fn extract_transactions(r: reporting_sdk::Report) -> Vec<ExtractedRequest> {
+fn extract_transactions(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
     let mut rows = Vec::new();
 
     match r {

@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 
 #[derive(Insertable, Debug)]
-#[diesel(table_name = crate::schema::invocation)]
+#[diesel(table_name = crate::analytics_schema::invocation)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Invocation {
     pub project_id: i32,
@@ -13,7 +13,7 @@ pub struct Invocation {
 }
 
 #[derive(Insertable, Debug)]
-#[diesel(table_name = crate::schema::reported_metrics)]
+#[diesel(table_name = crate::analytics_schema::reported_metrics)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Metric {
     pub project_id: i32,
@@ -29,7 +29,7 @@ pub struct Metric {
 }
 
 #[derive(Insertable, Debug)]
-#[diesel(table_name = crate::schema::batch)]
+#[diesel(table_name = crate::analytics_schema::batch)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Batch {
     pub timestamp_ms: DateTime<Utc>,
@@ -40,7 +40,7 @@ pub struct Batch {
 }
 
 #[derive(Insertable, Debug)]
-#[diesel(table_name = crate::schema::eth_transaction)]
+#[diesel(table_name = crate::analytics_schema::eth_transaction)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct EthTransaction {
     pub batch_id: String,
@@ -55,7 +55,7 @@ pub struct EthTransaction {
 }
 
 #[derive(Insertable, Debug)]
-#[diesel(table_name = crate::schema::processed_batch)]
+#[diesel(table_name = crate::analytics_schema::processed_batch)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct ProcessedBatch {
     pub id: String,
@@ -70,7 +70,7 @@ pub struct ProcessedBatch {
 }
 
 #[derive(Insertable, Debug)]
-#[diesel(table_name = crate::schema::processed_transaction)]
+#[diesel(table_name = crate::analytics_schema::processed_transaction)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct ProcessedTransaction {
     pub transaction_hash: String,

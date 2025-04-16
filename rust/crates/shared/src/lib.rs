@@ -1,3 +1,7 @@
+#[cfg(feature = "pg")]
+pub mod analytics_models;
+#[cfg(feature = "pg")]
+pub mod analytics_schema;
 pub mod configuration;
 #[cfg(feature = "pg")]
 pub mod connection;
@@ -8,8 +12,6 @@ pub mod events;
 pub mod fetcher;
 pub mod macros;
 pub mod manifest;
-#[cfg(feature = "pg")]
-pub mod analytics_models;
 pub mod networks;
 pub mod processing;
 pub mod redis_client;
@@ -17,8 +19,6 @@ pub mod redis_client;
 pub mod reporting_sdk;
 pub mod resend;
 pub mod s3;
-#[cfg(feature = "pg")]
-pub mod schema;
 pub mod sns;
 pub mod syncer;
 pub mod syncing;

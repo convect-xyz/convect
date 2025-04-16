@@ -21,6 +21,12 @@ pub struct Redis {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct Stripe {
+    #[serde(rename = "apiKey")]
+    pub api_key: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Reporting {
     #[serde(rename = "dbUrl")]
     pub db_url: String,
@@ -49,6 +55,7 @@ pub struct SupportedNetwork {
 #[derive(Debug, Deserialize, Clone)]
 pub struct EnvironmentConfig {
     pub redis: Redis,
+    pub stripe: Stripe,
     pub reporting: Reporting,
     pub chains: Vec<SupportedNetwork>,
 }

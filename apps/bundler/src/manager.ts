@@ -7,6 +7,9 @@ import { env } from "./env";
 type Deployment = InferSelectModel<typeof schema.deployment> & {
   function: InferSelectModel<typeof schema.convectFunctions> & {
     envs: Array<InferSelectModel<typeof schema.functionEnv>>;
+    project: InferSelectModel<typeof schema.projects> & {
+      user: InferSelectModel<typeof schema.users>;
+    };
   };
 };
 
@@ -24,6 +27,11 @@ async function getPendingDeployment(deploymentId: string) {
       function: {
         with: {
           envs: true,
+          project: {
+            with: {
+              user: true,
+            },
+          },
         },
       },
     },
@@ -70,6 +78,11 @@ export class DeploymentManager {
           function: {
             with: {
               envs: true,
+              project: {
+                with: {
+                  user: true,
+                },
+              },
             },
           },
         },
@@ -133,6 +146,11 @@ class DeploymentTask {
           function: {
             with: {
               envs: true,
+              project: {
+                with: {
+                  user: true,
+                },
+              },
             },
           },
         },
