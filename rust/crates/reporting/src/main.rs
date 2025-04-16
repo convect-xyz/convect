@@ -207,7 +207,7 @@ fn extract_transactions(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
                     },
                 }));
 
-                for tx in result.transactions.into_iter() {
+                for tx in result.transactions.clone() {
                     rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
                         function_id: function_id.clone(),
                         deployment_id: deployment_id.clone(),
