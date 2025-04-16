@@ -174,7 +174,7 @@ fn extract_transactions(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
             ..
         } => {
             rows.push(ExtractedRequest::Invocation(Invocation {
-                project_id,
+                project_id: project_id.clone(),
                 invocation_id: invocation_id.clone(),
                 timestamp: Utc::now(),
                 num_processed: results.len().try_into().unwrap(),
