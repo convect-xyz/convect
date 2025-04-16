@@ -9,7 +9,13 @@ pub trait ProcessedTransactionTelemetry {
         &self,
         customer_id: String,
         invocation_id: String,
-        num_processed: u64,
+    ) -> impl Future<Output = Result<(), BoxError>>;
+
+    fn record_mb_secs(
+        &self,
+        customer_id: String,
+        invocation_id: String,
+        mb_secs: u64,
     ) -> impl Future<Output = Result<(), BoxError>>;
 }
 
@@ -23,6 +29,35 @@ impl StripeProcessedTransactionTelemetry {
             client: reqwest::Client::new(),
         }
     }
+
+    async fn record_event(
+        &self,
+        customer_id: &str,
+        event_name: &str,
+        meter_name: &str,
+        meter_value: u64,
+        identifier: &str,
+    ) -> Result<(), BoxError> {
+        let shared_config = RefreshingEnvironmentConfig::new().await.get_config().await;
+
+        let meter_key = format!("payload[{}]", meter_name);
+        let meter_value = meter_value.to_string();
+
+        let mut form_data = HashMap::new();
+        form_data.insert("event_name", event_name);
+        form_data.insert(&meter_key, &meter_value);
+        form_data.insert("payload[stripe_customer_id]", customer_id);
+        form_data.insert("identifier", identifier);
+
+        self.client
+            .post("https://api.stripe.com/v1/billing/meter_events")
+            .form(&form_data)
+            .basic_auth(shared_config.stripe.api_key.clone(), None::<String>)
+            .send()
+            .await?;
+
+        Ok(())
+    }
 }
 
 impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
@@ -30,26 +65,33 @@ impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
         &self,
         customer_id: String,
         invocation_id: String,
-        num_processed: u64,
     ) -> Result<(), BoxError> {
-        let num_processed_as_string = num_processed.to_string();
-        let shared_config = RefreshingEnvironmentConfig::new().await.get_config().await;
+        self.record_event(
+            &customer_id,
+            "invocations",
+            "invocations",
+            1,
+            &invocation_id,
+        )
+        .await?;
 
-        let mut form_data = HashMap::new();
-        form_data.insert("event_name", "transactions_processed");
-        form_data.insert("payload[transactions]", &num_processed_as_string);
-        form_data.insert("payload[stripe_customer_id]", &customer_id);
-        form_data.insert("identifier", &invocation_id);
+        Ok(())
+    }
 
-        let r = self
-            .client
-            .post("https://api.stripe.com/v1/billing/meter_events")
-            .form(&form_data)
-            .basic_auth(shared_config.stripe.api_key, None::<String>)
-            .send()
-            .await?;
-
-        println!("{:?}", r.text().await.unwrap());
+    async fn record_mb_secs(
+        &self,
+        customer_id: String,
+        invocation_id: String,
+        mb_secs: u64,
+    ) -> Result<(), BoxError> {
+        self.record_event(
+            &customer_id,
+            "mb_seconds",
+            "mb_seconds",
+            mb_secs,
+            &invocation_id,
+        )
+        .await?;
 
         Ok(())
     }
