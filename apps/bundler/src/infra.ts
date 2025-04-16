@@ -44,6 +44,12 @@ export default async () => {
     handler: "bootstrap",
     packageType: "Zip",
     runtime: "provided.al2023",
+    environment: {
+      variables: {
+        STRIPE_CUSTOMER_ID:
+          current.deployment.function.project.stripeCustomerId!,
+      },
+    },
   });
 
   new aws.lambda.EventSourceMapping("reporing-handler-source-mapping", {

@@ -5,9 +5,6 @@
 file = "crates/shared/src/analytics_schema.rs"
 custom_type_derives = ["diesel::query_builder::QueryId"]
 
-# [print_schema]
-# file = "crates/shared/src/application_schema.rs"
-# custom_type_derives = ["diesel::query_builder::QueryId"]
 
 [migrations_directory]
 dir = "migrations"

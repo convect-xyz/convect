@@ -1,9 +1,9 @@
 use std::env;
 
 use crate::analytics_models;
+use crate::analytics_schema::{batch, eth_transaction};
 use crate::connection::DbPool;
 use crate::manifest::Manifest;
-use crate::schema::{batch, eth_transaction};
 use crate::syncing::State;
 use crate::types::batch::{IngestBatch, IngestBatchTransaction};
 use crate::{connection::establish_connection_pool, s3::S3};
