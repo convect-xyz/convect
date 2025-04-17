@@ -9,6 +9,7 @@ use shared::{
     redis_client::RedisClientImpl,
     syncer::ChainSyncer,
     syncing::State,
+    telemetry::StripeProcessedTransactionTelemetry,
 };
 use std::{error::Error, sync::Arc};
 
