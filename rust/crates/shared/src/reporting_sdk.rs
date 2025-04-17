@@ -3,6 +3,7 @@ use std::{env, sync::Arc};
 use crate::s3::S3;
 use async_trait::async_trait;
 use aws_config::BehaviorVersion;
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -115,6 +116,21 @@ impl<S: S3> StoredReportService<S> {
             .await?;
 
         Ok(serde_json::from_str(&body)?)
+    }
+
+    pub async fn get_reports(
+        &self,
+        stored_reports: &Vec<StoredReport>,
+    ) -> Result<Vec<Report>, errors::GetReportError> {
+        Ok(join_all(
+            stored_reports
+                .iter()
+                .map(|stored_report| self.get_report(stored_report))
+                .collect::<Vec<_>>(),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?)
     }
 
     pub async fn store_report(

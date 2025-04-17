@@ -18,11 +18,11 @@ use shared::{
 mod config;
 
 #[derive(Debug)]
-enum ExtractedRequest {
-    Transaction(ProcessedTransaction),
-    Batch(ProcessedBatch),
-    Metric(Metric),
-    Invocation(Invocation),
+struct ExtractedRequest {
+    transactions: Vec<ProcessedTransaction>,
+    batches: Vec<ProcessedBatch>,
+    metrics: Vec<(String, Metric)>,
+    invocations: Vec<Invocation>,
 }
 
 fn main() -> Result<(), Error> {
@@ -59,71 +59,35 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .collect();
 
     let stored_report_service = reporting_sdk::StoredReportService::new(s3_client);
-    let reports = join_all(
-        stored_reports
-            .iter()
-            .map(|stored_report| stored_report_service.get_report(stored_report)),
-    )
-    .await
-    .into_iter()
-    .collect::<Result<Vec<_>, _>>()?;
+    let reports: Vec<reporting_sdk::Report> =
+        stored_report_service.get_reports(&stored_reports).await?;
 
-    let extracted: Vec<_> = reports.iter().map(extract_transactions).flatten().collect();
-
-    let invocations: Vec<_> = extracted
-        .iter()
-        .map(|r| match r {
-            ExtractedRequest::Invocation(i) => Some(i),
-            _ => None,
-        })
-        .filter(Option::is_some)
-        .map(Option::unwrap)
-        .collect();
-
-    let transactions: Vec<_> = extracted
-        .iter()
-        .map(|r| match r {
-            ExtractedRequest::Transaction(t) => Some(t),
-            _ => None,
-        })
-        .filter(Option::is_some)
-        .map(Option::unwrap)
-        .collect();
-
-    let metrics: Vec<_> = extracted
-        .iter()
-        .map(|r| match r {
-            ExtractedRequest::Metric(m) => Some(m),
-            _ => None,
-        })
-        .filter(Option::is_some)
-        .map(Option::unwrap)
-        .collect();
-
-    let batches: Vec<_> = extracted
-        .iter()
-        .map(|r| match r {
-            ExtractedRequest::Batch(b) => Some(b),
-            _ => None,
-        })
-        .filter(Option::is_some)
-        .map(Option::unwrap)
-        .collect();
+    let extracted: Vec<_> = reports.iter().map(extract_request).flatten().collect();
 
     let conn = &mut pool.get().await?;
 
     let (invocations_result, processed_batch_result, transactions_result, metrics_result) = join!(
         diesel::insert_into(invocation::table)
-            .values(invocations)
+            .values(
+                extracted
+                    .iter()
+                    .flat_map(|f| f.invocations)
+                    .collect::<Vec<_>>()
+            )
             .execute(conn),
         diesel::insert_into(processed_batch::table)
-            .values(batches)
+            .values(extracted.iter().flat_map(|f| f.batches).collect::<Vec<_>>())
             .execute(conn),
         diesel::insert_into(processed_transaction::table)
-            .values(transactions)
+            .values(
+                extracted
+                    .iter()
+                    .flat_map(|f| f.transactions)
+                    .collect::<Vec<_>>()
+            )
             .execute(conn),
         diesel::insert_into(reported_metrics::table)
-            .values(metrics)
+            .values(extracted.iter().flat_map(|f| f.metrics).collect::<Vec<_>>())
             .execute(conn)
     );
 
@@ -131,37 +95,39 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     processed_batch_result.unwrap();
     transactions_result.unwrap();
     metrics_result.unwrap();
-
+    match f {
+        reporting_sdk::Report::Results {
+            invocation_id,
+            results,
+            ..
+        } => telemetry.record_invocation(config.stripe_customer_id.clone(), invocation_id.clone()),
+        reporting_sdk::Report::Metrics { metrics, .. } => telemetry.record_mb_secs(
+            config.stripe_customer_id.clone(),
+            invocation_id,
+            metrics
+                .iter()
+                .map(|m| m.memory_size_mb * m.billed_duration_ms)
+                .sum(),
+        ),
+    }
     join_all(
-        reports
+        extracted
             .iter()
-            .map(|f| match f {
-                reporting_sdk::Report::Results {
-                    invocation_id,
-                    results,
-                    ..
-                } => {
-                    Some(telemetry.record_invocation(
-                        config.stripe_customer_id.clone(),
-                        invocation_id.clone(),
-                    ))
-                }
-                reporting_sdk::Report::Metrics { metrics, .. } => Some(
-                    telemetry.record_mb_secs(
-                        config.stripe_customer_id.clone(),
-                        invocation_id,
-                        metrics
-                            .iter()
-                            .map(|m| m.memory_size_mb * m.billed_duration_ms)
-                            .sum(),
-                    ),
-                ),
+            .flat_map(|r| r.invocations)
+            .map(|i| {
+                telemetry.record_invocation(config.stripe_customer_id.clone(), i.invocation_id)
             })
-            .filter(Option::is_some)
-            .map(Option::unwrap)
             .collect::<Vec<_>>(),
     )
     .await;
+
+    join_all(extracted.iter().flat_map(|r| r.metrics).map(|m| {
+        telemetry.record_mb_secs(
+            config.stripe_customer_id.clone(),
+            m.0,
+            m.1.billed_duration_ms * m.1.memory_size_mb,
+        )
+    }));
 
     join_all(
         stored_reports
@@ -173,8 +139,13 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     Ok(())
 }
 
-fn extract_transactions(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
-    let mut rows = Vec::new();
+fn extract_request(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
+    let mut rows = ExtractedRequest {
+        transactions: Vec::new(),
+        batches: Vec::new(),
+        metrics: Vec::new(),
+        invocations: Vec::new(),
+    };
 
     match r {
         reporting_sdk::Report::Results {
@@ -186,17 +157,24 @@ fn extract_transactions(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
             deployment_id,
             ..
         } => {
-            rows.push(ExtractedRequest::Invocation(Invocation {
+            rows.invocations.push(Invocation {
                 project_id: project_id.clone(),
                 invocation_id: invocation_id.clone(),
                 timestamp: Utc::now(),
-                num_processed: results.len().try_into().unwrap(),
+                num_processed: results
+                    .iter()
+                    .flat_map(|r| r.transactions)
+                    .map(|tx| tx.transaction_hash)
+                    .collect::<HashSet<String>>()
+                    .len()
+                    .try_into()
+                    .unwrap(),
                 deployment_id: deployment_id.clone(),
-            }));
+            });
 
             for result in results.into_iter() {
                 let processed_batch_id = uuid::Uuid::new_v4().to_string();
-                rows.push(ExtractedRequest::Batch(ProcessedBatch {
+                rows.batches.push(ProcessedBatch {
                     id: processed_batch_id.clone(),
                     timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
                     function_id: function_id.clone(),
@@ -218,10 +196,10 @@ fn extract_transactions(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
                         }
                         _ => None,
                     },
-                }));
+                });
 
                 for tx in result.transactions.clone() {
-                    rows.push(ExtractedRequest::Transaction(ProcessedTransaction {
+                    rows.transactions.push(ProcessedTransaction {
                         function_id: function_id.clone(),
                         deployment_id: deployment_id.clone(),
                         processed_batch_id: processed_batch_id.clone(),
@@ -235,7 +213,7 @@ fn extract_transactions(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
                             reporting_sdk::ProcessedTransactionStatus::Failed => "FAILED",
                         }
                         .to_string(),
-                    }))
+                    })
                 }
             }
         }
@@ -248,18 +226,21 @@ fn extract_transactions(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
             ..
         } => {
             for metric in metrics.into_iter() {
-                rows.push(ExtractedRequest::Metric(Metric {
-                    duration_ms: metric.duration_ms,
-                    billed_duration_ms: metric.billed_duration_ms as i64,
-                    memory_size_mb: metric.memory_size_mb as i64,
-                    max_memory_used_mb: metric.max_memory_used_mb as i64,
-                    init_duration_ms: metric.init_duration_ms,
-                    restore_duration_ms: metric.restore_duration_ms,
-                    handler_id: function_id.clone(),
-                    handler_version: chain_id.clone(),
-                    deployment_id: deployment_id.clone(),
-                    project_id: project_id.clone(),
-                }))
+                rows.metrics.push((
+                    metric.request_id.clone(),
+                    Metric {
+                        duration_ms: metric.duration_ms,
+                        billed_duration_ms: metric.billed_duration_ms as i64,
+                        memory_size_mb: metric.memory_size_mb as i64,
+                        max_memory_used_mb: metric.max_memory_used_mb as i64,
+                        init_duration_ms: metric.init_duration_ms,
+                        restore_duration_ms: metric.restore_duration_ms,
+                        handler_id: function_id.clone(),
+                        handler_version: chain_id.clone(),
+                        deployment_id: deployment_id.clone(),
+                        project_id: project_id.clone(),
+                    },
+                ))
             }
         }
     };
