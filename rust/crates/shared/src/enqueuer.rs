@@ -5,7 +5,6 @@ use crate::analytics_schema::{batch, eth_transaction};
 use crate::connection::DbPool;
 use crate::manifest::Manifest;
 use crate::syncing::State;
-#[cfg(feature = "telemetry")]
 use crate::telemetry::{ProcessedTransactionTelemetry, StripeProcessedTransactionTelemetry};
 use crate::types::batch::{IngestBatch, IngestBatchTransaction};
 use crate::{connection::establish_connection_pool, s3::S3};
@@ -290,7 +289,6 @@ pub mod errors {
         PoolError(#[from] PoolError),
         #[error("Diesel error: {0}")]
         DieselError(#[from] diesel::result::Error),
-        #[cfg(feature = "telemetry")]
         #[error("Telemetry error: {0}")]
         TelemetryError(#[from] crate::telemetry::errors::TelemetryError),
     }

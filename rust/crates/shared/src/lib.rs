@@ -22,7 +22,6 @@ pub mod s3;
 pub mod sns;
 pub mod syncer;
 pub mod syncing;
-#[cfg(feature = "telemetry")]
 pub mod telemetry;
 #[cfg(test)]
 pub mod testing;
