@@ -57,12 +57,14 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .into_iter()
         .map(|r| serde_json::from_str(r.body.unwrap().as_str()).unwrap())
         .collect();
+    println!("stored_reports: {stored_reports:?}");
 
     let stored_report_service = reporting_sdk::StoredReportService::new(s3_client);
     let reports: Vec<reporting_sdk::Report> =
         stored_report_service.get_reports(&stored_reports).await?;
 
     let extracted: Vec<_> = reports.iter().map(extract_request).collect();
+    println!("extracted: {extracted:?}");
 
     let conn = &mut pool.get().await?;
 
