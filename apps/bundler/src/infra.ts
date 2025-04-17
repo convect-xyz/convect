@@ -142,6 +142,8 @@ export default async () => {
         FUNCTION_ID: current.deployment.functionId.toString(),
         DEPLOYMENT_ID: current.deployment.id,
         PROJECT_ID: current.deployment.function.projectId.toString(),
+        STRIPE_CUSTOMER_ID:
+          current.deployment.function.project.stripeCustomerId!,
         CHAINS: txQueueUrlOutputs.apply((output) =>
           JSON.stringify(
             output.map((url, idx) => {

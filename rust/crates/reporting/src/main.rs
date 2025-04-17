@@ -49,7 +49,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         aws_sdk_s3::Client::new(&aws_config::load_defaults(BehaviorVersion::latest()).await);
 
     let pool = establish_connection_pool().await;
-    let telemetry = StripeProcessedTransactionTelemetry::new();
+    let telemetry = StripeProcessedTransactionTelemetry::new(config.stripe_customer_id.clone());
 
     let stored_reports: Vec<reporting_sdk::StoredReport> = event
         .payload
@@ -111,10 +111,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         extracted
             .iter()
             .flat_map(|r| &r.invocations)
-            .map(|i| {
-                telemetry
-                    .record_invocation(config.stripe_customer_id.clone(), i.invocation_id.clone())
-            })
+            .map(|i| telemetry.record_invocation(i.invocation_id.clone()))
             .collect::<Vec<_>>(),
     )
     .await
@@ -124,7 +121,6 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
 
     join_all(extracted.iter().flat_map(|r| &r.metrics).map(|m| {
         telemetry.record_mb_secs(
-            config.stripe_customer_id.clone(),
             m.0.clone(),
             (m.1.billed_duration_ms * m.1.memory_size_mb)
                 .try_into()

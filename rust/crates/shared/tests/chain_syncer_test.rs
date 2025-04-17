@@ -10,6 +10,7 @@ use shared::{
     redis_client::RedisClientImpl,
     syncer::ChainSyncer,
     syncing::State,
+    telemetry::StripeProcessedTransactionTelemetry,
     types::{batch::IngestBatchTransaction, transactions::IngestTransaction},
 };
 
@@ -92,6 +93,7 @@ impl Test {
             queue.queue_url.clone().unwrap(),
             chain_id,
             self.manifest.clone(),
+            StripeProcessedTransactionTelemetry::new("cus_QnxZAls5dHRoJS".to_string()),
         )
         .await;
         let fetcher = TransactionFetcherImpl::with_defaults(chain_id).await;
