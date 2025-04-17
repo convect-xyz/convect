@@ -1,12 +1,12 @@
 use std::env;
 
+use crate::analytics_models;
 use crate::analytics_schema::{batch, eth_transaction};
 use crate::connection::DbPool;
 use crate::manifest::Manifest;
 use crate::syncing::State;
 use crate::telemetry::{ProcessedTransactionTelemetry, StripeProcessedTransactionTelemetry};
 use crate::types::batch::{IngestBatch, IngestBatchTransaction};
-use crate::{analytics_models, telemetry};
 use crate::{connection::establish_connection_pool, s3::S3};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -237,6 +237,7 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         txs: Vec<IngestBatchTransaction>,
         upload_method: UploadMethod,
     ) -> Result<(), errors::TransactionEnqueuerError> {
+        let num_transactions = txs.len();
         let batch_id = Uuid::new_v4().to_string();
         let batch = IngestBatch {
             batch_id: batch_id.clone(),
@@ -259,7 +260,7 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         self.telemetry
             .record_transactions_fetched(
                 batch_id.clone(),
-                batch.transactions.len().try_into().unwrap(),
+                <usize as TryInto<u64>>::try_into(num_transactions).unwrap(),
             )
             .await?;
 
