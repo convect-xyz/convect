@@ -69,7 +69,7 @@ impl StripeProcessedTransactionTelemetry {
 
 impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
     async fn record_invocation(&self, invocation_id: String) -> Result<(), errors::TelemetryError> {
-        self.record_event("invocations", "invocations", 1, &invocation_id)
+        self.record_event("invocations", "value", 1, &invocation_id)
             .await?;
 
         Ok(())
