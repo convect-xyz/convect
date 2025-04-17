@@ -71,18 +71,23 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
             .values(
                 extracted
                     .iter()
-                    .flat_map(|f| f.invocations)
+                    .flat_map(|f| &f.invocations)
                     .collect::<Vec<_>>()
             )
             .execute(conn),
         diesel::insert_into(processed_batch::table)
-            .values(extracted.iter().flat_map(|f| f.batches).collect::<Vec<_>>())
+            .values(
+                extracted
+                    .iter()
+                    .flat_map(|f| &f.batches)
+                    .collect::<Vec<_>>()
+            )
             .execute(conn),
         diesel::insert_into(processed_transaction::table)
             .values(
                 extracted
                     .iter()
-                    .flat_map(|f| f.transactions)
+                    .flat_map(|f| &f.transactions)
                     .collect::<Vec<_>>()
             )
             .execute(conn),
@@ -90,8 +95,8 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
             .values(
                 extracted
                     .iter()
-                    .flat_map(|f| f.metrics)
-                    .map(|m| m.1)
+                    .flat_map(|f| &f.metrics)
+                    .map(|m| &m.1)
                     .collect::<Vec<_>>()
             )
             .execute(conn)
@@ -105,18 +110,19 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     join_all(
         extracted
             .iter()
-            .flat_map(|r| r.invocations)
+            .flat_map(|r| &r.invocations)
             .map(|i| {
-                telemetry.record_invocation(config.stripe_customer_id.clone(), i.invocation_id)
+                telemetry
+                    .record_invocation(config.stripe_customer_id.clone(), i.invocation_id.clone())
             })
             .collect::<Vec<_>>(),
     )
     .await;
 
-    join_all(extracted.iter().flat_map(|r| r.metrics).map(|m| {
+    join_all(extracted.iter().flat_map(|r| &r.metrics).map(|m| {
         telemetry.record_mb_secs(
             config.stripe_customer_id.clone(),
-            m.0,
+            m.0.clone(),
             (m.1.billed_duration_ms * m.1.memory_size_mb)
                 .try_into()
                 .unwrap(),
@@ -158,9 +164,9 @@ fn extract_request(r: &reporting_sdk::Report) -> ExtractedRequest {
                 timestamp: Utc::now(),
                 num_processed: results
                     .iter()
-                    .flat_map(|r| r.transactions)
-                    .map(|tx| tx.transaction_hash)
-                    .collect::<HashSet<String>>()
+                    .flat_map(|r| &r.transactions)
+                    .map(|tx| &tx.transaction_hash)
+                    .collect::<HashSet<&String>>()
                     .len()
                     .try_into()
                     .unwrap(),
