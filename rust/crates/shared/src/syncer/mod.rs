@@ -158,10 +158,16 @@ impl<'a> ChainSyncer<'a> {
             .flatten()
             .collect();
 
-            for tx in transactions.into_iter() {
-                let maybe_buffer_entry = buffer.add_transaction(
-                    IngestBatchTransaction::from_transaction(&self.manifest, state.chain_id(), tx),
-                );
+            let transactions = transactions
+                .into_iter()
+                .map(|tx| {
+                    IngestBatchTransaction::from_transaction(&self.manifest, state.chain_id(), tx)
+                })
+                .filter(|tx| tx.tx_configs.len() > 0)
+                .collect::<Vec<_>>();
+
+            for tx in transactions {
+                let maybe_buffer_entry = buffer.add_transaction(tx);
 
                 if let Some(buffer_entry) = maybe_buffer_entry {
                     self.enqueuer
