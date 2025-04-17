@@ -90,7 +90,8 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
             .values(
                 extracted
                     .iter()
-                    .flat_map(|f| f.metrics.map(|m| m.1))
+                    .flat_map(|f| f.metrics)
+                    .map(|m| m.1)
                     .collect::<Vec<_>>()
             )
             .execute(conn)
