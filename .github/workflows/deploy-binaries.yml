@@ -101,7 +101,7 @@ jobs:
       - name: Run integration tests
         working-directory: rust
         run: |
-          cargo nextest run -p shared --features=pg
+          cargo nextest run -p shared --features=pg,telemetry
       - name: Build and Upload All Binaries
         working-directory: rust
         env:
