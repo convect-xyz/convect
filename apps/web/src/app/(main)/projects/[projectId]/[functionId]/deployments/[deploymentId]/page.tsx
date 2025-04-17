@@ -349,10 +349,12 @@ function RenderTransactionConfigs(props: {
   const structuredManifest = getStructuredManifest(props.manifest);
   const { selectedChainId } = props;
 
-  const validTxConfigs = structuredManifest.txConfigs.filter(
-    (txConfig) =>
-      !txConfig.chains || txConfig.chains.includes(Number(selectedChainId)),
-  );
+  const validTxConfigs = structuredManifest.txConfigs
+    .map((txConfig, index) => ({ txConfig, index }))
+    .filter(
+      ({ txConfig }) =>
+        !txConfig.chains || txConfig.chains.includes(Number(selectedChainId)),
+    );
 
   return (
     <div>
