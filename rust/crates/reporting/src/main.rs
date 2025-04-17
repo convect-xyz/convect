@@ -57,12 +57,14 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .into_iter()
         .map(|r| serde_json::from_str(r.body.unwrap().as_str()).unwrap())
         .collect();
+    println!("stored_reports: {stored_reports:?}");
 
     let stored_report_service = reporting_sdk::StoredReportService::new(s3_client);
     let reports: Vec<reporting_sdk::Report> =
         stored_report_service.get_reports(&stored_reports).await?;
 
     let extracted: Vec<_> = reports.iter().map(extract_request).collect();
+    println!("extracted: {extracted:?}");
 
     let conn = &mut pool.get().await?;
 
@@ -143,7 +145,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
 }
 
 fn extract_request(r: &reporting_sdk::Report) -> ExtractedRequest {
-    let mut rows = ExtractedRequest {
+    let mut request = ExtractedRequest {
         transactions: Vec::new(),
         batches: Vec::new(),
         metrics: Vec::new(),
@@ -160,7 +162,7 @@ fn extract_request(r: &reporting_sdk::Report) -> ExtractedRequest {
             deployment_id,
             ..
         } => {
-            rows.invocations.push(Invocation {
+            request.invocations.push(Invocation {
                 project_id: project_id.clone(),
                 invocation_id: invocation_id.clone(),
                 timestamp: Utc::now(),
@@ -177,7 +179,7 @@ fn extract_request(r: &reporting_sdk::Report) -> ExtractedRequest {
 
             for result in results.into_iter() {
                 let processed_batch_id = uuid::Uuid::new_v4().to_string();
-                rows.batches.push(ProcessedBatch {
+                request.batches.push(ProcessedBatch {
                     id: processed_batch_id.clone(),
                     timestamp: DateTime::from_timestamp_millis(result.timestamp_ms).unwrap(),
                     function_id: function_id.clone(),
@@ -202,7 +204,7 @@ fn extract_request(r: &reporting_sdk::Report) -> ExtractedRequest {
                 });
 
                 for tx in result.transactions.clone() {
-                    rows.transactions.push(ProcessedTransaction {
+                    request.transactions.push(ProcessedTransaction {
                         function_id: function_id.clone(),
                         deployment_id: deployment_id.clone(),
                         processed_batch_id: processed_batch_id.clone(),
@@ -229,7 +231,7 @@ fn extract_request(r: &reporting_sdk::Report) -> ExtractedRequest {
             ..
         } => {
             for metric in metrics.into_iter() {
-                rows.metrics.push((
+                request.metrics.push((
                     metric.request_id.clone(),
                     Metric {
                         duration_ms: metric.duration_ms,
@@ -248,5 +250,5 @@ fn extract_request(r: &reporting_sdk::Report) -> ExtractedRequest {
         }
     };
 
-    rows
+    request
 }
