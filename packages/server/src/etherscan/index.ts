@@ -47,6 +47,8 @@ export class EtherscanProvider {
         },
       });
 
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       for (const result of schema.parse(response.data).result) {
         results.set(result.contractAddress, result.txHash);
       }
