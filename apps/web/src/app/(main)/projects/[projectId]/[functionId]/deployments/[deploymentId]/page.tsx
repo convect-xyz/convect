@@ -353,10 +353,11 @@ function RenderTransactionConfigs(props: {
     (txConfig) =>
       !txConfig.chains || txConfig.chains.includes(Number(selectedChainId)),
   );
+
   return (
     <div>
       <div className="flex flex-col gap-4">
-        {validTxConfigs.map((txConfig, index) => (
+        {validTxConfigs.map(({ txConfig, index }) => (
           <TxConfigCard
             key={index}
             index={index}

@@ -1,5 +1,6 @@
 import { ComponentProps } from "react";
 import {
+  abstract,
   abstractTestnet,
   base,
   baseSepolia,
@@ -30,6 +31,7 @@ export default function ChainIcon(props: ChainIconProps) {
     case base.id:
     case baseSepolia.id:
       return <BaseIcon width={14} height={14} {...rest} />;
+    case abstract.id:
     case abstractTestnet.id:
       return <AbstractIcon width={14} height={14} {...rest} />;
     default:
