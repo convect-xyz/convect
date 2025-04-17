@@ -5,6 +5,7 @@ use crate::analytics_schema::{batch, eth_transaction};
 use crate::connection::DbPool;
 use crate::manifest::Manifest;
 use crate::syncing::State;
+#[cfg(feature = "telemetry")]
 use crate::telemetry::{ProcessedTransactionTelemetry, StripeProcessedTransactionTelemetry};
 use crate::types::batch::{IngestBatch, IngestBatchTransaction};
 use crate::{connection::establish_connection_pool, s3::S3};
