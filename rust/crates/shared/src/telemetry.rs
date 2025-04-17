@@ -34,13 +34,13 @@ impl StripeProcessedTransactionTelemetry {
         &self,
         customer_id: &str,
         event_name: &str,
-        meter_name: &str,
+        meter_key: &str,
         meter_value: u64,
         identifier: &str,
     ) -> Result<(), BoxError> {
         let shared_config = RefreshingEnvironmentConfig::new().await.get_config().await;
 
-        let meter_key = format!("payload[{}]", meter_name);
+        let meter_key = format!("payload[{}]", meter_key);
         let meter_value = meter_value.to_string();
 
         let mut form_data = HashMap::new();
@@ -84,14 +84,8 @@ impl ProcessedTransactionTelemetry for StripeProcessedTransactionTelemetry {
         invocation_id: String,
         mb_secs: u64,
     ) -> Result<(), BoxError> {
-        self.record_event(
-            &customer_id,
-            "mb_seconds",
-            "mb_seconds",
-            mb_secs,
-            &invocation_id,
-        )
-        .await?;
+        self.record_event(&customer_id, "mb_seconds", "value", mb_secs, &invocation_id)
+            .await?;
 
         Ok(())
     }
