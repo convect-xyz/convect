@@ -13,6 +13,8 @@ import { monikerRegex } from "~/lib/shared/validation";
 import { db } from "~/server/db";
 import { getConvectFn, getFormData, getUserContext } from "../utils";
 
+export const maxDuration = 300;
+
 const zodId = z
   .string()
   .transform((v) => v.split("/"))
