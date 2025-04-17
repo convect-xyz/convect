@@ -275,6 +275,7 @@ async fn get_task_override(
                     create_key_value_pair("MANIFEST_PREFIX", &config.manifest_prefix),
                     create_key_value_pair("DEPLOYMENT_ID", &config.deployment_id),
                     create_key_value_pair("PROJECT_ID", &config.project_id),
+                    create_key_value_pair("STRIPE_CUSTOMER_ID", &config.stripe_customer_id),
                 ]))
                 .build(),
         )

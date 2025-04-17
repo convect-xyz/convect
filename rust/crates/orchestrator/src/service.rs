@@ -7,6 +7,7 @@ use shared::{
     manifest::Manifest,
     networks::get_supported_network,
     redis_client::{RedisClient, RedisClientImpl},
+    telemetry::StripeProcessedTransactionTelemetry,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -70,6 +71,7 @@ impl ChainService {
             pool,
             config.chain_id,
             app_service.manifest.clone(),
+            StripeProcessedTransactionTelemetry::new(app_service.config.stripe_customer_id.clone()),
         );
 
         Self {

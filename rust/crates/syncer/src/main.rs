@@ -42,6 +42,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         pool,
         syncer_config.chain_id,
         manifest.clone(),
+        StripeProcessedTransactionTelemetry::new(syncer_config.stripe_customer_id.clone()),
     );
 
     let sync_result = ChainSyncer::new(&manifest, &enqueuer, &fetcher)

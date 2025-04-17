@@ -8,6 +8,7 @@ pub struct Config {
     pub transaction_queue_url: String,
     pub deployment_id: String,
     pub project_id: String,
+    pub stripe_customer_id: String,
 }
 
 pub fn load_config_from_env() -> Config {
@@ -29,5 +30,7 @@ pub fn load_config_from_env() -> Config {
             .expect("TRANSACTION_QUEUE_URL is not present"),
         deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not present"),
         project_id: env::var("PROJECT_ID").expect("PROJECT_ID is not present"),
+        stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")
+            .expect("STRIPE_CUSTOMER_ID is not present"),
     };
 }

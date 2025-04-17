@@ -1,11 +1,12 @@
 use std::env;
 
-use crate::analytics_models;
 use crate::analytics_schema::{batch, eth_transaction};
 use crate::connection::DbPool;
 use crate::manifest::Manifest;
 use crate::syncing::State;
+use crate::telemetry::{ProcessedTransactionTelemetry, StripeProcessedTransactionTelemetry};
 use crate::types::batch::{IngestBatch, IngestBatchTransaction};
+use crate::{analytics_models, telemetry};
 use crate::{connection::establish_connection_pool, s3::S3};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -66,14 +67,21 @@ pub struct SQSTransactionEnqueuer<T: S3> {
     pool: DbPool,
     chain_id: u64,
     manifest: Manifest,
+    telemetry: StripeProcessedTransactionTelemetry,
 }
 
 impl SQSTransactionEnqueuer<aws_sdk_s3::Client> {
-    pub async fn with_defaults(queue_url: String, chain_id: u64, manifest: Manifest) -> Self {
+    pub async fn with_defaults(
+        queue_url: String,
+        chain_id: u64,
+        manifest: Manifest,
+        stripe_customer_id: String,
+    ) -> Self {
         let config = aws_config::load_from_env().await;
         let s3_client = aws_sdk_s3::Client::new(&config);
         let sqs_client = aws_sdk_sqs::Client::new(&config);
         let pool = establish_connection_pool().await;
+        let telemetry = StripeProcessedTransactionTelemetry::new(stripe_customer_id);
 
         Self {
             s3_client,
@@ -82,6 +90,7 @@ impl SQSTransactionEnqueuer<aws_sdk_s3::Client> {
             pool,
             manifest,
             chain_id,
+            telemetry,
         }
     }
 }
@@ -94,6 +103,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         pool: DbPool,
         chain_id: u64,
         manifest: Manifest,
+        telemetry: StripeProcessedTransactionTelemetry,
     ) -> Self {
         Self {
             s3_client,
@@ -102,6 +112,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             pool,
             manifest,
             chain_id,
+            telemetry,
         }
     }
 
@@ -245,6 +256,13 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
             }
         }
 
+        self.telemetry
+            .record_transactions_fetched(
+                batch_id.clone(),
+                batch.transactions.len().try_into().unwrap(),
+            )
+            .await?;
+
         Ok(())
     }
 }
@@ -270,5 +288,8 @@ pub mod errors {
         PoolError(#[from] PoolError),
         #[error("Diesel error: {0}")]
         DieselError(#[from] diesel::result::Error),
+        #[cfg(feature = "telemetry")]
+        #[error("Telemetry error: {0}")]
+        TelemetryError(#[from] crate::telemetry::errors::TelemetryError),
     }
 }
