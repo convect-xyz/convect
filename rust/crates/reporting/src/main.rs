@@ -117,7 +117,10 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
             })
             .collect::<Vec<_>>(),
     )
-    .await;
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
 
     join_all(extracted.iter().flat_map(|r| &r.metrics).map(|m| {
         telemetry.record_mb_secs(
@@ -128,7 +131,10 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
                 .unwrap(),
         )
     }))
-    .await;
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
 
     join_all(
         stored_reports
