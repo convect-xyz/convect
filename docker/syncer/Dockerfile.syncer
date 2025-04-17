@@ -1,25 +1,50 @@
+ARG CONFIG_ENCRYPTION_PRIVATE_KEY
+ARG CONFIG_ENCRYPTION_ALGORITHM
+ARG INFRA_VERSION
+
+
+# Chef stage
 FROM --platform=linux/amd64 lukemathwalker/cargo-chef:latest as chef
+ARG CONFIG_ENCRYPTION_PRIVATE_KEY
+ARG CONFIG_ENCRYPTION_ALGORITHM
+ARG INFRA_VERSION
+
 WORKDIR /app
 
+
+# Planner stage
 FROM --platform=linux/amd64 chef AS planner
-COPY ./config ./config
+ARG CONFIG_ENCRYPTION_PRIVATE_KEY
+ARG CONFIG_ENCRYPTION_ALGORITHM
+ARG INFRA_VERSION
+
 COPY ./rust/Cargo.toml ./rust/Cargo.lock ./rust/
 COPY ./rust ./rust
 WORKDIR /app/rust
 RUN cargo chef prepare --bin=syncer --recipe-path recipe.json
 
+
+# Build stage
 FROM --platform=linux/amd64 chef AS builder
+ARG CONFIG_ENCRYPTION_PRIVATE_KEY
+ARG CONFIG_ENCRYPTION_ALGORITHM
+ARG INFRA_VERSION
+
+ENV CONFIG_ENCRYPTION_PRIVATE_KEY=$CONFIG_ENCRYPTION_PRIVATE_KEY
+ENV CONFIG_ENCRYPTION_ALGORITHM=$CONFIG_ENCRYPTION_ALGORITHM
+ENV INFRA_VERSION=$INFRA_VERSION
+
 WORKDIR /app/rust
 COPY --from=planner /app/rust/recipe.json ./recipe.json
 RUN cargo chef cook --release --recipe-path ./recipe.json --bin=syncer
 
 WORKDIR /app
-COPY ./config ./config
 WORKDIR /app/rust
 COPY ./rust ./
 RUN cargo build --release -p syncer
 RUN mv ./target/release/syncer ./app
 
+# Final stage
 FROM --platform=linux/amd64 debian:stable-slim AS runtime
 WORKDIR /app
 COPY --from=builder /app/rust/app /usr/local/bin/

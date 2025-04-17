@@ -5,7 +5,6 @@ import { formatDistanceToNow } from "date-fns";
 import { capitalize, times } from "lodash";
 import { ChevronRightIcon, LoaderIcon } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -49,7 +48,6 @@ function Header() {
 }
 
 function DeploymentsTable() {
-  const router = useRouter();
   const { ref, inView } = useInView();
   const {
     data: deploymentPages,

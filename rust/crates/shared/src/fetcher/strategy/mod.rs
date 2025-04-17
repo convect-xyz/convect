@@ -69,7 +69,10 @@ impl LogResult {
 
     pub fn to(&self) -> String {
         match self {
-            LogResult::Jsonrpc((tx, _)) => format!("{:#x}", tx.to.unwrap()),
+            LogResult::Jsonrpc((tx, _)) => tx.to.map_or(
+                "0x0000000000000000000000000000000000000000".to_string(),
+                |to| format!("{:#x}", to),
+            ),
             LogResult::Graphql(log) => log.transaction.to.as_ref().unwrap().address.clone(),
         }
     }
@@ -114,7 +117,6 @@ trait IntoIngestLog {
 
 impl IntoIngestLog for ExampleQueryLogs {
     fn into_ingest_log(&self) -> IngestLog {
-        println!("{:?}", self.data.clone());
         IngestLog {
             address: self.account.address.clone(),
             topics: self.topics.clone(),

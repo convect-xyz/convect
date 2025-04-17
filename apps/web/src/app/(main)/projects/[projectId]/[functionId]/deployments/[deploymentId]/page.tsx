@@ -22,6 +22,7 @@ import { Button } from "~/components/ui/button";
 import { Form } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
+import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   Tooltip,
@@ -34,7 +35,7 @@ import {
   useManifestFormContext,
   useManifestFormHelpers,
 } from "./hooks/useManifestForm";
-import { usePendingDeployment } from "./hooks/usePendingDeployment";
+import { useDeployment } from "./hooks/usePendingDeployment";
 
 export default function Page(props: {}) {
   const manifestForm = useManifestForm();
@@ -52,7 +53,7 @@ export default function Page(props: {}) {
 }
 
 function Header() {
-  const { data: deployment, refetch } = usePendingDeployment();
+  const { data: deployment, refetch } = useDeployment();
   const manifest = useManifestFormContext();
   const { mutateAsync: confirmDeploymentAsync, isPending } =
     api.functions.confirmDeployment.useMutation({
@@ -92,7 +93,7 @@ function Header() {
 }
 
 function Main(props: PropsWithChildren) {
-  const { data: deployment } = usePendingDeployment();
+  const { data: deployment } = useDeployment();
   const manifestForm = useManifestFormContext();
 
   if (
@@ -120,19 +121,26 @@ function RenderManifest(props: {
   );
   return (
     <div className="mt-4 flex flex-col gap-2">
-      <Tabs onValueChange={setSelectedChainId} value={selectedChainId}>
-        <TabsList className="h-auto rounded-full border">
-          {structuredManifest.chains.map((chain) => (
-            <TabsTrigger
-              key={chain.chainId}
-              value={chain.chainId.toString()}
-              className="gap-2 rounded-full px-2 text-xs"
-            >
-              <ChainIcon chainId={chain.chainId} />
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      {structuredManifest.chains.length > 1 && (
+        <div className="flex items-center justify-end">
+          <Tabs onValueChange={setSelectedChainId} value={selectedChainId}>
+            <TabsList className="h-auto  rounded-full border">
+              {structuredManifest.chains.map((chain) => (
+                <TabsTrigger
+                  key={chain.chainId}
+                  value={chain.chainId.toString()}
+                  className="gap-2 rounded-full border-none px-2 text-xs"
+                >
+                  <ChainIcon chainId={chain.chainId} />
+                  {selectedChainId === chain.chainId.toString() && (
+                    <div>{chain.name}</div>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
       <ChainsSection
         manifest={props.manifest}
         selectedChainId={selectedChainId}
@@ -158,17 +166,17 @@ function ChainsSection(props: {
   }
   return (
     <div className="mt-2 flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground">
-            Chain Configuration
-          </div>
-          <InfoTooltip text="These are all the chains that you intend to index.">
-            <InfoIcon size={14} className="text-muted-foreground" />
-          </InfoTooltip>
-        </div>
-      </div>
       <ChainCard key={chain.chainId} chain={chain} manifest={props.manifest} />
+
+      <StartBlockSection
+        selectedChainId={chain.chainId.toString()}
+        manifest={props.manifest}
+      />
+
+      <EndBlockSection
+        selectedChainId={chain.chainId.toString()}
+        manifest={props.manifest}
+      />
     </div>
   );
 }
@@ -177,47 +185,135 @@ function ChainCard(props: {
   chain: StructuredManifest["chains"][0];
   manifest: Manifest;
 }) {
-  const structuredManifest = getStructuredManifest(props.manifest);
-
   return (
     <div className="rounded-md border bg-muted px-4 shadow-sm">
       <div className="flex flex-col divide-y">
-        {[
-          {
-            label: "Chain",
-            value: (
-              <div className="flex items-center gap-2">
-                <ChainIcon chainId={props.chain.chainId} />
-                <div className="flex flex-col gap-2">
-                  <div>{props.chain.name}</div>
-                </div>
+        <div className="flex justify-between py-4 text-sm">
+          <span className="text-muted-foreground">Chain</span>
+          <span>
+            <div className="flex items-center gap-2">
+              <ChainIcon chainId={props.chain.chainId} />
+              <div className="flex flex-col gap-2">
+                <div>{props.chain.name}</div>
               </div>
-            ),
-          },
-          {
-            label: "Start Block",
-            value:
-              structuredManifest.txConfigs
-                .reduce(
-                  (acc, txConfig) => {
-                    const startBlock =
-                      txConfig.startBlock[props.chain.chainId.toString()]!;
-                    if (!acc || startBlock < acc) {
-                      acc = startBlock;
-                    }
-                    return acc;
-                  },
-                  null as number | null,
-                )
-                ?.toString() ?? 0,
-          },
-        ].map(({ label, value }) => (
-          <div key={label} className="flex justify-between py-4 text-xs">
-            <span className="text-muted-foreground">{label}</span>
-            <span>{value}</span>
-          </div>
-        ))}
+            </div>
+          </span>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function StartBlockSection(props: {
+  selectedChainId?: string;
+  manifest: Manifest;
+}) {
+  const { selectedChainId } = props;
+  const { backfill } = useManifestFormHelpers();
+  const { data: manifest } = useDeployment();
+
+  return (
+    <div className="rounded-md border p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="text-sm">Start Block</div>
+          <InfoTooltip text="Configure your handler to start at a specific block. When this toggle is not checked, it will start at the latest block.">
+            <InfoIcon size={14} className="text-muted-foreground" />
+          </InfoTooltip>
+        </div>
+
+        <Switch
+          disabled={!manifest?.deployment.isWaitingForApproval}
+          checked={
+            backfill.watchStartBlock(Number(selectedChainId)) !== undefined
+          }
+          onCheckedChange={() =>
+            backfill.toggleStartBlock(Number(selectedChainId))
+          }
+        />
+      </div>
+
+      {backfill.watchStartBlock(Number(selectedChainId)) !== undefined && (
+        <div className="text-xs">
+          <div className="flex items-center justify-between pt-4">
+            <div className="text-xs font-medium text-muted-foreground">
+              Start Block
+            </div>
+
+            <div>
+              <Input
+                disabled={!manifest?.deployment.isWaitingForApproval}
+                placeholder={new Intl.NumberFormat("en-US").format(
+                  backfill.watchStartBlock(Number(selectedChainId)) ?? 0,
+                )}
+                value={backfill.watchStartBlock(Number(selectedChainId))}
+                onChange={(e) => {
+                  backfill.setStartBlock(
+                    Number(selectedChainId),
+                    e.target.value,
+                  );
+                }}
+                className="h-auto w-full max-w-[80px] p-1 text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EndBlockSection(props: {
+  selectedChainId?: string;
+  manifest: Manifest;
+}) {
+  const { selectedChainId } = props;
+  const { backfill } = useManifestFormHelpers();
+  const { data: manifest } = useDeployment();
+
+  return (
+    <div className="rounded-md border p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="text-sm">End Block</div>
+          <InfoTooltip text="Configure your handler to stop at a specific block. When this value is not checked, it will follow the latest block.">
+            <InfoIcon size={14} className="text-muted-foreground" />
+          </InfoTooltip>
+        </div>
+
+        <Switch
+          disabled={!manifest?.deployment.isWaitingForApproval}
+          checked={
+            backfill.watchEndBlock(Number(selectedChainId)) !== undefined
+          }
+          onCheckedChange={() =>
+            backfill.toggleEndBlock(Number(selectedChainId))
+          }
+        />
+      </div>
+
+      {backfill.watchEndBlock(Number(selectedChainId)) !== undefined && (
+        <div className="text-xs">
+          <div className="flex items-center justify-between pt-4">
+            <div className="text-xs font-medium text-muted-foreground">
+              End Block
+            </div>
+
+            <div>
+              <Input
+                disabled={!manifest?.deployment.isWaitingForApproval}
+                value={backfill
+                  .watchEndBlock(Number(selectedChainId))
+                  ?.toString()}
+                onChange={(e) => {
+                  backfill.setEndBlock(Number(selectedChainId), e.target.value);
+                }}
+                className="h-auto w-full max-w-[80px] p-1 text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -230,7 +326,7 @@ function TransactionConfigsSection(props: {
     <div className="mt-2 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground">
             Transaction Configurations
           </div>
           <InfoTooltip text="A transaction is only processed by a configuration if it contains logs that match all the event signatures.">
@@ -245,6 +341,7 @@ function TransactionConfigsSection(props: {
     </div>
   );
 }
+
 function RenderTransactionConfigs(props: {
   manifest: Manifest;
   selectedChainId: string | undefined;
@@ -252,18 +349,11 @@ function RenderTransactionConfigs(props: {
   const structuredManifest = getStructuredManifest(props.manifest);
   const { selectedChainId } = props;
 
-  const validTxConfigs = structuredManifest.txConfigs
-    .map((txConfig, index) => ({ index, txConfig }))
-    .filter(
-      ({ txConfig }) =>
-        !txConfig.chains || txConfig.chains.includes(Number(selectedChainId)),
-    );
-  const ignoredTxConfigs = structuredManifest.txConfigs
-    .map((txConfig, index) => ({ index, txConfig }))
-    .filter(
-      ({ txConfig }) =>
-        txConfig.chains && !txConfig.chains.includes(Number(selectedChainId)),
-    );
+  const validTxConfigs = structuredManifest.txConfigs.filter(
+    (txConfig) =>
+      !txConfig.chains || txConfig.chains.includes(Number(selectedChainId)),
+  );
+
   return (
     <div>
       <div className="flex flex-col gap-4">
@@ -277,23 +367,6 @@ function RenderTransactionConfigs(props: {
             }
           />
         ))}
-        {ignoredTxConfigs.length > 0 && (
-          <div className="mt-4 flex flex-col gap-2">
-            <div className="text-sm text-muted-foreground">Ignored</div>
-            <div className="opacity-50">
-              {ignoredTxConfigs.map(({ txConfig, index }) => (
-                <TxConfigCard
-                  key={index}
-                  index={index}
-                  txConfig={txConfig}
-                  selectedChainId={
-                    selectedChainId ? Number(selectedChainId) : undefined
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -304,7 +377,7 @@ function TxConfigCard(props: {
   txConfig: StructuredManifest["txConfigs"][0];
   selectedChainId: number | undefined;
 }) {
-  const { data: deployment } = usePendingDeployment();
+  const { data: deployment } = useDeployment();
   const { txConfig, selectedChainId } = props;
   const helpers = useManifestFormHelpers();
 
@@ -335,29 +408,10 @@ function TxConfigCard(props: {
               <div className="rounded-full border bg-muted px-2 py-1 text-xs text-white">
                 {txConfig.name}
               </div>
+
               <div className="flex items-center gap-1 rounded-full py-1 pl-2 text-xs">
-                <span className="text-muted-foreground">Start Block / </span>
-                {deployment.deployment.isWaitingForApproval ? (
-                  <Input
-                    placeholder={new Intl.NumberFormat("en-US").format(
-                      startBlock!,
-                    )}
-                    value={helpers.txConfigs.watchStartBlock(
-                      props.index,
-                      selectedChainId!,
-                    )}
-                    onChange={(e) => {
-                      helpers.txConfigs.setStartBlock(
-                        props.index,
-                        selectedChainId!,
-                        e.target.value,
-                      );
-                    }}
-                    className="h-auto w-full max-w-[80px] p-1 text-xs"
-                  />
-                ) : (
-                  new Intl.NumberFormat("en-US").format(startBlock!)
-                )}
+                <span className="text-muted-foreground">Min. Block / </span>
+                {new Intl.NumberFormat("en-US").format(startBlock!)}
               </div>
             </div>
           </div>

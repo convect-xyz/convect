@@ -1,10 +1,11 @@
 use std::env;
 
+use crate::analytics_models;
+use crate::analytics_schema::{batch, eth_transaction};
 use crate::connection::DbPool;
 use crate::manifest::Manifest;
-use crate::models;
-use crate::schema::{batch, eth_transaction};
 use crate::syncing::State;
+use crate::telemetry::{ProcessedTransactionTelemetry, StripeProcessedTransactionTelemetry};
 use crate::types::batch::{IngestBatch, IngestBatchTransaction};
 use crate::{connection::establish_connection_pool, s3::S3};
 use async_trait::async_trait;
@@ -66,14 +67,21 @@ pub struct SQSTransactionEnqueuer<T: S3> {
     pool: DbPool,
     chain_id: u64,
     manifest: Manifest,
+    telemetry: StripeProcessedTransactionTelemetry,
 }
 
 impl SQSTransactionEnqueuer<aws_sdk_s3::Client> {
-    pub async fn with_defaults(queue_url: String, chain_id: u64, manifest: Manifest) -> Self {
+    pub async fn with_defaults(
+        queue_url: String,
+        chain_id: u64,
+        manifest: Manifest,
+        stripe_customer_id: String,
+    ) -> Self {
         let config = aws_config::load_from_env().await;
         let s3_client = aws_sdk_s3::Client::new(&config);
         let sqs_client = aws_sdk_sqs::Client::new(&config);
         let pool = establish_connection_pool().await;
+        let telemetry = StripeProcessedTransactionTelemetry::new(stripe_customer_id);
 
         Self {
             s3_client,
@@ -82,6 +90,7 @@ impl SQSTransactionEnqueuer<aws_sdk_s3::Client> {
             pool,
             manifest,
             chain_id,
+            telemetry,
         }
     }
 }
@@ -94,6 +103,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         pool: DbPool,
         chain_id: u64,
         manifest: Manifest,
+        telemetry: StripeProcessedTransactionTelemetry,
     ) -> Self {
         Self {
             s3_client,
@@ -102,6 +112,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
             pool,
             manifest,
             chain_id,
+            telemetry,
         }
     }
 
@@ -134,7 +145,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         );
 
         self.s3_client
-            .put_s3_object(
+            .put_object(
                 "ingest-fetch-logs",
                 key.as_str(),
                 serde_json::to_string(&batch).unwrap(),
@@ -178,7 +189,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         let chain_id = state.chain_id();
 
         diesel::insert_into(batch::table)
-            .values(models::Batch {
+            .values(analytics_models::Batch {
                 batch_id: batch_id.clone(),
                 function_id: function_id.clone(),
                 deployment_id: deployment_id.clone(),
@@ -192,7 +203,7 @@ impl<T: S3> SQSTransactionEnqueuer<T> {
         let futures = chunked_txs.into_iter().map(|txs| {
             diesel::insert_into(eth_transaction::table)
                 .values(
-                    txs.map(|tx| models::EthTransaction {
+                    txs.map(|tx| analytics_models::EthTransaction {
                         project_id: state.project_id(),
                         batch_id: batch_id.clone(),
                         transaction_hash: tx.transaction.transaction_hash.clone(),
@@ -226,6 +237,7 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
         txs: Vec<IngestBatchTransaction>,
         upload_method: UploadMethod,
     ) -> Result<(), errors::TransactionEnqueuerError> {
+        let num_transactions = txs.len();
         let batch_id = Uuid::new_v4().to_string();
         let batch = IngestBatch {
             batch_id: batch_id.clone(),
@@ -244,6 +256,13 @@ impl<T: S3> TransactionEnqueuer for SQSTransactionEnqueuer<T> {
                 self.send_batch_to_queue(batch).await?;
             }
         }
+
+        self.telemetry
+            .record_transactions_fetched(
+                batch_id.clone(),
+                <usize as TryInto<u64>>::try_into(num_transactions).unwrap(),
+            )
+            .await?;
 
         Ok(())
     }
@@ -270,5 +289,7 @@ pub mod errors {
         PoolError(#[from] PoolError),
         #[error("Diesel error: {0}")]
         DieselError(#[from] diesel::result::Error),
+        #[error("Telemetry error: {0}")]
+        TelemetryError(#[from] crate::telemetry::errors::TelemetryError),
     }
 }

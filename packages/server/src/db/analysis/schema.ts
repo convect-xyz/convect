@@ -2,6 +2,7 @@ import {
   integer,
   pgTable,
   serial,
+  text,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -35,6 +36,8 @@ export const processedBatch = pgTable("processed_batch", {
   deploymentId: varchar("deployment_id").notNull(),
   timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
   status: varchar("status", { length: 256 }).notNull(),
+  errorMessage: text("error_message"),
+  errorStacktrace: text("error_stacktrace"),
 });
 
 export const processedTransaction = pgTable("processed_transaction", {

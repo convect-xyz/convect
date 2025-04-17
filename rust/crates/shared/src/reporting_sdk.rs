@@ -3,6 +3,7 @@ use std::{env, sync::Arc};
 use crate::s3::S3;
 use async_trait::async_trait;
 use aws_config::BehaviorVersion;
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -24,19 +25,20 @@ pub struct ProcessedTransactionResult {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(tag = "label")]
 pub enum BatchStatus {
     #[serde(rename = "SUCCESS")]
     Success,
-    #[serde(rename = "FAILURE")]
-    Failure,
     #[serde(rename = "FAILED")]
-    Failed,
+    Failed { stacktrace: String, message: String },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProcessedBatchResult {
     #[serde(rename = "batchId")]
     pub batch_id: String,
+    #[serde(rename = "receiptHandle")]
+    pub receipt_handle: String,
     #[serde(rename = "messageId")]
     pub message_id: String,
     #[serde(rename = "timestampMs")]
@@ -53,6 +55,7 @@ pub struct Metric {
     pub max_memory_used_mb: u64,
     pub init_duration_ms: Option<f64>,
     pub restore_duration_ms: Option<f64>,
+    pub request_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -97,7 +100,7 @@ impl<S: S3> StoredReportService<S> {
         stored_report: &StoredReport,
     ) -> Result<(), errors::DeleteStoredReportError> {
         let s3 = self.s3.lock().await;
-        s3.delete_s3_object(stored_report.bucket.as_str(), stored_report.key.as_str())
+        s3.delete_object(stored_report.bucket.as_str(), stored_report.key.as_str())
             .await?;
 
         Ok(())
@@ -109,10 +112,25 @@ impl<S: S3> StoredReportService<S> {
     ) -> Result<Report, errors::GetReportError> {
         let s3 = self.s3.lock().await;
         let body = s3
-            .get_s3_object(stored_report.bucket.as_str(), stored_report.key.as_str())
+            .get_object(stored_report.bucket.as_str(), stored_report.key.as_str())
             .await?;
 
         Ok(serde_json::from_str(&body)?)
+    }
+
+    pub async fn get_reports(
+        &self,
+        stored_reports: &Vec<StoredReport>,
+    ) -> Result<Vec<Report>, errors::GetReportError> {
+        Ok(join_all(
+            stored_reports
+                .iter()
+                .map(|stored_report| self.get_report(stored_report))
+                .collect::<Vec<_>>(),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?)
     }
 
     pub async fn store_report(
@@ -123,7 +141,7 @@ impl<S: S3> StoredReportService<S> {
         let bucket = String::from("ingest-fetch-logs");
         let key = format!("convect-results/{}.json", format!("{}", Uuid::new_v4()));
 
-        s3.put_s3_object(
+        s3.put_object(
             bucket.as_str(),
             key.as_str(),
             serde_json::to_string(report)?,

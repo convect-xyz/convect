@@ -13,7 +13,9 @@ export default function InfoTooltip(props: {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger>{props.children}</TooltipTrigger>
-        <TooltipContent className="text-sm">{props.text}</TooltipContent>
+        <TooltipContent className="max-w-[300px] text-xs">
+          {props.text}
+        </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

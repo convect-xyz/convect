@@ -11,7 +11,7 @@ use config::{ChainConfig, Config};
 use futures::future::join_all;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use sentry::protocol::Context;
-use shared::configuration::SharedConfig;
+use shared::configuration::RefreshingEnvironmentConfig;
 use shared::syncer::ChainSyncer;
 use shared::syncing::State;
 use std::collections::BTreeMap;
@@ -134,12 +134,14 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), errors::Or
 async fn sync_chain(
     app_service: &service::AppService,
     chain_config: ChainConfig,
-    latest_block: u64,
+    incoming_block: u64,
 ) -> Result<(), errors::OrchestratorError> {
     let chain_service =
         service::ChainService::with_defaults(&app_service, chain_config.clone()).await;
 
     let chain_id = chain_service.config.chain_id;
+    let chain_config = app_service.manifest.get_chain_config(chain_id).unwrap();
+
     tracing::info!("Attempting to sync chain {:?}", chain_id);
 
     let mut sync_state = State::load(
@@ -150,25 +152,35 @@ async fn sync_chain(
         app_service.redis_client.clone(),
     )
     .await?;
+    let start_block = sync_state.next_block_to_fetch(&app_service.manifest, incoming_block);
+    if chain_config
+        .end_block
+        .is_some_and(|chain_end_block| start_block > chain_end_block)
+    {
+        tracing::info!("Chain {chain_id} is already synced to the chains defined end block");
+        return Ok(());
+    }
 
-    if sync_state.has_synced(latest_block) || sync_state.is_batch_syncing() {
+    let end_block = chain_config
+        .end_block
+        .map_or(incoming_block, |end_block| end_block.min(incoming_block));
+
+    if sync_state.has_synced(end_block) || sync_state.is_batch_syncing() {
         tracing::info!(
           target: "orchestrator",
           is_batch_syncing=sync_state.is_batch_syncing(),
-          has_synced=sync_state.has_synced(latest_block)
+          has_synced=sync_state.has_synced(incoming_block)
         );
         return Ok(());
     }
 
-    let start_block = sync_state.next_block_to_fetch(&app_service.manifest);
-
-    if latest_block - start_block > 10000 {
+    if incoming_block - start_block > 10000 {
         return sync_with_ecs(
             chain_id,
             &app_service.ecs_client,
             &mut sync_state,
             start_block,
-            latest_block,
+            end_block,
             &app_service.config,
         )
         .await;
@@ -179,7 +191,7 @@ async fn sync_chain(
         chain_service.transaction_enqueuer.as_ref(),
         chain_service.transaction_fetcher.as_ref(),
     )
-    .sync(&mut sync_state, start_block, latest_block)
+    .sync(&mut sync_state, start_block, end_block)
     .await?;
 
     Ok(())
@@ -205,7 +217,7 @@ async fn sync_with_ecs(
         .task_definition(&config.syncer_task_definition_arn)
         .launch_type(aws_sdk_ecs::types::LaunchType::Fargate)
         .network_configuration(get_network_configuration(config.syncer_subnets.clone()))
-        .overrides(get_task_override(chain_id, &config, start_block, end_block))
+        .overrides(get_task_override(chain_id, &config, start_block, end_block).await)
         .send()
         .await;
 
@@ -234,7 +246,7 @@ fn get_network_configuration(subnets: Vec<String>) -> NetworkConfiguration {
         .build()
 }
 
-fn get_task_override(
+async fn get_task_override(
     chain_id: u64,
     config: &Config,
     start_block: u64,
@@ -246,7 +258,6 @@ fn get_task_override(
         .find(|c| c.chain_id == chain_id)
         .unwrap();
 
-    let shared_config = SharedConfig::new().unwrap();
     TaskOverride::builder()
         .container_overrides(
             ContainerOverride::builder()
@@ -261,9 +272,8 @@ fn get_task_override(
                     create_key_value_pair("MANIFEST_BUCKET", &config.manifest_bucket),
                     create_key_value_pair("MANIFEST_PREFIX", &config.manifest_prefix),
                     create_key_value_pair("DEPLOYMENT_ID", &config.deployment_id),
-                    create_key_value_pair("DATABASE_URL", &config.database_url),
                     create_key_value_pair("PROJECT_ID", &config.project_id),
-                    create_key_value_pair("CONFIG__REDIS__URL", &shared_config.redis.url),
+                    create_key_value_pair("STRIPE_CUSTOMER_ID", &config.stripe_customer_id),
                 ]))
                 .build(),
         )
@@ -291,8 +301,6 @@ mod errors {
         RedisClientError(#[from] shared::redis_client::errors::RedisClientError),
         #[error("Syncer error: {0}")]
         SyncerError(#[from] shared::syncer::errors::ChainSyncerError),
-        #[error("Init block provider error: {0}")]
-        InitBlockProviderError(#[from] shared::manifest::providers::InitBlockProviderError),
         #[error("Sdk error: {0}")]
         SdkError(
             #[from] aws_sdk_ecs::error::SdkError<aws_sdk_ecs::operation::run_task::RunTaskError>,

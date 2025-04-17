@@ -60,7 +60,7 @@ export async function handler(event: SQSEvent, context: Context) {
 
 async function processBatch(
   resultsManager: ResultsManager,
-  batch: IngestBatch & { messageId: string }
+  batch: IngestBatch & { messageId: string; receiptHandle: string }
 ) {
   const groupedTxs = groupTransactions(batch.transactions, pipeline.handlers);
   for (let i = 0; i < groupedTxs.length; i++) {
@@ -75,6 +75,7 @@ async function processBatch(
       resultsManager.addSuccess({
         batchId: batch.batchId,
         messageId: batch.messageId,
+        receiptHandle: batch.receiptHandle,
         transactions: txs.map((tx) => ({
           transactionHash: tx.transactionHash,
           handler: i.toString(),
@@ -84,6 +85,7 @@ async function processBatch(
       resultsManager.fail({
         batchId: batch.batchId,
         messageId: batch.messageId,
+        receiptHandle: batch.receiptHandle,
         error: e,
         transactions: txs.map((tx) => ({
           transactionHash: tx.transactionHash,

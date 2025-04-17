@@ -48,6 +48,7 @@ async fn main() {
     init_tracing();
 
     let producer_modules: Vec<_> = get_supported_networks()
+        .await
         .into_iter()
         .map(|network| ProducerModuleImpl::new(network))
         .collect();

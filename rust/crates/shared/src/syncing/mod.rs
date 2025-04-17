@@ -45,23 +45,6 @@ impl State {
         self.chain_id
     }
 
-    pub fn manifest_min_block(&self, manifest: &Manifest) -> Result<u64, errors::StateError> {
-        let manifest_min_block = manifest
-            .tx_configs
-            .iter()
-            .filter(|c| {
-                c.chains
-                    .as_ref()
-                    .is_none_or(|chains| chains.contains(&(self.chain_id() as i64)))
-            })
-            .map(|c| c.get_start_block(self.chain_id()))
-            .filter(Option::is_some)
-            .map(Option::unwrap)
-            .min();
-
-        Ok(manifest_min_block.unwrap())
-    }
-
     pub fn last_fetched_block(&self) -> Option<u64> {
         self.last_block.as_ref().and_then(|v| {
             if v.is_empty() {
@@ -72,10 +55,17 @@ impl State {
         })
     }
 
-    pub fn next_block_to_fetch(&self, manifest: &Manifest) -> u64 {
-        self.last_fetched_block()
-            .map(|l| l + 1)
-            .unwrap_or(self.manifest_min_block(manifest).unwrap())
+    pub fn next_block_to_fetch(&self, manifest: &Manifest, latest_block: u64) -> u64 {
+        let chain_id = self.chain_id();
+        let chain_config = manifest.get_chain_config(chain_id).unwrap();
+
+        let default_block = chain_config.start_block.unwrap_or(latest_block);
+
+        self.last_fetched_block().map(|l| l + 1).unwrap_or(
+            manifest
+                .min_block(chain_id)
+                .map_or(latest_block, |min_block| min_block.max(default_block)),
+        )
     }
 
     pub fn has_synced(&self, incoming_block: u64) -> bool {

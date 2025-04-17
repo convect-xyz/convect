@@ -27,13 +27,49 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   CONFIG__REDIS__URL: ${{ secrets.CONFIG__REDIS__URL }}
   TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
+  INFRA_VERSION: ${{ github.event.inputs.version || github.event.release.tag_name || github.ref_name }}
+  CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ secrets.CONFIG_ENCRYPTION_PRIVATE_KEY }}
+  CONFIG_ENCRYPTION_ALGORITHM: ${{ secrets.CONFIG_ENCRYPTION_ALGORITHM }}
+  DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
+  PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+  TEST_STRIPE_API_KEY: ${{ secrets.TEST_STRIPE_API_KEY }}
+  PROD_STRIPE_API_KEY: ${{ secrets.PROD_STRIPE_API_KEY }}
+  PROD_REPORTING_DB_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  deploy_config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3.5.0
+        with:
+          node-version-file: package.json
+      - name: Set up node cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            node_modules
+            infra/node_modules
+          key: ${{ runner.os }}-deploy-config-${{ hashFiles('infra/yarn.lock') }}-
+          restore-keys: ${{ runner.os }}-deploy-config-
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Installing dependencies 📦️
+        run: cd infra && yarn
+      - name: Deploy config
+        run: cd infra && yarn deploy:config
+
   build_all_and_cache:
+    needs: [deploy_config]
     runs-on: ubuntu-latest
     steps:
       - name: Install Rust toolchain
@@ -64,10 +100,8 @@ jobs:
           sudo apt-get install -y libpq-dev postgresql
       - name: Run integration tests
         working-directory: rust
-        env:
-          DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
         run: |
-          cargo nextest run -p shared --features=pg
+          cargo nextest run -p shared --features=pg,telemetry
       - name: Build and Upload All Binaries
         working-directory: rust
         env:
@@ -82,6 +116,7 @@ jobs:
           aws s3api put-object --bucket ingest-functions --key handler-server/$GITHUB_SHA.zip --body "./target/lambda/extensions/handler-server.zip"
 
   build_images:
+    needs: [deploy_config]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -115,6 +150,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
           file: ./docker/${{ matrix.binary }}/Dockerfile.${{ matrix.binary }}
           outputs: type=oci,dest=/tmp/image.tar
+          build-args: |
+            CONFIG_ENCRYPTION_PRIVATE_KEY=${{ secrets.CONFIG_ENCRYPTION_PRIVATE_KEY }}
+            CONFIG_ENCRYPTION_ALGORITHM=${{ secrets.CONFIG_ENCRYPTION_ALGORITHM }}
+            INFRA_VERSION=${{ env.INFRA_VERSION }}
 
       - name: Import image in containerd
         env:
@@ -176,9 +215,3 @@ jobs:
           work-dir: ./infra
           stack-name: ${{ env.VERSION }}
           upsert: true
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          TEST_STRIPE_API_KEY: ${{ secrets.TEST_STRIPE_API_KEY }}
-          PROD_STRIPE_API_KEY: ${{ secrets.PROD_STRIPE_API_KEY }}
-          TINYBIRD_API_KEY: ${{ secrets.TINYBIRD_API_KEY }}
-          PROD_REPORTING_DB_URL: ${{ secrets.PROD_REPORTING_DB_URL }}

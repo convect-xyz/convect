@@ -163,10 +163,9 @@ export const projectCollaborators = createTable(
     userIdIdx: index("project_collaborator_userId_idx").on(
       projectCollaborators.userId
     ),
-    uniqueProjectUserIdx: unique().on(
-      projectCollaborators.projectId,
-      projectCollaborators.userId
-    ),
+    pk: primaryKey({
+      columns: [projectCollaborators.projectId, projectCollaborators.userId],
+    }),
   })
 );
 
@@ -329,7 +328,7 @@ export const producers = createTable(
   {
     id: serial("id").notNull().primaryKey(),
     chainId: integer("chain_id").notNull().unique(),
-    pollingUrls: varchar("pollingUrls", { length: 255 })
+    pollingUrls: text("pollingUrls")
       .array()
       .default(sql`ARRAY[]::varchar[]`),
     wsUrl: varchar("wsUrl", { length: 255 }).notNull(),

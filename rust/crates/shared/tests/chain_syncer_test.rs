@@ -3,13 +3,14 @@ use std::{fs::File, path::Path, sync::Arc};
 use expectations::{Expectations, ExpectedTransaction};
 use futures::{future::join_all, FutureExt};
 use shared::{
-    configuration::SharedConfig,
+    configuration::EnvironmentConfig,
     enqueuer::{Payload, SQSTransactionEnqueuer},
     fetcher::TransactionFetcherImpl,
     manifest::{Manifest, ManifestChainConfig},
     redis_client::RedisClientImpl,
     syncer::ChainSyncer,
     syncing::State,
+    telemetry::StripeProcessedTransactionTelemetry,
     types::{batch::IngestBatchTransaction, transactions::IngestTransaction},
 };
 
@@ -19,14 +20,14 @@ mod expectations;
 struct Test {
     name: &'static str,
     path: &'static str,
-    shared_config: SharedConfig,
+    shared_config: EnvironmentConfig,
     manifest: Manifest,
     sqs_client: aws_sdk_sqs::Client,
 }
 
 impl Test {
     pub async fn new(name: &'static str, path: &'static str) -> Self {
-        let shared_config = SharedConfig::new().unwrap();
+        let shared_config = EnvironmentConfig::new().await.unwrap();
         let manifest = Manifest::from_file(&Self::manifest_path(path))
             .await
             .unwrap();
@@ -92,9 +93,10 @@ impl Test {
             queue.queue_url.clone().unwrap(),
             chain_id,
             self.manifest.clone(),
+            "cus_QnxZAls5dHRoJS".to_string(),
         )
         .await;
-        let fetcher = TransactionFetcherImpl::with_defaults(chain_id);
+        let fetcher = TransactionFetcherImpl::with_defaults(chain_id).await;
         let syncer = ChainSyncer::new(&self.manifest, &enqueuer, &fetcher);
         let mut pipeline = State::load(
             "integration-test".to_string(),

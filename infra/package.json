@@ -3,6 +3,9 @@
   "main": "index.ts",
   "private": "true",
   "version": "1.0.0",
+  "scripts": {
+    "deploy:config": "npx ts-node uploadConfig.ts"
+  },
   "devDependencies": {
     "@types/node": "^18",
     "typescript": "5.5.2"

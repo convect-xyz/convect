@@ -53,13 +53,16 @@ export function TransactionDetail(props: { transactionHash?: string }) {
         <TransactionInformation transactionHash={props.transactionHash} />
       </div>
       <div className="mt-4">
-        <ProcessedInformation transactionHash={props.transactionHash} />
+        <Handlers transactionHash={props.transactionHash} />
+      </div>
+      <div className="mt-4">
+        <ErrorInformation transactionHash={props.transactionHash} />
       </div>
     </div>
   );
 }
 
-function ProcessedInformation(props: { transactionHash: string }) {
+function Handlers(props: { transactionHash: string }) {
   const { data: transaction } = useTransaction({
     transactionHash: props.transactionHash,
   });
@@ -85,6 +88,7 @@ function ProcessedInformation(props: { transactionHash: string }) {
       <div className="mt-4 flex flex-col divide-y rounded-md border">
         {transaction.transaction.txConfigs.map((txConfigIdx) => {
           const txConfig = getTxConfig(txConfigIdx);
+          console.log(transaction.transaction.mostRecentAttempts);
           const attempt = transaction.transaction.mostRecentAttempts.find(
             (attempt) => attempt.handler === txConfigIdx.toString(),
           );
@@ -103,25 +107,58 @@ function ProcessedInformation(props: { transactionHash: string }) {
                   {txConfig?.name}
                 </div>
               </div>
-              <InfoTooltip
-                text={Intl.DateTimeFormat("en-US", {
-                  dateStyle: "full",
-                  timeStyle: "medium",
-                }).format(transaction.transaction.timestamp)}
-              >
-                <div className="text-xs text-muted-foreground underline decoration-dashed">
-                  {attempt && (
+
+              {attempt && (
+                <InfoTooltip
+                  text={Intl.DateTimeFormat("en-US", {
+                    dateStyle: "full",
+                    timeStyle: "medium",
+                  }).format(attempt.timestamp)}
+                >
+                  <div className="text-xs text-muted-foreground underline decoration-dashed">
                     <ForceRerender>
                       {formatDistanceToNow(attempt.timestamp, {
                         addSuffix: true,
                       })}
                     </ForceRerender>
-                  )}
-                </div>
-              </InfoTooltip>
+                  </div>
+                </InfoTooltip>
+              )}
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function ErrorInformation(props: { transactionHash: string }) {
+  const { data: transaction } = useTransaction({
+    transactionHash: props.transactionHash,
+  });
+  const { data: deployment } = useSelectedDeployment();
+
+  if (
+    !transaction ||
+    !deployment ||
+    transaction.transaction.result?.status.status !== "FAILED"
+  ) {
+    return null;
+  }
+
+  const status = transaction.transaction.result.status;
+
+  return (
+    <div className="px-4">
+      <div className="flex items-center justify-between">
+        <div>Error</div>
+
+        <InfoTooltip text="The error emmitted when processing the batch this transaction belongs to.">
+          <HelpCircleIcon size={18} />
+        </InfoTooltip>
+      </div>
+      <div className="mt-4 flex flex-col divide-y rounded-md border p-4 text-xs">
+        {status.stacktrace}
       </div>
     </div>
   );

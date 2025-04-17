@@ -309,6 +309,13 @@
       "when": 1742951605636,
       "tag": "0043_futuristic_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1744802442667,
+      "tag": "0044_green_killer_shrike",
+      "breakpoints": true
     }
   ]
 }

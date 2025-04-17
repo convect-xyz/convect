@@ -88,21 +88,17 @@ export const getTransactions = protectedProcedure
     );
 
     const __results = analysisDb
-      .selectDistinctOn(
-        [aggregatedStats.batchId, aggregatedStats.transactionHash],
-        {
-          ethTransactionId: aggregatedStats.ethTransactionId,
-          transactionHash: aggregatedStats.transactionHash,
-          status: aggregatedStats.status,
-          successCount: aggregatedStats.successCount,
-          timestamp: aggregatedStats.timestamp,
-          txConfigs: aggregatedStats.txConfigs,
-          createdAt: aggregatedStats.createdAt,
-        },
-      )
+      .selectDistinctOn([aggregatedStats.transactionHash], {
+        ethTransactionId: aggregatedStats.ethTransactionId,
+        transactionHash: aggregatedStats.transactionHash,
+        status: aggregatedStats.status,
+        successCount: aggregatedStats.successCount,
+        timestamp: aggregatedStats.timestamp,
+        txConfigs: aggregatedStats.txConfigs,
+        createdAt: aggregatedStats.createdAt,
+      })
       .from(aggregatedStats)
       .orderBy(
-        desc(aggregatedStats.batchId),
         desc(aggregatedStats.transactionHash),
         desc(aggregatedStats.timestamp),
       )
@@ -193,6 +189,31 @@ function getProcessedTransactionsWithEthTransactions(
     return baseFilter;
   };
 
+  analysisDb
+    .select({
+      ethTransactionId: ethTransactions.id,
+      timestamp: analysisSchema.processedTransaction.timestamp,
+      processedBatchId: analysisSchema.processedTransaction.processedBatchId,
+      transactionHash: ethTransactions.transactionHash,
+      status: analysisSchema.processedTransaction.status,
+      txConfigs: ethTransactions.txConfigs,
+      deploymentId: analysisSchema.processedTransaction.deploymentId,
+      functionId: analysisSchema.processedTransaction.functionId,
+      chainId: analysisSchema.processedTransaction.chainId,
+      createdAt: ethTransactions.createdAt,
+    })
+    .from(analysisSchema.processedTransaction)
+    .where(getFilter())
+    .rightJoin(
+      ethTransactions,
+      and(
+        eq(
+          analysisSchema.processedTransaction.transactionHash,
+          ethTransactions.transactionHash,
+        ),
+      ),
+    )
+    .then(console.log);
   return analysisDb
     .select({
       ethTransactionId: ethTransactions.id,
@@ -210,9 +231,11 @@ function getProcessedTransactionsWithEthTransactions(
     .where(getFilter())
     .rightJoin(
       ethTransactions,
-      eq(
-        analysisSchema.processedTransaction.transactionHash,
-        ethTransactions.transactionHash,
+      and(
+        eq(
+          analysisSchema.processedTransaction.transactionHash,
+          ethTransactions.transactionHash,
+        ),
       ),
     )
     .as("processedTransactions");
@@ -290,7 +313,6 @@ function getAggregatedStats(
     .select({
       ethTransactionId: processedTransactionsWithBatch.ethTransactionId,
       processedBatchId: processedTransactionsWithBatch.processedBatchId,
-      batchId: processedTransactionsWithBatch.batchId,
       timestamp: max(processedTransactionsWithBatch.timestamp).as(
         "txCountsTimestamp",
       ),
@@ -311,7 +333,6 @@ function getAggregatedStats(
     .where(getFilter())
     .groupBy(
       processedTransactionsWithBatch.transactionHash,
-      processedTransactionsWithBatch.batchId,
       processedTransactionsWithBatch.processedBatchId,
       processedTransactionsWithBatch.ethTransactionId,
       processedTransactionsWithBatch.createdAt,

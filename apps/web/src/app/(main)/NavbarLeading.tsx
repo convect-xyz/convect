@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusCircle } from "lucide-react";
+import { ChevronsUpDownIcon, PlusCircle, SlashIcon } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -14,9 +14,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { Skeleton } from "~/components/ui/skeleton";
 import { api } from "~/trpc/react";
 import { NewProjectDialog } from "./NewProject";
+
+function useFunctions() {
+  const { projectId } = useParams<{ projectId?: string }>();
+
+  return api.project.getFunctions.useQuery(
+    {
+      projectId: Number(projectId),
+    },
+    {
+      select: (data) => data.functions,
+    },
+  );
+}
+
+function useProjects() {
+  return api.project.getProjects.useQuery();
+}
 
 export function NavbarLeading() {
   const pathname = usePathname();
@@ -46,12 +62,40 @@ export function NavbarLeading() {
     );
   }
 
-  return <ProjectsDropdown />;
+  return <ProjectsBreadcrumbs />;
+}
+
+function ProjectsBreadcrumbs() {
+  const { projectId, functionId } = useParams<{
+    projectId?: string;
+    functionId?: string;
+  }>();
+  const { data: projects } = useProjects();
+  const { data: functions } = useFunctions();
+
+  if ((projectId && !projects) || (functionId && !functions)) {
+    return <div></div>;
+  }
+
+  return (
+    <div className="flex items-center gap-2 px-4">
+      <Link href="/projects">
+        <LogoIcon className="h-6 w-6" />
+      </Link>
+      {projectId && (
+        <SlashIcon className="h-4 w-4 skew-x-[30deg] text-muted-foreground" />
+      )}
+      {projectId && <ProjectsDropdown />}
+      {functionId && (
+        <SlashIcon className="h-4 w-4 skew-x-[30deg] text-muted-foreground" />
+      )}
+      {functionId && <FunctionsDropdown />}
+    </div>
+  );
 }
 
 export function ProjectsDropdown() {
-  const { data: projects, isLoading: isLoadingProjects } =
-    api.project.getProjects.useQuery();
+  const { data: projects } = api.project.getProjects.useQuery();
   const { projectId } = useParams<{ projectId?: string }>();
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const router = useRouter();
@@ -61,23 +105,21 @@ export function ProjectsDropdown() {
   return (
     <>
       <DropdownMenu>
-        {isLoadingProjects ? (
-          <Skeleton className="h-9 w-[180px]" />
-        ) : (
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-[180px] items-center justify-start gap-2"
-            >
-              <LogoIcon className="h-6 w-6" />
-              {currentProject ? (
-                <>{currentProject.name}</>
-              ) : (
-                <>Select a project</>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-        )}
+        <DropdownMenuTrigger asChild className="border-none">
+          <Button
+            variant="outline"
+            className="min-w-[80px] max-w-[180px] items-center justify-between gap-2"
+          >
+            {currentProject ? (
+              <>{currentProject.name}</>
+            ) : (
+              <>Select a project</>
+            )}
+
+            <ChevronsUpDownIcon className="h-3 w-3 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+
         <DropdownMenuContent className="w-56">
           <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">
             Projects
@@ -108,6 +150,51 @@ export function ProjectsDropdown() {
   );
 }
 
-export function ProjectsDropdownSkeletion() {
-  return <Skeleton className="h-9 w-[180px]" />;
+export function FunctionsDropdown() {
+  const { projectId, functionId } = useParams<{
+    projectId: string;
+    functionId?: string;
+  }>();
+  const { data: functions, isLoading: isLoadingProjects } = useFunctions();
+  const router = useRouter();
+  const currentProject = functions?.find((p) => functionId === p.id.toString());
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild className="border-none">
+          <Button
+            variant="outline"
+            className="min-w-[80px] max-w-[180px] items-center justify-between gap-2"
+          >
+            {currentProject ? (
+              <>{currentProject.name}</>
+            ) : (
+              <>Select a Function</>
+            )}
+
+            <ChevronsUpDownIcon className="h-3 w-3 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56">
+          <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">
+            Functions
+          </DropdownMenuLabel>
+          {functions?.map((fn) => (
+            <DropdownMenuItem
+              key={fn.id}
+              onClick={() => router.push(`/projects/${projectId}/${fn.id}`)}
+            >
+              {fn.name}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="gap-2" onClick={() => {}}>
+            <PlusCircle size={14} />
+            New Function
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
 }

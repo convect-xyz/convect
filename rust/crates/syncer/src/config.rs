@@ -1,4 +1,4 @@
-use std::env;
+use std::env::{self, VarError};
 
 pub struct Config {
     pub function_id: String,
@@ -8,26 +8,22 @@ pub struct Config {
     pub transaction_queue_url: String,
     pub deployment_id: String,
     pub project_id: String,
+    pub stripe_customer_id: String,
 }
 
-pub fn load_config_from_env() -> Config {
-    return Config {
-        function_id: env::var("FUNCTION_ID").expect("Function ID not set"),
-        chain_id: env::var("CHAIN_ID")
-            .expect("Chain ID not set")
-            .parse()
-            .expect("Chain ID not a u64"),
-        start_block: env::var("START_BLOCK")
-            .expect("START_BLOCK is not present")
+pub fn load_config_from_env() -> Result<Config, VarError> {
+    Ok(Config {
+        function_id: env::var("FUNCTION_ID")?,
+        chain_id: env::var("CHAIN_ID")?.parse().expect("Chain ID not a u64"),
+        start_block: env::var("START_BLOCK")?
             .parse()
             .expect("START_BLOCK is not a u64"),
-        end_block: env::var("END_BLOCK")
-            .expect("END_BLOCK is not present")
+        end_block: env::var("END_BLOCK")?
             .parse()
             .expect("END_BLOCK is not a u64"),
-        transaction_queue_url: env::var("TRANSACTION_QUEUE_URL")
-            .expect("TRANSACTION_QUEUE_URL is not present"),
-        deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID is not present"),
-        project_id: env::var("PROJECT_ID").expect("PROJECT_ID is not present"),
-    };
+        transaction_queue_url: env::var("TRANSACTION_QUEUE_URL")?,
+        deployment_id: env::var("DEPLOYMENT_ID")?,
+        project_id: env::var("PROJECT_ID")?,
+        stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")?,
+    })
 }

@@ -6,38 +6,6 @@ export = async () => {
   const stackName = pulumi.getStack();
   const GITHUB_SHA = process.env.GITHUB_SHA!;
 
-  const reportingQueue = new aws.sqs.Queue(
-    `reporting-queue`,
-    {
-      visibilityTimeoutSeconds: 300,
-    },
-    {
-      deleteBeforeReplace: false,
-    }
-  );
-
-  const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
-    role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-    s3Bucket: "ingest-functions",
-    s3Key: `reporting/${GITHUB_SHA}.zip`,
-    environment: {
-      variables: {
-        DATABASE_URL: config.reportingDbUrl,
-        STRIPE_API_KEY: config.stripeApiKey,
-      },
-    },
-    timeout: 300,
-    memorySize: 512,
-    handler: "bootstrap",
-    packageType: "Zip",
-    runtime: "provided.al2023",
-  });
-
-  new aws.lambda.EventSourceMapping("reporing-handler-source-mapping", {
-    eventSourceArn: reportingQueue.arn,
-    functionName: reportingHandler.arn,
-  });
-
   const extension = new aws.lambda.LayerVersion("handler_extension", {
     layerName: `${stackName}_handler_extension`,
     compatibleArchitectures: ["x86_64"],
@@ -81,10 +49,6 @@ export = async () => {
         ],
         essential: true,
         environment: [
-          {
-            name: "PULUMI_ACCESS_TOKEN",
-            value: config.pulumiAccessToken,
-          },
           {
             name: "VERSION",
             value: stackName,
@@ -147,7 +111,7 @@ export = async () => {
           environment: [
             {
               name: "PULUMI_ACCESS_TOKEN",
-              value: config.pulumiAccessToken,
+              value: config.pulumi.accessToken,
             },
             {
               name: "VERSION",
@@ -188,21 +152,11 @@ export = async () => {
     { dependsOn: [syncer] }
   );
 
-  const serverConfig = new aws.s3.BucketObject("config", {
-    bucket: "convect-pzecvtjr9v",
-    key: "config/config.json",
-    source: new pulumi.asset.StringAsset(JSON.stringify(config)),
-  });
-
   return {
     handlerExtensionArn: extension.arn,
     handlerServerArn: handler_server.arn,
     builderTaskDefinition: builder.arn,
     syncerTaskDefinition: syncer.arn,
-    reportingHandlerArn: reportingHandler.arn,
-    reportingQueueUrl: reportingQueue.url,
     githubSha: pulumi.output(GITHUB_SHA),
-    configBucket: pulumi.secret(serverConfig.bucket),
-    configKey: pulumi.secret(serverConfig.key),
   };
 };

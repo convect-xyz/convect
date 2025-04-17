@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-const TINYBIRD_API_KEY: &'static str = env!("TINYBIRD_API_KEY");
+use crate::configuration::RefreshingEnvironmentConfig;
 
 #[async_trait]
 pub trait TinybirdService {
@@ -30,11 +30,18 @@ impl TinybirdService for TinybirdServiceImpl {
         name: &str,
         events: Vec<String>,
     ) -> Result<(), errors::TinybirdServiceError> {
+        let api_key = RefreshingEnvironmentConfig::new()
+            .await
+            .get_config()
+            .await
+            .tinybird
+            .api_key;
+
         self.client
             .post(format!(
                 "https://api.eu-central-1.aws.tinybird.co/v0/events?name={name}",
             ))
-            .header("Authorization", format!("Bearer {TINYBIRD_API_KEY}"))
+            .header("Authorization", format!("Bearer {api_key}"))
             .body(events.join("\n"))
             .send()
             .await?;

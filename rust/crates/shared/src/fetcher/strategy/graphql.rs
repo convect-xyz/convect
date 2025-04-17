@@ -25,9 +25,9 @@ impl<T: GethGraphqlClient> GraphqlFetchStrategyImpl<T> {
 }
 
 impl GraphqlFetchStrategyImpl<GethGraphqlClientImpl> {
-    pub fn with_defaults(chain_id: u64) -> Self {
+    pub async fn with_defaults(chain_id: u64) -> Self {
         Self {
-            graphql_client: GethGraphqlClientImpl::new(get_first_polling_url(chain_id)),
+            graphql_client: GethGraphqlClientImpl::new(get_first_polling_url(chain_id).await),
             chain_id,
         }
     }
@@ -45,7 +45,7 @@ impl<T: GethGraphqlClient> FetchStrategy for GraphqlFetchStrategyImpl<T> {
         let chain_id = self.chain_id;
 
         let eligible_tx_cfgs: Vec<_> =
-            super::utils::get_eligible_tx_configs(manifest, chain_id, range_start, range_end);
+            manifest.get_eligible_tx_configs(chain_id, range_start, range_end);
 
         let fetched_logs = Retry::spawn(
             ExponentialBackoff::from_millis(15).map(jitter).take(3),

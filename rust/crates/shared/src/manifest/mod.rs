@@ -50,7 +50,10 @@ pub struct LogConfig {
 pub struct ManifestChainConfig {
     #[serde(rename = "chainId")]
     pub chain_id: u64,
+    pub start_block: Option<u64>,
+    pub end_block: Option<u64>,
 }
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Manifest {
     pub chains: Vec<ManifestChainConfig>,
@@ -97,6 +100,49 @@ impl Manifest {
             })
             .collect()
     }
+
+    pub fn min_block(&self, chain_id: u64) -> Option<u64> {
+        self.tx_configs
+            .iter()
+            .filter(|c| {
+                c.chains
+                    .as_ref()
+                    .is_none_or(|chains| chains.contains(&(chain_id as i64)))
+            })
+            .map(|c| c.get_start_block(chain_id))
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .min()
+    }
+
+    pub fn get_eligible_tx_configs(
+        &self,
+        chain_id: u64,
+        range_start: u64,
+        range_end: u64,
+    ) -> Vec<(TransactionConfig, Vec<LogConfig>)> {
+        let is_tx_config_after_start =
+            |tx_config: &TransactionConfig| match tx_config.get_start_block(chain_id) {
+                Some(tx_cfg_start_block) => {
+                    range_start >= tx_cfg_start_block || range_end >= tx_cfg_start_block
+                }
+                None => true,
+            };
+
+        let should_run_on_chain = |tx_config: &TransactionConfig| match &tx_config.chains {
+            Some(chains) => chains.contains(&(chain_id as i64)),
+            None => true,
+        };
+
+        self.get_tx_configs_with_log_configs()
+            .into_iter()
+            .filter(|(tx_cfg, _)| is_tx_config_after_start(tx_cfg) && should_run_on_chain(tx_cfg))
+            .collect()
+    }
+
+    pub fn get_chain_config(&self, chain_id: u64) -> Option<ManifestChainConfig> {
+        self.chains.iter().find(|c| c.chain_id == chain_id).cloned()
+    }
 }
 
 pub mod errors {
@@ -128,56 +174,5 @@ pub mod errors {
         SerError(#[from] serde_json::Error),
         #[error("IO Error: {0}")]
         IoError(#[from] std::io::Error),
-    }
-}
-
-pub mod providers {
-    use thiserror::Error;
-
-    use crate::contract_info;
-    use crate::fetcher::web3::client::Web3Client;
-    use crate::manifest::Manifest;
-
-    pub trait InitBlockProvider: std::marker::Sync {
-        fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError>;
-    }
-
-    pub struct InitBlockProviderImpl {
-        web3_client: Box<dyn Web3Client>,
-    }
-
-    impl InitBlockProviderImpl {
-        pub fn new(web3_client: Box<dyn Web3Client>) -> Self {
-            Self { web3_client }
-        }
-    }
-
-    impl InitBlockProvider for InitBlockProviderImpl {
-        fn get_init_block(&self, manifest: &Manifest) -> Result<u64, InitBlockProviderError> {
-            let manifest_min_block = manifest
-                .tx_configs
-                .iter()
-                .filter(|c| {
-                    c.chains
-                        .as_ref()
-                        .is_none_or(|chains| chains.contains(&(self.web3_client.chain_id() as i64)))
-                })
-                .map(|c| c.get_start_block(self.web3_client.chain_id()))
-                .filter(Option::is_some)
-                .map(Option::unwrap)
-                .min();
-
-            Ok(manifest_min_block.unwrap())
-        }
-    }
-
-    #[derive(Debug, Error)]
-    pub enum InitBlockProviderError {
-        #[error("Contract info provider error: {0}")]
-        ContractInfoProviderError(
-            #[from] contract_info::errors::EtherscanContractInfoProviderError,
-        ),
-        #[error("Web3 client error: {0}")]
-        Web3ClientError(#[from] crate::fetcher::web3::client::errors::Web3ClientError),
     }
 }

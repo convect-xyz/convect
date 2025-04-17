@@ -3,12 +3,17 @@ import { handlerServerAxios } from "./axios";
 type ProcessedBatchResult = {
   batchId: string;
   messageId: string;
+  receiptHandle: string;
   timestampMs: number;
   transactions: Array<{
     transactionHash: string;
     handler: string;
   }>;
-} & ({ status: "SUCCESS" } | { status: "FAILED"; error: object });
+} & {
+  status:
+    | { label: "SUCCESS" }
+    | { label: "FAILED"; message: string; stacktrace: string };
+};
 
 export class ResultsManager {
   // A map of batchId to ProcessedBatchResult
@@ -22,7 +27,7 @@ export class ResultsManager {
 
   get failure() {
     for (const result of this.results.values()) {
-      if (result.status === "FAILED") {
+      if (result.status.label === "FAILED") {
         return result;
       }
     }
@@ -32,6 +37,7 @@ export class ResultsManager {
     opts: {
       batchId: string;
       messageId: string;
+      receiptHandle: string;
       transactions: ProcessedBatchResult["transactions"];
     } & ({ status: "SUCCESS" } | { status: "FAILED"; error: any })
   ) {
@@ -39,13 +45,29 @@ export class ResultsManager {
     if (!this.results.has(batchId)) {
       this.results.set(batchId, {
         ...opts,
+        status:
+          opts.status === "SUCCESS"
+            ? { label: "SUCCESS" }
+            : {
+                label: "FAILED",
+                message: opts.error.message ?? "",
+                stacktrace: opts.error.stack ?? "",
+              },
         timestampMs: Date.now(),
         transactions: [],
       });
     }
 
     const result = this.results.get(batchId)!;
-    result.status = opts.status;
+    result.status =
+      opts.status === "SUCCESS"
+        ? { label: "SUCCESS" }
+        : {
+            label: "FAILED",
+            message: opts.error.message ?? "",
+            stacktrace: opts.error.stack ?? "",
+          };
+
     result.transactions.push(
       ...opts.transactions.map((tx) => ({
         ...tx,
@@ -57,6 +79,7 @@ export class ResultsManager {
   addSuccess(opts: {
     batchId: string;
     messageId: string;
+    receiptHandle: string;
     transactions: ProcessedBatchResult["transactions"];
   }) {
     this._addWithStatus({
@@ -68,6 +91,7 @@ export class ResultsManager {
   fail(opts: {
     batchId: string;
     messageId: string;
+    receiptHandle: string;
     error: any;
     transactions: ProcessedBatchResult["transactions"];
   }) {

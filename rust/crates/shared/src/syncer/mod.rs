@@ -119,8 +119,12 @@ impl<'a> ChainSyncer<'a> {
         state: &mut State,
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {
-        let start_block = state.manifest_min_block(&self.manifest)?;
-        return Ok(self._sync(state, start_block, end_block).await?);
+        let start_block = self.manifest.min_block(state.chain_id());
+        if let Some(start_block) = start_block {
+            return Ok(self._sync(state, start_block, end_block).await?);
+        }
+
+        return Ok(());
     }
 
     async fn _sync(
@@ -129,10 +133,17 @@ impl<'a> ChainSyncer<'a> {
         start_block: u64,
         end_block: u64,
     ) -> Result<(), errors::ChainSyncerError> {
+        if start_block > end_block {
+            return Err(errors::ChainSyncerError::InvalidBlockRange(
+                start_block,
+                end_block,
+            ));
+        }
+
         let configs = utils::get_block_configs(start_block, end_block, BATCH_SIZE);
         let mut buffer = TransactionBuffer::new();
 
-        for chunk in configs.chunks(100) {
+        for chunk in configs.chunks(10) {
             let transactions: Vec<IngestTransaction> = join_all(chunk.iter().map(|range| {
                 self.fetcher.get_transactions_in_range(
                     &self.manifest,
@@ -192,7 +203,7 @@ pub mod errors {
         TransactionEnqueuerError(#[from] crate::enqueuer::errors::TransactionEnqueuerError),
         #[error("Failed to update pipeline: {0}")]
         StateError(#[from] crate::syncing::errors::StateError),
-        #[error("Failed to get init block: {0}")]
-        InitBlockProviderError(#[from] crate::manifest::providers::InitBlockProviderError),
+        #[error("Invalid block range: {0} - {1}")]
+        InvalidBlockRange(u64, u64),
     }
 }
