@@ -62,7 +62,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     let reports: Vec<reporting_sdk::Report> =
         stored_report_service.get_reports(&stored_reports).await?;
 
-    let extracted: Vec<_> = reports.iter().map(extract_request).flatten().collect();
+    let extracted: Vec<_> = reports.iter().map(extract_request).collect();
 
     let conn = &mut pool.get().await?;
 
@@ -134,7 +134,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     Ok(())
 }
 
-fn extract_request(r: &reporting_sdk::Report) -> Vec<ExtractedRequest> {
+fn extract_request(r: &reporting_sdk::Report) -> ExtractedRequest {
     let mut rows = ExtractedRequest {
         transactions: Vec::new(),
         batches: Vec::new(),
