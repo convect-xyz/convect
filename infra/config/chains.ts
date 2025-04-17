@@ -85,7 +85,7 @@ export const chains = [
     etherscan_like: "https://api.basescan.org",
     etherscan_api_key: "REDACTED",
     slug: "base-mainnet",
-    fetch_strategy: "graphql",
+    fetch_strategy: "jsonrpc",
   },
   {
     id: 84532,
