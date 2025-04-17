@@ -127,7 +127,8 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
             m.0,
             m.1.billed_duration_ms * m.1.memory_size_mb,
         )
-    }));
+    }))
+    .await;
 
     join_all(
         stored_reports
