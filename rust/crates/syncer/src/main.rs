@@ -35,7 +35,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let fetcher = TransactionFetcherImpl::with_defaults(network.id).await;
     let pool = establish_connection_pool().await;
     let manifest = Manifest::from_env().await.unwrap();
-
     let enqueuer = SQSTransactionEnqueuer::new(
         s3_client,
         syncer_config.transaction_queue_url,

@@ -45,9 +45,7 @@ impl S3 for aws_sdk_s3::Client {
         prefix: &str,
     ) -> Result<String, errors::GetS3ObjectError> {
         let output = self.get_object().bucket(bucket).key(prefix).send().await?;
-
         let data = output.body.collect().await?;
-
         return Ok(String::from_utf8(data.into_bytes().to_vec())?);
     }
 
@@ -58,7 +56,7 @@ impl S3 for aws_sdk_s3::Client {
         encryption_config: &EncryptionConfig,
     ) -> Result<String, errors::GetS3ObjectError> {
         let encryption_key_as_bytes = general_purpose::STANDARD
-            .decode(encryption_config.key.clone())
+            .decode(&encryption_config.key)
             .unwrap();
         let key_md5_hash = md5::compute(encryption_key_as_bytes);
         let encoded_key_md5_hash = general_purpose::STANDARD.encode(key_md5_hash.0);
@@ -67,8 +65,8 @@ impl S3 for aws_sdk_s3::Client {
             .get_object()
             .bucket(bucket)
             .key(prefix)
-            .sse_customer_key(encryption_config.key.clone())
-            .sse_customer_algorithm(encryption_config.algorithm.clone())
+            .sse_customer_key(&encryption_config.key)
+            .sse_customer_algorithm(&encryption_config.algorithm)
             .sse_customer_key_md5(encoded_key_md5_hash)
             .send()
             .await?;
