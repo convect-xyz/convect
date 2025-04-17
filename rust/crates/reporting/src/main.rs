@@ -95,21 +95,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
     processed_batch_result.unwrap();
     transactions_result.unwrap();
     metrics_result.unwrap();
-    match f {
-        reporting_sdk::Report::Results {
-            invocation_id,
-            results,
-            ..
-        } => telemetry.record_invocation(config.stripe_customer_id.clone(), invocation_id.clone()),
-        reporting_sdk::Report::Metrics { metrics, .. } => telemetry.record_mb_secs(
-            config.stripe_customer_id.clone(),
-            invocation_id,
-            metrics
-                .iter()
-                .map(|m| m.memory_size_mb * m.billed_duration_ms)
-                .sum(),
-        ),
-    }
+
     join_all(
         extracted
             .iter()
