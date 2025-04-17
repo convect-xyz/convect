@@ -26,7 +26,7 @@ export default async () => {
   const manifest = parseManifest(current.deployment.manifest);
 
   const reportingQueue = new aws.sqs.Queue(
-    `reporting-queue`,
+    `reporting-queue-${current.deployment.id}`,
     {
       visibilityTimeoutSeconds: 300,
     },
@@ -35,27 +35,33 @@ export default async () => {
     }
   );
 
-  const reportingHandler = new aws.lambda.Function(`reporting-handler`, {
-    role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-    s3Bucket: "ingest-functions",
-    s3Key: pulumi.interpolate`reporting/${githubSha}.zip`,
-    timeout: 300,
-    memorySize: 512,
-    handler: "bootstrap",
-    packageType: "Zip",
-    runtime: "provided.al2023",
-    environment: {
-      variables: {
-        STRIPE_CUSTOMER_ID:
-          current.deployment.function.project.stripeCustomerId!,
+  const reportingHandler = new aws.lambda.Function(
+    `reporting-handler-${current.deployment.id}`,
+    {
+      role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+      s3Bucket: "ingest-functions",
+      s3Key: pulumi.interpolate`reporting/${githubSha}.zip`,
+      timeout: 300,
+      memorySize: 512,
+      handler: "bootstrap",
+      packageType: "Zip",
+      runtime: "provided.al2023",
+      environment: {
+        variables: {
+          STRIPE_CUSTOMER_ID:
+            current.deployment.function.project.stripeCustomerId!,
+        },
       },
-    },
-  });
+    }
+  );
 
-  new aws.lambda.EventSourceMapping("reporing-handler-source-mapping", {
-    eventSourceArn: reportingQueue.arn,
-    functionName: reportingHandler.arn,
-  });
+  new aws.lambda.EventSourceMapping(
+    `reporing-handler-source-mapping-${current.deployment.id}`,
+    {
+      eventSourceArn: reportingQueue.arn,
+      functionName: reportingHandler.arn,
+    }
+  );
 
   for (const chain of manifest.chains) {
     const queue = new aws.sqs.Queue(
@@ -72,44 +78,47 @@ export default async () => {
       (c) => c.chainId === chain.chainId
     )!;
 
-    const handler = new aws.lambda.Function(`handler-${chain.chainId}`, {
-      role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-      s3Bucket: getCodeBucket(),
-      s3Key: path.join(
-        "outputs",
-        current.deployment.functionId.toString(),
-        current.deployment.id + ".zip"
-      ),
-      environment: {
-        variables: {
-          CHAIN_ID: manifestChain.chainId.toString(),
-          USER_ENVS: JSON.stringify(
-            current.deployment.function.envs.map((functionEnv) => ({
-              key: functionEnv.key,
-              value: decryptEnvValue(
-                env.ENV_DECRYPTION_KEY,
-                functionEnv.value,
-                functionEnv.iv
-              ),
-            }))
-          ),
-          TRANSACTION_QUEUE_URL: queue.url,
-          PROJECT_ID: current.deployment.function.projectId.toString(),
-          REPORTING_QUEUE_URL: reportingQueue.url,
-          DEPLOYMENT_ID: current.deployment.id,
-          FUNCTION_ID: current.deployment.functionId.toString(),
+    const handler = new aws.lambda.Function(
+      `handler-${chain.chainId}-${current.deployment.id}`,
+      {
+        role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+        s3Bucket: getCodeBucket(),
+        s3Key: path.join(
+          "outputs",
+          current.deployment.functionId.toString(),
+          current.deployment.id + ".zip"
+        ),
+        environment: {
+          variables: {
+            CHAIN_ID: manifestChain.chainId.toString(),
+            USER_ENVS: JSON.stringify(
+              current.deployment.function.envs.map((functionEnv) => ({
+                key: functionEnv.key,
+                value: decryptEnvValue(
+                  env.ENV_DECRYPTION_KEY,
+                  functionEnv.value,
+                  functionEnv.iv
+                ),
+              }))
+            ),
+            TRANSACTION_QUEUE_URL: queue.url,
+            PROJECT_ID: current.deployment.function.projectId.toString(),
+            REPORTING_QUEUE_URL: reportingQueue.url,
+            DEPLOYMENT_ID: current.deployment.id,
+            FUNCTION_ID: current.deployment.functionId.toString(),
+          },
         },
-      },
-      layers: [
-        stackRef.getOutput("handlerExtensionArn"),
-        stackRef.getOutput("handlerServerArn"),
-      ],
-      timeout: 900,
-      memorySize: 512,
-      handler: "index.handler",
-      packageType: "Zip",
-      runtime: "nodejs20.x",
-    });
+        layers: [
+          stackRef.getOutput("handlerExtensionArn"),
+          stackRef.getOutput("handlerServerArn"),
+        ],
+        timeout: 900,
+        memorySize: 512,
+        handler: "index.handler",
+        packageType: "Zip",
+        runtime: "nodejs20.x",
+      }
+    );
 
     new aws.lambda.EventSourceMapping(
       current.deployment.functionId.toString() +
@@ -125,44 +134,49 @@ export default async () => {
 
   const txQueueUrlOutputs = pulumi.all(txQueueUrls);
 
-  const orchestrator = new aws.lambda.Function(`orchestrator`, {
-    role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
-    s3Bucket: "ingest-functions",
-    s3Key: pulumi.interpolate`orchestrator/${githubSha}.zip`,
-    environment: {
-      variables: {
-        MANIFEST_BUCKET: current.deployment.manifestBucket,
-        MANIFEST_PREFIX: current.deployment.manifestKey,
-        VERSION: current.deployment.version,
-        SYNCER_TASK_DEFINITION_ARN: stackRef.getOutput("syncerTaskDefinition"),
-        SYNCER_CLUSTER,
-        SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
-        SYNCER_CONTAINER_NAME,
-        GITHUB_SHA: githubSha,
-        FUNCTION_ID: current.deployment.functionId.toString(),
-        DEPLOYMENT_ID: current.deployment.id,
-        PROJECT_ID: current.deployment.function.projectId.toString(),
-        STRIPE_CUSTOMER_ID:
-          current.deployment.function.project.stripeCustomerId!,
-        CHAINS: txQueueUrlOutputs.apply((output) =>
-          JSON.stringify(
-            output.map((url, idx) => {
-              const manifestChain = manifest.chains[idx];
-              return {
-                chainId: manifestChain.chainId,
-                txQueueUrl: url,
-              };
-            })
-          )
-        ),
+  const orchestrator = new aws.lambda.Function(
+    `orchestrator-${current.deployment.id}`,
+    {
+      role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+      s3Bucket: "ingest-functions",
+      s3Key: pulumi.interpolate`orchestrator/${githubSha}.zip`,
+      environment: {
+        variables: {
+          MANIFEST_BUCKET: current.deployment.manifestBucket,
+          MANIFEST_PREFIX: current.deployment.manifestKey,
+          VERSION: current.deployment.version,
+          SYNCER_TASK_DEFINITION_ARN: stackRef.getOutput(
+            "syncerTaskDefinition"
+          ),
+          SYNCER_CLUSTER,
+          SYNCER_SUBNETS: SYNCER_SUBNETS.join(","),
+          SYNCER_CONTAINER_NAME,
+          GITHUB_SHA: githubSha,
+          FUNCTION_ID: current.deployment.functionId.toString(),
+          DEPLOYMENT_ID: current.deployment.id,
+          PROJECT_ID: current.deployment.function.projectId.toString(),
+          STRIPE_CUSTOMER_ID:
+            current.deployment.function.project.stripeCustomerId!,
+          CHAINS: txQueueUrlOutputs.apply((output) =>
+            JSON.stringify(
+              output.map((url, idx) => {
+                const manifestChain = manifest.chains[idx];
+                return {
+                  chainId: manifestChain.chainId,
+                  txQueueUrl: url,
+                };
+              })
+            )
+          ),
+        },
       },
-    },
-    timeout: 200,
-    handler: "bootstrap",
-    packageType: "Zip",
-    runtime: "provided.al2023",
-    reservedConcurrentExecutions: 1,
-  });
+      timeout: 200,
+      handler: "bootstrap",
+      packageType: "Zip",
+      runtime: "provided.al2023",
+      reservedConcurrentExecutions: 1,
+    }
+  );
 
   new aws.lambda.FunctionEventInvokeConfig("orchestrator_config", {
     functionName: orchestrator.arn,
