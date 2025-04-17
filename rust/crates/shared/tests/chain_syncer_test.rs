@@ -93,7 +93,7 @@ impl Test {
             queue.queue_url.clone().unwrap(),
             chain_id,
             self.manifest.clone(),
-            StripeProcessedTransactionTelemetry::new("cus_QnxZAls5dHRoJS".to_string()),
+            "cus_QnxZAls5dHRoJS".to_string(),
         )
         .await;
         let fetcher = TransactionFetcherImpl::with_defaults(chain_id).await;
