@@ -87,7 +87,12 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
             )
             .execute(conn),
         diesel::insert_into(reported_metrics::table)
-            .values(extracted.iter().flat_map(|f| f.metrics).collect::<Vec<_>>())
+            .values(
+                extracted
+                    .iter()
+                    .flat_map(|f| f.metrics.map(|m| m.1))
+                    .collect::<Vec<_>>()
+            )
             .execute(conn)
     );
 
@@ -111,7 +116,9 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         telemetry.record_mb_secs(
             config.stripe_customer_id.clone(),
             m.0,
-            m.1.billed_duration_ms * m.1.memory_size_mb,
+            (m.1.billed_duration_ms * m.1.memory_size_mb)
+                .try_into()
+                .unwrap(),
         )
     }))
     .await;
