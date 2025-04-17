@@ -41,35 +41,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy_config:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v3.5.0
-        with:
-          node-version-file: package.json
-      - name: Set up node cache
-        uses: actions/cache@v3
-        continue-on-error: false
-        with:
-          path: |
-            node_modules
-            infra/node_modules
-          key: ${{ runner.os }}-deploy-config-${{ hashFiles('infra/yarn.lock') }}-
-          restore-keys: ${{ runner.os }}-deploy-config-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-region: ${{ secrets.AWS_REGION }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - name: Installing dependencies 📦️
-        run: cd infra && yarn
-      - name: Deploy config
-        run: cd infra && yarn deploy:config
-
   build_all_and_cache:
-    needs: [deploy_config]
     runs-on: ubuntu-latest
     steps:
       - name: Install Rust toolchain
@@ -116,7 +88,6 @@ jobs:
           aws s3api put-object --bucket ingest-functions --key handler-server/$GITHUB_SHA.zip --body "./target/lambda/extensions/handler-server.zip"
 
   build_images:
-    needs: [deploy_config]
     runs-on: ubuntu-latest
     strategy:
       matrix:
