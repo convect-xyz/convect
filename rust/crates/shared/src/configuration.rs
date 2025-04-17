@@ -15,7 +15,6 @@ const INFRA_VERSION: &str = env!("INFRA_VERSION");
 static REFRESHING_ENVIRONMENT_CONFIG: OnceCell<RefreshingEnvironmentConfig> = OnceCell::const_new();
 
 #[derive(Debug, Deserialize, Clone)]
-
 pub struct Redis {
     pub url: String,
 }
@@ -30,6 +29,12 @@ pub struct Stripe {
 pub struct Reporting {
     #[serde(rename = "dbUrl")]
     pub db_url: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Tinybird {
+    #[serde(rename = "apiKey")]
+    pub api_key: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -55,6 +60,7 @@ pub struct SupportedNetwork {
 #[derive(Debug, Deserialize, Clone)]
 pub struct EnvironmentConfig {
     pub redis: Redis,
+    pub tinybird: Tinybird,
     pub stripe: Stripe,
     pub reporting: Reporting,
     pub chains: Vec<SupportedNetwork>,
