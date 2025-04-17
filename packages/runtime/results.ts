@@ -106,9 +106,14 @@ export class ResultsManager {
   }
 
   async uploadResults() {
+    const results = Array.from(this.results.values());
+    if (results.length === 0) {
+      return;
+    }
+
     await handlerServerAxios.post("/results", {
       invocationId: this.invocationId,
-      results: Array.from(this.results.values()),
+      results,
     });
   }
 }
