@@ -58,7 +58,6 @@ export function Chain(props: { withLabel?: boolean }) {
           <span className="rounded-full border bg-black px-2 text-[10px]">
             Chain
           </span>
-          &bull;
           <div className="flex-1 truncate">
             <div className="flex flex-1 items-center gap-2 overflow-hidden text-left">
               <ChainIcon
@@ -69,7 +68,7 @@ export function Chain(props: { withLabel?: boolean }) {
                 }
               />
               {props.withLabel && (
-                <div className="flex-1 truncate text-sm">
+                <div className="flex-1 truncate text-xs">
                   {overview?.deployment.manifest.chains.find(
                     (f) => f.chainId === chainId,
                   )?.name ?? ""}
