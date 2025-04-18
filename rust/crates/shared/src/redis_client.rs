@@ -1,9 +1,11 @@
-use std::borrow::Borrow;
+use std::{borrow::Borrow, sync::Arc};
 
 use async_trait::async_trait;
-use redis::{AsyncCommands, FromRedisValue, RedisResult, ToRedisArgs, Value};
+use futures::lock::Mutex;
+use redis::{AsyncCommands, FromRedisValue, RedisError, RedisResult, ToRedisArgs, Value};
+use tokio_retry::{strategy::jitter, RetryIf};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConvectRedisValue {
     String(String),
     I64(i64),
@@ -156,22 +158,68 @@ pub trait RedisClient: Send + Sync + std::fmt::Debug {
         key: String,
         delta: i64,
     ) -> Result<ConvectRedisValue, errors::RedisClientError>;
+
+    async fn reconnect(&self) -> Result<(), errors::RedisClientError>;
 }
 
 #[derive(Clone, Debug)]
 pub struct RedisClientImpl {
-    connection: redis::aio::MultiplexedConnection,
+    url: String,
+    connection: Arc<Mutex<redis::aio::MultiplexedConnection>>,
 }
 
 impl RedisClientImpl {
     pub async fn new(url: &str) -> Self {
+        let connection = Self::open(url).await.unwrap();
+
+        Self {
+            url: url.to_string(),
+            connection: Arc::new(Mutex::new(connection)),
+        }
+    }
+
+    async fn open(
+        url: &str,
+    ) -> Result<redis::aio::MultiplexedConnection, errors::RedisClientError> {
         let connection = redis::Client::open(url)
             .unwrap()
             .get_multiplexed_async_connection()
             .await
             .unwrap();
+        Ok(connection)
+    }
 
-        Self { connection }
+    async fn with_retry<Fn, I, Fut>(&self, func: Fn) -> Result<I, RedisError>
+    where
+        Fn: FnMut(redis::aio::MultiplexedConnection) -> Fut,
+        Fut: std::future::Future<Output = Result<I, RedisError>>,
+    {
+        let retry_strategy = tokio_retry::strategy::FixedInterval::from_millis(200)
+            .map(jitter)
+            .take(3);
+
+        let func = Mutex::new(func);
+
+        RetryIf::spawn(
+            retry_strategy,
+            || async {
+                let con = self.connection.lock().await.clone();
+                let mut func = func.lock().await;
+                let result = func(con).await;
+                match result {
+                    Ok(result) => Ok(result),
+                    Err(err) => {
+                        if err.is_connection_dropped() {
+                            self.reconnect().await.unwrap();
+                        }
+
+                        Err(err)
+                    }
+                }
+            },
+            |err: &RedisError| err.is_connection_dropped(),
+        )
+        .await
     }
 }
 
@@ -179,9 +227,12 @@ impl RedisClientImpl {
 impl RedisClient for RedisClientImpl {
     #[tracing::instrument(skip_all, err)]
     async fn mget(&self, keys: Vec<String>) -> Result<ConvectRedisValue, errors::RedisClientError> {
-        let mut con = self.connection.clone();
-
-        let result: ConvectRedisValue = con.mget(keys).await?;
+        let result: ConvectRedisValue = self
+            .with_retry(move |mut con| {
+                let keys = keys.clone();
+                async move { con.mget(keys).await }
+            })
+            .await?;
         Ok(result)
     }
 
@@ -190,17 +241,23 @@ impl RedisClient for RedisClientImpl {
         &'a self,
         items: &'a [(String, ConvectRedisValue)],
     ) -> Result<ConvectRedisValue, errors::RedisClientError> {
-        let mut con = self.connection.clone();
-
-        let result: ConvectRedisValue = con.mset(items).await?;
+        let result: ConvectRedisValue = self
+            .with_retry(move |mut con| {
+                let items = items.clone();
+                async move { con.mset(items).await }
+            })
+            .await?;
         Ok(result)
     }
 
     #[tracing::instrument(skip_all, err)]
     async fn get(&self, key: String) -> Result<ConvectRedisValue, errors::RedisClientError> {
-        let mut con = self.connection.clone();
-
-        let result: ConvectRedisValue = con.get(key).await?;
+        let result: ConvectRedisValue = self
+            .with_retry(move |mut con| {
+                let key = key.clone();
+                async move { con.get(key).await }
+            })
+            .await?;
         Ok(result)
     }
 
@@ -210,9 +267,13 @@ impl RedisClient for RedisClientImpl {
         key: String,
         value: ConvectRedisValue,
     ) -> Result<ConvectRedisValue, errors::RedisClientError> {
-        let mut con = self.connection.clone();
-
-        let result: ConvectRedisValue = con.set(&key, value).await?;
+        let result: ConvectRedisValue = self
+            .with_retry(move |mut con| {
+                let key = key.clone();
+                let value = value.clone();
+                async move { con.set(&key, value).await }
+            })
+            .await?;
         Ok(result)
     }
 
@@ -222,10 +283,21 @@ impl RedisClient for RedisClientImpl {
         key: String,
         delta: i64,
     ) -> Result<ConvectRedisValue, errors::RedisClientError> {
-        let mut con = self.connection.clone();
-
-        let result: ConvectRedisValue = con.incr(key, delta).await?;
+        let result: ConvectRedisValue = self
+            .with_retry(move |mut con| {
+                let key = key.clone();
+                let delta = delta.clone();
+                async move { con.incr(key, delta).await }
+            })
+            .await?;
         Ok(result)
+    }
+
+    #[tracing::instrument(skip_all, err)]
+    async fn reconnect(&self) -> Result<(), errors::RedisClientError> {
+        let mut con = self.connection.lock().await;
+        *con = Self::open(&self.url).await?;
+        Ok(())
     }
 }
 
@@ -236,5 +308,13 @@ pub mod errors {
     pub enum RedisClientError {
         #[error("Redis error: {0}")]
         Redis(#[from] redis::RedisError),
+    }
+
+    impl RedisClientError {
+        pub fn is_connection_dropped(&self) -> bool {
+            match self {
+                RedisClientError::Redis(e) => e.is_connection_dropped(),
+            }
+        }
     }
 }
