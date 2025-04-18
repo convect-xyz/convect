@@ -11,13 +11,13 @@ import {
 
 export default function Page() {
   return (
-    <div className="py-12 md:py-24 lg:py-32">
+    <div className="py-12 pt-12 md:pb-24 lg:pb-32">
       <div className="container max-w-screen-lg px-4 md:px-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold">Pricing Plans</h2>
           <p className="text-muted-foreground">Choose the best one for you.</p>
         </div>
-        <div className="mt-16 grid gap-8 md:grid-cols-3 md:gap-6 lg:gap-12">
+        <div className="mt-16 grid gap-8 md:grid-cols-3 md:gap-6 lg:gap-8">
           <PricingCard>
             <PricingHeader>
               <PricingTitle title="Hobby" />
@@ -42,7 +42,7 @@ export default function Page() {
             </form>
           </PricingCard>
 
-          <PricingCard>
+          <PricingCard className="border-white md:scale-[125%]">
             <PricingHeader>
               <PricingTitle title="Pro" />
               <PricingDescription description="Perfect for startups and professionals." />
@@ -88,7 +88,7 @@ export default function Page() {
           </PricingCard>
         </div>
 
-        <div className="mt-8 text-center text-xs text-gray-400">
+        <div className="mt-16 text-center text-xs text-gray-400">
           *Additional fees apply for usage outside of the included limits.
         </div>
         <MorePricing />

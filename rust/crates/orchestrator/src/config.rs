@@ -19,34 +19,30 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Self {
-        Self {
-            function_id: env::var("FUNCTION_ID").expect("FUNCTION_ID not set"),
-            manifest_bucket: env::var("MANIFEST_BUCKET").expect("MANIFEST_BUCKET not set"),
-            manifest_prefix: env::var("MANIFEST_PREFIX").expect("MANIFEST_PREFIX not set"),
-            syncer_task_definition_arn: env::var("SYNCER_TASK_DEFINITION_ARN")
-                .expect("SYNCER_TASK_DEFINITION_ARN not set"),
-            syncer_cluster: env::var("SYNCER_CLUSTER").expect("SYNCER_CLUSTER not set"),
-            syncer_subnets: env::var("SYNCER_SUBNETS")
-                .expect("SYNCER_SUBNETS not set")
+    pub fn new() -> Result<Self, errors::ConfigError> {
+        Ok(Self {
+            function_id: env::var("FUNCTION_ID")?,
+            manifest_bucket: env::var("MANIFEST_BUCKET")?,
+            manifest_prefix: env::var("MANIFEST_PREFIX")?,
+            syncer_task_definition_arn: env::var("SYNCER_TASK_DEFINITION_ARN")?,
+            syncer_cluster: env::var("SYNCER_CLUSTER")?,
+            syncer_subnets: env::var("SYNCER_SUBNETS")?
                 .split(",")
                 .map(|s| s.to_string())
                 .collect(),
-            version: env::var("VERSION").expect("VERSION not set"),
-            github_sha: env::var("GITHUB_SHA").expect("GITHUB_SHA not set"),
-            syncer_container_name: env::var("SYNCER_CONTAINER_NAME")
-                .expect("SYNCER_CONTAINER_NAME not set"),
-            deployment_id: env::var("DEPLOYMENT_ID").expect("DEPLOYMENT_ID not set"),
-            project_id: env::var("PROJECT_ID").expect("PROJECT_ID not set"),
-            stripe_customer_id: env::var("STRIPE_CUSTOMER_ID").expect("STRIPE_CUSTOMER_ID not set"),
-            chains: serde_json::from_str(&env::var("CHAINS").expect("CHAINS not set"))
-                .expect("CHAINS not set"),
-        }
+            version: env::var("VERSION")?,
+            github_sha: env::var("GITHUB_SHA")?,
+            syncer_container_name: env::var("SYNCER_CONTAINER_NAME")?,
+            deployment_id: env::var("DEPLOYMENT_ID")?,
+            project_id: env::var("PROJECT_ID")?,
+            stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")?,
+            chains: serde_json::from_str(&env::var("CHAINS")?)?,
+        })
     }
 
     pub fn release_name(&self) -> String {
-        let github_sha = self.github_sha.clone();
-        let version = self.version.clone();
+        let github_sha = &self.github_sha;
+        let version = &self.version;
         format!("orchestrator::{github_sha}::{version}")
     }
 }
@@ -57,4 +53,18 @@ pub struct ChainConfig {
     pub chain_id: u64,
     #[serde(rename = "txQueueUrl")]
     pub tx_queue_url: String,
+}
+
+pub mod errors {
+    use std::env::VarError;
+
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum ConfigError {
+        #[error("Env var error: {0}")]
+        MissingEnvVar(#[from] VarError),
+        #[error("Serde error: {0}")]
+        SerdeError(#[from] serde_json::Error),
+    }
 }

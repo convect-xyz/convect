@@ -169,23 +169,21 @@ pub struct RedisClientImpl {
 }
 
 impl RedisClientImpl {
-    pub async fn new(url: &str) -> Self {
-        let connection = Self::open(url).await.unwrap();
+    pub async fn new(url: &str) -> Result<Self, errors::RedisClientError> {
+        let connection = Self::open(url).await?;
 
-        Self {
+        Ok(Self {
             url: url.to_string(),
             connection: Arc::new(Mutex::new(connection)),
-        }
+        })
     }
 
     async fn open(
         url: &str,
     ) -> Result<redis::aio::MultiplexedConnection, errors::RedisClientError> {
-        let connection = redis::Client::open(url)
-            .unwrap()
+        let connection = redis::Client::open(url)?
             .get_multiplexed_async_connection()
-            .await
-            .unwrap();
+            .await?;
         Ok(connection)
     }
 

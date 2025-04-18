@@ -1,9 +1,6 @@
 use async_trait::async_trait;
-use tokio_retry::strategy::{jitter, ExponentialBackoff};
-use tokio_retry::Retry;
 
 use super::{FetchStrategy, LogResult};
-use crate::fetcher::web3::client::errors::Web3ClientError;
 use crate::fetcher::web3::client::Web3Client;
 use crate::manifest::Manifest;
 use std::cmp::max;
@@ -80,30 +77,23 @@ impl<T: Web3Client> FetchStrategy for JsonRpcFetcherImpl<T> {
                     acc
                 });
 
-        let fetched_logs = Retry::spawn(
-            ExponentialBackoff::from_millis(15).map(jitter).take(3),
-            || async {
-                Ok::<_, Web3ClientError>(
-                    self.web3_client
-                        .get_logs_batch(
-                            address_to_topics
-                                .iter()
-                                .map(|(address, topics)| {
-                                    get_web3_client_filter(
-                                        address.clone(),
-                                        topics.clone(),
-                                        *address_to_min_start_block.get(address).unwrap_or(&0),
-                                        range_start,
-                                        range_end,
-                                    )
-                                })
-                                .collect(),
+        let fetched_logs = self
+            .web3_client
+            .get_logs_batch(
+                address_to_topics
+                    .iter()
+                    .map(|(address, topics)| {
+                        get_web3_client_filter(
+                            address.clone(),
+                            topics.clone(),
+                            *address_to_min_start_block.get(address).unwrap_or(&0),
+                            range_start,
+                            range_end,
                         )
-                        .await?,
-                )
-            },
-        )
-        .await?;
+                    })
+                    .collect(),
+            )
+            .await?;
 
         let mut transaction_hashes = fetched_logs
             .iter()

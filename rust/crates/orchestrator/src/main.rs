@@ -52,17 +52,15 @@ fn configure_sentry_scope(config: &Config) {
 }
 
 fn main() -> Result<(), Error> {
-    let config = Config::new();
+    let config = Config::new()?;
     let _guard = init_sentry(&config);
 
     configure_sentry_scope(&config);
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
-        .build()
-        .unwrap()
+        .build()?
         .block_on(async {
-            // let log_format = env::var("AWS_LAMBDA_LOG_FORMAT").unwrap_or_default();
             let log_level = Level::from_str(&env::var("AWS_LAMBDA_LOG_LEVEL").unwrap_or_default())
                 .unwrap_or(Level::INFO);
 
@@ -102,18 +100,16 @@ fn parse_blocks(
 }
 
 async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), errors::OrchestratorError> {
-    let app_service = service::AppService::with_defaults().await;
+    let app_service = service::AppService::with_defaults().await?;
     let incoming_blocks = parse_blocks(&event)?;
     tracing::info!("Incoming blocks: {incoming_blocks:?}");
 
     let futures = app_service.config.chains.iter().map(|chain_config| async {
         let chain_id = chain_config.chain_id;
-        let latest_block_for_chain = match incoming_blocks.get(&chain_id) {
-            Some(block) => Ok(block.clone()),
-            None => Err(errors::OrchestratorError::MissingBlockForChain(chain_id)),
-        }?;
-
-        sync_chain(&app_service, chain_config.clone(), latest_block_for_chain).await
+        let latest_block_for_chain = incoming_blocks
+            .get(&chain_id)
+            .ok_or(errors::OrchestratorError::MissingBlockForChain(chain_id))?;
+        sync_chain(&app_service, chain_config.clone(), *latest_block_for_chain).await
     });
 
     let errors: Vec<_> = join_all(futures)
@@ -140,7 +136,10 @@ async fn sync_chain(
         service::ChainService::with_defaults(&app_service, chain_config.clone()).await;
 
     let chain_id = chain_service.config.chain_id;
-    let chain_config = app_service.manifest.get_chain_config(chain_id).unwrap();
+    let chain_config = app_service
+        .manifest
+        .get_chain_config(chain_id)
+        .ok_or(errors::OrchestratorError::MissingChainConfig(chain_id))?;
 
     tracing::info!("Attempting to sync chain {:?}", chain_id);
 
@@ -152,7 +151,7 @@ async fn sync_chain(
         app_service.redis_client.clone(),
     )
     .await?;
-    let start_block = sync_state.next_block_to_fetch(&app_service.manifest, incoming_block);
+    let start_block = sync_state.next_block_to_fetch(&app_service.manifest, incoming_block)?;
     if chain_config
         .end_block
         .is_some_and(|chain_end_block| start_block > chain_end_block)
@@ -313,5 +312,9 @@ mod errors {
         MissingPayload,
         #[error("Serde error: {0}")]
         SerdeError(#[from] serde_json::Error),
+        #[error("Missing chain config for chain {0}")]
+        MissingChainConfig(u64),
+        #[error("App service error: {0}")]
+        AppServiceError(#[from] super::service::errors::AppServiceError),
     }
 }

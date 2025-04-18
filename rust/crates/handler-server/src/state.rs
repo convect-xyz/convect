@@ -30,7 +30,11 @@ impl AppState {
                 function_id,
                 chain_id,
                 deployment_id,
-                Arc::new(RedisClientImpl::new(&shared_config.redis.url).await),
+                Arc::new(
+                    RedisClientImpl::new(&shared_config.redis.url)
+                        .await
+                        .unwrap(),
+                ),
             )
             .await,
         ));
