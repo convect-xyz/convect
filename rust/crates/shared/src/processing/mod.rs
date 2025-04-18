@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use crate::redis_client::{errors::RedisClientError, IntoOriginalValue as _, RedisClient};
-use backoff::{exponential::ExponentialBackoff, SystemClock};
+use crate::redis_client::{IntoOriginalValue as _, RedisClient};
 
 #[derive(Clone)]
 pub struct State {
@@ -77,20 +76,12 @@ impl<'a> UpdateStateFluentBuilder<'a> {
         let deployment_id = &self.state.deployment_id;
         let redis_client = &self.state.redis_client;
 
-        backoff::future::retry::<(), RedisClientError, _, _, ExponentialBackoff<SystemClock>>(
-            ExponentialBackoff::default(),
-            || async {
-                redis_client
-                    .mset(&[(
-                        get_error_batch_id_key(function_id, chain_id, deployment_id),
-                        self.error_batch_id.clone().unwrap_or_default().into(),
-                    )])
-                    .await?;
-
-                Ok(())
-            },
-        )
-        .await?;
+        redis_client
+            .mset(&[(
+                get_error_batch_id_key(function_id, chain_id, deployment_id),
+                self.error_batch_id.clone().unwrap_or_default().into(),
+            )])
+            .await?;
 
         self.state.error_batch_id = self.error_batch_id;
 

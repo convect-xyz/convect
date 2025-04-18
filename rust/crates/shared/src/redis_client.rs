@@ -3,7 +3,7 @@ use std::{borrow::Borrow, sync::Arc};
 use async_trait::async_trait;
 use futures::lock::Mutex;
 use redis::{AsyncCommands, FromRedisValue, RedisError, RedisResult, ToRedisArgs, Value};
-use tokio_retry::{strategy::jitter, RetryIf};
+use tokio_retry::{strategy::jitter, Retry};
 
 #[derive(Debug, Clone)]
 pub enum ConvectRedisValue {
@@ -200,25 +200,21 @@ impl RedisClientImpl {
 
         let func = Mutex::new(func);
 
-        RetryIf::spawn(
-            retry_strategy,
-            || async {
-                let con = self.connection.lock().await.clone();
-                let mut func = func.lock().await;
-                let result = func(con).await;
-                match result {
-                    Ok(result) => Ok(result),
-                    Err(err) => {
-                        if err.is_connection_dropped() {
-                            self.reconnect().await.unwrap();
-                        }
-
-                        Err(err)
+        Retry::spawn(retry_strategy, || async {
+            let con = self.connection.lock().await.clone();
+            let mut func = func.lock().await;
+            let result = func(con).await;
+            match result {
+                Ok(result) => Ok(result),
+                Err(err) => {
+                    if err.is_connection_dropped() {
+                        self.reconnect().await.unwrap();
                     }
+
+                    Err(err)
                 }
-            },
-            |err: &RedisError| err.is_connection_dropped(),
-        )
+            }
+        })
         .await
     }
 }
