@@ -2,6 +2,7 @@ import { chains } from "./chains";
 import { configSchema } from "./schema";
 
 function getStripeApiKey(): string {
+  console.log(process.env.PROD_REPORTING_DB_URL);
   switch (process.env.INFRA_VERSION) {
     case "infra-v1":
       return process.env.PROD_STRIPE_API_KEY!;
