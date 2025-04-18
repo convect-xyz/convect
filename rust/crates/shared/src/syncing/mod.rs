@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
 use crate::manifest::Manifest;
-use crate::redis_client::{errors::RedisClientError, ConvectRedisValue};
+use crate::redis_client::ConvectRedisValue;
 use crate::redis_client::{IntoOriginalValue, RedisClient};
 use serde::{Deserialize, Serialize};
-use tokio_retry::Retry;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum BatchSyncState {
@@ -163,15 +162,7 @@ impl<'a> UpdateStateFluentBuilder<'a> {
             ));
         }
 
-        Retry::spawn(
-            tokio_retry::strategy::ExponentialBackoff::from_millis(15).take(3),
-            || async {
-                println!("mset {:?}", params);
-                redis_client.mset(&params).await?;
-                Ok::<(), RedisClientError>(())
-            },
-        )
-        .await?;
+        redis_client.mset(&params).await?;
 
         self.inner.last_block = self.last_block.clone();
         self.inner.state = self.state.clone();
