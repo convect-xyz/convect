@@ -11,7 +11,7 @@ import {
 
 export default function Page() {
   return (
-    <div className="py-12 md:py-24 lg:py-32">
+    <div className="py-12 pt-12 md:pb-24 lg:pb-32">
       <div className="container max-w-screen-lg px-4 md:px-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold">Pricing Plans</h2>
