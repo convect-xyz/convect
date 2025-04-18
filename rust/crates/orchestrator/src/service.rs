@@ -91,6 +91,6 @@ pub mod errors {
         #[error("Config error: {0}")]
         ConfigError(#[from] crate::config::errors::ConfigError),
         #[error("Redis client error: {0}")]
-        RedisClientError(#[from] crate::redis_client::errors::RedisClientError),
+        RedisClientError(#[from] shared::redis_client::errors::RedisClientError),
     }
 }
