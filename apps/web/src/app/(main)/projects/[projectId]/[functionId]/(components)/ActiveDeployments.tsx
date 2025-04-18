@@ -37,10 +37,16 @@ export function ActiveDeployments() {
       value={searchParams.get("deploymentId") ?? fn?.activeDeployments[0]?.id}
       onValueChange={handleValueChange}
     >
-      <SelectTrigger className="w-full">
+      <SelectTrigger className="w-full px-1">
         <div className="flex-1 overflow-hidden text-left">
-          <div className="truncate">
-            Deployment &bull; {selectedDeployment?.id.slice(0, 6)}
+          <div className="flex items-center gap-1">
+            <span className="rounded-full border bg-black px-2 text-[10px]">
+              Deployment
+            </span>
+            &bull;
+            <div className="flex-1 truncate">
+              {selectedDeployment?.id.slice(0, 6)}
+            </div>
           </div>
         </div>
       </SelectTrigger>

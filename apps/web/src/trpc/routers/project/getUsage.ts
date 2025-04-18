@@ -1,10 +1,19 @@
 import { analysisSchema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, gt, lt, sql } from "drizzle-orm";
+import { and, count, eq, gt, lt, sql, SQLWrapper } from "drizzle-orm";
 import { z } from "zod";
-import { availebleProducts, planLoader, Product } from "~/lib/server/products";
+import { availableProducts, planLoader, Product } from "~/lib/server/products";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
+
+export const explainAnalyze = async <T extends SQLWrapper>(
+  db: typeof analysisDb,
+  query: T,
+) => {
+  const debugResult = await db.execute(sql`EXPLAIN ANALYZE ${query.getSQL()}`);
+  console.debug(debugResult);
+  return await query;
+};
 
 export const getUsage = protectedProcedure
   .input(
@@ -17,7 +26,7 @@ export const getUsage = protectedProcedure
   .output(
     z.array(
       z.object({
-        key: z.nativeEnum(availebleProducts),
+        key: z.nativeEnum(availableProducts),
         name: z.string(),
         totalUsage: z.number(),
         includedFree: z.number(),
@@ -86,7 +95,7 @@ async function getProcessedTransactionCount(
     );
 
   return {
-    key: availebleProducts.processedTransactions,
+    key: availableProducts.processedTransactions,
     usage: numProcessedTransactions.pop()!.count,
   } as const;
 }
@@ -96,31 +105,34 @@ async function getGbHours(
   periodStart: number,
   periodEnd: number,
 ) {
-  const gbHours = await analysisDb
-    .select({
-      gbHour:
-        sql<string>`SUM((billed_duration_ms / 3600000.0) * (memory_size_mb / 1024.0))`.as(
-          "gbHour",
+  const gbHours = await explainAnalyze(
+    analysisDb,
+    analysisDb
+      .select({
+        gbHour:
+          sql<string>`SUM((billed_duration_ms / 3600000.0) * (memory_size_mb / 1024.0))`.as(
+            "gbHour",
+          ),
+        numInvocations: count(analysisSchema.reportedMetrics.id),
+      })
+      .from(analysisSchema.reportedMetrics)
+      .where(
+        and(
+          gt(analysisSchema.reportedMetrics.timestamp, new Date(periodStart)),
+          lt(analysisSchema.reportedMetrics.timestamp, new Date(periodEnd)),
+          eq(analysisSchema.reportedMetrics.projectId, projectId),
         ),
-      numInvocations: count(analysisSchema.reportedMetrics.id),
-    })
-    .from(analysisSchema.reportedMetrics)
-    .where(
-      and(
-        gt(analysisSchema.reportedMetrics.timestamp, new Date(periodStart)),
-        lt(analysisSchema.reportedMetrics.timestamp, new Date(periodEnd)),
-        eq(analysisSchema.reportedMetrics.projectId, projectId),
       ),
-    );
+  );
   const result = gbHours.pop()!;
 
   return {
     gbHours: {
-      key: availebleProducts.gbHours,
+      key: availableProducts.gbHours,
       usage: Number(result.gbHour),
     },
     numInvocations: {
-      key: availebleProducts.invocations,
+      key: availableProducts.invocations,
       usage: result.numInvocations,
     },
   } as const;
