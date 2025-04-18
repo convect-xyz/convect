@@ -6,11 +6,10 @@ import { z } from "zod";
 import { env } from "~/env";
 import { loadFromPath } from "./utils";
 
-export const availebleProducts = {
+export const availableProducts = {
   processedTransactions: "processedTransactions",
   gbHours: "gbHours",
   invocations: "invocations",
-  basePlan: "basePlan",
 } as const;
 
 type ProductMetadata = {
@@ -21,7 +20,7 @@ type ProductMetadata = {
 };
 
 export const productMetadata: Record<
-  keyof typeof availebleProducts,
+  keyof typeof availableProducts,
   ProductMetadata
 > = {
   processedTransactions: {
@@ -42,12 +41,6 @@ export const productMetadata: Record<
     unitSymbol: "",
     unitSize: 1000000,
   },
-  basePlan: {
-    key: "basePlan",
-    name: "Base Plan",
-    unitSymbol: "",
-    unitSize: 1,
-  },
 };
 
 const planSchema = z
@@ -55,7 +48,7 @@ const planSchema = z
     id: z.string(),
     products: z.array(
       z.object({
-        key: z.nativeEnum(availebleProducts),
+        key: z.nativeEnum(availableProducts),
         name: z.string().optional(),
         includedFree: z.number(),
         priceInCentsPerAdditionalUnit: z.number(),
@@ -66,7 +59,7 @@ const planSchema = z
     ),
   })
   .refine((data) => {
-    return Object.values(availebleProducts).every((key) =>
+    return Object.values(availableProducts).every((key) =>
       data.products.some((p) => p.key === key),
     );
   })

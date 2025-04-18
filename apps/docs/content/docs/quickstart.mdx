@@ -40,11 +40,12 @@ import { env } from "../../app/env.mjs";
 
     ```ts title="src/convect/handlers/transfer.ts"
     import { tokenABI, tokenAddress } from './abis/token'
-    import { log, transaction } from "convect-xyz";
+    import { ethMainnet, log, transaction } from "convect-xyz";
 
     const usdc = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
 
     export const transfer = transaction({
+      chains: [ethMainnet],
       logs: [
         log({
           origin: usdc,
@@ -74,10 +75,9 @@ import { env } from "../../app/env.mjs";
 
     ```ts title="src/convect/[project-name]/[function-name].convect.ts"
     import { transfer } from "../../handlers/transfer";
-    import { convect, ethMainnet } from "convect-xyz";
+    import { convect } from "convect-xyz";
 
     export default convect({
-      chains: [ethMainnet],
       handlers: [transfer]
     });
     ```

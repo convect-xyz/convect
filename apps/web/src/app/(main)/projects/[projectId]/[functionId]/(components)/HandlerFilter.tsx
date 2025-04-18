@@ -1,19 +1,23 @@
 import { Checkbox } from "~/components/ui/checkbox";
 import { useTransactionFilters } from "../filters";
+import { useSelectedChainId } from "../hooks/useSelectedChainId";
 import { useSelectedDeployment } from "../hooks/useSelectedDeployment";
 
 export function HandlerFilter() {
   const { data: selectedDeployment } = useSelectedDeployment();
+  const selectedChainId = useSelectedChainId();
+
   const filters = useTransactionFilters();
-  if (!selectedDeployment) {
+  if (!selectedDeployment || !selectedChainId) {
     return null;
   }
 
   return (
     <div>
       <div className="flex flex-col gap-2">
-        {selectedDeployment.deployment.manifest.tx_configs.map(
-          (txConfig, idx) => (
+        {selectedDeployment.deployment.manifest.tx_configs
+          .filter((txConfig) => txConfig.chains?.includes(selectedChainId))
+          .map((txConfig, idx) => (
             <div className="flex items-center space-x-2">
               <Checkbox
                 className="border-muted-foreground"
@@ -36,8 +40,7 @@ export function HandlerFilter() {
                 {txConfig.name}
               </label>
             </div>
-          ),
-        )}
+          ))}
       </div>
     </div>
   );
