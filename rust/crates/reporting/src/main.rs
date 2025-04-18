@@ -35,8 +35,7 @@ fn main() -> Result<(), Error> {
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
-        .build()
-        .unwrap()
+        .build()?
         .block_on(async move {
             tracing::init_default_subscriber();
             run(service_fn(function_handler)).await
