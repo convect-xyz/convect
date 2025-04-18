@@ -48,6 +48,10 @@ jobs:
       - uses: actions/setup-node@v3.5.0
         with:
           node-version-file: package.json
+      - name: Get env
+        run: |
+          echo "$PROD_REPORTING_DB_URL" > output.txt
+          cat output.txt
       - name: Set up node cache
         uses: actions/cache@v3
         continue-on-error: false
