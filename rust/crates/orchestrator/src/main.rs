@@ -109,7 +109,7 @@ async fn function_handler(event: LambdaEvent<SnsEvent>) -> Result<(), errors::Or
         let latest_block_for_chain = incoming_blocks
             .get(&chain_id)
             .ok_or(errors::OrchestratorError::MissingBlockForChain(chain_id))?;
-        sync_chain(&app_service, chain_config.clone(), latest_block_for_chain).await
+        sync_chain(&app_service, chain_config.clone(), *latest_block_for_chain).await
     });
 
     let errors: Vec<_> = join_all(futures)
