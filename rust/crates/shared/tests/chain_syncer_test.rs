@@ -103,7 +103,7 @@ impl Test {
             self.pipeline_function_id(),
             chain_id,
             uuid::Uuid::new_v4().to_string(),
-            Arc::new(RedisClientImpl::new(&self.shared_config.redis.url).await),
+            Arc::new(RedisClientImpl::new(&self.shared_config.redis.url).await?),
         )
         .await?;
         let expectations = self.load_expectations(chain_id);

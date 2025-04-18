@@ -34,16 +34,17 @@ pub struct AppService {
 }
 
 impl AppService {
-    pub async fn with_defaults() -> Self {
+    pub async fn with_defaults() -> Result<Self, errors::AppServiceError> {
         let sdk_config = aws_config::load_from_env().await;
         let ecs_client = aws_sdk_ecs::Client::new(&sdk_config);
         let s3_client = aws_sdk_s3::Client::new(&sdk_config);
         let sqs_client = aws_sdk_sqs::Client::new(&sdk_config);
         let refreshing_env = RefreshingEnvironmentConfig::new().await;
-        let redis_client = RedisClientImpl::new(&refreshing_env.get_config().await.redis.url).await;
+        let redis_client =
+            RedisClientImpl::new(&refreshing_env.get_config().await.redis.url).await?;
 
         Self {
-            config: Config::new(),
+            config: Config::new()?,
             manifest: get_manifest().await.clone(),
             ecs_client,
             s3_client,
@@ -79,5 +80,17 @@ impl ChainService {
             transaction_fetcher: Box::new(fetcher),
             transaction_enqueuer: Box::new(enqueuer),
         }
+    }
+}
+
+pub mod errors {
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum AppServiceError {
+        #[error("Config error: {0}")]
+        ConfigError(#[from] crate::config::errors::ConfigError),
+        #[error("Redis client error: {0}")]
+        RedisClientError(#[from] crate::redis_client::errors::RedisClientError),
     }
 }
