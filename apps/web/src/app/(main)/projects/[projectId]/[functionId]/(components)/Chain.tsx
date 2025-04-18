@@ -49,23 +49,34 @@ export function Chain(props: { withLabel?: boolean }) {
   return (
     <Select value={chainId?.toString()} onValueChange={handleValueChange}>
       <SelectTrigger
-        className={cn("w-full bg-muted text-sm", !props.withLabel && "w-auto")}
+        className={cn(
+          "overflow-hidden bg-muted px-1 text-sm",
+          !props.withLabel && "w-auto",
+        )}
       >
-        <div className="flex flex-1 items-center gap-2 overflow-hidden text-left">
-          <ChainIcon
-            chainId={
-              overview?.deployment.manifest.chains.find(
-                (f) => f.chainId === chainId,
-              )?.chainId ?? 0
-            }
-          />
-          {props.withLabel && (
-            <div className="flex-1 truncate">
-              {overview?.deployment.manifest.chains.find(
-                (f) => f.chainId === chainId,
-              )?.name ?? ""}
+        <div className="flex w-full items-center gap-1 overflow-hidden">
+          <span className="rounded-full border bg-black px-2 text-[10px]">
+            Chain
+          </span>
+          &bull;
+          <div className="flex-1 truncate">
+            <div className="flex flex-1 items-center gap-2 overflow-hidden text-left">
+              <ChainIcon
+                chainId={
+                  overview?.deployment.manifest.chains.find(
+                    (f) => f.chainId === chainId,
+                  )?.chainId ?? 0
+                }
+              />
+              {props.withLabel && (
+                <div className="flex-1 truncate text-sm">
+                  {overview?.deployment.manifest.chains.find(
+                    (f) => f.chainId === chainId,
+                  )?.name ?? ""}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </SelectTrigger>
       <SelectContent>

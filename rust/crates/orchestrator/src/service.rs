@@ -43,7 +43,7 @@ impl AppService {
         let redis_client =
             RedisClientImpl::new(&refreshing_env.get_config().await.redis.url).await?;
 
-        Self {
+        Ok(Self {
             config: Config::new()?,
             manifest: get_manifest().await.clone(),
             ecs_client,
@@ -51,7 +51,7 @@ impl AppService {
             sqs_client,
             redis_client: Arc::new(redis_client),
             refreshing_env,
-        }
+        })
     }
 }
 
