@@ -26,14 +26,13 @@ export function Filters() {
             <ActiveDeployments />
           </div>
         </div>
+        <div className="mb-4">
+          <div className="mt-2">
+            <Chain withLabel />
+          </div>
+        </div>
         <hr />
         <Accordion type="multiple">
-          <AccordionItem value={filters.chain}>
-            <AccordionTrigger className="w-full">Chain</AccordionTrigger>
-            <AccordionContent>
-              <Chain withLabel />
-            </AccordionContent>
-          </AccordionItem>
           <AccordionItem value={filters.level}>
             <AccordionTrigger className="w-full">Log Level</AccordionTrigger>
             <AccordionContent>
