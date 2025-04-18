@@ -59,7 +59,7 @@ async function parseBatches(records: Array<ParsedRecord>) {
         ...tx,
         transaction: {
           ...tx.transaction,
-          value: Number(tx.transaction.value),
+          value: BigInt(tx.transaction.value),
         },
       })),
     });

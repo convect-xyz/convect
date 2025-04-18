@@ -12,7 +12,7 @@ export const ingestBatchSchema = z.object({
         transactionHash: string;
         from: string;
         to: string;
-        value: number;
+        value: bigint;
         logs: Array<{
           address: string;
           topics: Array<string>;
