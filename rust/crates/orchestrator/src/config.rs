@@ -36,7 +36,7 @@ impl Config {
             deployment_id: env::var("DEPLOYMENT_ID")?,
             project_id: env::var("PROJECT_ID")?,
             stripe_customer_id: env::var("STRIPE_CUSTOMER_ID")?,
-            chains: serde_json::from_str(&env::var("CHAINS")?).expect("CHAINS not set"),
+            chains: serde_json::from_str(&env::var("CHAINS")?)?,
         })
     }
 
@@ -63,6 +63,8 @@ pub mod errors {
     #[derive(Error, Debug)]
     pub enum ConfigError {
         #[error("Env var error: {0}")]
-        MissingEnvVar(VarError),
+        MissingEnvVar(#[from] VarError),
+        #[error("Serde error: {0}")]
+        SerdeError(#[from] serde_json::Error),
     }
 }
