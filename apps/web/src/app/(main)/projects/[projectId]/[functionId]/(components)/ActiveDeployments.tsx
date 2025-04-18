@@ -43,6 +43,7 @@ export function ActiveDeployments() {
             <span className="rounded-full border bg-black px-2 text-[10px]">
               Deployment
             </span>
+            &bull;
             <div className="flex-1 truncate text-xs">
               {selectedDeployment?.id.slice(0, 6)}
             </div>
