@@ -88,19 +88,26 @@ export async function getConvectFn({
 }) {
   return db
     .select()
-    .from(schema.convectFunctions)
+    .from(schema.projectCollaborators)
     .innerJoin(
       schema.projects,
-      eq(schema.convectFunctions.projectId, schema.projects.id),
+      eq(schema.projectCollaborators.projectId, schema.projects.id),
+    )
+    .innerJoin(
+      schema.convectFunctions,
+      eq(
+        schema.projectCollaborators.projectId,
+        schema.convectFunctions.projectId,
+      ),
     )
     .where(
       and(
         eq(schema.convectFunctions.name, convectFn),
         eq(schema.projects.name, project),
-        eq(schema.projects.userId, userId),
+        eq(schema.projectCollaborators.userId, userId),
       ),
     )
-    .then((fns) => {
-      return fns.at(0);
+    .then((collaborator) => {
+      return collaborator.at(0);
     });
 }
