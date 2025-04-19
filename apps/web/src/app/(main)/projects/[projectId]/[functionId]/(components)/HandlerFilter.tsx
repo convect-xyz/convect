@@ -16,8 +16,9 @@ export function HandlerFilter() {
     <div>
       <div className="flex flex-col gap-2">
         {selectedDeployment.deployment.manifest.tx_configs
-          .filter((txConfig) => txConfig.chains?.includes(selectedChainId))
-          .map((txConfig, idx) => (
+          .map((txConfig, idx) => ({ txConfig, idx }))
+          .filter(({ txConfig }) => txConfig.chains?.includes(selectedChainId))
+          .map(({ txConfig, idx }) => (
             <div className="flex items-center space-x-2">
               <Checkbox
                 className="border-muted-foreground"
