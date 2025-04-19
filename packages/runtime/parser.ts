@@ -55,13 +55,6 @@ async function parseBatches(records: Array<ParsedRecord>) {
       ...batchData,
       messageId: record.messageId,
       receiptHandle: record.receiptHandle,
-      transactions: batchData.transactions.map((tx) => ({
-        ...tx,
-        transaction: {
-          ...tx.transaction,
-          value: BigInt(tx.transaction.value),
-        },
-      })),
     });
   }
   return batches;
