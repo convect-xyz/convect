@@ -5,22 +5,27 @@ export const ingestBatchSchema = z.object({
   chainId: z.number(),
   transactions: z.array(
     z.object({
-      transaction: z.custom<{
-        blockNumber: number;
-        blockHash: string;
-        transactionIndex: number;
-        transactionHash: string;
-        from: string;
-        to: string;
-        value: bigint;
-        logs: Array<{
-          address: string;
-          topics: Array<string>;
-          data: string;
-          logIndex: number;
-          removed: boolean;
-        }>;
-      }>(),
+      transaction: z
+        .custom<{
+          blockNumber: number;
+          blockHash: string;
+          transactionIndex: number;
+          transactionHash: string;
+          from: string;
+          to: string;
+          value: string;
+          logs: Array<{
+            address: string;
+            topics: Array<string>;
+            data: string;
+            logIndex: number;
+            removed: boolean;
+          }>;
+        }>()
+        .transform((tx) => ({
+          ...tx,
+          value: !tx.value.startsWith("0x") ? "0x" + tx.value : tx.value,
+        })),
       txConfigs: z.array(z.number()),
     })
   ),
