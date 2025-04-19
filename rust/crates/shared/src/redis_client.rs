@@ -289,6 +289,7 @@ impl RedisClient for RedisClientImpl {
 
     #[tracing::instrument(skip_all, err)]
     async fn reconnect(&self) -> Result<(), errors::RedisClientError> {
+        tracing::info!("reconnecting to redis server");
         let mut con = self.connection.lock().await;
         *con = Self::open(&self.url).await?;
         Ok(())
