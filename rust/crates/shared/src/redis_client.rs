@@ -205,10 +205,9 @@ impl RedisClientImpl {
             match result {
                 Ok(result) => Ok(result),
                 Err(err) => {
-                    if err.is_connection_dropped() {
-                        self.reconnect().await.unwrap();
+                    if err.is_unrecoverable_error() {
+                        self.reconnect().await;
                     }
-
                     Err(err)
                 }
             }
@@ -291,7 +290,9 @@ impl RedisClient for RedisClientImpl {
     async fn reconnect(&self) -> Result<(), errors::RedisClientError> {
         tracing::info!("reconnecting to redis server");
         let mut con = self.connection.lock().await;
-        *con = Self::open(&self.url).await?;
+        *con = Self::open(&self.url)
+            .await
+            .inspect_err(|e| tracing::error!("failed to reconnect to redis server: {e}"))?;
         Ok(())
     }
 }
