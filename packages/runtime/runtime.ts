@@ -5,6 +5,18 @@ import { BatchQueue } from "./processing";
 import { ResultsManager } from "./results";
 import { IngestBatch, IngestBatchTransaction } from "./types";
 
+class MyConsole extends console.Console {
+  constructor(stdout: NodeJS.WriteStream, stderr: NodeJS.WriteStream) {
+    super(stdout, stderr);
+  }
+
+  system(message?: any, ...optionalParams: any[]): void {
+    super.log(message, ...optionalParams);
+  }
+}
+
+const systemConsole = new MyConsole(process.stdout, process.stderr);
+
 const USER_ENVS = (
   JSON.parse(process.env.USER_ENVS!) as Array<{
     key: string;
@@ -37,6 +49,7 @@ export async function handler(event: SQSEvent, context: Context) {
     invocationId: context.awsRequestId,
   });
 
+  systemConsole.system("Starting processing...");
   for (const batch of await BatchQueue.fromBatches(batches)) {
     await processBatch(resultsManager, batch).catch(() => {});
   }
