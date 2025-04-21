@@ -63,7 +63,6 @@ async function processBatch(
   batch: IngestBatch & { messageId: string; receiptHandle: string }
 ) {
   const groupedTxs = groupTransactions(batch.transactions, pipeline.handlers);
-  console.log("groupedTxs", groupedTxs);
   for (let i = 0; i < groupedTxs.length; i++) {
     let txConfig = pipeline.handlers[i];
     const txs = groupedTxs[i]!.map((tx) => decodeTx(tx.transaction, txConfig));

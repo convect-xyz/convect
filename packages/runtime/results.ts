@@ -107,6 +107,7 @@ export class ResultsManager {
 
   async uploadResults() {
     const results = Array.from(this.results.values());
+    console.log("results", JSON.stringify(results));
     if (results.length === 0) {
       return;
     }
