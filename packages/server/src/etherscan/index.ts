@@ -38,7 +38,7 @@ export class EtherscanProvider {
     for (const batch of chunk([...addresses], 5)) {
       const axios = buildEtherscanAxios(producer!.etherscanLike);
 
-      const response = await axios.get(`/api`, {
+      const response = await axios.get("/api", {
         params: {
           module: "contract",
           action: "getcontractcreation",
@@ -55,5 +55,26 @@ export class EtherscanProvider {
     }
 
     return results;
+  }
+
+  async getBlockNumberByTime(timestamp: number) {
+    const schema = z.object({
+      result: z.coerce.number(),
+    });
+
+    const producer = await getProducer(this.chainId, this.db);
+    const axios = buildEtherscanAxios(producer!.etherscanLike);
+
+    const response = await axios.get("/api", {
+      params: {
+        module: "block",
+        action: "getblocknobytime",
+        timestamp,
+        closest: "after",
+        apikey: producer?.etherscanApiKey ?? undefined,
+      },
+    });
+
+    return schema.parse(response.data).result;
   }
 }
