@@ -131,7 +131,9 @@ export function decodeTx(tx: any, txConfig: any) {
     var topic = log.topics.at(0);
     const logConfig = txConfig._logMap.get(topic);
 
-    if (!logConfig) continue;
+    if (!logConfig) {
+      throw new Error("No matching handler for topic: " + topic);
+    }
 
     const decodedEvent: any = decodeEventLog({
       abi: [logConfig._event],
