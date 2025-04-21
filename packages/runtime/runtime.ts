@@ -66,12 +66,14 @@ async function processBatch(
   for (let i = 0; i < groupedTxs.length; i++) {
     let txConfig = pipeline.handlers[i];
     const txs = groupedTxs[i]!.map((tx) => decodeTx(tx.transaction, txConfig));
+    console.log(txs);
     if (txs.length === 0) {
       continue;
     }
 
     try {
       await txConfig._handler(txs, getContext());
+      console.log("success");
       resultsManager.addSuccess({
         batchId: batch.batchId,
         messageId: batch.messageId,
@@ -82,6 +84,7 @@ async function processBatch(
         })),
       });
     } catch (e) {
+      console.log(e);
       resultsManager.fail({
         batchId: batch.batchId,
         messageId: batch.messageId,
