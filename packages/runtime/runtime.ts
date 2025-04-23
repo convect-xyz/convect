@@ -75,12 +75,9 @@ async function processBatch(
   batch: IngestBatch & { messageId: string; receiptHandle: string }
 ) {
   const groupedTxs = groupTransactions(batch.transactions, pipeline.handlers);
-  console.log(groupedTxs);
   for (let i = 0; i < groupedTxs.length; i++) {
     let txConfig = pipeline.handlers[i];
-    console.log(txConfig);
     const txs = groupedTxs[i]!.map((tx) => decodeTx(tx.transaction, txConfig));
-    console.log(txs);
     if (txs.length === 0) {
       continue;
     }
@@ -137,18 +134,17 @@ export function groupTransactions(
 }
 
 export function decodeTx(tx: any, txConfig: any) {
-  try {
-    const newTx = { ...tx, logs: [] };
+  const newTx = { ...tx, logs: [] };
 
-    for (const log of tx.logs) {
-      var topic = log.topics.at(0);
-      const logConfig = txConfig._logMap.get(topic);
+  for (const log of tx.logs) {
+    var topic = log.topics.at(0);
+    const logConfig = txConfig._logMap.get(topic);
 
-      if (!logConfig) {
-        systemConsole.system("Log Map: ", JSON.stringify(txConfig._logMap));
-        throw new Error("No matching handler for topic: " + topic);
-      }
+    if (!logConfig) {
+      continue;
+    }
 
+    try {
       const decodedEvent: any = decodeEventLog({
         abi: [logConfig._event],
         data: log.data,
@@ -165,16 +161,15 @@ export function decodeTx(tx: any, txConfig: any) {
         eventName: decodedEvent.eventName,
         args: decodedEvent.args,
       });
+    } catch (e) {
+      systemConsole.system(
+        "Error decoding log",
+        tx.transactionHash,
+        tx.transactionIndex,
+        e
+      );
     }
-
-    return newTx;
-  } catch (e) {
-    systemConsole.system(
-      "Error decoding transaction",
-      tx.transactionHash,
-      tx.transactionIndex,
-      e
-    );
-    throw e;
   }
+
+  return newTx;
 }
