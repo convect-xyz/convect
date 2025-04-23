@@ -11,7 +11,7 @@ class MyConsole extends console.Console {
   }
 
   system(message?: any, ...optionalParams: any[]): void {
-    super.log(message, ...optionalParams);
+    super.debug(message, ...optionalParams);
   }
 }
 
@@ -49,7 +49,6 @@ export async function handler(event: SQSEvent, context: Context) {
     invocationId: context.awsRequestId,
   });
 
-  systemConsole.system("Starting processing...");
   for (const batch of await BatchQueue.fromBatches(batches)) {
     await processBatch(resultsManager, batch).catch(() => {});
   }
@@ -142,6 +141,7 @@ export function decodeTx(tx: any, txConfig: any) {
     const logConfig = txConfig._logMap.get(topic);
 
     if (!logConfig) {
+      systemConsole.system("Log Map: ", JSON.stringify(txConfig._logMap));
       throw new Error("No matching handler for topic: " + topic);
     }
 
