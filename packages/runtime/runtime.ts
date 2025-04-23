@@ -137,34 +137,44 @@ export function groupTransactions(
 }
 
 export function decodeTx(tx: any, txConfig: any) {
-  const newTx = { ...tx, logs: [] };
+  try {
+    const newTx = { ...tx, logs: [] };
 
-  for (const log of tx.logs) {
-    var topic = log.topics.at(0);
-    const logConfig = txConfig._logMap.get(topic);
+    for (const log of tx.logs) {
+      var topic = log.topics.at(0);
+      const logConfig = txConfig._logMap.get(topic);
 
-    if (!logConfig) {
-      systemConsole.system("Log Map: ", JSON.stringify(txConfig._logMap));
-      throw new Error("No matching handler for topic: " + topic);
+      if (!logConfig) {
+        systemConsole.system("Log Map: ", JSON.stringify(txConfig._logMap));
+        throw new Error("No matching handler for topic: " + topic);
+      }
+
+      const decodedEvent: any = decodeEventLog({
+        abi: [logConfig._event],
+        data: log.data,
+        topics: log.topics,
+      });
+
+      log.eventName = decodedEvent.eventName;
+      log.args = decodedEvent.args;
+      log.transactionHash = tx.transactionHash;
+      log.transactionIndex = tx.transactionIndex;
+
+      newTx.logs.push({
+        ...log,
+        eventName: decodedEvent.eventName,
+        args: decodedEvent.args,
+      });
     }
 
-    const decodedEvent: any = decodeEventLog({
-      abi: [logConfig._event],
-      data: log.data,
-      topics: log.topics,
-    });
-
-    log.eventName = decodedEvent.eventName;
-    log.args = decodedEvent.args;
-    log.transactionHash = tx.transactionHash;
-    log.transactionIndex = tx.transactionIndex;
-
-    newTx.logs.push({
-      ...log,
-      eventName: decodedEvent.eventName,
-      args: decodedEvent.args,
-    });
+    return newTx;
+  } catch (e) {
+    systemConsole.system(
+      "Error decoding transaction",
+      tx.transactionHash,
+      tx.transactionIndex,
+      e
+    );
+    throw e;
   }
-
-  return newTx;
 }
