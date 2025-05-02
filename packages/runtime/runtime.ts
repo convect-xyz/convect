@@ -5,6 +5,18 @@ import { BatchQueue } from "./processing";
 import { ResultsManager } from "./results";
 import { IngestBatch, IngestBatchTransaction } from "./types";
 
+class MyConsole extends console.Console {
+  constructor(stdout: NodeJS.WriteStream, stderr: NodeJS.WriteStream) {
+    super(stdout, stderr);
+  }
+
+  system(message?: any, ...optionalParams: any[]): void {
+    super.debug(message, ...optionalParams);
+  }
+}
+
+const systemConsole = new MyConsole(process.stdout, process.stderr);
+
 const USER_ENVS = (
   JSON.parse(process.env.USER_ENVS!) as Array<{
     key: string;
@@ -128,24 +140,35 @@ export function decodeTx(tx: any, txConfig: any) {
     var topic = log.topics.at(0);
     const logConfig = txConfig._logMap.get(topic);
 
-    if (!logConfig) continue;
+    if (!logConfig) {
+      continue;
+    }
 
-    const decodedEvent: any = decodeEventLog({
-      abi: [logConfig._event],
-      data: log.data,
-      topics: log.topics,
-    });
+    try {
+      const decodedEvent: any = decodeEventLog({
+        abi: [logConfig._event],
+        data: log.data,
+        topics: log.topics,
+      });
 
-    log.eventName = decodedEvent.eventName;
-    log.args = decodedEvent.args;
-    log.transactionHash = tx.transactionHash;
-    log.transactionIndex = tx.transactionIndex;
+      log.eventName = decodedEvent.eventName;
+      log.args = decodedEvent.args;
+      log.transactionHash = tx.transactionHash;
+      log.transactionIndex = tx.transactionIndex;
 
-    newTx.logs.push({
-      ...log,
-      eventName: decodedEvent.eventName,
-      args: decodedEvent.args,
-    });
+      newTx.logs.push({
+        ...log,
+        eventName: decodedEvent.eventName,
+        args: decodedEvent.args,
+      });
+    } catch (e) {
+      systemConsole.system(
+        "Error decoding log",
+        tx.transactionHash,
+        tx.transactionIndex,
+        e
+      );
+    }
   }
 
   return newTx;

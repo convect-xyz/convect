@@ -7,7 +7,7 @@ import {
 } from "@convect-xyz/lib";
 import { Portal } from "@radix-ui/react-tooltip";
 import { formatAbiItem } from "abitype";
-import { InfoIcon } from "lucide-react";
+import { CalendarIcon, InfoIcon } from "lucide-react";
 import { PropsWithChildren, useState } from "react";
 import { toast } from "sonner";
 import InfoTooltip from "~/components/core/InfoTooltip";
@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { api } from "~/trpc/react";
+import { DateTimePicker } from "./DateTimePicker";
 import {
   useManifestForm,
   useManifestFormContext,
@@ -44,7 +45,7 @@ export default function Page(props: {}) {
     <Form {...manifestForm}>
       <div>
         <Header />
-        <div className="mx-auto w-full max-w-screen-md px-4 pb-10">
+        <div className="mx-auto w-full max-w-screen-md px-4 pb-60">
           <Main />
         </div>
       </div>
@@ -240,7 +241,23 @@ function StartBlockSection(props: {
               Start Block
             </div>
 
-            <div>
+            <div className="relative">
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 text-xs">
+                <DateTimePicker
+                  chainId={Number(selectedChainId)}
+                  onBlockNumberChanged={(value) =>
+                    backfill.setStartBlock(Number(selectedChainId), value)
+                  }
+                >
+                  <Button
+                    variant="outline"
+                    className="aspect-square h-full rounded-sm p-1.5"
+                  >
+                    <CalendarIcon size={12} />
+                  </Button>
+                </DateTimePicker>
+              </div>
+
               <Input
                 disabled={!manifest?.deployment.isWaitingForApproval}
                 placeholder={new Intl.NumberFormat("en-US").format(
@@ -253,7 +270,7 @@ function StartBlockSection(props: {
                     e.target.value,
                   );
                 }}
-                className="h-auto w-full max-w-[80px] p-1 text-xs"
+                className="h-auto w-full min-w-[150px] p-2 pr-10 text-xs"
               />
             </div>
           </div>
@@ -299,7 +316,22 @@ function EndBlockSection(props: {
               End Block
             </div>
 
-            <div>
+            <div className="relative">
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 text-xs">
+                <DateTimePicker
+                  chainId={Number(selectedChainId)}
+                  onBlockNumberChanged={(value) =>
+                    backfill.setEndBlock(Number(selectedChainId), value)
+                  }
+                >
+                  <Button
+                    variant="outline"
+                    className="aspect-square h-full rounded-sm p-1.5"
+                  >
+                    <CalendarIcon size={12} />
+                  </Button>
+                </DateTimePicker>
+              </div>
               <Input
                 disabled={!manifest?.deployment.isWaitingForApproval}
                 value={backfill
@@ -308,7 +340,7 @@ function EndBlockSection(props: {
                 onChange={(e) => {
                   backfill.setEndBlock(Number(selectedChainId), e.target.value);
                 }}
-                className="h-auto w-full max-w-[80px] p-1 text-xs"
+                className="h-auto w-full min-w-[150px] p-2 pr-10 text-xs"
               />
             </div>
           </div>

@@ -4,6 +4,7 @@ import { createApiKey } from "./routers/apiKey/createApiKey";
 import { deleteApiKey } from "./routers/apiKey/deleteApiKey";
 import { getApiKeys } from "./routers/apiKey/getApiKeys";
 import { switchPlan } from "./routers/billing/switchPlan";
+import { getBlockByTimestamp } from "./routers/blocks/getBlockByTimestamp";
 import { addEnv } from "./routers/function/addEnv";
 import { confirmDeployment } from "./routers/function/confirmDeployment";
 import { createFunction } from "./routers/function/create";
@@ -29,6 +30,10 @@ import { projectRouter } from "./routers/project";
 
 export const billingRouter = createTRPCRouter({
   switchPlan,
+});
+
+export const blocksRouter = createTRPCRouter({
+  getBlockByTimestamp,
 });
 
 export const apiKeysRouter = createTRPCRouter({
@@ -71,6 +76,7 @@ export const appRouter = createTRPCRouter({
   functions: functionRouter,
   apiKeys: apiKeysRouter,
   billing: billingRouter,
+  blocks: blocksRouter,
 });
 
 export type AppRouter = typeof appRouter;

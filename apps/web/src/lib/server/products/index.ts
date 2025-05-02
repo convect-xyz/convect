@@ -10,6 +10,7 @@ export const availableProducts = {
   processedTransactions: "processedTransactions",
   gbHours: "gbHours",
   invocations: "invocations",
+  basePlan: "basePlan",
 } as const;
 
 type ProductMetadata = {
@@ -40,6 +41,12 @@ export const productMetadata: Record<
     name: "Invocations",
     unitSymbol: "",
     unitSize: 1000000,
+  },
+  basePlan: {
+    key: "basePlan",
+    name: "Base Plan",
+    unitSymbol: "",
+    unitSize: 1,
   },
 };
 
