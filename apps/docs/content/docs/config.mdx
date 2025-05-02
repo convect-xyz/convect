@@ -1,0 +1,38 @@
+---
+title: Config
+description: Config
+---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The Convect configuration file is a JavaScript file that exports a configuration object. This object contains various settings and options that control the behavior of Convect.
+
+<Callout>
+  Run `npx convect-xyz init` in your project root directory to create a configuration file in your project.
+</Callout>
+
+
+## Configuration File
+
+```js
+// convect.config.mjs
+
+import { Config } from "convect-xyz";
+
+
+export default {
+  // ...config options
+} satisfies Config;
+```
+
+<TypeTable
+  type={{
+    src: {
+      description:
+        "The path to the base convect directory relative to the project root.",
+      type: "string",
+      default: "./src/convect",
+    },
+  }}
+/>
