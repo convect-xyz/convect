@@ -30,6 +30,8 @@ For example, let's say you built a dApp that allows users to swap tokens. When a
 
 In traditional event-based indexing, you would need to handle each of these logs separately. This can lead to inconsistencies and errors in your data. With transaction-based indexing, you receive the entire transaction object with the desired logs. This allows you to correlate the logs and process them together, ensuring that your data is consistent and accurate.
 
+Additionally, you have access to the entire transaction object and can use it to extract additional information such as any native token transfers typically stored in the transaction's `value` field.
+
 
 ## Batch Processing
 
