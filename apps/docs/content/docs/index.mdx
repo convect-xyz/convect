@@ -16,3 +16,25 @@ Convect aims to provide all these features while ensuring a better developer exp
   For comparisons with existing solutions, see our{" "}
   <Link href="/comparisons">Comparisons</Link> page
 </Callout>
+
+
+## Transaction-based Indexing
+
+Transaction-based indexing is a new paradigm for on-chain data processing. It allows you to process on-chain data in a more efficient and reliable way than traditional event-based indexing. The motivation behind this new paradigm comes from real-world use cases where developers need to deal with logs that are related to each other. 
+
+For example, let's say you built a dApp that allows users to swap tokens. When a user swaps tokens, the dApp needs to process multiple logs:
+
+- the log for the swap event
+- the log for the approval event; and
+- the log for the transfer event. 
+
+In traditional event-based indexing, you would need to handle each of these logs separately. This can lead to inconsistencies and errors in your data. With transaction-based indexing, you receive the entire transaction object with the desired logs. This allows you to correlate the logs and process them together, ensuring that your data is consistent and accurate.
+
+
+## Batch Processing
+
+Convect uses batch processing to handle large volumes of transactions efficiently. This means that Convect can process multiple transactions at once, reducing the overhead of handling each transaction individually. This is particularly useful for applications that need to process a high volume of transactions in real time. All batches of transactions are processed in-order.
+
+## Fault Tolerance
+
+Convect is designed to be fault-tolerant. This means that if a batch processing job fails, Convect will automatically retry it within a few minutes. This ensures that your application can continue to process transactions even if one batch fails intermittently.
