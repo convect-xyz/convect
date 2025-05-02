@@ -1,11 +1,9 @@
 type Log = {};
 type Handler = {};
+type Chain = {};
 
 export interface Ps {
-  /**
-   * {@link https://github.com/microsoft/tsdoc}
-   */
+  chains: Array<Chain>;
   logs: Array<Log>;
   handler: Handler;
-  startBlock?: bigint;
 }
