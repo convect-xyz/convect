@@ -1,3 +1,10 @@
 {
-  "pages": ["index", "quickstart", "deployments", "api", "comparisons"]
+  "pages": [
+    "index",
+    "quickstart",
+    "config",
+    "deployments",
+    "api",
+    "comparisons"
+  ]
 }
