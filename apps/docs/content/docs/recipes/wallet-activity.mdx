@@ -1,0 +1,96 @@
+---
+title: Wallet Activity
+description: Wallet Activity
+---
+
+import Link from "fumadocs-core/link";
+import { Callout } from "fumadocs-ui/components/callout";
+import { Step, Steps } from "fumadocs-ui/components/steps";
+
+
+This recipe will show an example application that indexes wallet activity from a ERC-20 Token Contract. The activity we are interested in is when a wallet transfers tokens.
+
+### Prerequisites
+
+- A Convect account
+- A Convect project & function
+- An ERC-20 Token Contract Address
+
+
+<Steps>
+  <Step>
+    ### Drizzle Schema
+
+    This example will use Drizzle to manage database operations. Feel free to use a different ORM or database.
+
+    ```ts title="src/db/schema.ts"
+    import {integer, pgTable, serial, text, unique} from 'drizzle-orm/pg-core';
+
+    export const activity = pgTable(
+      'activity',
+      {
+        id: serial('id').primaryKey(),
+        from: text('from').notNull(),
+        to: text('to').notNull(),
+        value: integer('token_id').notNull(),
+        transactionHash: text('transaction_hash').notNull(),
+        type: text('type', {enum: ['TRANSFER']}).notNull(),
+      },
+      t => [unique().on(t.transactionHash, t.type)],
+    );
+    ```
+
+  </Step>
+  <Step>
+    ### Convect Function
+
+    Export the Convect Function from the file.
+
+    ```ts title="src/[project-name]/[function-name].ts"
+    import {convect, ethSepolia, log, transaction} from 'convect-xyz';
+    import {db} from '../db';
+    import {activity} from '../db/schema';
+
+    const transferHandler = transaction({
+      name: 'transfer',
+      chains: [ethSepolia],
+      logs: [
+        log({
+          origin: '0x0000000000000000000000000000000000000000',
+          signature:
+            'event Transfer(address indexed from, address indexed to, uint256 value)',
+        }),
+      ],
+      handler: async transactions => {
+        const records = transactions.flatMap(tx => tx.logs);
+
+        await db
+          .insert(activity)
+          .values(
+            records.map(log => ({
+              from: log.args.from,
+              to: log.args.to,
+              value: Number(log.args.value),
+              transactionHash: log.transactionHash,
+              type: 'TRANSFER' as const,
+            })),
+          )
+          .onConflictDoNothing();
+      },
+    });
+
+    export default convect({
+      handlers: [transferHandler],
+    });
+    ```
+  </Step>
+  <Step>
+    ### Deploy the Function
+
+    Deploy the function to Convect. It will output a deployment URL for you to make some final configuration changes if needed and approve the deployment.
+
+    ```bash
+    npx convect deploy -s [project-name]/[function-name]
+    ```
+  </Step>
+</Steps>
