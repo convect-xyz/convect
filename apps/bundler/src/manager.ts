@@ -176,4 +176,10 @@ class DeploymentTask {
       bundleOutFile,
     };
   }
+
+  async removeDeployment() {
+    await db
+      .delete(schema.convectFunctions)
+      .where(eq(schema.convectFunctions.id, this.deployment.functionId));
+  }
 }

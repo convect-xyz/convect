@@ -1,6 +1,8 @@
-import { ECS } from "@aws-sdk/client-ecs";
+import { ECS, RunTaskCommand } from "@aws-sdk/client-ecs";
 import { S3 } from "@aws-sdk/client-s3";
 import { Manifest } from "@convect-xyz/lib";
+import { v4 } from "uuid";
+import { schema } from "..";
 import { Db } from "../db/db";
 import { _CodeService } from "./code";
 import { _DeploymentService } from "./deployment";
@@ -76,6 +78,64 @@ export class ConvectFunctionFacade {
     return this.deploymentService.confirm({
       ...options,
       functionId: this.functionId,
+    });
+  }
+
+  async destroy(options: {
+    taskDefinition: string;
+    version: string;
+    databaseUrl: string;
+  }) {
+    const deploymentId = v4();
+    await this.config.db.insert(schema.deployment).values({
+      id: deploymentId,
+      functionId: this.functionId,
+      ecsTaskId: "",
+      status: "PENDING",
+      manifest: "",
+      manifestBucket: "",
+      manifestKey: "",
+      mode: "destroy",
+      sourceKey: "",
+      sourceBucket: "",
+      version: options.version,
+    });
+
+    new RunTaskCommand({
+      cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
+      taskDefinition: options.taskDefinition,
+      networkConfiguration: {
+        awsvpcConfiguration: {
+          subnets: ["subnet-05d39f2476de29dc7"],
+          assignPublicIp: "ENABLED",
+        },
+      },
+      launchType: "FARGATE",
+      overrides: {
+        containerOverrides: [
+          {
+            name: "builder",
+            environment: [
+              {
+                name: "INITIAL_DEPLOYMENT_ID",
+                value: deploymentId,
+              },
+              {
+                name: "DATABASE_URL",
+                value: options.databaseUrl,
+              },
+              {
+                name: "CURR_DIR",
+                value: "/tmp",
+              },
+              {
+                name: "ENV_DECRYPTION_KEY",
+                value: "test",
+              },
+            ],
+          },
+        ],
+      },
     });
   }
 }
