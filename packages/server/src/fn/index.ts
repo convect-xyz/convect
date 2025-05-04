@@ -87,6 +87,7 @@ export class ConvectFunctionFacade {
     databaseUrl: string;
   }) {
     const deploymentId = v4();
+    console.log("deploymentId", deploymentId);
     await this.config.db.insert(schema.deployment).values({
       id: deploymentId,
       functionId: this.functionId,
@@ -101,41 +102,43 @@ export class ConvectFunctionFacade {
       version: options.version,
     });
 
-    new RunTaskCommand({
-      cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
-      taskDefinition: options.taskDefinition,
-      networkConfiguration: {
-        awsvpcConfiguration: {
-          subnets: ["subnet-05d39f2476de29dc7"],
-          assignPublicIp: "ENABLED",
-        },
-      },
-      launchType: "FARGATE",
-      overrides: {
-        containerOverrides: [
-          {
-            name: "builder",
-            environment: [
-              {
-                name: "INITIAL_DEPLOYMENT_ID",
-                value: deploymentId,
-              },
-              {
-                name: "DATABASE_URL",
-                value: options.databaseUrl,
-              },
-              {
-                name: "CURR_DIR",
-                value: "/tmp",
-              },
-              {
-                name: "ENV_DECRYPTION_KEY",
-                value: "test",
-              },
-            ],
+    await this.config.ecs.send(
+      new RunTaskCommand({
+        cluster: "arn:aws:ecs:eu-west-1:730335604495:cluster/build",
+        taskDefinition: options.taskDefinition,
+        networkConfiguration: {
+          awsvpcConfiguration: {
+            subnets: ["subnet-05d39f2476de29dc7"],
+            assignPublicIp: "ENABLED",
           },
-        ],
-      },
-    });
+        },
+        launchType: "FARGATE",
+        overrides: {
+          containerOverrides: [
+            {
+              name: "builder",
+              environment: [
+                {
+                  name: "INITIAL_DEPLOYMENT_ID",
+                  value: deploymentId,
+                },
+                {
+                  name: "DATABASE_URL",
+                  value: options.databaseUrl,
+                },
+                {
+                  name: "CURR_DIR",
+                  value: "/tmp",
+                },
+                {
+                  name: "ENV_DECRYPTION_KEY",
+                  value: "test",
+                },
+              ],
+            },
+          ],
+        },
+      })
+    );
   }
 }
