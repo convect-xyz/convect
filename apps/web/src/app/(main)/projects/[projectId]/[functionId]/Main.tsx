@@ -16,20 +16,23 @@ import { useOverview } from "./hooks/useOverview";
 
 export default function Main() {
   const [batchId, setBatchId] = useState<string>();
+  const { data: status } = useFunctionStatus();
 
   return (
     <div className="mx-auto max-w-screen-lg py-4">
       <div>
         <div className="flex justify-between px-4">
           <Status />
-          <div className="ml-auto flex w-min gap-2">
-            <div className="max-w-[160px]">
-              <Chain />
+          {!status?.isPending && (
+            <div className="ml-auto flex w-min gap-2">
+              <div className="max-w-[160px]">
+                <Chain />
+              </div>
+              <div className="max-w-[220px]">
+                <ActiveDeployments />
+              </div>
             </div>
-            <div className="max-w-[220px]">
-              <ActiveDeployments />
-            </div>
-          </div>
+          )}
         </div>
         <Overview />
         <RecentBatches batchId={batchId} setBatchId={setBatchId} />
@@ -46,7 +49,7 @@ function Status() {
       return "running";
     }
     if (status?.isPending) {
-      return "pending";
+      return "No active deployments";
     }
     if (status?.isDestroying) {
       return "destroying";
