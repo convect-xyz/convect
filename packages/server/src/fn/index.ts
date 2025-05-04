@@ -1,6 +1,7 @@
 import { ECS, RunTaskCommand } from "@aws-sdk/client-ecs";
 import { S3 } from "@aws-sdk/client-s3";
 import { Manifest } from "@convect-xyz/lib";
+import { eq } from "drizzle-orm";
 import { v4 } from "uuid";
 import { schema } from "..";
 import { Db } from "../db/db";
@@ -86,8 +87,25 @@ export class ConvectFunctionFacade {
     version: string;
     databaseUrl: string;
   }) {
+    const activeOrPendingDeployment =
+      await this.config.db.query.deployment.findFirst({
+        where: (fields, { eq, or, and }) => {
+          return and(
+            eq(fields.functionId, this.functionId),
+            or(eq(fields.status, "SUCCESS"), eq(fields.status, "PENDING")),
+            or(eq(fields.mode, "init"), eq(fields.mode, "update"))
+          );
+        },
+      });
+
+    if (!activeOrPendingDeployment) {
+      await this.config.db
+        .delete(schema.convectFunctions)
+        .where(eq(schema.convectFunctions.id, this.functionId));
+      return;
+    }
+
     const deploymentId = v4();
-    console.log("deploymentId", deploymentId);
     await this.config.db.insert(schema.deployment).values({
       id: deploymentId,
       functionId: this.functionId,

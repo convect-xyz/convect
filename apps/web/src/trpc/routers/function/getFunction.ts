@@ -18,7 +18,7 @@ export const getFunction = protectedProcedure
       id: z.number(),
       name: z.string(),
       description: z.string(),
-      isInitialised: z.boolean(),
+      status: z.enum(["PENDING", "RUNNING", "DESTROYING"]),
       project: z.object({
         name: z.string(),
       }),
@@ -67,22 +67,38 @@ export const getFunction = protectedProcedure
       userId: ctx.session.user.id,
     });
 
-    const activeDeployments = await ctx.db.query.deployment.findMany({
-      where(fields, { eq }) {
-        return and(
-          eq(fields.functionId, input.functionId),
-          eq(fields.status, "SUCCESS"),
-        );
-      },
-      limit: 3,
-      orderBy(fields, { desc }) {
-        return desc(fields.createdAt);
-      },
-    });
+    const [activeDeployments, destroyDeployment] = await Promise.all([
+      ctx.db.query.deployment.findMany({
+        where(fields, { eq, or }) {
+          return and(
+            eq(fields.functionId, input.functionId),
+            eq(fields.status, "SUCCESS"),
+            or(eq(fields.mode, "init"), eq(fields.mode, "update")),
+          );
+        },
+        limit: 3,
+        orderBy(fields, { desc }) {
+          return desc(fields.createdAt);
+        },
+      }),
+      ctx.db.query.deployment.findFirst({
+        where(fields, { eq }) {
+          return and(
+            eq(fields.functionId, input.functionId),
+            eq(fields.mode, "destroy"),
+          );
+        },
+      }),
+    ]);
 
     return {
       ...fn.convectFunction,
-      isInitialised: true,
+      status:
+        activeDeployments.length === 0
+          ? "PENDING"
+          : !!destroyDeployment
+            ? "DESTROYING"
+            : "RUNNING",
       project: fn.project,
       activeDeployments: activeDeployments.map((d) => {
         const manifest = parseManifest(d.manifest);
