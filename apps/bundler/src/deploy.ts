@@ -65,6 +65,11 @@ async function destroy() {
   console.info("removing stack...");
   await stack.workspace.removeStack(stack.name);
   console.info("removed stack...");
+
+  await DeploymentManager.getOrCreate().then((r) =>
+    r.current?.removeDeployment()
+  );
+
   return;
 }
 
