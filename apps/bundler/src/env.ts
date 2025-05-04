@@ -7,8 +7,6 @@ export const env = createEnv({
     CURR_DIR: z.string().min(1),
     INITIAL_DEPLOYMENT_ID: z.string().min(1),
     ENV_DECRYPTION_KEY: z.string().min(1),
-    REPORTING_DB_URL: z.string().min(1),
-    CONFIG__REDIS__URL: z.string().min(1),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

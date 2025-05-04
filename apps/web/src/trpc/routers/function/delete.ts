@@ -1,9 +1,10 @@
-import { schema } from "@convect-xyz/server";
+import { ConvectFunctionFacade } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
-import { destroyDeployment } from "~/server/actions/builds";
+import { ecs, s3 } from "~/lib/server/aws";
+import { getStackOutputs } from "~/server/actions/pulumi/getStackOutputs";
+import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
 import { throwIfNotProjectCollaborator } from "../permissions";
 
@@ -30,15 +31,18 @@ export const deleteFunction = protectedProcedure
       userId: ctx.session.user.id,
     });
 
-    await destroyDeployment({
-      version: env.VERSION,
-      functionId: input.functionId,
-      functionGlobalId: convectFunction.globalId,
+    const convectFn = new ConvectFunctionFacade(input.functionId, {
+      s3,
+      db,
+      ecs,
     });
 
-    await ctx.db
-      .delete(schema.convectFunctions)
-      .where(eq(schema.convectFunctions.id, input.functionId));
+    const outputs = await getStackOutputs();
+    await convectFn.destroy({
+      taskDefinition: outputs.builderTaskDefinition,
+      version: env.VERSION,
+      databaseUrl: env.DATABASE_URL,
+    });
 
     return {};
   });
