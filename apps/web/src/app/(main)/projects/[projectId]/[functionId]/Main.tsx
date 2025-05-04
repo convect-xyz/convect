@@ -5,15 +5,14 @@ import { HelpCircleIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import InfoTooltip from "~/components/core/InfoTooltip";
-import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
+import { cn } from "~/lib/utils";
 import { ActiveDeployments } from "./(components)/ActiveDeployments";
 import BatchRow from "./(components)/BatchRow";
 import { Chain } from "./(components)/Chain";
-import ManifestDialog from "./(components)/ManifestDialog";
 import { useBatches } from "./hooks/useBatches";
+import { useFunctionStatus } from "./hooks/useFunctionStatus";
 import { useOverview } from "./hooks/useOverview";
-import { useParams } from "./hooks/useParams";
 
 export default function Main() {
   const [batchId, setBatchId] = useState<string>();
@@ -21,17 +20,53 @@ export default function Main() {
   return (
     <div className="mx-auto max-w-screen-lg py-4">
       <div>
-        <div className="ml-auto flex w-min gap-2 px-4">
-          <div className="max-w-[160px]">
-            <Chain />
-          </div>
-          <div className="max-w-[220px]">
-            <ActiveDeployments />
+        <div className="flex justify-between px-4">
+          <Status />
+          <div className="ml-auto flex w-min gap-2">
+            <div className="max-w-[160px]">
+              <Chain />
+            </div>
+            <div className="max-w-[220px]">
+              <ActiveDeployments />
+            </div>
           </div>
         </div>
         <Overview />
         <RecentBatches batchId={batchId} setBatchId={setBatchId} />
       </div>
+    </div>
+  );
+}
+
+function Status() {
+  const { data: status } = useFunctionStatus();
+
+  const getLabel = () => {
+    if (status?.isRunning) {
+      return "running";
+    }
+    if (status?.isPending) {
+      return "pending";
+    }
+    if (status?.isDestroying) {
+      return "destroying";
+    }
+
+    return "Unknown";
+  };
+
+  return (
+    <div className="flex h-9 items-center gap-2 rounded-md border px-3">
+      <div
+        className={cn(
+          "h-2 w-2 rounded-full",
+
+          status?.isRunning && "bg-green-500",
+          status?.isPending && "bg-yellow-500",
+          status?.isDestroying && "bg-red-500",
+        )}
+      ></div>
+      <div className="text-xs">{getLabel()}</div>
     </div>
   );
 }
@@ -131,29 +166,5 @@ function RecentBatches(props: {
       </div>
       {maybeBatches?.length !== 0 && <div ref={scrollRef} />}
     </div>
-  );
-}
-
-function ManifestSection() {
-  const [isOpen, setIsOpen] = useState(false);
-  const { chainId } = useParams();
-  const { data: overview } = useOverview();
-
-  if (!overview) {
-    return null;
-  }
-
-  return (
-    <>
-      <Button variant="outline" onClick={() => setIsOpen(true)}>
-        View Manifest
-      </Button>
-      <ManifestDialog
-        open={isOpen}
-        onOpenChange={setIsOpen}
-        initialChainId={chainId ?? undefined}
-        manifest={overview.manifest}
-      />
-    </>
   );
 }
