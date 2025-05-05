@@ -1,6 +1,6 @@
 import { ECS, RunTaskCommand } from "@aws-sdk/client-ecs";
 import { Manifest } from "@convect-xyz/lib";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, lt, sql } from "drizzle-orm";
 import { Db } from "../db/db";
 import * as schema from "../db/schema";
 import {
@@ -61,17 +61,43 @@ export class _DeploymentService {
       throw new Error("Deployment not found");
     }
 
-    const hasPendingOrRunning = await this.config.db.transaction(async (tx) => {
-      const hasPendingOrRunning = await tx.query.deployment.findFirst({
+    await this.config.db
+      .update(schema.deployment)
+      .set({
+        status: "FAILED",
+        finishedAt: new Date(),
+      })
+      .where(
+        and(
+          gt(
+            sql`now() - ${schema.deployment.runningAt}`,
+            sql`INTERVAL '10 minutes'`
+          ),
+          eq(schema.deployment.functionId, options.functionId),
+          eq(schema.deployment.status, "RUNNING")
+        )
+      );
+
+    const pendingOrRunning = await this.config.db.transaction(async (tx) => {
+      const pendingOrRunning = await tx.query.deployment.findMany({
         where(fields, { eq, and, or }) {
           return and(
             eq(fields.functionId, options.functionId),
-            or(and(eq(fields.status, "PENDING")), eq(fields.status, "RUNNING"))
+            or(
+              and(
+                eq(fields.status, "PENDING"),
+                lt(
+                  sql`now() - ${schema.deployment.approvedAt}`,
+                  sql`INTERVAL '2 minutes'`
+                )
+              ),
+              eq(fields.status, "RUNNING")
+            )
           );
         },
       });
 
-      await this.config.db
+      await tx
         .update(schema.deployment)
         .set({
           status: "PENDING",
@@ -79,10 +105,10 @@ export class _DeploymentService {
         })
         .where(eq(schema.deployment.id, options.deploymentId));
 
-      return !!hasPendingOrRunning;
+      return pendingOrRunning;
     });
 
-    if (hasPendingOrRunning) {
+    if (pendingOrRunning.length > 0) {
       return;
     }
 
