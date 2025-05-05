@@ -49,7 +49,7 @@ import { env } from "../../app/env.mjs";
       logs: [
         log({
           origin: usdc,
-          signature: "event Transfer(address from, address to, uint256 value)"
+          signature: "event Transfer(address indexed from, address indexed to, uint256 value)"
         })
       ],
       handler: async (transactions) => {
