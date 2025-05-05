@@ -81,7 +81,7 @@ export default async () => {
     const handler = new aws.lambda.Function(
       `handler-${chain.chainId}-${current.deployment.id}`,
       {
-        role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
+        role: getRoleForHandler().arn,
         s3Bucket: getCodeBucket(),
         s3Key: path.join(
           "outputs",
@@ -202,3 +202,50 @@ export default async () => {
     orchestratorArn: orchestrator.arn,
   };
 };
+
+function getRoleForHandler() {
+  // Define the IAM policy with the necessary permissions
+  const sqsPolicy = new aws.iam.Policy("sqsPolicy", {
+    description: "IAM policy for Lambda function to access SQS",
+    policy: JSON.stringify({
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Action: [
+            "sqs:SendMessage",
+            "sqs:ReceiveMessage",
+            "sqs:DeleteMessage",
+            "sqs:GetQueueAttributes",
+            "sqs:GetQueueUrl",
+          ],
+          Resource: "*",
+        },
+      ],
+    }),
+  });
+
+  // Create the IAM role for the Lambda function
+  const lambdaRole = new aws.iam.Role("lambdaRole", {
+    assumeRolePolicy: JSON.stringify({
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Principal: {
+            Service: "lambda.amazonaws.com",
+          },
+          Action: "sts:AssumeRole",
+        },
+      ],
+    }),
+  });
+
+  // Attach the policy to the role
+  new aws.iam.RolePolicyAttachment("lambdaRolePolicyAttachment", {
+    role: lambdaRole.name,
+    policyArn: sqsPolicy.arn,
+  });
+
+  return lambdaRole;
+}
