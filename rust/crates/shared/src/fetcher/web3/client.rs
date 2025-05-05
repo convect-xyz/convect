@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use futures::future::join_all;
+use std::fmt::Debug;
 use std::str::FromStr;
 use std::{future::Future, sync::Arc};
 use tokio::sync::Mutex;
@@ -56,7 +57,12 @@ impl Web3ClientImpl {
         }
     }
 
-    async fn with_retry<R, E, T: Future<Output = Result<R, E>>, F: FnMut(&Web3<Http>) -> T>(
+    async fn with_retry<
+        R,
+        E: Debug,
+        T: Future<Output = Result<R, E>>,
+        F: FnMut(&Web3<Http>) -> T,
+    >(
         &self,
         func: F,
     ) -> Result<R, E> {
@@ -81,13 +87,16 @@ impl Web3ClientImpl {
             wrapper()
                 .await
                 .inspect_err(|_| *endpoint_index = (*endpoint_index + 1) % self.endpoints.len())
+                .inspect_err(|e| {
+                    println!("Error: {:?}", e);
+                })
         })
         .await
     }
 
     async fn batch_with_retry<
         R,
-        E,
+        E: Debug,
         T: Future<Output = Result<R, E>>,
         F: Fn(&Web3<Batch<Http>>) -> T,
     >(
@@ -116,6 +125,9 @@ impl Web3ClientImpl {
             wrapper()
                 .await
                 .inspect_err(|_| *endpoint_index = (*endpoint_index + 1) % self.endpoints.len())
+                .inspect_err(|e| {
+                    println!("Error: {:?}", e);
+                })
         })
         .await
     }
@@ -146,7 +158,7 @@ impl Web3Client for Web3ClientImpl {
         &self,
         filters: Vec<Filter>,
     ) -> Result<Vec<Log>, errors::Web3ClientError> {
-        let chunks: std::slice::Chunks<'_, Filter> = filters.chunks(500);
+        let chunks: std::slice::Chunks<'_, Filter> = filters.chunks(300);
         let results = join_all(chunks.into_iter().map(|chunk| {
             self.batch_with_retry(move |web3| {
                 let web3 = web3.clone();
@@ -206,7 +218,7 @@ impl Web3Client for Web3ClientImpl {
     ) -> Result<Vec<Option<web3::types::Transaction>>, errors::Web3ClientError> {
         let tx_hashes = tx_hashes.clone();
 
-        let chunks = tx_hashes.chunks(800);
+        let chunks = tx_hashes.chunks(100);
         let results = join_all(chunks.into_iter().map(|chunk| {
             self.batch_with_retry(move |web3| {
                 let web3 = web3.clone();

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use resend_rs::types::CreateEmailBaseOptions;
-use shared::{networks::SupportedNetwork, resend::ResendClient};
+use shared::{configuration::SupportedNetwork, resend::ResendClient};
 use tokio::sync::Mutex;
 
 const FROM_EMAIL: &str = "notification@convect.xyz";

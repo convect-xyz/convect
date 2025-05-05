@@ -35,7 +35,7 @@ impl<N: IssueNotifier + 'static, S: Sns + 'static> ListenerImpl<N, S> {
 #[async_trait]
 impl<N: IssueNotifier + 'static, S: Sns + 'static> Listener for ListenerImpl<N, S> {
     async fn listen(&self) -> Result<(), errors::ListenerError> {
-        let mut interval: time::Interval = time::interval(time::Duration::from_secs(1));
+        let mut interval: time::Interval = time::interval(time::Duration::from_millis(100));
 
         loop {
             interval.tick().await;
@@ -74,7 +74,6 @@ impl<N: IssueNotifier + 'static, S: Sns + 'static> Listener for ListenerImpl<N, 
                 }
             }
 
-            tracing::info!("Current Blocks: {:?}", current_blocks);
             self.sns_client
                 .publish(
                     PRODUCER_SNS_TOPIC,
