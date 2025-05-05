@@ -96,7 +96,7 @@ impl Web3ClientImpl {
 
     async fn batch_with_retry<
         R,
-        E,
+        E: Debug,
         T: Future<Output = Result<R, E>>,
         F: Fn(&Web3<Batch<Http>>) -> T,
     >(
@@ -125,6 +125,9 @@ impl Web3ClientImpl {
             wrapper()
                 .await
                 .inspect_err(|_| *endpoint_index = (*endpoint_index + 1) % self.endpoints.len())
+                .inspect_err(|e| {
+                    println!("Error: {:?}", e);
+                })
         })
         .await
     }
