@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use futures::future::join_all;
+use std::fmt::Debug;
 use std::str::FromStr;
 use std::{future::Future, sync::Arc};
 use tokio::sync::Mutex;
@@ -56,7 +57,12 @@ impl Web3ClientImpl {
         }
     }
 
-    async fn with_retry<R, E, T: Future<Output = Result<R, E>>, F: FnMut(&Web3<Http>) -> T>(
+    async fn with_retry<
+        R,
+        E: Debug,
+        T: Future<Output = Result<R, E>>,
+        F: FnMut(&Web3<Http>) -> T,
+    >(
         &self,
         func: F,
     ) -> Result<R, E> {
@@ -81,6 +87,9 @@ impl Web3ClientImpl {
             wrapper()
                 .await
                 .inspect_err(|_| *endpoint_index = (*endpoint_index + 1) % self.endpoints.len())
+                .inspect_err(|e| {
+                    println!("Error: {:?}", e);
+                })
         })
         .await
     }
