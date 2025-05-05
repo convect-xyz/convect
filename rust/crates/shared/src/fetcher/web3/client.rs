@@ -218,7 +218,7 @@ impl Web3Client for Web3ClientImpl {
     ) -> Result<Vec<Option<web3::types::Transaction>>, errors::Web3ClientError> {
         let tx_hashes = tx_hashes.clone();
 
-        let chunks = tx_hashes.chunks(800);
+        let chunks = tx_hashes.chunks(500);
         let results = join_all(chunks.into_iter().map(|chunk| {
             self.batch_with_retry(move |web3| {
                 let web3 = web3.clone();
