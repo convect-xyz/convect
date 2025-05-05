@@ -81,7 +81,7 @@ export default async () => {
     const handler = new aws.lambda.Function(
       `handler-${chain.chainId}-${current.deployment.id}`,
       {
-        role: getRoleForHandler().arn,
+        role: "arn:aws:iam::730335604495:role/orchestrator-lambda",
         s3Bucket: getCodeBucket(),
         s3Key: path.join(
           "outputs",
@@ -117,6 +117,10 @@ export default async () => {
         handler: "index.handler",
         packageType: "Zip",
         runtime: "nodejs20.x",
+        loggingConfig: {
+          applicationLogLevel: "FATAL",
+          logFormat: "Text",
+        },
       }
     );
 
