@@ -15,6 +15,7 @@
     "@pulumi/awsx": "^2.0.2",
     "@pulumi/pulumi": "^3.113.0",
     "zod": "^3.23.8",
-    "@infra/config": "*"
+    "@infra/config": "*",
+    "esbuild": "0.19.11"
   }
 }
