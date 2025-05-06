@@ -1,0 +1,17 @@
+{
+  "name": "@infra/stripe",
+  "main": "index.ts",
+  "private": "true",
+  "version": "1.0.0",
+  "scripts": {},
+  "devDependencies": {
+    "@types/node": "^18",
+    "typescript": "5.5.2"
+  },
+  "dependencies": {
+    "@pulumi/aws": "^6.79.1",
+    "@pulumi/awsx": "^2.0.2",
+    "@pulumi/pulumi": "^3.113.0",
+    "zod": "^3.23.8"
+  }
+}
