@@ -1,4 +1,5 @@
 import * as aws from "@pulumi/aws";
+import * as archive from "@pulumi/archive";
 import * as pulumi from "@pulumi/pulumi";
 
 export = async () => {
