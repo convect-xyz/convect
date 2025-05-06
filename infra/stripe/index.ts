@@ -37,6 +37,7 @@ export = async () => {
     handler: "index.handler",
     role: iamForLambda.arn,
     sourceCodeHash: lambda.then((lambda) => lambda.outputBase64sha256),
+    runtime: "nodejs20.x"
   });
 
   return {
