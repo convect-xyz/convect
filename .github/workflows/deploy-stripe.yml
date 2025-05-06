@@ -47,8 +47,8 @@ jobs:
         with:
           path: |
             node_modules
-            apps/stripe/node_modules
-          key: ${{ runner.os }}-deploy-config-${{ hashFiles('infra/yarn.lock') }}-
+            infra/stripe/node_modules
+          key: ${{ runner.os }}-deploy-config-${{ hashFiles('infra/stripe/package.json') }}-
           restore-keys: ${{ runner.os }}-deploy-config-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -57,7 +57,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Installing dependencies 📦️
-        run: cd infra && yarn
+        run: cd infra/stripe && yarn
       - name: Bundle Stripe
         run: yarn esbuild ./apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --outfile=./infra/stripe/stripe.js
       - uses: pulumi/actions@v6
