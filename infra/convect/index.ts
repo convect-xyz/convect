@@ -1,6 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import config from "./config/config";
+import { config } from "@infra/config";
 
 export = async () => {
   const stackName = pulumi.getStack();
