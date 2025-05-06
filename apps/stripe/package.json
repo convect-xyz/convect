@@ -18,7 +18,8 @@
     "ngrok": "^5.0.0-beta.2",
     "smee-client": "1.2.3",
     "stripe": "^18.1.0",
-    "zod": "^3.24.4"
+    "zod": "^3.24.4",
+    "esbuild": "0.19.11"
   },
   "devDependencies": {
     "@convect-xyz/server": "*",
