@@ -60,10 +60,6 @@ jobs:
         run: cd infra && yarn
       - name: Bundle Stripe
         run: yarn esbuild ./apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --outfile=./infra/stripe/stripe.js
-      - name: Upload Stripe Bundle to S3
-        env:
-          ENVIRONMENT: ${{ github.event.inputs.environment }}
-        run: aws s3api put-object --bucket ingest-functions --key stripe/$ENVIRONMENT.zip --body "./apps/stripe/dist/index.js"
       - uses: pulumi/actions@v3
         with:
           command: up
