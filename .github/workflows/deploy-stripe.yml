@@ -57,7 +57,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Installing dependencies 📦️
-        run: cd infra/stripe && yarn
+        run: cd infra/stripe && yarn && yarn global add esbuild
       - name: Bundle Stripe
         run: yarn esbuild ./apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --outfile=./infra/stripe/stripe.js
       - uses: pulumi/actions@v6
