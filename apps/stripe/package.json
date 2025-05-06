@@ -23,7 +23,6 @@
   "devDependencies": {
     "@convect-xyz/server": "*",
     "@types/aws-lambda": "^8.10.149",
-    "esbuild": "0.19.11",
     "ts-node": "*"
   }
 }
