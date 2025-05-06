@@ -92,7 +92,6 @@ export const POST = async (req: NextRequest) => {
     manifest: manifest,
     mode: data.mode,
   });
-  console.log("deployment created");
 
   const projectId = fn.project.id;
   const functionId = fn.convectFunction.id;
