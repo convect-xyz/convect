@@ -1,5 +1,5 @@
 {
-  "name": "infra",
+  "name": "@infra/convect",
   "main": "index.ts",
   "private": "true",
   "version": "1.0.0",
@@ -14,6 +14,7 @@
     "@pulumi/aws": "^6.79.1",
     "@pulumi/awsx": "^2.0.2",
     "@pulumi/pulumi": "^3.113.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@infra/config": "*"
   }
 }
