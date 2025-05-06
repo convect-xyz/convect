@@ -1,0 +1,7 @@
+name: infra
+runtime: nodejs
+description: Convect General Infrastructure
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-typescript
