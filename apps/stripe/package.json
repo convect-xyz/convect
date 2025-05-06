@@ -6,7 +6,6 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "dev": "NODE_OPTIONS=\"--max_old_space_size=4096\" ts-node ./src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -14,7 +13,7 @@
   "dependencies": {
     "@t3-oss/env-core": "^0.13.4",
     "dotenv": "^16.4.1",
-    "drizzle-orm": "^0.43.1",
+    "drizzle-orm": "0.31.2",
     "ngrok": "^5.0.0-beta.2",
     "smee-client": "1.2.3",
     "stripe": "^18.1.0",

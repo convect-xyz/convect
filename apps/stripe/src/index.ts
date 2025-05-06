@@ -1,4 +1,5 @@
 import { Context, EventBridgeEvent, SQSEvent } from "aws-lambda";
+import { eq } from "drizzle-orm";
 import { Stripe } from "stripe";
 import { db } from "./db";
 import schema from "./db/schema";
