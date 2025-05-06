@@ -27,6 +27,7 @@
     "pg": "8.12.0",
     "server-only": "0.0.1",
     "@convect-xyz/lib": "*",
+    "@infra/config": "*",
     "@aws-sdk/client-ecs": "3.542.0"
   },
   "dependencies": {
