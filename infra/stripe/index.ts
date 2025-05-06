@@ -21,6 +21,7 @@ export = async () => {
       },
     ],
   });
+  
   const iamForLambda = new aws.iam.Role("iam_for_lambda", {
     name: "iam_for_lambda",
     assumeRolePolicy: assumeRole.then((assumeRole) => assumeRole.json),
