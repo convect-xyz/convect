@@ -8,6 +8,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "exports": {
+    ".": "./src/index.ts",
+    "./chains": "./src/chains.ts"
+  },
   "author": "",
   "license": "ISC",
   "devDependencies": {

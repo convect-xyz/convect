@@ -21,7 +21,7 @@ export = async () => {
       },
     ],
   });
-  
+
   const iamForLambda = new aws.iam.Role("iam_for_lambda", {
     name: "iam_for_lambda",
     assumeRolePolicy: assumeRole.then((assumeRole) => assumeRole.json),
@@ -36,7 +36,7 @@ export = async () => {
   const fn = new aws.lambda.Function("stripe", {
     code: new pulumi.asset.FileArchive("stripe_payload.zip"),
     name: "stripe_" + ENVIRONMENT,
-    handler: "index.handler",
+    handler: "stripe.handler",
     role: iamForLambda.arn,
     sourceCodeHash: lambda.then((lambda) => lambda.outputBase64sha256),
     runtime: "nodejs20.x"
