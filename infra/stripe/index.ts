@@ -19,6 +19,17 @@ export = async () => {
         ],
         actions: ["sts:AssumeRole"],
       },
+      {
+        effect: "Allow",
+        actions: [
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl",
+        ],
+        resources: ["*"],
+      },
     ],
   });
 
@@ -39,7 +50,7 @@ export = async () => {
     handler: "stripe.handler",
     role: iamForLambda.arn,
     sourceCodeHash: lambda.then((lambda) => lambda.outputBase64sha256),
-    runtime: "nodejs20.x"
+    runtime: "nodejs20.x",
   });
 
   return {
