@@ -38,7 +38,7 @@ async function getPendingDeployment(deploymentId: string) {
   });
 
   if (!deployment) {
-    throw new Error("Deployment not found");
+    throw new Error(`Deployment ${deploymentId} not found`);
   }
 
   return deployment;

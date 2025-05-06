@@ -1,0 +1,28 @@
+{
+  "name": "@ingest/stripe",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_OPTIONS=\"--max_old_space_size=4096\" ts-node ./src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@t3-oss/env-core": "^0.13.4",
+    "dotenv": "^16.4.1",
+    "drizzle-orm": "^0.43.1",
+    "ngrok": "^5.0.0-beta.2",
+    "smee-client": "1.2.3",
+    "stripe": "^18.1.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@convect-xyz/server": "*",
+    "@types/aws-lambda": "^8.10.149",
+    "ts-node": "*"
+  }
+}
