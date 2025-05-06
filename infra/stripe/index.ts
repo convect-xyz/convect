@@ -28,7 +28,9 @@ export = async () => {
           "sqs:GetQueueAttributes",
           "sqs:GetQueueUrl",
         ],
-        resources: ["*"],
+        resources: [
+          "arn:aws:sqs:::*",
+        ]
       },
     ],
   });
