@@ -59,7 +59,7 @@ jobs:
       - name: Installing dependencies 📦️
         run: cd infra/stripe && yarn
       - name: Bundle Stripe
-        run: yarn esbuild ./apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --outfile=./infra/stripe/stripe.js
+        run: cd infra/stripe && yarn esbuild ../../apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --outfile=./infra/stripe/stripe.js
       - uses: pulumi/actions@v6
         with:
           command: up
