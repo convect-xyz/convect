@@ -95,7 +95,7 @@ export = async () => {
     role: iamForLambda.arn,
     sourceCodeHash: lambda.then((lambda) => lambda.outputBase64sha256),
     runtime: "nodejs20.x",
-
+    timeout: 900,
     environment: {
       variables: {
         STRIPE_API_KEY: getStripeApiKey(),
