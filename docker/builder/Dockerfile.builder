@@ -16,6 +16,7 @@ COPY packages/typescript-config packages/typescript-config
 COPY packages/lib packages/lib
 COPY packages/server packages/server
 COPY packages/runtime packages/runtime
+COPY infra/config infra/config
 
 RUN yarn
 
