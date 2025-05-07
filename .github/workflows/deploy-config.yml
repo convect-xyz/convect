@@ -64,6 +64,6 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Installing dependencies 📦️
-        run: cd infra && yarn
+        run: cd infra/convect && yarn
       - name: Deploy config
-        run: cd infra && yarn deploy:config
+        run: cd infra/convect && yarn deploy:config
