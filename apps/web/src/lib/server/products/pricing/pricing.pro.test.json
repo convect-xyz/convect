@@ -8,7 +8,7 @@
       "priceInCentsPerAdditionalUnit": 20,
       "unitSize": 100000,
       "unitSymbol": "Txs",
-      "stripePriceId": "price_1PrjdK2LJct0ubJ33itFUXlF"
+      "stripePriceId": "price_1RMFe7Ru90pWJjEEeSP33VZN"
     },
     {
       "key": "gbHours",
@@ -17,7 +17,7 @@
       "priceInCentsPerAdditionalUnit": 18,
       "unitSize": 1,
       "unitSymbol": "GB-Hours",
-      "stripePriceId": "price_1PriFC2LJct0ubJ31Q1FAqwq"
+      "stripePriceId": "price_1RMFb9Ru90pWJjEEG9wByGtw"
     },
     {
       "key": "invocations",
@@ -26,7 +26,7 @@
       "priceInCentsPerAdditionalUnit": 60,
       "unitSize": 1000000,
       "unitSymbol": "",
-      "stripePriceId": "price_1PrjYY2LJct0ubJ30GqZ3NJ1"
+      "stripePriceId": "price_1RMFh6Ru90pWJjEEmfpwix4q"
     },
     {
       "key": "basePlan",
@@ -35,7 +35,7 @@
       "priceInCentsPerAdditionalUnit": 0,
       "unitSize": 1,
       "unitSymbol": "",
-      "stripePriceId": "price_1Prjjm2LJct0ubJ3rUXID3wG"
+      "stripePriceId": "price_1RMFYLRu90pWJjEEETHImxRO"
     }
   ]
 }

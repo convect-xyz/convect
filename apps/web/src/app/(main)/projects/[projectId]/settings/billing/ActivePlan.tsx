@@ -68,11 +68,13 @@ function ChangePlanDialog(props: DialogProps) {
 
 function ChangePlanButton(props: { plan: schema.PlanType }) {
   const { projectId } = useParams();
-  const { mutateAsync: switchPlan } = api.billing.switchPlan.useMutation();
+  const { mutateAsync: switchPlan, isPending } =
+    api.billing.switchPlan.useMutation();
 
   return (
     <Button
       variant="outline"
+      isLoading={isPending}
       onClick={() => switchPlan({ newPlan: props.plan, projectId })}
     >
       Upgrade
