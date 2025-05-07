@@ -134,6 +134,12 @@ export const projects = createTable(
     }).unique(),
     planType: planEnum("plan_type").default("HOBBY").notNull(),
     planUrl: varchar("plan_url", { length: 255 }),
+    billingStatus: text("billing_status", {
+      enum: ["ACTIVE", "OVERDUE"],
+    }),
+    billingStatusUpdatedAt: timestamp("billing_status_updated_at", {
+      mode: "date",
+    }),
   },
   (projects) => ({
     userIdIdx: index("project_userId_idx").on(projects.userId),
