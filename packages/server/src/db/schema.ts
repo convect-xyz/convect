@@ -136,10 +136,10 @@ export const projects = createTable(
     planUrl: varchar("plan_url", { length: 255 }),
     billingStatus: text("billing_status", {
       enum: ["ACTIVE", "OVERDUE"],
-    }),
+    }).default("ACTIVE"),
     billingStatusUpdatedAt: timestamp("billing_status_updated_at", {
       mode: "date",
-    }),
+    }).defaultNow(),
   },
   (projects) => ({
     userIdIdx: index("project_userId_idx").on(projects.userId),

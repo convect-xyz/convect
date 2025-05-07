@@ -316,6 +316,13 @@
       "when": 1744802442667,
       "tag": "0044_green_killer_shrike",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1746646172504,
+      "tag": "0045_lumpy_silver_fox",
+      "breakpoints": true
     }
   ]
 }
