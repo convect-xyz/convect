@@ -20,8 +20,8 @@ async function main() {
 
     await current.start();
 
+    const mode = current.deployment.mode;
     try {
-      const mode = current.deployment.mode;
       if (mode === "destroy") {
         await destroy();
       } else if (mode === "init") {
