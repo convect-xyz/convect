@@ -163,8 +163,8 @@ jobs:
         with:
           path: |
             node_modules
-            infra/node_modules
-          key: ${{ runner.os }}-deploy-pulumi-${{ hashFiles('infra/yarn.lock') }}-
+            infra/convect/node_modules
+          key: ${{ runner.os }}-deploy-pulumi-${{ hashFiles('infra/convect/yarn.lock') }}-
           restore-keys: ${{ runner.os }}-deploy-pulumi-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -179,10 +179,10 @@ jobs:
           VERSION=${VERSION//\//-}
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
       - name: Installing dependencies 📦️
-        run: cd infra && yarn
+        run: cd infra/convect && yarn
       - uses: pulumi/actions@v3
         with:
           command: up
-          work-dir: ./infra
+          work-dir: ./infra/convect
           stack-name: ${{ env.VERSION }}
           upsert: true
