@@ -109,7 +109,7 @@ export = async () => {
     environment: {
       variables: {
         STRIPE_API_KEY: getStripeApiKey(),
-        DATABASE_URL: process.env.DATABASE_URL!,
+        DATABASE_URL: getDatabaseUrl(),
       },
     },
   });
