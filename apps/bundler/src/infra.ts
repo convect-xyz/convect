@@ -237,6 +237,16 @@ function getRoleForHandler() {
     ],
   });
 
+  const s3Policy = aws.iam.getPolicyDocument({
+    statements: [
+      {
+        effect: "Allow",
+        actions: ["s3:*"],
+        resources: ["*"],
+      },
+    ],
+  });
+
   const assumeRole = aws.iam.getPolicyDocument({
     statements: [
       {
@@ -265,6 +275,10 @@ function getRoleForHandler() {
         policy: cloudWatchPolicy.then(
           (cloudWatchPolicy) => cloudWatchPolicy.json
         ),
+      },
+      {
+        name: "s3Policy",
+        policy: s3Policy.then((s3Policy) => s3Policy.json),
       },
     ],
   });
