@@ -2,6 +2,7 @@
   "name": "@infra/convect",
   "main": "index.ts",
   "private": "true",
+  "type": "module",
   "version": "1.0.0",
   "scripts": {
     "deploy:config": "npx ts-node uploadConfig.ts"
