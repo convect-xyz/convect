@@ -17,6 +17,7 @@
     "@aws-sdk/cloudfront-signer": "^3.621.0",
     "@convect-xyz/lib": "*",
     "@convect-xyz/server": "*",
+    "@infra/config": "*",
     "@hookform/resolvers": "3.3.4",
     "@octokit/webhooks": "12.0.11",
     "@radix-ui/react-accordion": "^1.2.3",

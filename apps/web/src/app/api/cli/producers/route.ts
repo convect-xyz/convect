@@ -2,10 +2,9 @@ import { isNull, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "~/server/db";
-import { chains } from "../../../../../../../infra/config/chains";
+import { chains } from "@infra/config/chains";
 import { getJsonData, getUserContext } from "../utils";
 
-console.log(chains);
 const requestSchema = z.object({
   ids: z.array(z.string()),
 });
@@ -21,33 +20,13 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ message: dataError.message }, { status: 401 });
   }
 
-  const producers = await db.query.producers.findMany({
-    where(fields, { eq, and }) {
-      var filter = and();
-
-      for (const id of data.ids) {
-        const chainId = chains.find((c) => c.slug === id)?.id;
-        console.log(chainId);
-        if (chainId) {
-          filter = or(
-            filter,
-            and(eq(fields.chainId, chainId), isNull(fields.userId)),
-          );
-        } else {
-          throw new Error(`Invalid producer id: ${id}`);
-        }
-      }
-
-      return filter;
-    },
-  });
 
   return NextResponse.json({
-    producers: producers.map((producer) => ({
+    producers: chains.filter(chain => data.ids.includes(chain.slug)).map((producer) => ({
       id: producer.id,
       name: producer.name,
-      chainId: producer.chainId,
-      slug: chains.find((c) => c.id === producer.chainId)!.slug,
+      chainId: producer.id,
+      slug: producer.slug,
     })),
   });
 };

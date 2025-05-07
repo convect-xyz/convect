@@ -22,11 +22,11 @@ env:
   INFRA_VERSION: ${{ github.event.inputs.version || github.event.release.tag_name || github.ref_name }}
   CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ secrets.CONFIG_ENCRYPTION_PRIVATE_KEY }}
   CONFIG_ENCRYPTION_ALGORITHM: ${{ secrets.CONFIG_ENCRYPTION_ALGORITHM }}
-  DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
+  DEV_APPLICATION_DB_URL: ${{ secrets.DEV_APPLICATION_DB_URL }}
+  PROD_APPLICATION_DB_URL: ${{ secrets.PROD_APPLICATION_DB_URL }}
   PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
   TEST_STRIPE_API_KEY: ${{ secrets.TEST_STRIPE_API_KEY }}
   PROD_STRIPE_API_KEY: ${{ secrets.PROD_STRIPE_API_KEY }}
-  PROD_REPORTING_DB_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
   ENVIRONMENT: ${{ github.event.inputs.environment }}
 
 concurrency:
