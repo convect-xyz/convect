@@ -2,3 +2,20 @@
 title: Log
 description: Log
 ---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+ 
+<TypeTable
+  type={{
+    origin: {
+      description:
+        'The address of the contract that emitted the log',
+      type: '0x${string}',
+    },
+    signature: {
+      description:
+        'The signature of the event that was emitted',
+      type: 'event ${string}',
+    },
+  }}
+/>

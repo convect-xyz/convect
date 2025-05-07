@@ -13,6 +13,16 @@ function getStripeApiKey(): string {
   }
 }
 
+function getDatabaseUrl(): string {
+  switch (process.env.ENVIRONMENT) {
+    case "prod":
+      return process.env.PROD_APPLICATION_DB_URL!;
+    case "test":
+      return process.env.DEV_APPLICATION_DB_URL!;
+    default:
+  }
+}
+
 export = async () => {
   const stackName = pulumi.getStack();
   const GITHUB_SHA = process.env.GITHUB_SHA!;
