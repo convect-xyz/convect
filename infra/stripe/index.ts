@@ -2,12 +2,12 @@ import * as aws from "@pulumi/aws";
 import * as archive from "@pulumi/archive";
 import * as pulumi from "@pulumi/pulumi";
 
-const isMain = process.env.BRANCH_NAME === "main"
-const isDev = process.env.BRANCH_NAME.includes("dev")
+const isMain = process.env.BRANCH_NAME === "main";
+const isDev = process.env.BRANCH_NAME?.includes("dev") ?? false;
 
 function getStripeApiKey(): string {
   console.log("BRANCH_NAME", process.env.BRANCH_NAME);
-  if(isMain) {
+  if (isMain) {
     return process.env.PROD_STRIPE_API_KEY!;
   }
 
@@ -15,11 +15,11 @@ function getStripeApiKey(): string {
     return process.env.TEST_STRIPE_API_KEY!;
   }
 
-  throw new Error("Unknown infra version");
+  throw new Error("Unknown branch: " + process.env.BRANCH_NAME);
 }
 
 function getDatabaseUrl(): string {
-  if(isMain) {
+  if (isMain) {
     return process.env.PROD_APPLICATION_DB_URL!;
   }
 
@@ -27,7 +27,7 @@ function getDatabaseUrl(): string {
     return process.env.DEV_APPLICATION_DB_URL!;
   }
 
-  throw new Error("Unknown infra version");
+  throw new Error("Unknown branch: " + process.env.BRANCH_NAME);
 }
 
 export = async () => {
