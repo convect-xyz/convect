@@ -3,8 +3,10 @@ import Stripe from "stripe";
 import { db } from "~/db";
 import schema from "~/db/schema";
 
-export async function handleSubscriptionCreated(
-  event: Extract<Stripe.Event, { type: "customer.subscription.created" }>
+export async function handleSubscriptionCreatedOrUpdated(
+  event:
+    | Extract<Stripe.Event, { type: "customer.subscription.created" }>
+    | Extract<Stripe.Event, { type: "customer.subscription.updated" }>
 ) {
   const data = event.data.object;
   const planType = data.metadata.planType;
