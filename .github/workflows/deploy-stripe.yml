@@ -2,15 +2,6 @@ name: "Deploy Stripe"
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Environment"
-        required: true
-        default: "warning"
-        type: choice
-        options:
-          - prod
-          - test
 
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -22,12 +13,13 @@ env:
   INFRA_VERSION: ${{ github.event.inputs.version || github.event.release.tag_name || github.ref_name }}
   CONFIG_ENCRYPTION_PRIVATE_KEY: ${{ secrets.CONFIG_ENCRYPTION_PRIVATE_KEY }}
   CONFIG_ENCRYPTION_ALGORITHM: ${{ secrets.CONFIG_ENCRYPTION_ALGORITHM }}
-  DATABASE_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
+  DEV_APPLICATION_DB_URL: ${{ secrets.DEV_APPLICATION_DB_URL }}
+  PROD_APPLICATION_DB_URL: ${{ secrets.PROD_APPLICATION_DB_URL }}
   PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
   TEST_STRIPE_API_KEY: ${{ secrets.TEST_STRIPE_API_KEY }}
   PROD_STRIPE_API_KEY: ${{ secrets.PROD_STRIPE_API_KEY }}
-  PROD_REPORTING_DB_URL: ${{ secrets.PROD_REPORTING_DB_URL }}
   ENVIRONMENT: ${{ github.event.inputs.environment }}
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -47,8 +39,8 @@ jobs:
         with:
           path: |
             node_modules
-            apps/stripe/node_modules
-          key: ${{ runner.os }}-deploy-config-${{ hashFiles('infra/yarn.lock') }}-
+            infra/stripe/node_modules
+          key: ${{ runner.os }}-deploy-config-${{ hashFiles('infra/stripe/package.json') }}-
           restore-keys: ${{ runner.os }}-deploy-config-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -57,14 +49,10 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Installing dependencies 📦️
-        run: cd infra && yarn
+        run: cd infra/stripe && yarn && cd ../../apps/stripe && yarn
       - name: Bundle Stripe
-        run: yarn esbuild ./apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --outfile=./infra/stripe/stripe.js
-      - name: Upload Stripe Bundle to S3
-        env:
-          ENVIRONMENT: ${{ github.event.inputs.environment }}
-        run: aws s3api put-object --bucket ingest-functions --key stripe/$ENVIRONMENT.zip --body "./apps/stripe/dist/index.js"
-      - uses: pulumi/actions@v3
+        run: cd infra/stripe && yarn esbuild ../../apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --outfile=./stripe.js
+      - uses: pulumi/actions@v6
         with:
           command: up
           work-dir: ./infra/stripe

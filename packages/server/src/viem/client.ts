@@ -1,5 +1,5 @@
 import { createPublicClient, defineChain, http } from "viem";
-import { chains } from "../../../../infra/config/chains";
+import { chains } from "@infra/config/chains";
 
 export function getPublicClient(chainId: number) {
   const chain = chains.find((c) => c.id === chainId)!;

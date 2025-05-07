@@ -1,0 +1,23 @@
+{
+  "name": "@infra/config",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./chains": "./src/chains.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "zod": "^3.23.8"
+  },
+  "dependencies": {
+    "dotenv": "16.4.5"
+  }
+}
