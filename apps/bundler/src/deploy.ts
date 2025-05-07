@@ -20,13 +20,18 @@ async function main() {
 
     await current.start();
 
-    const mode = current.deployment.mode;
-    if (mode === "destroy") {
-      await destroy();
-    } else if (mode === "init") {
-      await deploy();
-    } else if (mode === "update") {
-      await deploy();
+    try {
+      const mode = current.deployment.mode;
+      if (mode === "destroy") {
+        await destroy();
+      } else if (mode === "init") {
+        await deploy();
+      } else if (mode === "update") {
+        await deploy();
+      }
+    } catch (e) {
+      current.fail();
+      throw e;
     }
 
     await manager.next();
