@@ -2,12 +2,21 @@ import * as aws from "@pulumi/aws";
 import * as archive from "@pulumi/archive";
 import * as pulumi from "@pulumi/pulumi";
 
-const isMain = process.env.BRANCH_NAME === "main"
-const isDev = process.env.BRANCH_NAME.includes("dev")
+const isMain = process.env.BRANCH_NAME === "main";
+const isDev = process.env.BRANCH_NAME?.includes("dev") ?? false;
+
+function getEnvironmentName(): string {
+  if (isMain) {
+    return "main";
+  }
+  if (isDev) {
+    return "dev";
+  }
+  throw new Error("Unknown branch: " + process.env.BRANCH_NAME);
+}
 
 function getStripeApiKey(): string {
-  console.log("BRANCH_NAME", process.env.BRANCH_NAME);
-  if(isMain) {
+  if (isMain) {
     return process.env.PROD_STRIPE_API_KEY!;
   }
 
@@ -15,11 +24,11 @@ function getStripeApiKey(): string {
     return process.env.TEST_STRIPE_API_KEY!;
   }
 
-  throw new Error("Unknown infra version");
+  throw new Error("Unknown branch: " + process.env.BRANCH_NAME);
 }
 
 function getDatabaseUrl(): string {
-  if(isMain) {
+  if (isMain) {
     return process.env.PROD_APPLICATION_DB_URL!;
   }
 
@@ -27,7 +36,7 @@ function getDatabaseUrl(): string {
     return process.env.DEV_APPLICATION_DB_URL!;
   }
 
-  throw new Error("Unknown infra version");
+  throw new Error("Unknown branch: " + process.env.BRANCH_NAME);
 }
 
 export = async () => {
@@ -83,7 +92,7 @@ export = async () => {
   });
 
   const iamForLambda = new aws.iam.Role("iam_for_lambda", {
-    name: "iam_for_lambda",
+    name: "iam_for_lambda" + getEnvironmentName(),
     assumeRolePolicy: assumeRole.then((assumeRole) => assumeRole.json),
     inlinePolicies: [
       {
@@ -107,7 +116,7 @@ export = async () => {
 
   const fn = new aws.lambda.Function("stripe", {
     code: new pulumi.asset.FileArchive("stripe_payload.zip"),
-    name: "stripe_" + ENVIRONMENT,
+    name: "stripe_" + getEnvironmentName(),
     handler: "stripe.handler",
     role: iamForLambda.arn,
     sourceCodeHash: lambda.then((lambda) => lambda.outputBase64sha256),
