@@ -7,6 +7,24 @@ export = async () => {
   const GITHUB_SHA = process.env.GITHUB_SHA!;
   const ENVIRONMENT = process.env.ENVIRONMENT!;
 
+  const sqsPolicy = aws.iam.getPolicyDocument({
+    statements: [
+      {
+        effect: "Allow",
+        actions: [
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl",
+          "sqs:ListQueues",
+          "sqs:ListQueueTags",
+        ],
+        resources: ["*"],
+      },
+    ],
+  });
+
   const assumeRole = aws.iam.getPolicyDocument({
     statements: [
       {
@@ -19,25 +37,18 @@ export = async () => {
         ],
         actions: ["sts:AssumeRole"],
       },
-      {
-        effect: "Allow",
-        actions: [
-          "sqs:SendMessage",
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage",
-          "sqs:GetQueueAttributes",
-          "sqs:GetQueueUrl",
-        ],
-        resources: [
-          "arn:aws:sqs:::*",
-        ]
-      },
     ],
   });
 
   const iamForLambda = new aws.iam.Role("iam_for_lambda", {
     name: "iam_for_lambda",
     assumeRolePolicy: assumeRole.then((assumeRole) => assumeRole.json),
+    inlinePolicies: [
+      {
+        name: "sqsPolicy",
+        policy: sqsPolicy.then((sqsPolicy) => sqsPolicy.json),
+      },
+    ],
   });
 
   const lambda = archive.getFile({
