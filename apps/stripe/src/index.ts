@@ -4,7 +4,7 @@ import { handleCheckoutSessionComplete } from "./handlers/checkout_session_compl
 import { handleInvoicePaymentFailed } from "./handlers/invoice_payment_failed";
 import { handleInvoicePaymentSucceeded } from "./handlers/invoice_payment_succeeded";
 import { handlePaymentMethodAttached } from "./handlers/payment_method_attached";
-import { handleSubscriptionCreated } from "./handlers/subscription_created";
+import { handleSubscriptionCreatedOrUpdated } from "./handlers/subscription_created_or_updated";
 
 export const handler = async (event: SQSEvent, context: Context) => {
   const stripeEvents = event.Records.map((record) => {
@@ -37,7 +37,10 @@ async function processStripeEvent(event: Stripe.Event) {
       await handlePaymentMethodAttached(event);
       break;
     case "customer.subscription.created":
-      await handleSubscriptionCreated(event);
+      await handleSubscriptionCreatedOrUpdated(event);
+      break;
+    case "customer.subscription.updated":
+      await handleSubscriptionCreatedOrUpdated(event);
       break;
     default:
     // Unhandled event type

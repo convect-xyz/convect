@@ -91,7 +91,7 @@ async function updateSubscription(
 
 const getSubscriptionItemsForPlan = async (planType: "HOBBY" | "PRO") => {
   const plan = await planLoader.loadForIdentifier(planType);
-
+  console.log(plan);
   return plan.products.map((product) => {
     return {
       price: product.stripePriceId,
