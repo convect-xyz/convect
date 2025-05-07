@@ -25,6 +25,32 @@ export = async () => {
     ],
   });
 
+  const cloudWatchPolicy = aws.iam.getPolicyDocument({
+    statements: [
+      {
+        effect: "Allow",
+        actions: [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups",
+          "logs:PutRetentionPolicy",
+          "logs:DeleteLogGroup",
+          "logs:DeleteLogStream",
+          "logs:GetLogEvents",
+          "logs:FilterLogEvents",
+          "logs:PutSubscriptionFilter",
+          "logs:DeleteSubscriptionFilter",
+          "logs:ListTagsLogGroup",
+          "logs:TagLogGroup",
+          "logs:UntagLogGroup",
+        ],
+        resources: ["*"],
+      },
+    ],
+  });
+
   const assumeRole = aws.iam.getPolicyDocument({
     statements: [
       {
@@ -47,6 +73,12 @@ export = async () => {
       {
         name: "sqsPolicy",
         policy: sqsPolicy.then((sqsPolicy) => sqsPolicy.json),
+      },
+      {
+        name: "cloudWatchPolicy",
+        policy: cloudWatchPolicy.then(
+          (cloudWatchPolicy) => cloudWatchPolicy.json
+        ),
       },
     ],
   });
