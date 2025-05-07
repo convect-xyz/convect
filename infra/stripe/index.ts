@@ -2,6 +2,17 @@ import * as aws from "@pulumi/aws";
 import * as archive from "@pulumi/archive";
 import * as pulumi from "@pulumi/pulumi";
 
+function getStripeApiKey(): string {
+  switch (process.env.ENVIRONMENT) {
+    case "prod":
+      return process.env.PROD_STRIPE_API_KEY!;
+    case "test":
+      return process.env.TEST_STRIPE_API_KEY!;
+    default:
+      throw new Error("Unknown infra version");
+  }
+}
+
 export = async () => {
   const stackName = pulumi.getStack();
   const GITHUB_SHA = process.env.GITHUB_SHA!;
@@ -84,6 +95,13 @@ export = async () => {
     role: iamForLambda.arn,
     sourceCodeHash: lambda.then((lambda) => lambda.outputBase64sha256),
     runtime: "nodejs20.x",
+
+    environment: {
+      variables: {
+        STRIPE_API_KEY: getStripeApiKey(),
+        DATABASE_URL: process.env.DATABASE_URL!,
+      },
+    },
   });
 
   return {
