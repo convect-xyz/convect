@@ -223,15 +223,11 @@ function getRoleForHandler() {
     ],
   });
 
-  const cloudWatchPolicy = aws.iam.getPolicyDocument({
+  const s3Policy = aws.iam.getPolicyDocument({
     statements: [
       {
         effect: "Allow",
-        actions: [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-        ],
+        actions: ["s3:*"],
         resources: ["*"],
       },
     ],
@@ -261,10 +257,8 @@ function getRoleForHandler() {
         policy: sqsPolicy.then((sqsPolicy) => sqsPolicy.json),
       },
       {
-        name: "cloudWatchPolicy",
-        policy: cloudWatchPolicy.then(
-          (cloudWatchPolicy) => cloudWatchPolicy.json
-        ),
+        name: "s3Policy",
+        policy: s3Policy.then((s3Policy) => s3Policy.json),
       },
     ],
   });

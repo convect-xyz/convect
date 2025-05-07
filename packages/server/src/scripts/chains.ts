@@ -1,8 +1,8 @@
+import { chains } from "@infra/config/chains";
 import "dotenv/config";
 import { eq } from "drizzle-orm";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
-import { chains } from "../../../../infra/config/chains";
 import { getConnection, getDb } from "../db/db";
 import { producers } from "../db/schema";
 
