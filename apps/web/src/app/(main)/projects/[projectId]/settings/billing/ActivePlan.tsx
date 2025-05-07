@@ -1,6 +1,5 @@
 "use client";
 
-import { schema } from "@convect-xyz/server";
 import { DialogProps } from "@radix-ui/react-dialog";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
@@ -66,7 +65,7 @@ function ChangePlanDialog(props: DialogProps) {
   );
 }
 
-function ChangePlanButton(props: { plan: schema.PlanType }) {
+function ChangePlanButton(props: { plan: "HOBBY" | "PRO" }) {
   const { projectId } = useParams();
   const { mutateAsync: switchPlan, isPending } =
     api.billing.switchPlan.useMutation();
