@@ -24,8 +24,6 @@ import { getTransactions } from "./routers/function/getTransactions";
 import { updateDescription } from "./routers/function/updateDescription";
 import { updateEnv } from "./routers/function/updateEnv";
 import { updateName } from "./routers/function/updateName";
-import { createProducer } from "./routers/producers/create";
-import { getProducers } from "./routers/producers/getProducers";
 import { projectRouter } from "./routers/project";
 
 export const billingRouter = createTRPCRouter({
@@ -64,15 +62,9 @@ export const functionRouter = createTRPCRouter({
   getBatches,
 });
 
-export const producersRouter = createTRPCRouter({
-  create: createProducer,
-  getProducers: getProducers,
-});
-
 export const appRouter = createTRPCRouter({
   accounts: accountsRouter,
   project: projectRouter,
-  producers: producersRouter,
   functions: functionRouter,
   apiKeys: apiKeysRouter,
   billing: billingRouter,

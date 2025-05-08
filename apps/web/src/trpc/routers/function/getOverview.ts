@@ -1,5 +1,6 @@
 import { manifestSchema, parseManifest } from "@convect-xyz/lib";
 import { analysisSchema } from "@convect-xyz/server";
+import { chains } from "@infra/config/chains";
 import { TRPCError } from "@trpc/server";
 import { and, count, eq, sql, SQLWrapper } from "drizzle-orm";
 import { Redis } from "ioredis";
@@ -116,37 +117,31 @@ export const getOverview = protectedProcedure
       ),
     ]);
 
-    const producer = await ctx.db.query.producers.findFirst({
-      where(fields, { eq }) {
-        return eq(fields.chainId, input.chainId);
-      },
-    });
-
-    if (!producer) {
+    const chain = chains.find((c) => c.id === input.chainId);
+    if (!chain) {
       throw new TRPCError({
-        message: "Producer not found",
+        message: `Chain not found ${input.chainId}`,
         code: "NOT_FOUND",
       });
     }
 
     const manifest = parseManifest(deployment.manifest);
-    const chains =
-      manifest?.chains.map((c: any) => ({
-        name: c.name,
-        chainId: c.chainId,
-      })) ?? null;
 
     return {
       chain: {
-        name: producer.name,
-        chainId: producer.chainId,
+        name: chain.name,
+        chainId: chain.id,
       },
       transactionCount: txCount ?? 0,
       processedTransactionsCount: successfulTx,
       lastFetchedBlock: fetchState?.lastBlock ?? 0,
       avgDuration: avgDuration,
       manifest,
-      chains,
+      chains:
+        manifest?.chains.map((c: any) => ({
+          name: c.name,
+          chainId: c.chainId,
+        })) ?? null,
     };
   });
 

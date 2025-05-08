@@ -25,7 +25,7 @@ export default function Page() {
             </PricingHeader>
             <PricingPrice
               price={{
-                value: "$5",
+                value: "$20",
                 schedule: "MONTHLY",
                 additionalFeesApply: false,
               }}
@@ -49,7 +49,7 @@ export default function Page() {
             </PricingHeader>
             <PricingPrice
               price={{
-                value: "$20",
+                value: "$99",
                 schedule: "MONTHLY",
                 additionalFeesApply: true,
               }}
