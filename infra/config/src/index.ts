@@ -1,3 +1,3 @@
-export * from "./schema";
-export { default as config } from "./config";
 export * from "./chains";
+export * from "./config";
+export * from "./schema";
