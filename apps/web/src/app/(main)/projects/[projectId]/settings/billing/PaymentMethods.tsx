@@ -191,7 +191,7 @@ function AddPaymentMethod(props: DialogProps) {
       <div className="mt-8">
         <Button
           type="submit"
-          className="w-full"
+          variant="default"
           isLoading={isCreatingPaymentMethod}
         >
           Add Payment Method

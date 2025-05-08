@@ -147,6 +147,16 @@ class PlanLoader {
 
     return planSchema.parse(await loadFromPath(project.planUrl));
   }
+
+  async loadForIdentifier(
+    identifier: "HOBBY" | "PRO" | string,
+  ): Promise<z.infer<typeof planSchema>> {
+    if (identifier === "HOBBY" || identifier === "PRO") {
+      return this.load(identifier);
+    }
+
+    return planSchema.parse(await loadFromPath(identifier));
+  }
 }
 
 export const planLoader = new PlanLoader();

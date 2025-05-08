@@ -52,7 +52,7 @@ export function ActiveDeployments() {
       </SelectTrigger>
       <SelectContent>
         {fn?.activeDeployments.map((deployment) => (
-          <SelectItem value={deployment.id}>
+          <SelectItem value={deployment.id} key={deployment.id}>
             <div className="flex items-center gap-2">
               {deployment.id.slice(0, 6)}
             </div>

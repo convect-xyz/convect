@@ -1,18 +1,9 @@
 import { CaseInsensitiveMap } from "@convect-xyz/lib";
+import { chains } from "@infra/config/chains";
 import { chunk } from "lodash";
 import { z } from "zod";
 import { Db } from "../db/db";
 import { buildEtherscanAxios } from "./axios";
-
-async function getProducer(chainId: number, db: Db) {
-  const producer = await db.query.producers.findFirst({
-    where(fields, { eq }) {
-      return eq(fields.chainId, chainId);
-    },
-  });
-
-  return producer;
-}
 
 export class EtherscanProvider {
   constructor(
@@ -30,20 +21,23 @@ export class EtherscanProvider {
       ),
     });
 
-    const producer = await getProducer(this.chainId, this.db);
+    const chain = chains.find((c) => c.id === this.chainId);
+    if (!chain) {
+      throw new Error(`Chain not found ${this.chainId}`);
+    }
     const addresses = new Set(_addresses.map((a) => a.toLowerCase()));
     const results: CaseInsensitiveMap<string, string> =
       new CaseInsensitiveMap();
 
     for (const batch of chunk([...addresses], 5)) {
-      const axios = buildEtherscanAxios(producer!.etherscanLike);
+      const axios = buildEtherscanAxios(chain.etherscan_like);
 
       const response = await axios.get("/api", {
         params: {
           module: "contract",
           action: "getcontractcreation",
           contractaddresses: batch.join(","),
-          apikey: producer?.etherscanApiKey ?? undefined,
+          apikey: chain.etherscan_api_key,
         },
       });
 
@@ -62,8 +56,11 @@ export class EtherscanProvider {
       result: z.coerce.number(),
     });
 
-    const producer = await getProducer(this.chainId, this.db);
-    const axios = buildEtherscanAxios(producer!.etherscanLike);
+    const chain = chains.find((c) => c.id === this.chainId);
+    if (!chain) {
+      throw new Error(`Chain not found ${this.chainId}`);
+    }
+    const axios = buildEtherscanAxios(chain.etherscan_like);
 
     const response = await axios.get("/api", {
       params: {
@@ -71,7 +68,7 @@ export class EtherscanProvider {
         action: "getblocknobytime",
         timestamp,
         closest: "after",
-        apikey: producer?.etherscanApiKey ?? undefined,
+        apikey: chain.etherscan_api_key,
       },
     });
 

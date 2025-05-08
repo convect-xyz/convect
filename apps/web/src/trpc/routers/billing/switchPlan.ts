@@ -13,7 +13,7 @@ const stripe = new Stripe(env.STRIPE_API_KEY);
 export const switchPlan = protectedProcedure
   .input(
     z.object({
-      newPlan: z.enum(schema.planEnum.enumValues),
+      newPlan: z.enum(["HOBBY", "PRO"]),
       projectId: z.number(),
     }),
   )
@@ -33,29 +33,30 @@ export const switchPlan = protectedProcedure
       : null;
 
     const stripeCustomerId = await getStripeCustomerId(project);
+
     await (activeSubscription
-      ? updateSubscription(project, activeSubscription)
-      : createSubscription(project, stripeCustomerId));
+      ? updateSubscription(input.newPlan, activeSubscription)
+      : createSubscription(input.newPlan, stripeCustomerId));
 
     await db
       .update(schema.projects)
       .set({
         planType: input.newPlan,
       })
-      .where(eq(schema.projects.stripeCustomerId, stripeCustomerId))
-      .returning({ stripeSubscriptionId: schema.projects.stripeSubscriptionId })
-      .then((c) => c.at(0)!.stripeSubscriptionId!);
-
+      .where(eq(schema.projects.stripeCustomerId, stripeCustomerId));
     return {};
   });
 
 async function createSubscription(
-  project: InferSelectModel<typeof schema.projects>,
+  planType: "HOBBY" | "PRO",
   stripeCustomerId: string,
 ) {
   const subscription = await stripe.subscriptions.create({
     customer: stripeCustomerId,
-    items: await getSubscriptionItemsForPlan(project),
+    items: await getSubscriptionItemsForPlan(planType),
+    metadata: {
+      planType,
+    },
   });
 
   await db
@@ -71,7 +72,7 @@ async function createSubscription(
 }
 
 async function updateSubscription(
-  project: InferSelectModel<typeof schema.projects>,
+  planType: "HOBBY" | "PRO",
   activeSubscription: Stripe.Subscription,
 ) {
   const previousSubscriptionItems = () => {
@@ -86,16 +87,16 @@ async function updateSubscription(
   return stripe.subscriptions.update(activeSubscription.id, {
     items: [
       ...previousSubscriptionItems(),
-      ...(await getSubscriptionItemsForPlan(project)),
+      ...(await getSubscriptionItemsForPlan(planType)),
     ],
+    metadata: {
+      planType,
+    },
   });
 }
 
-const getSubscriptionItemsForPlan = async (
-  project: InferSelectModel<typeof schema.projects>,
-) => {
-  const plan = await planLoader.loadForProject(project);
-
+const getSubscriptionItemsForPlan = async (planType: "HOBBY" | "PRO") => {
+  const plan = await planLoader.loadForIdentifier(planType);
   return plan.products.map((product) => {
     return {
       price: product.stripePriceId,
@@ -109,7 +110,6 @@ export const getStripeCustomerId = async (
   if (projects.stripeCustomerId) {
     return projects.stripeCustomerId;
   }
-
   const createdCustomerId = await stripe.customers.create().then((c) => c.id);
 
   return db.transaction(async (tx) => {

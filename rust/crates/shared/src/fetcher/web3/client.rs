@@ -68,7 +68,7 @@ impl Web3ClientImpl {
     ) -> Result<R, E> {
         let retry_strategy = tokio_retry::strategy::FixedInterval::from_millis(200)
             .map(jitter)
-            .take(usize::MAX);
+            .take(5);
 
         let func = Mutex::new(func);
 
@@ -105,7 +105,7 @@ impl Web3ClientImpl {
     ) -> Result<R, E> {
         let retry_strategy = tokio_retry::strategy::FixedInterval::from_millis(200)
             .map(jitter)
-            .take(usize::MAX);
+            .take(5);
 
         let func = Mutex::new(func);
 

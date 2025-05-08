@@ -28,6 +28,7 @@ export const users = createTable("user", {
     mode: "date",
   }).default(sql`CURRENT_TIMESTAMP`),
   image: varchar("image", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -54,6 +55,7 @@ export const accounts = createTable(
     scope: varchar("scope", { length: 255 }),
     id_token: text("id_token"),
     session_state: varchar("session_state", { length: 255 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (account) => ({
     compoundKey: primaryKey({
@@ -77,6 +79,7 @@ export const apiKey = createTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     token: varchar("token", { length: 255 }).notNull().unique(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (apiKey) => ({
     name_user_unique: unique().on(apiKey.name, apiKey.userId),
@@ -98,6 +101,7 @@ export const sessions = createTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     expires: timestamp("expires", { mode: "date" }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (session) => ({
     userIdIdx: index("session_userId_idx").on(session.userId),
@@ -114,6 +118,7 @@ export const verificationTokens = createTable(
     identifier: varchar("identifier", { length: 255 }).notNull(),
     token: varchar("token", { length: 255 }).notNull(),
     expires: timestamp("expires", { mode: "date" }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (vt) => ({
     compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
@@ -134,6 +139,17 @@ export const projects = createTable(
     }).unique(),
     planType: planEnum("plan_type").default("HOBBY").notNull(),
     planUrl: varchar("plan_url", { length: 255 }),
+    billingStatus: text("billing_status", {
+      enum: ["ACTIVE", "OVERDUE"],
+    })
+      .default("ACTIVE")
+      .notNull(),
+    billingStatusUpdatedAt: timestamp("billing_status_updated_at", {
+      mode: "date",
+    })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (projects) => ({
     userIdIdx: index("project_userId_idx").on(projects.userId),
@@ -155,6 +171,7 @@ export const projectCollaborators = createTable(
     userId: varchar("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (projectCollaborators) => ({
     projectIdIdx: index("project_collaborator_projectId_idx").on(
@@ -233,6 +250,7 @@ export const convectFunctions = createTable(
     name: varchar("name").notNull(),
     description: varchar("description").notNull().default(""),
     infraVersion: varchar("infra_version"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (handler) => ({
     projectIdName: unique().on(handler.name, handler.projectId),
@@ -261,6 +279,7 @@ export const functionEnv = createTable(
     value: varchar("value").notNull(),
     iv: varchar("iv").notNull(),
     lastUpdatedAt: timestamp("last_updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (functionEnv) => ({
     functionIdName: unique().on(functionEnv.functionId, functionEnv.key),
