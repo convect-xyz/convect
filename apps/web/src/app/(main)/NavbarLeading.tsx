@@ -110,11 +110,13 @@ export function ProjectsDropdown() {
             variant="outline"
             className="min-w-[80px] max-w-[180px] items-center justify-between gap-2"
           >
-            {currentProject ? (
-              <>{currentProject.name}</>
-            ) : (
-              <>Select a project</>
-            )}
+            <div className="flex-1 truncate">
+              {currentProject ? (
+                <>{currentProject.name}</>
+              ) : (
+                <>Select a project</>
+              )}
+            </div>
 
             <ChevronsUpDownIcon className="h-3 w-3 text-muted-foreground" />
           </Button>
@@ -167,11 +169,13 @@ export function FunctionsDropdown() {
             variant="outline"
             className="min-w-[80px] max-w-[180px] items-center justify-between gap-2"
           >
-            {currentProject ? (
-              <>{currentProject.name}</>
-            ) : (
-              <>Select a Function</>
-            )}
+            <div className="flex-1 truncate">
+              {currentProject ? (
+                <>{currentProject.name}</>
+              ) : (
+                <>Select a Function</>
+              )}
+            </div>
 
             <ChevronsUpDownIcon className="h-3 w-3 text-muted-foreground" />
           </Button>
