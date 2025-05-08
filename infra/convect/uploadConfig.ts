@@ -1,7 +1,8 @@
+import { getConfig } from "@infra/config";
 import * as AWS from "aws-sdk";
 import * as crypto from "crypto";
-import config from "@infra/config";
 
+const config = getConfig();
 const s3 = new AWS.S3();
 
 const main = async () => {
