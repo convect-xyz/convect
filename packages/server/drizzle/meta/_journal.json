@@ -337,6 +337,13 @@
       "when": 1746713057519,
       "tag": "0047_exotic_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1746724300922,
+      "tag": "0048_daily_red_ghost",
+      "breakpoints": true
     }
   ]
 }
