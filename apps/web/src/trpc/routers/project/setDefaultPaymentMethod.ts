@@ -20,7 +20,7 @@ export const setDefaultPaymentMethod = protectedProcedure
 
     const stripeCustomerId = await getStripeCustomerId(project!);
 
-    const setupIntent = await stripe.customers.update(stripeCustomerId, {
+    await stripe.customers.update(stripeCustomerId, {
       invoice_settings: {
         default_payment_method: input.paymentMethodId,
       },

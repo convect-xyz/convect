@@ -53,7 +53,7 @@ const plans = [
   {
     type: "HOBBY" as const,
     name: "Hobby",
-    description: "Perfect for startups and professionals.",
+    description: "For hobbyists and small projects.",
     price: "$20",
     schedule: "MONTHLY",
     additionalFeesApply: true,
