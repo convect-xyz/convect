@@ -1,5 +1,5 @@
-import * as aws from "@pulumi/aws";
 import * as archive from "@pulumi/archive";
+import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 
 const isMain = process.env.BRANCH_NAME === "main";
@@ -19,7 +19,6 @@ function getStripeApiKey(): string {
   if (isMain) {
     return process.env.PROD_STRIPE_API_KEY!;
   }
-
   if (isDev) {
     return process.env.TEST_STRIPE_API_KEY!;
   }
@@ -31,7 +30,6 @@ function getDatabaseUrl(): string {
   if (isMain) {
     return process.env.PROD_APPLICATION_DB_URL!;
   }
-
   if (isDev) {
     return process.env.DEV_APPLICATION_DB_URL!;
   }
@@ -114,7 +112,7 @@ export = async () => {
     outputPath: "stripe_payload.zip",
   });
 
-  const fn = new aws.lambda.Function("stripe", {
+  new aws.lambda.Function("stripe", {
     code: new pulumi.asset.FileArchive("stripe_payload.zip"),
     name: "stripe_" + getEnvironmentName(),
     handler: "stripe.handler",
