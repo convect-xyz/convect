@@ -2,6 +2,8 @@ import { init } from "@paralleldrive/cuid2";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { env } from "~/env";
+import { getQuota } from "~/lib/server/products";
+import { currentMonthUsage } from "~/lib/server/products/usage";
 import xZod from "~/lib/shared/validation";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -28,12 +30,23 @@ export const createFunction = protectedProcedure
       throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
     }
 
+    const convectFunctionsUsage = await currentMonthUsage
+      .convectFunctions(input.projectId)
+      .then((d) => d.usage);
+    const allowedFunctions = await getQuota("convectFunctions", project);
+    if (convectFunctionsUsage >= allowedFunctions) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: `You have reached the limit of ${allowedFunctions} functions for this project. Upgrade your plan to add more functions.`,
+      });
+    }
+
     await throwIfNotProjectCollaborator({
       projectId: input.projectId,
       userId: ctx.session.user.id,
     });
 
-    const fn = await ctx.db
+    await ctx.db
       .insert(schema.convectFunctions)
       .values({
         projectId: project.id,

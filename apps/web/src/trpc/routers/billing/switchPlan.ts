@@ -4,7 +4,8 @@ import { InferSelectModel, eq } from "drizzle-orm";
 import { Stripe } from "stripe";
 import { z } from "zod";
 import { env } from "~/env";
-import { planLoader } from "~/lib/server/products";
+import { getQuota, planLoader } from "~/lib/server/products";
+import { currentMonthUsage } from "~/lib/server/products/usage";
 import { db } from "~/server/db";
 import { protectedProcedure } from "~/trpc/trpc";
 
@@ -28,6 +29,8 @@ export const switchPlan = protectedProcedure
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
 
+    await ensureCompliance(project, input.newPlan);
+
     const activeSubscription = project.stripeSubscriptionId
       ? await stripe.subscriptions.retrieve(project.stripeSubscriptionId)
       : null;
@@ -44,8 +47,30 @@ export const switchPlan = protectedProcedure
         planType: input.newPlan,
       })
       .where(eq(schema.projects.stripeCustomerId, stripeCustomerId));
+
     return {};
   });
+
+async function ensureCompliance(
+  project: InferSelectModel<typeof schema.projects>,
+  newPlan: "HOBBY" | "PRO",
+) {
+  if (newPlan === "HOBBY") {
+    const convectFunctionsUsage = await currentMonthUsage
+      .convectFunctions(project.id)
+      .then((d) => d.usage);
+    const allowedFunctions = await getQuota("convectFunctions", {
+      planType: "HOBBY",
+      planUrl: null,
+    });
+    if (convectFunctionsUsage >= allowedFunctions) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: `To downgrade to a HOBBY plan, you must have at-most ${allowedFunctions} functions.`,
+      });
+    }
+  }
+}
 
 async function createSubscription(
   planType: "HOBBY" | "PRO",

@@ -21,7 +21,7 @@ export default function Page() {
           <PricingCard>
             <PricingHeader>
               <PricingTitle title="Hobby" />
-              <PricingDescription description="Get started with our free plan." />
+              <PricingDescription description="For hobbyists and small projects." />
             </PricingHeader>
             <PricingPrice
               price={{

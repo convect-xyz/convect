@@ -88,8 +88,10 @@ function Overview() {
               Total Transactions
             </div>
             <div className="text-xl">
-              {overview.processedTransactionsCount} /{" "}
-              {overview.transactionCount}
+              {new Intl.NumberFormat().format(
+                overview.processedTransactionsCount,
+              )}{" "}
+              / {new Intl.NumberFormat().format(overview.transactionCount)}
             </div>
           </div>
           <div className="rounded-md border border-[#191B1F] bg-muted p-4">
@@ -116,7 +118,9 @@ function Overview() {
             <div className="text-xs uppercase text-muted-foreground">
               Last Fetched Block
             </div>
-            <div className="text-xl">{overview.lastFetchedBlock}</div>
+            <div className="text-xl">
+              {new Intl.NumberFormat().format(overview.lastFetchedBlock)}
+            </div>
           </div>
         </>
       )}

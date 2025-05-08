@@ -1,6 +1,7 @@
 "use client";
 
 import { times } from "lodash";
+import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BillingOverdueAlert } from "~/components/core/billing/BillingOverdueAlert";
@@ -37,7 +38,9 @@ export default function Page() {
                 </h3>
               </div>
 
-              <Button onClick={() => setIsOpen(true)}>New</Button>
+              <Button onClick={() => setIsOpen(true)} className="gap-2">
+                Create <PlusIcon strokeWidth={2.5} className="h-4 w-4" />
+              </Button>
               <CreateHandler open={isOpen} onOpenChange={setIsOpen} />
             </div>
           )}

@@ -1,6 +1,7 @@
 import { createTRPCRouter } from "../../trpc";
 import { createProject } from "./create";
 import { deleteProject } from "./delete";
+import { detachPaymentMethod } from "./detachPaymentMethod";
 import { getActivePlan } from "./getActivePlan";
 import { getCollaborators } from "./getCollaborators";
 import { getFunctions } from "./getFunctions";
@@ -29,6 +30,7 @@ export const projectRouter = createTRPCRouter({
   getPaymentMethods,
   getStripeSetupIntent,
   setDefaultPaymentMethod,
+  detachPaymentMethod,
   getActivePlan,
   removeCollaborator,
 });
