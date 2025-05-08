@@ -4,9 +4,9 @@
     {
       "key": "processedTransactions",
       "name": "Processed Transactions",
-      "includedFree": 100000,
+      "includedFree": 10000,
       "priceInCentsPerAdditionalUnit": 20,
-      "unitSize": 100000,
+      "unitSize": 10000,
       "unitSymbol": "Txs",
       "stripePriceId": "price_1RMFe7Ru90pWJjEEeSP33VZN"
     },

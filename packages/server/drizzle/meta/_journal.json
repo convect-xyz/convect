@@ -330,6 +330,13 @@
       "when": 1746646684797,
       "tag": "0046_many_ultimo",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1746713057519,
+      "tag": "0047_exotic_bug",
+      "breakpoints": true
     }
   ]
 }

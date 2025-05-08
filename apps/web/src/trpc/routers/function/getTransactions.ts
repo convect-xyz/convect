@@ -189,31 +189,6 @@ function getProcessedTransactionsWithEthTransactions(
     return baseFilter;
   };
 
-  analysisDb
-    .select({
-      ethTransactionId: ethTransactions.id,
-      timestamp: analysisSchema.processedTransaction.timestamp,
-      processedBatchId: analysisSchema.processedTransaction.processedBatchId,
-      transactionHash: ethTransactions.transactionHash,
-      status: analysisSchema.processedTransaction.status,
-      txConfigs: ethTransactions.txConfigs,
-      deploymentId: analysisSchema.processedTransaction.deploymentId,
-      functionId: analysisSchema.processedTransaction.functionId,
-      chainId: analysisSchema.processedTransaction.chainId,
-      createdAt: ethTransactions.createdAt,
-    })
-    .from(analysisSchema.processedTransaction)
-    .where(getFilter())
-    .rightJoin(
-      ethTransactions,
-      and(
-        eq(
-          analysisSchema.processedTransaction.transactionHash,
-          ethTransactions.transactionHash,
-        ),
-      ),
-    )
-    .then(console.log);
   return analysisDb
     .select({
       ethTransactionId: ethTransactions.id,
@@ -247,6 +222,20 @@ function getProcessedTransactionsWithBatch(
     typeof getProcessedTransactionsWithEthTransactions
   >,
 ) {
+  const processedBatch = analysisDb
+    .select()
+    .from(analysisSchema.processedBatch)
+    .where(
+      and(
+        eq(analysisSchema.processedBatch.deploymentId, input.deploymentId),
+        eq(
+          analysisSchema.processedBatch.functionId,
+          input.functionId.toString(),
+        ),
+        eq(analysisSchema.processedBatch.chainId, input.chainId),
+      ),
+    )
+    .as("processedBatch");
   return analysisDb
     .select({
       ethTransactionId: processedTransactions.ethTransactionId,
@@ -267,24 +256,10 @@ function getProcessedTransactionsWithBatch(
       ),
     )
     .leftJoin(
-      analysisSchema.processedBatch,
-      and(
-        eq(
-          analysisSchema.processedBatch.id,
-          processedTransactions.processedBatchId,
-        ),
-        eq(
-          analysisSchema.processedBatch.deploymentId,
-          processedTransactions.deploymentId,
-        ),
-        eq(
-          analysisSchema.processedBatch.functionId,
-          processedTransactions.functionId,
-        ),
-        eq(
-          analysisSchema.processedBatch.chainId,
-          processedTransactions.chainId,
-        ),
+      processedBatch,
+      eq(
+        analysisSchema.processedBatch.id,
+        processedTransactions.processedBatchId,
       ),
     )
     .as("processedTransactionsWithBatch");

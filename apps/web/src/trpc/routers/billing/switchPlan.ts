@@ -38,6 +38,12 @@ export const switchPlan = protectedProcedure
       ? updateSubscription(input.newPlan, activeSubscription)
       : createSubscription(input.newPlan, stripeCustomerId));
 
+    await db
+      .update(schema.projects)
+      .set({
+        planType: input.newPlan,
+      })
+      .where(eq(schema.projects.stripeCustomerId, stripeCustomerId));
     return {};
   });
 
@@ -91,7 +97,6 @@ async function updateSubscription(
 
 const getSubscriptionItemsForPlan = async (planType: "HOBBY" | "PRO") => {
   const plan = await planLoader.loadForIdentifier(planType);
-  console.log(plan);
   return plan.products.map((product) => {
     return {
       price: product.stripePriceId,
@@ -105,7 +110,6 @@ export const getStripeCustomerId = async (
   if (projects.stripeCustomerId) {
     return projects.stripeCustomerId;
   }
-
   const createdCustomerId = await stripe.customers.create().then((c) => c.id);
 
   return db.transaction(async (tx) => {

@@ -14,6 +14,7 @@ export const getProjectById = protectedProcedure
       id: z.number(),
       name: z.string(),
       isOwner: z.boolean(),
+      billingStatus: z.enum(["ACTIVE", "OVERDUE"]),
     }),
   )
   .query(async ({ ctx, input }) => {

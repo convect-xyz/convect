@@ -3,6 +3,7 @@
 import { times } from "lodash";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { BillingOverdueAlert } from "~/components/core/billing/BillingOverdueAlert";
 import ChainIcon from "~/components/icons/ChainIcon";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -11,6 +12,7 @@ import { RouterOutputs } from "~/trpc/shared";
 import CreateHandler from "./CreateHandler";
 import { UpgradeDialog } from "./UpgradeDialog";
 import { useParams } from "./hooks/useParams";
+import { useProject } from "./hooks/useProject";
 
 export default function Page() {
   const { projectId } = useParams();
@@ -18,11 +20,15 @@ export default function Page() {
   const { data: functions } = api.project.getFunctions.useQuery({
     projectId: Number(projectId),
   });
+  const { data: project } = useProject();
 
   return (
     <>
-      <div className="mx-auto w-full max-w-screen-xl px-4 pt-8">
-        <div className="mx-auto flex w-full max-w-screen-lg flex-col gap-2">
+      <div className="mx-auto w-full max-w-screen-lg px-4 pt-8">
+        {project?.billingStatus === "OVERDUE" && (
+          <BillingOverdueAlert projectId={projectId} />
+        )}
+        <div className="mt-4 flex w-full flex-col gap-2">
           {functions && functions.functions.length > 0 && (
             <div className="flex items-center justify-between">
               <div>

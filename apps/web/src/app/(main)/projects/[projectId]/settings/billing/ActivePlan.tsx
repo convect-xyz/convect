@@ -1,19 +1,28 @@
 "use client";
 
 import { DialogProps } from "@radix-ui/react-dialog";
+import Link from "next/link";
 import { useState } from "react";
+import {
+  PricingCard,
+  PricingDescription,
+  PricingHeader,
+  PricingPrice,
+  PricingTitle,
+} from "~/app/(landing)/pricing/PricingCard";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useParams } from "../../hooks/useParams";
+import { useActivePlan } from "./hooks/useActivePlan";
+import { useUsage } from "./hooks/useUsage";
 
 export default function ActivePlan() {
   const [open, setOpen] = useState(false);
-  const { projectId } = useParams();
-  const { data: activePlan } = api.project.getActivePlan.useQuery({
-    projectId,
-  });
+  const { data: activePlan } = useActivePlan();
+
   return (
     <>
       <div className="flex flex-col gap-4">
@@ -26,9 +35,7 @@ export default function ActivePlan() {
                   {activePlan?.name}
                 </div>
               </div>
-              <Button variant="outline" onClick={() => setOpen(true)}>
-                Change Plan
-              </Button>
+              <Button onClick={() => setOpen(true)}>Change Plan</Button>
             </div>
           </CardContent>
         </Card>
@@ -38,26 +45,81 @@ export default function ActivePlan() {
   );
 }
 
+type ActionProps = {
+  onPlanChanged: () => void;
+};
+
+const plans = [
+  {
+    type: "HOBBY" as const,
+    name: "Hobby",
+    description: "Perfect for startups and professionals.",
+    price: "$20",
+    schedule: "MONTHLY",
+    additionalFeesApply: true,
+    action: (props: ActionProps) => (
+      <ChangePlanButton plan="HOBBY" onPlanChanged={props.onPlanChanged} />
+    ),
+  },
+  {
+    type: "PRO" as const,
+    name: "Pro",
+    description: "Perfect for startups and professionals.",
+    price: "$99",
+    schedule: "MONTHLY",
+    additionalFeesApply: true,
+    action: (props: ActionProps) => (
+      <ChangePlanButton plan="PRO" onPlanChanged={props.onPlanChanged} />
+    ),
+  },
+  {
+    type: "ENTERPRISE" as const,
+    name: "Enterprise",
+    description: "Suited for advanced use cases.",
+    price: "Custom",
+    schedule: "MONTHLY",
+    additionalFeesApply: true,
+    action: (props: ActionProps) => (
+      <a href="mailto:support@convect.xyz" target="_blank">
+        <Button className="w-full">Contact Us</Button>
+      </a>
+    ),
+  },
+];
+
 function ChangePlanDialog(props: DialogProps) {
+  const { data: activePlan } = useActivePlan();
+
   return (
     <Dialog {...props}>
-      <DialogContent className="py-4">
-        <DialogTitle>Add Payment Method</DialogTitle>
+      <DialogContent className="max-w-screen-lg py-4">
+        <DialogTitle className="text-2xl">Select Plan</DialogTitle>
         <div className="mt-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="text-xl">Downgrade to Hobby</div>
-              <ChangePlanButton plan="HOBBY" />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="text-xl">Upgrade to Pro</div>
-              <ChangePlanButton plan="PRO" />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="text-xl">Upgrade to Enterprise</div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {plans.map((plan) => (
+              <PricingCard
+                key={plan.type}
+                className={cn(
+                  activePlan?.isActive(plan.type) && "border-white",
+                )}
+              >
+                <PricingHeader>
+                  <PricingTitle title={plan.name} />
+                  <PricingDescription description={plan.description} />
+                </PricingHeader>
+                <PricingPrice price={plan.price} />
+                {
+                  <plan.action
+                    onPlanChanged={() => props.onOpenChange?.(false)}
+                  />
+                }
+              </PricingCard>
+            ))}
+          </div>
 
-              <Button variant="outline">Contact US</Button>
-            </div>
+          <div className="mb-4 mt-8 text-center text-sm text-muted-foreground">
+            *Additional fees apply for usage outside of the included limits. See
+            <Link href="/pricing"> pricing page</Link> for more details.
           </div>
         </div>
       </DialogContent>
@@ -65,18 +127,42 @@ function ChangePlanDialog(props: DialogProps) {
   );
 }
 
-function ChangePlanButton(props: { plan: "HOBBY" | "PRO" }) {
+function ChangePlanButton(props: {
+  plan: "HOBBY" | "PRO";
+  onPlanChanged: () => void;
+}) {
   const { projectId } = useParams();
+  const { data, refetch: refetchActivePlan } = useActivePlan();
+  const { refetch: refetchUsage } = useUsage();
   const { mutateAsync: switchPlan, isPending } =
-    api.billing.switchPlan.useMutation();
+    api.billing.switchPlan.useMutation({
+      onSuccess: () => {
+        refetchActivePlan();
+        refetchUsage();
+        props.onPlanChanged();
+      },
+    });
+
+  const getLabelForPlan = (plan: "HOBBY" | "PRO") => {
+    if (data?.isActive(plan)) {
+      return "Current Plan";
+    }
+
+    if (plan === "HOBBY") {
+      return "Downgrade to Hobby";
+    }
+
+    return "Upgrade to Pro";
+  };
 
   return (
     <Button
-      variant="outline"
+      variant={data?.isActive(props.plan) ? "outline" : "default"}
       isLoading={isPending}
+      disabled={data?.isActive(props.plan)}
       onClick={() => switchPlan({ newPlan: props.plan, projectId })}
     >
-      Upgrade
+      {getLabelForPlan(props.plan)}
     </Button>
   );
 }
