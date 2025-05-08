@@ -1,6 +1,6 @@
 import * as AWS from "aws-sdk";
 import * as crypto from "crypto";
-import config from "./config/config";
+import config from "@infra/config";
 
 const s3 = new AWS.S3();
 
