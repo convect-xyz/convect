@@ -12,11 +12,17 @@ import {
 import { loadStripe } from "@stripe/stripe-js";
 import { useMutation } from "@tanstack/react-query";
 import { times } from "lodash";
+import { MoreHorizontalIcon } from "lucide-react";
 import { ComponentProps, PropsWithChildren, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import { Skeleton } from "~/components/ui/skeleton";
 import { env } from "~/env";
 import { cn } from "~/lib/utils";
@@ -24,6 +30,13 @@ import { api } from "~/trpc/react";
 import { useParams } from "../../hooks/useParams";
 
 const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+
+function usePaymentMethods() {
+  const { projectId } = useParams();
+  return api.project.getPaymentMethods.useQuery({
+    projectId,
+  });
+}
 
 export default function PaymentMethods() {
   const [open, setOpen] = useState(false);
@@ -220,10 +233,7 @@ function InputWrapper({
 }
 
 function ListPaymentMethods() {
-  const { projectId } = useParams();
-  const { data: paymentMethods } = api.project.getPaymentMethods.useQuery({
-    projectId,
-  });
+  const { data: paymentMethods } = usePaymentMethods();
 
   if (paymentMethods && paymentMethods.length === 0) {
     return (
@@ -261,11 +271,73 @@ function ListPaymentMethods() {
               </div>
             )}
           </div>
-          <div className="text-right">
+          <div className="text-right text-xs">
             Valid until {method.exp_month} / {method.exp_year}
           </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost">
+                <MoreHorizontalIcon />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="flex w-40 flex-col p-1 text-left">
+              {!method.default && (
+                <MakeDefaultButton paymentMethodId={method.id} />
+              )}
+              <DetachPaymentMethodButton paymentMethodId={method.id} />
+            </PopoverContent>
+          </Popover>
         </div>
       ))}
     </div>
+  );
+}
+
+function MakeDefaultButton(props: { paymentMethodId: string }) {
+  const { projectId } = useParams();
+  const { refetch } = usePaymentMethods();
+  const { mutateAsync: setDefaultPaymentMethod } =
+    api.project.setDefaultPaymentMethod.useMutation({
+      onSuccess: () => {
+        refetch();
+      },
+    });
+  return (
+    <Button
+      variant="ghost"
+      className="cursor-pointer justify-start"
+      onClick={() => {
+        setDefaultPaymentMethod({
+          paymentMethodId: props.paymentMethodId,
+          projectId,
+        });
+      }}
+    >
+      Make Default
+    </Button>
+  );
+}
+
+function DetachPaymentMethodButton(props: { paymentMethodId: string }) {
+  const { refetch } = usePaymentMethods();
+  const { mutateAsync: detachPaymentMethod } =
+    api.project.detachPaymentMethod.useMutation({
+      onSuccess: () => {
+        refetch();
+      },
+    });
+
+  return (
+    <Button
+      variant="ghost"
+      className="cursor-pointer justify-start text-red-200"
+      onClick={() => {
+        detachPaymentMethod({
+          paymentMethodId: props.paymentMethodId,
+        });
+      }}
+    >
+      Remove
+    </Button>
   );
 }

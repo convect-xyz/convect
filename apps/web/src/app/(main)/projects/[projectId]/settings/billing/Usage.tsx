@@ -1,23 +1,18 @@
 "use client";
 
-import { endOfMonth, startOfMonth } from "date-fns";
 import { times } from "lodash";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { formatCurrency } from "~/lib/shared/utils/formatting";
-import { api } from "~/trpc/react";
 import { RouterOutputs } from "~/trpc/shared";
 import { useParams } from "../../hooks/useParams";
+import { useUsage } from "./hooks/useUsage";
 
 type UsageMetric = RouterOutputs["project"]["getUsage"][number];
 
 export default function Usage() {
   const { projectId } = useParams();
-  const { data: usage } = api.project.getUsage.useQuery({
-    projectId,
-    periodStart: startOfMonth(new Date()).getTime(),
-    periodEnd: endOfMonth(new Date()).getTime(),
-  });
+  const { data: usage } = useUsage();
 
   return (
     <div className="flex flex-col gap-4">
@@ -46,7 +41,7 @@ function Product(props: { metric: UsageMetric }) {
     const totalUsage = metric.totalUsage;
     const includedFree = metric.includedFree;
 
-    if (totalUsage < includedFree) {
+    if (totalUsage <= includedFree) {
       return null;
     }
 

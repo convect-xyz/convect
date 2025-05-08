@@ -29,6 +29,15 @@
       "stripePriceId": "price_1RMFH3Ru90pWJjEEdAJr4Pl3"
     },
     {
+      "key": "convectFunctions",
+      "name": "Convect Functions",
+      "includedFree": 2,
+      "priceInCentsPerAdditionalUnit": 0,
+      "unitSize": 1,
+      "unitSymbol": "",
+      "stripePriceId": "price_1RMWmxRu90pWJjEE73mHEcHx"
+    },
+    {
       "key": "basePlan",
       "name": "Base Plan",
       "includedFree": 0,
