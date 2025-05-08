@@ -341,33 +341,3 @@ export const deploymentsRelations = relations(deployment, ({ one }) => ({
     references: [convectFunctions.id],
   }),
 }));
-
-export const producers = createTable(
-  "producer",
-  {
-    id: serial("id").notNull().primaryKey(),
-    chainId: integer("chain_id").notNull().unique(),
-    pollingUrls: text("pollingUrls")
-      .array()
-      .default(sql`ARRAY[]::varchar[]`),
-    wsUrl: varchar("wsUrl", { length: 255 }).notNull(),
-    userId: varchar("userId").references(() => users.id),
-    serviceArn: varchar("serviceArn", { length: 255 }),
-    topicArn: varchar("topicArn", { length: 255 }),
-    name: varchar("name").notNull(),
-    etherscanApiKey: varchar("etherscanApiKey", { length: 255 })
-      .notNull()
-      .default(""),
-    etherscanLike: varchar("etherscanLike", { length: 255 })
-      .notNull()
-      .default(""),
-  },
-  (producers) => ({
-    uniqueName: unique().on(producers.userId, producers.name),
-    userIdIdx: index("producers_userId_idx").on(producers.userId),
-  })
-);
-
-export const producersRelations = relations(producers, ({ one, many }) => ({
-  user: one(users, { fields: [producers.userId], references: [users.id] }),
-}));
