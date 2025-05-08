@@ -8,7 +8,7 @@
       "priceInCentsPerAdditionalUnit": 20,
       "unitSize": 100000,
       "unitSymbol": "Txs",
-      "stripePriceId": ""
+      "stripePriceId": "price_1RMXhw2LJct0ubJ3ys0xZVgy"
     },
     {
       "key": "gbHours",
@@ -17,7 +17,7 @@
       "priceInCentsPerAdditionalUnit": 18,
       "unitSize": 1,
       "unitSymbol": "GB-Hours",
-      "stripePriceId": ""
+      "stripePriceId": "price_1RMXhl2LJct0ubJ3lOk4b1pQ"
     },
     {
       "key": "invocations",
@@ -26,7 +26,16 @@
       "priceInCentsPerAdditionalUnit": 60,
       "unitSize": 1000000,
       "unitSymbol": "",
-      "stripePriceId": ""
+      "stripePriceId": "price_1RMXqE2LJct0ubJ39MxcunLW"
+    },
+    {
+      "key": "convectFunctions",
+      "name": "Convect Functions",
+      "includedFree": 2,
+      "priceInCentsPerAdditionalUnit": 0,
+      "unitSize": 1,
+      "unitSymbol": "",
+      "stripePriceId": "price_1RMXhg2LJct0ubJ3EYZmPIra"
     },
     {
       "key": "basePlan",
@@ -35,7 +44,7 @@
       "priceInCentsPerAdditionalUnit": 0,
       "unitSize": 1,
       "unitSymbol": "",
-      "stripePriceId": ""
+      "stripePriceId": "price_1RMXhj2LJct0ubJ3RPCYREv6"
     }
   ]
 }
