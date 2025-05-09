@@ -1,5 +1,6 @@
 import { Button, ButtonProps } from "@react-email/components";
-import { cn } from "~/lib/utils";
+import React from "react";
+import { cn } from "../../utils";
 
 export function EmailButton({ className, ...rest }: ButtonProps) {
   return (
@@ -7,7 +8,7 @@ export function EmailButton({ className, ...rest }: ButtonProps) {
       {...rest}
       className={cn(
         "rounded-[5px] bg-background px-5 py-[10px] text-[14px] font-medium text-white",
-        className,
+        className
       )}
     />
   );

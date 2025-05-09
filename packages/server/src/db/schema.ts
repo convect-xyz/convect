@@ -140,7 +140,7 @@ export const projects = createTable(
     planType: planEnum("plan_type").default("HOBBY").notNull(),
     planUrl: varchar("plan_url", { length: 255 }),
     billingStatus: text("billing_status", {
-      enum: ["ACTIVE", "OVERDUE"],
+      enum: ["ACTIVE", "OVERDUE", "CANCELLED"],
     })
       .default("ACTIVE")
       .notNull(),
