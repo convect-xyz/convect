@@ -5,22 +5,32 @@
   "main": "src/index.ts",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./emails": "./src/emails/index.ts"
+  },
   "scripts": {
     "db:push": "drizzle-kit push:pg",
     "db:migrate": "drizzle-kit generate:pg",
     "db:deploy": "npx tsx ./src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "scripts:sync-chains": "npx tsx ./src/scripts/chains.ts",
+    "email": "email dev --dir=src/emails --port=3005",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@convect-xyz/lib": "*",
+    "@react-email/components": "^0.0.22",
     "drizzle-kit": "0.20.13",
     "drizzle-orm": "0.29.3",
     "postgres": "3.4.3",
     "ts-node": "10.9.2",
-    "typescript": "5.5.2"
+    "typescript": "5.5.2",
+    "react": "18.2.0",
+    "react-day-picker": "8.10.1",
+    "react-dom": "18.2.0"
   },
   "dependencies": {
     "dotenv": "^16.4.5"

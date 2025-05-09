@@ -1,3 +1,4 @@
+import { getAppHostname } from "@convect-xyz/lib";
 import {
   Container,
   Img,
@@ -6,9 +7,9 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { getAppHostname } from "~/lib/shared/utils";
-import { EmailButton } from "./components/EmailButton";
-import { EmailWrapper } from "./EmailWrapper";
+import React from "react";
+import { EmailButton } from "../components/EmailButton.js";
+import { EmailWrapper } from "../EmailWrapper";
 
 interface InviteSentProps {
   inviteId: string;

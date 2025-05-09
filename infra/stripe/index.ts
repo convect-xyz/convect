@@ -126,6 +126,7 @@ export = async () => {
         DATABASE_URL: getDatabaseUrl(),
         SENTRY_DSN: process.env.SENTRY_DSN!,
         BRANCH_NAME: process.env.BRANCH_NAME!,
+        RESEND_API_KEY: process.env.RESEND_API_KEY!,
       },
     },
   });
