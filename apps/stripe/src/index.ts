@@ -1,5 +1,6 @@
 import "./sentry/instrumentation";
 
+import { startSpan } from "@sentry/node";
 import { Context, EventBridgeEvent, SQSEvent } from "aws-lambda";
 import { Stripe } from "stripe";
 import { handleCheckoutSessionComplete } from "./handlers/checkout_session_completed";
@@ -7,6 +8,12 @@ import { handleInvoicePaymentFailed } from "./handlers/invoice_payment_failed";
 import { handleInvoicePaymentSucceeded } from "./handlers/invoice_payment_succeeded";
 import { handlePaymentMethodAttached } from "./handlers/payment_method_attached";
 import { handleSubscriptionCreatedOrUpdated } from "./handlers/subscription_created_or_updated";
+
+function span(name: string, fn: () => Promise<any>) {
+  return startSpan({ name }, async (_) => {
+    return await fn();
+  });
+}
 
 export const handler = async (event: SQSEvent, context: Context) => {
   const stripeEvents = event.Records.map((record) => {
@@ -27,22 +34,34 @@ export const handler = async (event: SQSEvent, context: Context) => {
 async function processStripeEvent(event: Stripe.Event) {
   switch (event.type) {
     case "checkout.session.completed":
-      await handleCheckoutSessionComplete(event);
+      await span("handleCheckoutSessionComplete", () =>
+        handleCheckoutSessionComplete(event)
+      );
       break;
     case "invoice.payment_failed":
-      await handleInvoicePaymentFailed(event);
+      await span("handleInvoicePaymentFailed", () =>
+        handleInvoicePaymentFailed(event)
+      );
       break;
     case "invoice.payment_succeeded":
-      await handleInvoicePaymentSucceeded(event);
+      await span("handleInvoicePaymentSucceeded", () =>
+        handleInvoicePaymentSucceeded(event)
+      );
       break;
     case "payment_method.attached":
-      await handlePaymentMethodAttached(event);
+      await span("handlePaymentMethodAttached", () =>
+        handlePaymentMethodAttached(event)
+      );
       break;
     case "customer.subscription.created":
-      await handleSubscriptionCreatedOrUpdated(event);
+      await span("handleSubscriptionCreatedOrUpdated", () =>
+        handleSubscriptionCreatedOrUpdated(event)
+      );
       break;
     case "customer.subscription.updated":
-      await handleSubscriptionCreatedOrUpdated(event);
+      await span("handleSubscriptionCreatedOrUpdated", () =>
+        handleSubscriptionCreatedOrUpdated(event)
+      );
       break;
     default:
     // Unhandled event type
