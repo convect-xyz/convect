@@ -8,8 +8,6 @@ init({
   profileSessionSampleRate: 1.0,
   profileLifecycle: "trace",
   sendDefaultPii: true,
-
-  // Set initial scope
   initialScope: (scope) => {
     scope.setContext("branch_name", {
       branchName: process.env.BRANCH_NAME,

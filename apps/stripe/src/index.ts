@@ -21,11 +21,7 @@ export const handler = async (event: SQSEvent, context: Context) => {
   });
 
   for (const stripeEvent of stripeEvents) {
-    try {
-      await processStripeEvent(stripeEvent.detail);
-    } catch (error) {
-      console.error("Error processing Stripe event:", error);
-    }
+    await processStripeEvent(stripeEvent.detail);
   }
 
   return {};
