@@ -45,7 +45,7 @@ export default function InvoicePaidTemplate({
             {new Intl.NumberFormat("en-US", {
               style: "currency",
               currency: amount.currency,
-            }).format(amount.value)}
+            }).format(amount.value / 100)}
           </Text>
         </Section>
       </Container>
