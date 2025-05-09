@@ -47,7 +47,7 @@ export default function InvoiceOverdueTemplate({
             {new Intl.NumberFormat("en-US", {
               style: "currency",
               currency: amount.currency,
-            }).format(amount.value)}
+            }).format(amount.value / 100)}
           </Text>
           <EmailButton
             className="mt-6"
