@@ -63,7 +63,7 @@ async function ensureCompliance(
       planType: "HOBBY",
       planUrl: null,
     });
-    if (convectFunctionsUsage >= allowedFunctions) {
+    if (convectFunctionsUsage > allowedFunctions) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: `To downgrade to a HOBBY plan, you must have at-most ${allowedFunctions} functions.`,

@@ -34,32 +34,32 @@ export const handler = async (event: SQSEvent, context: Context) => {
 async function processStripeEvent(event: Stripe.Event) {
   switch (event.type) {
     case "checkout.session.completed":
-      await span("handleCheckoutSessionComplete", () =>
+      await span("checkout.session.completed", () =>
         handleCheckoutSessionComplete(event)
       );
       break;
     case "invoice.payment_failed":
-      await span("handleInvoicePaymentFailed", () =>
+      await span("invoice.payment_failed", () =>
         handleInvoicePaymentFailed(event)
       );
       break;
     case "invoice.payment_succeeded":
-      await span("handleInvoicePaymentSucceeded", () =>
+      await span("invoice.payment_succeeded", () =>
         handleInvoicePaymentSucceeded(event)
       );
       break;
     case "payment_method.attached":
-      await span("handlePaymentMethodAttached", () =>
+      await span("payment_method.attached", () =>
         handlePaymentMethodAttached(event)
       );
       break;
     case "customer.subscription.created":
-      await span("handleSubscriptionCreatedOrUpdated", () =>
+      await span("customer.subscription.created", () =>
         handleSubscriptionCreatedOrUpdated(event)
       );
       break;
     case "customer.subscription.updated":
-      await span("handleSubscriptionCreatedOrUpdated", () =>
+      await span("customer.subscription.updated", () =>
         handleSubscriptionCreatedOrUpdated(event)
       );
       break;
