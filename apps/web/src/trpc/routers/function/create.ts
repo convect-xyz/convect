@@ -34,6 +34,7 @@ export const createFunction = protectedProcedure
       .convectFunctions(input.projectId)
       .then((d) => d.usage);
     const allowedFunctions = await getQuota("convectFunctions", project);
+    console.log(convectFunctionsUsage, allowedFunctions);
     if (convectFunctionsUsage >= allowedFunctions) {
       throw new TRPCError({
         code: "FORBIDDEN",
