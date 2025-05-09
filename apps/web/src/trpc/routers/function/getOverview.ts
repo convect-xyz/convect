@@ -5,6 +5,7 @@ import { TRPCError } from "@trpc/server";
 import { and, count, eq, sql, SQLWrapper } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { z } from "zod";
+import { db } from "~/server/db";
 import { analysisDb } from "~/server/db/analysis";
 import { protectedProcedure } from "~/trpc/trpc";
 import { throwIfNotProjectCollaborator } from "../permissions";
@@ -70,29 +71,13 @@ export const getOverview = protectedProcedure
       throw new TRPCError({ message: "Handler not found", code: "NOT_FOUND" });
     }
 
-    const deployment = await ctx.db.query.deployment.findFirst({
-      where(fields, { eq, and }) {
-        return and(
-          eq(fields.functionId, input.functionId),
-          eq(fields.status, "SUCCESS"),
-        );
-      },
-      orderBy(fields, { desc }) {
-        return desc(fields.createdAt);
-      },
-    });
-
-    if (!deployment) {
-      throw new TRPCError({
-        message: "Deployment not found",
-        code: "NOT_FOUND",
-      });
-    }
-
-    await throwIfNotProjectCollaborator({
-      projectId: fn.projectId,
-      userId: ctx.session.user.id,
-    });
+    const [_, deployment] = await Promise.all([
+      throwIfNotProjectCollaborator({
+        projectId: fn.projectId,
+        userId: ctx.session.user.id,
+      }),
+      getMostRecentSuccessfulDeployment(db, input.functionId),
+    ]);
 
     const [fetchState, txCount, avgDuration, successfulTx] = await Promise.all([
       getFetchState(
@@ -145,16 +130,41 @@ export const getOverview = protectedProcedure
     };
   });
 
+const getMostRecentSuccessfulDeployment = async (
+  _db: typeof db,
+  functionId: number,
+) => {
+  const deployment = await _db.query.deployment.findFirst({
+    where(fields, { eq, and }) {
+      return and(
+        eq(fields.functionId, functionId),
+        eq(fields.status, "SUCCESS"),
+      );
+    },
+    orderBy(fields, { desc }) {
+      return desc(fields.createdAt);
+    },
+  });
+
+  if (!deployment) {
+    throw new TRPCError({
+      message: "Deployment not found",
+      code: "NOT_FOUND",
+    });
+  }
+
+  return deployment;
+};
+
 const getAvgDuration = async (
   internalId: string,
   version: number,
   deploymentId: string,
 ) => {
-  return analysisDb
-    .execute(
-      sql`SELECT AVG(duration_ms) FROM reported_metrics WHERE handler_id = ${internalId} AND handler_version = ${version} AND deployment_id = ${deploymentId}`,
-    )
-    .then((r) => Number(r.rows.at(0)!.avg));
+  const result = await analysisDb.execute(
+    sql`SELECT AVG(duration_ms) FROM reported_metrics WHERE handler_id = ${internalId} AND handler_version = ${version} AND deployment_id = ${deploymentId}`,
+  );
+  return Number(result.rows.at(0)!.avg);
 };
 
 const getSuccessfulTxCount = async (
@@ -163,9 +173,7 @@ const getSuccessfulTxCount = async (
   deploymentId: string,
 ) => {
   const processedTransactions = analysisDb
-    .select({
-      transactionHash: analysisSchema.processedTransaction.transactionHash,
-    })
+    .selectDistinctOn([analysisSchema.processedTransaction.transactionHash])
     .from(analysisSchema.processedTransaction)
     .where(
       and(
@@ -175,43 +183,36 @@ const getSuccessfulTxCount = async (
         eq(analysisSchema.processedTransaction.status, "SUCCESS"),
       ),
     )
-    .groupBy(analysisSchema.processedTransaction.transactionHash)
     .as("processedTransactions");
 
-  return analysisDb
-    .select({
-      successIsUniqueCount: count(processedTransactions.transactionHash),
-    })
-    .from(analysisSchema.ethTransaction)
-    .leftJoin(
-      processedTransactions,
-      eq(
-        processedTransactions.transactionHash,
-        analysisSchema.ethTransaction.transactionHash,
-      ),
-    )
-    .where(
-      and(
-        eq(analysisSchema.ethTransaction.functionId, functionId),
-        eq(analysisSchema.ethTransaction.deploymentId, deploymentId),
-        eq(analysisSchema.ethTransaction.chainId, chainId),
-      ),
-    )
-    .then((r) => Number(r.at(0)!.successIsUniqueCount));
-};
-
-const getTxCount = async (
-  functionId: string,
-  chainId: number,
-  deploymentId: string,
-) => {
   const result = await explainAnalyze(
     analysisDb,
     analysisDb
       .select({
-        numTransactions: count(analysisSchema.ethTransaction.deploymentId),
+        successIsUniqueCount: count(processedTransactions.transactionHash),
       })
       .from(analysisSchema.ethTransaction)
+      .leftJoin(
+        processedTransactions,
+        and(
+          eq(
+            processedTransactions.functionId,
+            analysisSchema.ethTransaction.functionId,
+          ),
+          eq(
+            processedTransactions.deploymentId,
+            analysisSchema.ethTransaction.deploymentId,
+          ),
+          eq(
+            processedTransactions.chainId,
+            analysisSchema.ethTransaction.chainId,
+          ),
+          eq(
+            processedTransactions.transactionHash,
+            analysisSchema.ethTransaction.transactionHash,
+          ),
+        ),
+      )
       .where(
         and(
           eq(analysisSchema.ethTransaction.functionId, functionId),
@@ -220,6 +221,27 @@ const getTxCount = async (
         ),
       ),
   );
+
+  return Number(result.at(0)!.successIsUniqueCount);
+};
+
+const getTxCount = async (
+  functionId: string,
+  chainId: number,
+  deploymentId: string,
+) => {
+  const result = await analysisDb
+    .select({
+      numTransactions: count(analysisSchema.ethTransaction.functionId),
+    })
+    .from(analysisSchema.ethTransaction)
+    .where(
+      and(
+        eq(analysisSchema.ethTransaction.functionId, functionId),
+        eq(analysisSchema.ethTransaction.deploymentId, deploymentId),
+        eq(analysisSchema.ethTransaction.chainId, chainId),
+      ),
+    );
 
   return result.length > 0 ? result[0]?.numTransactions : null;
 };
