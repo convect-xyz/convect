@@ -81,7 +81,7 @@ async function sendEmail(data: {
   };
 }) {
   return sendNoReply({
-    subject: "Your Convect payment has failed",
+    subject: "Your Convect Invoice",
     to: data.project.user.email,
     react: InvoicePaidTemplate({
       project: {
