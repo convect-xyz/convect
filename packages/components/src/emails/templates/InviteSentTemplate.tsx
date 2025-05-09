@@ -8,7 +8,7 @@ import {
   Text,
 } from "@react-email/components";
 import React from "react";
-import { EmailButton } from "../components/EmailButton.js";
+import { EmailButton } from "../components/EmailButton";
 import { EmailWrapper } from "../EmailWrapper";
 
 interface InviteSentProps {
