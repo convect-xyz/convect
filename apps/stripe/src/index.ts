@@ -1,3 +1,5 @@
+import "./sentry/instrumentation";
+
 import { Context, EventBridgeEvent, SQSEvent } from "aws-lambda";
 import { Stripe } from "stripe";
 import { handleCheckoutSessionComplete } from "./handlers/checkout_session_completed";

@@ -124,6 +124,8 @@ export = async () => {
       variables: {
         STRIPE_API_KEY: getStripeApiKey(),
         DATABASE_URL: getDatabaseUrl(),
+        SENTRY_DSN: process.env.SENTRY_DSN!,
+        BRANCH_NAME: process.env.BRANCH_NAME!,
       },
     },
   });
