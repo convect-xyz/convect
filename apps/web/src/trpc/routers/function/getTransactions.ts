@@ -236,11 +236,12 @@ function getProcessedTransactionsWithBatch(
       ),
     )
     .as("processedBatch");
+
   return analysisDb
     .select({
       ethTransactionId: processedTransactions.ethTransactionId,
       timestamp: processedTransactions.timestamp,
-      batchId: analysisSchema.processedBatch.batchId,
+      batchId: processedBatch.batchId,
       processedBatchId: processedTransactions.processedBatchId,
       transactionHash: processedTransactions.transactionHash,
       status: processedTransactions.status,
@@ -257,10 +258,7 @@ function getProcessedTransactionsWithBatch(
     )
     .leftJoin(
       processedBatch,
-      eq(
-        analysisSchema.processedBatch.id,
-        processedTransactions.processedBatchId,
-      ),
+      eq(processedBatch.id, processedTransactions.processedBatchId),
     )
     .as("processedTransactionsWithBatch");
 }
