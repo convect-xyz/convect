@@ -108,7 +108,7 @@ export = async () => {
 
   const lambda = archive.getFile({
     type: "zip",
-    sourceFile: "./stripe.js",
+    sourceDir: "./out",
     outputPath: "stripe_payload.zip",
   });
 
