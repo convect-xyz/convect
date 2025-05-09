@@ -42,7 +42,7 @@ export async function handleInvoicePaymentFailed(
   ]);
 }
 
-function updateProject(
+async function updateProject(
   projectId: number,
   data: {
     billingStatus: "OVERDUE";
@@ -55,7 +55,7 @@ function updateProject(
     .where(eq(schema.projects.id, projectId));
 }
 
-function sendEmail(data: {
+async function sendEmail(data: {
   project: {
     id: number;
     name: string;
