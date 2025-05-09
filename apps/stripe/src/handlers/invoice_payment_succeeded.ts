@@ -97,7 +97,7 @@ async function sendEmail(data: {
       ? [
           {
             filename: "convect_invoice.pdf",
-            content: data.invoice.url,
+            path: data.invoice.url,
           },
         ]
       : undefined,
