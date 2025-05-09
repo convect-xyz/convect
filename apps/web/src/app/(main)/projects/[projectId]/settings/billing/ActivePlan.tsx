@@ -148,11 +148,23 @@ function ChangePlanButton(props: {
       return "Current Plan";
     }
 
-    if (plan === "HOBBY") {
-      return "Downgrade to Hobby";
+    if (plan === "PRO") {
+      if (data?.name === "ENTERPRISE") {
+        return "Downgrade to Pro";
+      }
+
+      return "Upgrade to Pro";
     }
 
-    return "Upgrade to Pro";
+    if (plan === "HOBBY") {
+      if (data?.name === "ENTERPRISE" || data?.name === "PRO") {
+        return "Downgrade to Hobby";
+      }
+
+      return "Upgrade to Hobby";
+    }
+
+    return "Upgrade";
   };
 
   return (

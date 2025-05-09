@@ -116,7 +116,7 @@ export const currentMonthUsage = new Proxy(
   >,
   {
     get(_, prop) {
-      const fn = _usage[prop as keyof typeof _usage];
+      const fn = usage[prop as keyof typeof _usage];
       return (projectId: number) =>
         fn({
           projectId,
