@@ -88,7 +88,7 @@ export = async () => {
   });
 
   const iamForLambda = new aws.iam.Role(
-    "iam_for_lambda" + getEnvironmentName(),
+    "iam_for_lambda_" + getEnvironmentName(),
     {
       name: "iam_for_lambda" + getEnvironmentName(),
       assumeRolePolicy: assumeRole.then((assumeRole) => assumeRole.json),
@@ -113,7 +113,7 @@ export = async () => {
     outputPath: "stripe_payload.zip",
   });
 
-  new aws.lambda.Function("stripe" + getEnvironmentName(), {
+  new aws.lambda.Function("stripe_" + getEnvironmentName(), {
     code: new pulumi.asset.FileArchive("stripe_payload.zip"),
     name: "stripe_" + getEnvironmentName(),
     handler: "stripe.handler",
