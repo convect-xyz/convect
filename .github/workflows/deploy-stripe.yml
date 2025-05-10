@@ -15,6 +15,7 @@ env:
   PROD_STRIPE_API_KEY: ${{ secrets.PROD_STRIPE_API_KEY }}
   SENTRY_DSN: ${{ secrets.STRIPE_APP_SENTRY_DSN }}
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -46,7 +47,7 @@ jobs:
       - name: Installing dependencies 📦️
         run: cd infra/stripe && yarn && cd ../../apps/stripe && yarn
       - name: Bundle Stripe
-        run: cd infra/stripe && yarn esbuild ../../apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --outfile=./stripe.js
+        run: cd infra/stripe && yarn esbuild ../../apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --loader:.node=copy --outfile=./out/stripe.js
       - uses: pulumi/actions@v6
         with:
           command: up

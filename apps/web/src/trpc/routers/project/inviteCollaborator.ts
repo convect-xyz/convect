@@ -1,7 +1,7 @@
+import { InviteSentTemplate } from "@convect-xyz/components/emails";
 import { schema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import InviteSentTemplate from "~/components/emails/InviteSentTemplate";
 import { sendNoReply } from "~/lib/server/resend";
 import { protectedProcedure } from "~/trpc/trpc";
 import { getCollaborator } from "../permissions";

@@ -10,21 +10,28 @@ import {
   PricingPrice,
   PricingTitle,
 } from "~/app/(landing)/pricing/PricingCard";
+import { BillingOverdueAlert } from "~/components/core/billing/BillingOverdueAlert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useParams } from "../../hooks/useParams";
+import { useProject } from "../../hooks/useProject";
 import { useActivePlan } from "./hooks/useActivePlan";
 import { useUsage } from "./hooks/useUsage";
 
 export default function ActivePlan() {
   const [open, setOpen] = useState(false);
   const { data: activePlan } = useActivePlan();
-
+  const { data: project } = useProject();
   return (
     <>
+      <div className="mb-4">
+        {project?.billingStatus === "OVERDUE" && (
+          <BillingOverdueAlert projectId={project.id} hideUpdateButton />
+        )}
+      </div>
       <div className="flex flex-col gap-4">
         <Card className="bg-background">
           <CardContent className="p-4">

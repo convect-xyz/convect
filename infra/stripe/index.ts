@@ -108,7 +108,7 @@ export = async () => {
 
   const lambda = archive.getFile({
     type: "zip",
-    sourceFile: "./stripe.js",
+    sourceDir: "./out",
     outputPath: "stripe_payload.zip",
   });
 
@@ -120,12 +120,14 @@ export = async () => {
     sourceCodeHash: lambda.then((lambda) => lambda.outputBase64sha256),
     runtime: "nodejs20.x",
     timeout: 900,
+    memorySize: 1024,
     environment: {
       variables: {
         STRIPE_API_KEY: getStripeApiKey(),
         DATABASE_URL: getDatabaseUrl(),
         SENTRY_DSN: process.env.SENTRY_DSN!,
         BRANCH_NAME: process.env.BRANCH_NAME!,
+        RESEND_API_KEY: process.env.RESEND_API_KEY!,
       },
     },
   });

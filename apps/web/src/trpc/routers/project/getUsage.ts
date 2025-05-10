@@ -1,6 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { availableProducts, planLoader, Product } from "~/lib/server/products";
+import {
+  availableProducts,
+  ExtendedPricing,
+  planLoader,
+} from "~/lib/server/products";
 import { usage, UsageFn } from "~/lib/server/products/usage";
 import { protectedProcedure } from "~/trpc/trpc";
 
@@ -52,23 +56,33 @@ export const getUsage = protectedProcedure
       execute(usage.invocations),
     ]);
 
-    const getResponseForProduct = (product: Product, totalUsage: number) => {
+    const getResponseForProduct = (
+      pricing: ExtendedPricing,
+      totalUsage: number,
+    ) => {
       return {
-        key: product.key,
-        name: product.name,
+        key: pricing.key,
+        name: pricing.product.name,
         totalUsage,
-        includedFree: product.includedFree,
-        additionalChargeInCents: product.getAdditionalChargeInCents(totalUsage),
+        includedFree:
+          pricing.price._type === "tiered" ? pricing.price.includedFree : 0,
+        additionalChargeInCents:
+          pricing.price._type === "tiered"
+            ? pricing.price.getAdditionalChargeInCents(totalUsage)
+            : 0,
         includedFreeUsageAsFraction:
-          product.getIncludedFreeUsageAsFraction(totalUsage),
-        unitSymbol: product.unitSymbol,
+          pricing.price._type === "tiered"
+            ? pricing.price.getIncludedFreeUsageAsFraction(totalUsage)
+            : 0,
+        unitSymbol: pricing.product.unitSymbol,
       };
     };
 
-    const plan = await planLoader.loadForProject(project);
+    console.log(results);
+    const plan = await planLoader.byProject(project);
     return results
       .map((usage) => {
-        const product = plan.products.find((p) => p.key === usage.key)!;
+        const product = plan.pricing.find((p) => p.key === usage.key)!;
         return getResponseForProduct(product, usage.usage);
       })
       .sort((a, b) => b.additionalChargeInCents - a.additionalChargeInCents);

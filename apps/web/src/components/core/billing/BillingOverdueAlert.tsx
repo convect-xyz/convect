@@ -3,7 +3,10 @@ import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 
-export function BillingOverdueAlert(props: { projectId: number }) {
+export function BillingOverdueAlert(props: {
+  projectId: number;
+  hideUpdateButton?: boolean;
+}) {
   return (
     <Alert variant="default">
       <AlertCircle className="h-4 w-4" />
@@ -14,11 +17,13 @@ export function BillingOverdueAlert(props: { projectId: number }) {
           service interruption.
         </div>
 
-        <Button size="sm" asChild className="mt-2">
-          <Link href={`/projects/${props.projectId}/settings/billing`}>
-            Update Payment Method
-          </Link>
-        </Button>
+        {!props.hideUpdateButton && (
+          <Button size="sm" asChild className="mt-2">
+            <Link href={`/projects/${props.projectId}/settings/billing`}>
+              Update Payment Method
+            </Link>
+          </Button>
+        )}
       </AlertDescription>
     </Alert>
   );
