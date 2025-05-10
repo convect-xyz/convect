@@ -90,7 +90,7 @@ export = async () => {
   const iamForLambda = new aws.iam.Role(
     "iam_for_lambda_" + getEnvironmentName(),
     {
-      name: "iam_for_lambda" + getEnvironmentName(),
+      name: "iam_for_lambda_" + getEnvironmentName(),
       assumeRolePolicy: assumeRole.then((assumeRole) => assumeRole.json),
       inlinePolicies: [
         {
