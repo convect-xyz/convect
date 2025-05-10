@@ -112,7 +112,7 @@ export = async () => {
     outputPath: "stripe_payload.zip",
   });
 
-  new aws.lambda.Function("stripe", {
+  new aws.lambda.Function("stripe" + getEnvironmentName(), {
     code: new pulumi.asset.FileArchive("stripe_payload.zip"),
     name: "stripe_" + getEnvironmentName(),
     handler: "stripe.handler",
