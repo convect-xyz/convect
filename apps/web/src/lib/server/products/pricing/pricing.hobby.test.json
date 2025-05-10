@@ -1,49 +1,48 @@
 {
   "id": "hobby-test",
-  "products": [
+  "pricing": [
     {
       "key": "processedTransactions",
-      "name": "Processed Transactions",
-      "includedFree": 10000,
-      "priceInCentsPerAdditionalUnit": 30,
-      "unitSize": 100000,
-      "unitSymbol": "Txs",
+      "price": {
+        "_type": "tiered",
+        "includedFree": 10000,
+        "priceInCentsPerAdditionalUnit": 0.0003
+      },
       "stripePriceId": "price_1RMFe7Ru90pWJjEEeSP33VZN"
     },
     {
       "key": "gbHours",
-      "name": "GB Hours",
-      "includedFree": 100,
-      "priceInCentsPerAdditionalUnit": 18,
-      "unitSize": 1,
-      "unitSymbol": "GB-Hours",
+      "price": {
+        "_type": "tiered",
+        "includedFree": 100,
+        "priceInCentsPerAdditionalUnit": 18
+      },
       "stripePriceId": "price_1RMFNhRu90pWJjEEpmg2PCL6"
     },
     {
       "key": "invocations",
-      "name": "Invocations",
-      "includedFree": 100000,
-      "priceInCentsPerAdditionalUnit": 60,
-      "unitSize": 1000000,
-      "unitSymbol": "",
+      "price": {
+        "_type": "tiered",
+        "includedFree": 100000,
+        "priceInCentsPerAdditionalUnit": 0.00006
+      },
       "stripePriceId": "price_1RMFH3Ru90pWJjEEdAJr4Pl3"
     },
     {
       "key": "convectFunctions",
-      "name": "Convect Functions",
-      "includedFree": 2,
-      "priceInCentsPerAdditionalUnit": 0,
-      "unitSize": 1,
-      "unitSymbol": "",
+      "price": {
+        "_type": "tiered",
+        "includedFree": 2,
+        "priceInCentsPerAdditionalUnit": 0
+      },
       "stripePriceId": "price_1RMWmxRu90pWJjEE73mHEcHx"
     },
     {
       "key": "basePlan",
-      "name": "Base Plan",
-      "includedFree": 0,
-      "priceInCentsPerAdditionalUnit": 0,
-      "unitSize": 1,
-      "unitSymbol": "",
+      "price": {
+        "_type": "fixed",
+        "priceInCents": 9999
+      },
       "stripePriceId": "price_1RMFYLRu90pWJjEEQj1klikO"
     }
   ]

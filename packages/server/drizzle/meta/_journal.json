@@ -344,6 +344,27 @@
       "when": 1746724300922,
       "tag": "0048_daily_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1746821933298,
+      "tag": "0049_thin_genesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1746821940447,
+      "tag": "0050_handy_quicksilver",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1746821951009,
+      "tag": "0051_dashing_quicksilver",
+      "breakpoints": true
     }
   ]
 }

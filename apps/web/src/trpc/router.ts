@@ -1,5 +1,6 @@
 import { createTRPCRouter } from "~/trpc/trpc";
 import { accountsRouter } from "./routers/account";
+import { adminRouter } from "./routers/admin";
 import { createApiKey } from "./routers/apiKey/createApiKey";
 import { deleteApiKey } from "./routers/apiKey/deleteApiKey";
 import { getApiKeys } from "./routers/apiKey/getApiKeys";
@@ -69,6 +70,7 @@ export const appRouter = createTRPCRouter({
   apiKeys: apiKeysRouter,
   billing: billingRouter,
   blocks: blocksRouter,
+  admin: adminRouter,
 });
 
 export type AppRouter = typeof appRouter;
