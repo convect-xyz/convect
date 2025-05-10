@@ -48,9 +48,13 @@ jobs:
         run: cd infra/stripe && yarn && cd ../../apps/stripe && yarn
       - name: Bundle Stripe
         run: cd infra/stripe && yarn esbuild ../../apps/stripe/src/index.ts --bundle --platform=node --target=node10.4 --loader:.node=copy --outfile=./out/stripe.js
+      - name: Sanitize branch name
+        run: |
+          SANITIZED_BRANCH_NAME="${BRANCH_NAME//\//-}"
+          echo "SANITIZED_BRANCH_NAME=$SANITIZED_BRANCH_NAME" >> $GITHUB_ENV
       - uses: pulumi/actions@v6
         with:
           command: up
           work-dir: ./infra/stripe
-          stack-name: stripe-${{ env.ENVIRONMENT }}
+          stack-name: stripe-${{ env.SANITIZED_BRANCH_NAME }}
           upsert: true
