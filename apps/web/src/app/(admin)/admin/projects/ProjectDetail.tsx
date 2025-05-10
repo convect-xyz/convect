@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFormContext } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import {
@@ -12,6 +13,7 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
+import { formatDate } from "~/lib/shared/utils/formatting";
 import { api } from "~/trpc/react";
 import { useAdminProject } from "./hooks/useAdminProject";
 
@@ -45,7 +47,42 @@ export default function ProjectDetail(props: { projectId?: number }) {
         </div>
       </div>
 
+      <PlanInformation projectId={props.projectId} />
+
       <Plan projectId={props.projectId} />
+    </div>
+  );
+}
+
+function PlanInformation(props: { projectId: number }) {
+  const { data } = useAdminProject(props.projectId);
+
+  if (!data) {
+    return null;
+  }
+
+  if (!data.stripeSubscription) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 flex flex-col divide-y rounded-md border">
+      <div className="flex items-center justify-between gap-2 p-3">
+        <div className="text-xs">Billing Cycle Anchor</div>
+        <div className="text-xs text-muted-foreground">
+          {formatDate(
+            new Date(data.stripeSubscription.billing_cycle_anchor * 1000),
+          )}
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2 p-3">
+        <div className="text-xs">Next Billing Date</div>
+        <div className="text-xs text-muted-foreground">
+          {formatDate(
+            new Date(data.stripeSubscription.current_period_end * 1000),
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -80,7 +117,11 @@ type Values = z.infer<typeof formSchema>;
 
 function Plan(props: { projectId: number }) {
   const { data } = useAdminProject(props.projectId);
-  const { mutateAsync: updatePlan } = api.admin.updatePlan.useMutation();
+  const { mutateAsync: updatePlan } = api.admin.updatePlan.useMutation({
+    onSuccess: () => {
+      toast.success("Plan updated");
+    },
+  });
 
   const form = useForm<Values>({
     resolver: zodResolver(formSchema),
@@ -169,6 +210,7 @@ function Plan(props: { projectId: number }) {
 function TieredBilling(props: { index: number }) {
   const { index } = props;
   const form = useFormContext<Values>();
+
   return (
     <div className="flex flex-col gap-2">
       <FormField
@@ -179,7 +221,13 @@ function TieredBilling(props: { index: number }) {
             <FormControl>
               <div className="flex items-center gap-2">
                 <div className="flex-1 text-xs text-muted-foreground">
-                  Price per add.
+                  Price per add. (
+                  {new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 12,
+                  }).format(Number(field.value) / 100)}
+                  )
                 </div>
                 <Input className="h-auto w-32" {...field} />
               </div>
@@ -196,7 +244,11 @@ function TieredBilling(props: { index: number }) {
             <FormControl>
               <div className="flex items-center gap-2">
                 <div className="flex-1 text-xs text-muted-foreground">
-                  Included free
+                  Included free (
+                  {new Intl.NumberFormat("en-US", {
+                    style: "decimal",
+                  }).format(Number(field.value))}
+                  )
                 </div>
                 <Input className="h-auto w-32" {...field} />
               </div>

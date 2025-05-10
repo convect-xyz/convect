@@ -1,3 +1,4 @@
+import Stripe from "stripe";
 import { z } from "zod";
 import {
   getDefaultPricing,
@@ -5,6 +6,7 @@ import {
   planSchema,
   productMetadata,
 } from "~/lib/server/products";
+import { stripe } from "~/lib/server/stripe";
 import { adminProcedure } from "~/trpc/trpc";
 
 export const getProject = adminProcedure
@@ -17,6 +19,7 @@ export const getProject = adminProcedure
     z.object({
       id: z.number(),
       name: z.string(),
+      stripeSubscription: z.custom<Stripe.Subscription>().nullable(),
       planType: z.enum(["HOBBY", "PRO", "ENTERPRISE"]),
       plan: planSchema.transform((data) => {
         return {
@@ -51,10 +54,15 @@ export const getProject = adminProcedure
 
     const plan = await planLoader.byProject(project);
 
+    const stripeSubscription = project.stripeSubscriptionId
+      ? await stripe.subscriptions.retrieve(project.stripeSubscriptionId)
+      : null;
+
     return {
       id: project.id,
       name: project.name,
       planType: project.planType,
       plan,
+      stripeSubscription,
     };
   });

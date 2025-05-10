@@ -6,7 +6,7 @@
       "price": {
         "_type": "tiered",
         "includedFree": 100000,
-        "priceInCentsPerAdditionalUnit": 30
+        "priceInCentsPerAdditionalUnit": 0.0003
       },
       "stripePriceId": "price_1RMFe7Ru90pWJjEEeSP33VZN"
     },
@@ -24,7 +24,7 @@
       "price": {
         "_type": "tiered",
         "includedFree": 100000,
-        "priceInCentsPerAdditionalUnit": 60
+        "priceInCentsPerAdditionalUnit": 0.00006
       },
       "stripePriceId": "price_1RMFh6Ru90pWJjEEmfpwix4q"
     },
