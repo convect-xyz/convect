@@ -52,5 +52,5 @@ jobs:
         with:
           command: up
           work-dir: ./infra/stripe
-          stack-name: stripe-${{ env.ENVIRONMENT }}
+          stack-name: stripe-${{ env.BRANCH_NAME }}
           upsert: true
