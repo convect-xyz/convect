@@ -149,10 +149,10 @@ function Plan(props: { projectId: number }) {
                     <div>{pricing.product.name}</div>
                   </div>
                   <div className="mt-2 flex flex-col gap-2">
-                    {pricing.product.billingType === "tiered" && (
+                    {pricing.product.billing._type === "tiered" && (
                       <TieredBilling index={index} />
                     )}
-                    {pricing.product.billingType === "fixed" && (
+                    {pricing.product.billing._type === "fixed" && (
                       <FixedBilling index={index} />
                     )}
                   </div>
