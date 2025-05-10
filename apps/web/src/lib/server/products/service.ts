@@ -116,6 +116,11 @@ async function createStripePrice(product: ExtendedPricing) {
     currency: "USD",
     recurring: {
       interval: "month",
+      usage_type: "metered",
+      meter:
+        product.product.billing._type === "tiered"
+          ? product.product.billing.stripeMeterId
+          : undefined,
     },
     billing_scheme: "tiered",
     tax_behavior: "inclusive",
