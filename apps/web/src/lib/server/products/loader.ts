@@ -8,40 +8,42 @@ import { db } from "~/server/db";
 import { availableProducts, productMetadata } from "./products";
 
 export const planSchema = z.object({
-  id: z.string(),
-  pricing: z.array(
-    z
-      .object({
-        key: z.nativeEnum(availableProducts),
-        stripePriceId: z.string(),
-        price: z
-          .object({
-            _type: z.literal("tiered"),
-            includedFree: z.number(),
-            priceInCentsPerAdditionalUnit: z
-              .number()
-              .transform((v) => v.toString())
-              .or(z.string()),
-          })
-          .or(
-            z.object({
-              _type: z.literal("fixed"),
-              priceInCents: z
+  id: z.string().default(""),
+  pricing: z
+    .array(
+      z
+        .object({
+          key: z.nativeEnum(availableProducts),
+          stripePriceId: z.string(),
+          price: z
+            .object({
+              _type: z.literal("tiered"),
+              includedFree: z.number(),
+              priceInCentsPerAdditionalUnit: z
                 .number()
                 .transform((v) => v.toString())
                 .or(z.string()),
-            }),
-          ),
-      })
-      .refine(
-        (data) => {
-          return productMetadata[data.key] !== undefined;
-        },
-        {
-          message: "Invalid product key",
-        },
-      ),
-  ),
+            })
+            .or(
+              z.object({
+                _type: z.literal("fixed"),
+                priceInCents: z
+                  .number()
+                  .transform((v) => v.toString())
+                  .or(z.string()),
+              }),
+            ),
+        })
+        .refine(
+          (data) => {
+            return productMetadata[data.key] !== undefined;
+          },
+          {
+            message: "Invalid product key",
+          },
+        ),
+    )
+    .default([]),
 });
 
 export const xPlanSchema = planSchema.transform((data) => {
