@@ -26,9 +26,9 @@ const _productMetadata = {
     }),
   },
   gbHours: {
-    name: "GB Hours",
+    name: "MB Seconds",
     billingType: "tiered",
-    unitSymbol: "GB-Hours",
+    unitSymbol: "MB-Seconds",
     unitSize: 1,
     stripeProductId: stripeEnv({
       live: "prod_SH5tWNMU8isZoF",
