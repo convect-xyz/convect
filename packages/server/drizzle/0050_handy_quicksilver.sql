@@ -1,0 +1,1 @@
+ALTER TABLE "web_project" ALTER COLUMN "plan" DROP DEFAULT;

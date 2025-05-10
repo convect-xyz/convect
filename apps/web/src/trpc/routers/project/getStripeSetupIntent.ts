@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { getStripeCustomerId } from "~/lib/server/products";
 import { stripe } from "~/lib/server/stripe";
 import { protectedProcedure } from "~/trpc/trpc";
-import { getStripeCustomerId } from "../billing/switchPlan";
 
 export const getStripeSetupIntent = protectedProcedure
   .input(

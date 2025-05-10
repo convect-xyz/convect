@@ -112,3 +112,10 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     },
   });
 });
+
+export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (ctx.session?.user.email !== "kayakthedev@gmail.com") {
+    throw new TRPCError({ message: "Unauthorized", code: "UNAUTHORIZED" });
+  }
+  return next({ ctx });
+});

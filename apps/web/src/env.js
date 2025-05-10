@@ -46,6 +46,8 @@ export const env = createEnv({
     CLOUDFRONT_PRIVATE_KEY: z.string(),
     CLOUDFRONT_KEY_PAIR_ID: z.string(),
     CLOUDFRONT_PLANS_URL: z.string(),
+
+    STRIPE_ENVIRONMENT: z.enum(["live", "test"]),
   },
   client: {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string(),
@@ -76,6 +78,7 @@ export const env = createEnv({
     CLOUDFRONT_PRIVATE_KEY: process.env.CLOUDFRONT_PRIVATE_KEY,
     CLOUDFRONT_KEY_PAIR_ID: process.env.CLOUDFRONT_KEY_PAIR_ID,
     CLOUDFRONT_PLANS_URL: process.env.CLOUDFRONT_PLANS_URL,
+    STRIPE_ENVIRONMENT: process.env.STRIPE_ENVIRONMENT,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

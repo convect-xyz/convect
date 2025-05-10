@@ -61,13 +61,21 @@ function Product(props: { metric: UsageMetric }) {
         <div className="font-medium">{metric.name}</div>
       </div>
       <div className="basis-[140px] text-right">
-        {Math.min(metric.totalUsage, metric.includedFree)} /{" "}
-        {metric.includedFree} {metric.unitSymbol}
+        {new Intl.NumberFormat("en-US", {
+          style: "decimal",
+        }).format(Math.min(metric.totalUsage, metric.includedFree))}{" "}
+        /{" "}
+        {new Intl.NumberFormat("en-US", {
+          style: "decimal",
+        }).format(metric.includedFree)}
       </div>
       <div className="basis-[120px] text-right">
         {onDemandUsage && (
           <>
-            +{onDemandUsage.toFixed(2)} {metric.unitSymbol}
+            +
+            {new Intl.NumberFormat("en-US", {
+              style: "decimal",
+            }).format(onDemandUsage)}{" "}
           </>
         )}
       </div>

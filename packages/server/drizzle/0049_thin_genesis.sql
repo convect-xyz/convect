@@ -1,0 +1,1 @@
+ALTER TABLE "web_project" ADD COLUMN "plan" json DEFAULT '{}'::json NOT NULL;

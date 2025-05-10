@@ -25,7 +25,7 @@ export default function InvoicePaidTemplate({
   amount,
 }: Readonly<InvoicePaidTemplateProps>) {
   return (
-    <EmailWrapper preview={<Preview>Your invoice is overdue.</Preview>}>
+    <EmailWrapper preview={<Preview>Your invoice is paid.</Preview>}>
       <Container className="mt-16">
         <Img
           src="https://d3485o3p54n14c.cloudfront.net/logo_black.png"
