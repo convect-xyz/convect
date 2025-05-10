@@ -125,6 +125,30 @@ export const productMetadata = new Proxy(
     set(target, key, value) {
       throw new Error("Cannot set productMetadata");
     },
+    ownKeys(target) {
+      return Object.keys(_productMetadata);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      return Object.getOwnPropertyDescriptor(_productMetadata, key);
+    },
+    has(target, key) {
+      return key in _productMetadata;
+    },
+    deleteProperty(target, key) {
+      throw new Error("Cannot delete productMetadata");
+    },
+    getPrototypeOf(target) {
+      return null;
+    },
+    setPrototypeOf(target, prototype) {
+      throw new Error("Cannot setPrototypeOf productMetadata");
+    },
+    isExtensible(target) {
+      return true;
+    },
+    preventExtensions(target) {
+      throw new Error("Cannot preventExtensions productMetadata");
+    },
   },
 );
 
