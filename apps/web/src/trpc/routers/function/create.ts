@@ -18,7 +18,7 @@ export const createFunction = protectedProcedure
   .output(z.object({}))
   .mutation(async ({ ctx, input }) => {
     const project = await ctx.db.query.projects.findFirst({
-      where: (fields, { eq, and }) => and(eq(fields.id, input.projectId)),
+      where: (fields, { eq }) => eq(fields.id, input.projectId),
     });
     if (!project) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
