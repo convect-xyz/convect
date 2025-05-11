@@ -65,10 +65,8 @@ async function isFunctionNameTaken(
   name: string,
   projectId: number,
 ) {
-  const existing = await db.query.convectFunctions.findFirst({
+  return db.query.convectFunctions.findFirst({
     where: (fields, { eq, and }) =>
       and(eq(fields.name, name), eq(fields.projectId, projectId)),
   });
-
-  return existing;
 }
