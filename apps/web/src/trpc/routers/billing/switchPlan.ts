@@ -4,7 +4,7 @@ import { InferSelectModel } from "drizzle-orm";
 import { Stripe } from "stripe";
 import { z } from "zod";
 import { env } from "~/env";
-import { planService, quota } from "~/lib/server/products";
+import { planService, quotaService } from "~/lib/server/products";
 import { currentMonthUsage } from "~/lib/server/products/usage";
 import { protectedProcedure } from "~/trpc/trpc";
 
@@ -43,7 +43,7 @@ async function ensureCompliance(
     const convectFunctionsUsage = await currentMonthUsage
       .convectFunctions(project.id)
       .then((d) => d.usage);
-    const allowedFunctions = await quota.byPlanType(
+    const allowedFunctions = await quotaService.byPlanType(
       "convectFunctions",
       "HOBBY",
     );

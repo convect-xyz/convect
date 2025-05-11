@@ -2,7 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DialogProps } from "@radix-ui/react-dialog";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogOverlay } from "~/components/ui/dialog";
@@ -51,6 +53,27 @@ function Content(props: Props) {
       utils.project.getFunctions.invalidate({
         projectId: Number(projectId),
       });
+      props.onOpenChange?.(false);
+    },
+    onError(error) {
+      if (error.data?.appCode === "FUNCTION_QUOTA_EXCEEDED") {
+        toast.error(
+          <div className="flex flex-col gap-2">
+            <p>{error.message}</p>
+            <Button asChild className="w-auto">
+              <Link
+                href={`/projects/${projectId}/settings/billing`}
+                target="_blank"
+                className="text-sm text-muted-foreground"
+              >
+                Upgrade your plan
+              </Link>
+            </Button>
+          </div>,
+        );
+      } else {
+        toast.error(error.message);
+      }
       props.onOpenChange?.(false);
     },
   });

@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { env } from "~/env";
-import { quota } from "~/lib/server/products";
-import { currentMonthUsage } from "~/lib/server/products/usage";
+import { AppError } from "~/lib/server/error/app";
+import { quotaService } from "~/lib/server/products";
 import xZod from "~/lib/shared/validation";
 import schema from "~/server/db/schema";
 import { protectedProcedure } from "~/trpc/trpc";
@@ -24,21 +24,21 @@ export const createFunction = protectedProcedure
       throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
     }
 
-    const convectFunctionsUsage = await currentMonthUsage
-      .convectFunctions(input.projectId)
-      .then((d) => d.usage);
-    const allowedFunctions = await quota.byProject("convectFunctions", project);
-    if (convectFunctionsUsage >= allowedFunctions) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: `You have reached the limit of ${allowedFunctions} functions for this project. Upgrade your plan to add more functions.`,
-      });
-    }
-
     await throwIfNotProjectCollaborator({
       projectId: input.projectId,
       userId: ctx.session.user.id,
     });
+
+    const { remaining, quota } = await quotaService.remainingQuota(
+      "convectFunctions",
+      input.projectId,
+    );
+    if (remaining <= 0) {
+      throw new AppError(
+        `You have reached the limit of ${quota} functions for this project. Upgrade your plan to add more functions.`,
+        "FUNCTION_QUOTA_EXCEEDED",
+      );
+    }
 
     await ctx.db
       .insert(schema.convectFunctions)
