@@ -35,6 +35,9 @@ class QuotaService {
     return this.byPlan(product, await planLoader.byProjectId(projectId));
   }
 
+  /**
+   * Returns the remaining quota for the project for the current month.
+   */
   async remainingQuota(product: ExtendedPricing["key"], projectId: number) {
     const currentUsage = await currentMonthUsage[product](projectId);
     const quota = await this.byProjectId(product, projectId);
@@ -42,6 +45,19 @@ class QuotaService {
       remaining: quota - currentUsage.usage,
       currentUsage: currentUsage.usage,
       quota,
+    };
+  }
+
+  /**
+   * Returns true if the project has used up its quota for the current month.
+   *
+   * This means the quota remaining is less than or equal to 0.
+   */
+  async hasUsedQuota(product: ExtendedPricing["key"], projectId: number) {
+    const remaining = await this.remainingQuota(product, projectId);
+    return {
+      ...remaining,
+      hasUsedQuota: remaining.remaining <= 0,
     };
   }
 }

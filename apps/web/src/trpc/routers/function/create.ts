@@ -18,7 +18,7 @@ export const createFunction = protectedProcedure
   .output(z.object({}))
   .mutation(async ({ ctx, input }) => {
     const project = await ctx.db.query.projects.findFirst({
-      where: (fields, { eq, and }) => and(eq(fields.id, input.projectId)),
+      where: (fields, { eq }) => eq(fields.id, input.projectId),
     });
     if (!project) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
@@ -29,11 +29,11 @@ export const createFunction = protectedProcedure
       userId: ctx.session.user.id,
     });
 
-    const { remaining, quota } = await quotaService.remainingQuota(
+    const { hasUsedQuota, quota } = await quotaService.hasUsedQuota(
       "convectFunctions",
       input.projectId,
     );
-    if (remaining <= 0) {
+    if (hasUsedQuota) {
       throw new AppError(
         `You have reached the limit of ${quota} functions for this project. Upgrade your plan to add more functions.`,
         "FUNCTION_QUOTA_EXCEEDED",
