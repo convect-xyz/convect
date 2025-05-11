@@ -1,6 +1,7 @@
 import { InferSelectModel } from "drizzle-orm";
 import schema from "~/server/db/schema";
 import { ExtendedPlan, ExtendedPricing, planLoader } from "./loader";
+import { currentMonthUsage } from "./usage";
 
 class QuotaService {
   async byPlan(productKey: ExtendedPricing["key"], plan: ExtendedPlan) {
@@ -33,6 +34,16 @@ class QuotaService {
   async byProjectId(product: ExtendedPricing["key"], projectId: number) {
     return this.byPlan(product, await planLoader.byProjectId(projectId));
   }
+
+  async remainingQuota(product: ExtendedPricing["key"], projectId: number) {
+    const currentUsage = await currentMonthUsage[product](projectId);
+    const quota = await this.byProjectId(product, projectId);
+    return {
+      remaining: quota - currentUsage.usage,
+      currentUsage: currentUsage.usage,
+      quota,
+    };
+  }
 }
 
-export const quota = new QuotaService();
+export const quotaService = new QuotaService();
