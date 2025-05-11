@@ -34,17 +34,17 @@ export const createFunction = protectedProcedure
       isFunctionNameTaken(ctx.db, input.name, input.projectId),
       quotaService.hasUsedQuota("convectFunctions", input.projectId),
     ]);
-    if (hasUsedQuota) {
-      throw new AppError(
-        `You have reached the limit of ${quota} functions for this project. Upgrade your plan to add more functions.`,
-        "FUNCTION_QUOTA_EXCEEDED",
-      );
-    }
     if (existing) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "Function name already in use",
       });
+    }
+    if (hasUsedQuota) {
+      throw new AppError(
+        `You have reached the limit of ${quota} functions for this project. Upgrade your plan to add more functions.`,
+        "FUNCTION_QUOTA_EXCEEDED",
+      );
     }
 
     await ctx.db
