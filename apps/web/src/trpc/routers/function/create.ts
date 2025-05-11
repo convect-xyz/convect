@@ -32,7 +32,7 @@ export const createFunction = protectedProcedure
 
     const [existing, { hasUsedQuota, quota }] = await Promise.all([
       isFunctionNameTaken(ctx.db, input.name, input.projectId),
-      retrieveQuotaStatus(input.projectId),
+      quotaService.hasUsedQuota("convectFunctions", input.projectId),
     ]);
     if (hasUsedQuota) {
       throw new AppError(
@@ -71,13 +71,4 @@ async function isFunctionNameTaken(
   });
 
   return existing;
-}
-
-async function retrieveQuotaStatus(projectId: number) {
-  const { hasUsedQuota, quota } = await quotaService.hasUsedQuota(
-    "convectFunctions",
-    projectId,
-  );
-
-  return { hasUsedQuota, quota };
 }
