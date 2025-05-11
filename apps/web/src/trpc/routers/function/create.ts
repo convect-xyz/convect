@@ -1,3 +1,4 @@
+import { getDb } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { env } from "~/env";
@@ -29,15 +30,21 @@ export const createFunction = protectedProcedure
       userId: ctx.session.user.id,
     });
 
-    const { hasUsedQuota, quota } = await quotaService.hasUsedQuota(
-      "convectFunctions",
-      input.projectId,
-    );
+    const [existing, { hasUsedQuota, quota }] = await Promise.all([
+      isFunctionNameTaken(ctx.db, input.name, input.projectId),
+      retrieveQuotaStatus(input.projectId),
+    ]);
     if (hasUsedQuota) {
       throw new AppError(
         `You have reached the limit of ${quota} functions for this project. Upgrade your plan to add more functions.`,
         "FUNCTION_QUOTA_EXCEEDED",
       );
+    }
+    if (existing) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Function name already in use",
+      });
     }
 
     await ctx.db
@@ -52,3 +59,25 @@ export const createFunction = protectedProcedure
 
     return {};
   });
+
+async function isFunctionNameTaken(
+  db: ReturnType<typeof getDb>,
+  name: string,
+  projectId: number,
+) {
+  const existing = await db.query.convectFunctions.findFirst({
+    where: (fields, { eq, and }) =>
+      and(eq(fields.name, name), eq(fields.projectId, projectId)),
+  });
+
+  return existing;
+}
+
+async function retrieveQuotaStatus(projectId: number) {
+  const { hasUsedQuota, quota } = await quotaService.hasUsedQuota(
+    "convectFunctions",
+    projectId,
+  );
+
+  return { hasUsedQuota, quota };
+}
