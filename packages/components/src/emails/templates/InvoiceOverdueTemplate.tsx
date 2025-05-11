@@ -20,11 +20,13 @@ interface InvoiceOverdueTemplateProps {
     value: number;
     currency: string;
   };
+  nextPaymentDate?: Date;
 }
 
 export default function InvoiceOverdueTemplate({
   project,
   amount,
+  nextPaymentDate,
 }: Readonly<InvoiceOverdueTemplateProps>) {
   return (
     <EmailWrapper preview={<Preview>Your invoice is overdue.</Preview>}>
@@ -49,6 +51,17 @@ export default function InvoiceOverdueTemplate({
               currency: amount.currency,
             }).format(amount.value / 100)}
           </Text>
+
+          {nextPaymentDate && (
+            <Text>
+              We'll try to charge you again on{" "}
+              {nextPaymentDate.toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </Text>
+          )}
           <EmailButton
             className="mt-6"
             href={`${getAppHostname()}/projects/${project.id}/settings/billing`}
