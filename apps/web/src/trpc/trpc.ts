@@ -11,6 +11,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { auth } from "~/auth";
+import { AppError } from "~/lib/server/error/app";
 
 import { db } from "~/server/db";
 
@@ -52,6 +53,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
       ...shape,
       data: {
         ...shape.data,
+        appCode: error.cause instanceof AppError ? error.cause.appCode : null,
         zodError:
           error.cause instanceof ZodError ? error.cause.flatten() : null,
       },
