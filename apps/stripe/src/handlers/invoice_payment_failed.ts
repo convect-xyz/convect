@@ -38,6 +38,9 @@ export async function handleInvoicePaymentFailed(
         value: data.amount_due,
         currency: data.currency,
       },
+      nextPaymentDate: data.next_payment_attempt
+        ? new Date(secondsToMilliseconds(data.next_payment_attempt))
+        : undefined,
     }),
   ]);
 }
@@ -67,6 +70,7 @@ async function sendEmail(data: {
     value: number;
     currency: string;
   };
+  nextPaymentDate?: Date;
 }) {
   return sendNoReply({
     subject: "Your Convect payment has failed",
@@ -80,6 +84,7 @@ async function sendEmail(data: {
         value: data.amount.value,
         currency: data.amount.currency,
       },
+      nextPaymentDate: data.nextPaymentDate,
     }),
   }).catch((err) => {
     console.error(err);

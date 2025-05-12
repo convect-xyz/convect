@@ -6,6 +6,8 @@ export const updatePlan = adminProcedure
   .input(
     z.object({
       projectId: z.number(),
+      backdateStartDateSecs: z.number().optional(),
+      billingCycleAnchorSecs: z.number().optional(),
       prices: z.array(
         z.object({
           key: z
@@ -47,5 +49,10 @@ export const updatePlan = adminProcedure
       pricing: prices,
     });
 
-    await planService.switchPlan(project, "ENTERPRISE");
+    await planService.switchPlan(project, "ENTERPRISE", {
+      create: {
+        backdateStartDateSecs: input.backdateStartDateSecs,
+        billingCycleAnchorSecs: input.billingCycleAnchorSecs,
+      },
+    });
   });
