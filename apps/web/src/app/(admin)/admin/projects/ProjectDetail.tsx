@@ -1,10 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { format, millisecondsToSeconds } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { ReactNode } from "react";
 import { useForm, useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import { Calendar } from "~/components/ui/calendar";
 import {
   Form,
   FormControl,
@@ -13,7 +17,13 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import { formatDate } from "~/lib/shared/utils/formatting";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useAdminProject } from "./hooks/useAdminProject";
 
@@ -47,8 +57,6 @@ export default function ProjectDetail(props: { projectId?: number }) {
         </div>
       </div>
 
-      <PlanInformation projectId={props.projectId} />
-
       <Plan projectId={props.projectId} />
     </div>
   );
@@ -56,38 +64,168 @@ export default function ProjectDetail(props: { projectId?: number }) {
 
 function PlanInformation(props: { projectId: number }) {
   const { data } = useAdminProject(props.projectId);
-
+  const form = useFormContext<Values>();
   if (!data) {
     return null;
   }
 
   if (!data.stripeSubscription) {
-    return null;
+    return (
+      <div className="mt-4 flex flex-col divide-y rounded-md border">
+        <PlanInformationRow
+          label="Backdate Start Date"
+          value={
+            <FormField
+              control={form.control}
+              name="backdateStartDateSecs"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          size="sm"
+                          className={cn(
+                            "w-[180px] pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground",
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(
+                              new Date(
+                                Date.UTC(
+                                  date.getFullYear(),
+                                  date.getMonth(),
+                                  date.getDate(),
+                                ),
+                              ),
+                            );
+                          } else {
+                            field.onChange(undefined);
+                          }
+                        }}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date("1900-01-01")
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          }
+        />
+        <PlanInformationRow
+          label="Billing Cycle Anchor"
+          value={
+            <FormField
+              control={form.control}
+              name="billingCycleAnchorSecs"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          size="sm"
+                          className={cn(
+                            "w-[180px] pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground",
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(
+                              new Date(
+                                Date.UTC(
+                                  date.getFullYear(),
+                                  date.getMonth(),
+                                  date.getDate(),
+                                ),
+                              ),
+                            );
+                          } else {
+                            field.onChange(undefined);
+                          }
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          }
+        />
+      </div>
+    );
   }
 
   return (
     <div className="mt-4 flex flex-col divide-y rounded-md border">
-      <div className="flex items-center justify-between gap-2 p-3">
-        <div className="text-xs">Billing Cycle Anchor</div>
-        <div className="text-xs text-muted-foreground">
-          {formatDate(
-            new Date(data.stripeSubscription.billing_cycle_anchor * 1000),
-          )}
-        </div>
-      </div>
-      <div className="flex items-center justify-between gap-2 p-3">
-        <div className="text-xs">Next Billing Date</div>
-        <div className="text-xs text-muted-foreground">
-          {formatDate(
-            new Date(data.stripeSubscription.current_period_end * 1000),
-          )}
-        </div>
-      </div>
+      <PlanInformationRow
+        label="Billing Start Date"
+        value={formatDate(new Date(data.stripeSubscription.start_date * 1000))}
+      />
+      <PlanInformationRow
+        label="Billing Cycle Anchor"
+        value={formatDate(
+          new Date(data.stripeSubscription.billing_cycle_anchor * 1000),
+        )}
+      />
+      <PlanInformationRow
+        label="Next Billing Date"
+        value={formatDate(
+          new Date(data.stripeSubscription.current_period_end * 1000),
+        )}
+      />
     </div>
   );
 }
 
+function PlanInformationRow(props: { label: ReactNode; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2 p-3">
+      <div className="text-xs">{props.label}</div>
+      <div className="text-xs text-muted-foreground">{props.value}</div>
+    </div>
+  );
+}
 const formSchema = z.object({
+  backdateStartDateSecs: z.date().optional(),
+  billingCycleAnchorSecs: z.date().optional(),
   pricing: z.array(
     z
       .object({
@@ -145,9 +283,17 @@ function Plan(props: { projectId: number }) {
     },
   });
 
+  console.log(form.watch("backdateStartDateSecs"));
+
   const onSubmit = (values: Values) =>
     updatePlan({
       projectId: props.projectId,
+      backdateStartDateSecs: values.backdateStartDateSecs
+        ? millisecondsToSeconds(values.backdateStartDateSecs.getTime())
+        : undefined,
+      billingCycleAnchorSecs: values.billingCycleAnchorSecs
+        ? millisecondsToSeconds(values.billingCycleAnchorSecs.getTime())
+        : undefined,
       prices: values.pricing.map((pricing) => ({
         ...pricing,
         price:
@@ -179,6 +325,8 @@ function Plan(props: { projectId: number }) {
               Save
             </Button>
           </div>
+          <PlanInformation projectId={props.projectId} />
+
           <div className="flex flex-col gap-2">
             {data?.plan.pricing.map((pricing, index) => {
               return (

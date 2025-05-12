@@ -5,13 +5,6 @@ export function useAdminProject(projectId?: number) {
     { projectId: projectId ?? -1 },
     {
       enabled: !!projectId,
-
-      select(data) {
-        return {
-          ...data,
-          isEditable: data.planType === "HOBBY" || data.planType === "PRO",
-        };
-      },
     },
   );
 }

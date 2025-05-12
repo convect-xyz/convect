@@ -86,11 +86,20 @@ const plans = [
     price: "Custom",
     schedule: "MONTHLY",
     additionalFeesApply: true,
-    action: (props: ActionProps) => (
-      <a href="mailto:support@convect.xyz" target="_blank">
-        <Button className="w-full">Contact Us</Button>
-      </a>
-    ),
+    action: (props: ActionProps) => {
+      const { data: activePlan } = useActivePlan();
+      return (
+        <Button
+          className="w-full"
+          variant={activePlan?.name === "ENTERPRISE" ? "outline" : "default"}
+          disabled={activePlan?.name === "ENTERPRISE"}
+        >
+          <a href="mailto:support@convect.xyz" target="_blank">
+            {activePlan?.name === "ENTERPRISE" ? "Current Plan" : "Contact Us"}
+          </a>
+        </Button>
+      );
+    },
   },
 ];
 
@@ -125,8 +134,11 @@ function ChangePlanDialog(props: DialogProps) {
           </div>
 
           <div className="mb-4 mt-8 text-center text-sm text-muted-foreground">
-            *Additional fees apply for usage outside of the included limits. See
-            <Link href="/pricing"> pricing page</Link> for more details.
+            *Additional fees apply for usage outside of the included limits. See{" "}
+            <Link href="/pricing" target="_blank" className="underline">
+              pricing
+            </Link>{" "}
+            page for more details.
           </div>
         </div>
       </DialogContent>

@@ -39,7 +39,7 @@ const _productMetadata = {
     }),
   },
   gbHours: {
-    name: "MB Seconds",
+    name: "GB Hours",
     billing: {
       _type: "tiered",
       stripeMeterId: stripeEnv({
@@ -47,7 +47,7 @@ const _productMetadata = {
         test: "mtr_test_61SVdJZtFpAtSv84541Ru90pWJjEEJua",
       }),
     },
-    unitSymbol: "MB-Seconds",
+    unitSymbol: "GB-Hours",
     unitSize: 1,
     stripeProductId: stripeEnv({
       live: "prod_SH5tWNMU8isZoF",

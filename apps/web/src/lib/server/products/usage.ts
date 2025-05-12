@@ -38,7 +38,7 @@ const getGbHoursAndInvocations = cache(
   },
 );
 
-export const _usage: Record<
+const _usage: Record<
   keyof typeof availableProducts,
   (options: UsageOptions) => Promise<number>
 > = {
