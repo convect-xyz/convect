@@ -20,7 +20,7 @@ export const getProject = adminProcedure
       id: z.number(),
       name: z.string(),
       stripeSubscription: z.custom<Stripe.Subscription>().nullable(),
-      planType: z.enum(["HOBBY", "PRO", "ENTERPRISE"]),
+      planType: z.enum(["FREE", "HOBBY", "PRO", "ENTERPRISE"]),
       plan: planSchema.transform((data) => {
         return {
           ...data,

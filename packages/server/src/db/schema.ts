@@ -158,9 +158,10 @@ export const projects = createTable(
   })
 );
 
-export const projectRelations = relations(projects, ({ one, many }) => ({
+export const projectsRelations = relations(projects, ({ one, many }) => ({
   user: one(users, { fields: [projects.userId], references: [users.id] }),
   collaborators: many(projectCollaborators),
+  functions: many(convectFunctions),
 }));
 
 export const projectCollaborators = createTable(
@@ -231,11 +232,6 @@ export const pendingInvitesRelations = relations(pendingInvites, ({ one }) => ({
     fields: [pendingInvites.projectId],
     references: [projects.id],
   }),
-}));
-
-export const projectsRelations = relations(projects, ({ one, many }) => ({
-  user: one(users, { fields: [projects.userId], references: [users.id] }),
-  collaborators: many(projectCollaborators),
 }));
 
 export const convectFunctions = createTable(

@@ -12,6 +12,10 @@ async function createSubscription(
   planType: "HOBBY" | "PRO" | "ENTERPRISE",
   plan: z.infer<typeof planSchema>,
   stripeCustomerId: string,
+  options?: {
+    backdateStartDateSecs?: number;
+    billingCycleAnchorSecs?: number;
+  },
 ) {
   const subscription = await stripe.subscriptions.create({
     customer: stripeCustomerId,
@@ -19,6 +23,12 @@ async function createSubscription(
     metadata: {
       planType,
     },
+    ...(options?.backdateStartDateSecs && {
+      backdate_start_date: options.backdateStartDateSecs,
+    }),
+    ...(options?.billingCycleAnchorSecs && {
+      billing_cycle_anchor: options.billingCycleAnchorSecs,
+    }),
   });
 
   await db
@@ -160,6 +170,12 @@ class PlanService {
   async switchPlan(
     project: InferSelectModel<typeof schema.projects>,
     newPlan: "HOBBY" | "PRO" | "ENTERPRISE",
+    options?: {
+      create?: {
+        backdateStartDateSecs?: number;
+        billingCycleAnchorSecs?: number;
+      };
+    },
   ) {
     const plan =
       newPlan === "ENTERPRISE"
@@ -174,7 +190,12 @@ class PlanService {
     if (activeSubscription) {
       await updateSubscription(newPlan, plan, activeSubscription);
     } else {
-      await createSubscription(newPlan, plan, stripeCustomerId);
+      await createSubscription(
+        newPlan,
+        plan,
+        stripeCustomerId,
+        options?.create,
+      );
     }
 
     await db
@@ -183,6 +204,14 @@ class PlanService {
         planType: newPlan,
       })
       .where(eq(schema.projects.id, project.id));
+  }
+
+  async cancelSubscription(project: InferSelectModel<typeof schema.projects>) {
+    if (!project.stripeSubscriptionId) {
+      return;
+    }
+
+    await stripe.subscriptions.cancel(project.stripeSubscriptionId);
   }
 }
 

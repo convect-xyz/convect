@@ -123,7 +123,7 @@ function DeleteProject() {
   const { mutateAsync: deleteProject, isPending: isDeleting } =
     api.project.delete.useMutation({
       onSuccess() {
-        router.push(`/projects/${projectId}`);
+        router.push(`/projects`);
       },
     });
 

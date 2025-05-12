@@ -111,7 +111,7 @@ class PlanLoader {
   }
 
   async byPlanType(
-    plan: "HOBBY" | "PRO" | number,
+    plan: "HOBBY" | "PRO",
   ): Promise<z.infer<typeof xPlanSchema>> {
     if (plan === "HOBBY") {
       const pricing = require(
