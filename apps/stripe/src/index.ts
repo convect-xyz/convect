@@ -8,6 +8,7 @@ import { handleInvoicePaymentFailed } from "./handlers/invoice_payment_failed";
 import { handleInvoicePaymentSucceeded } from "./handlers/invoice_payment_succeeded";
 import { handlePaymentMethodAttached } from "./handlers/payment_method_attached";
 import { handleSubscriptionCreatedOrUpdated } from "./handlers/subscription_created_or_updated";
+import { handleSubscriptionDeleted } from "./handlers/subscription_deleted";
 
 function span(name: string, fn: () => Promise<any>) {
   return startSpan({ name }, async (_) => {
@@ -57,6 +58,11 @@ async function processStripeEvent(event: Stripe.Event) {
     case "customer.subscription.updated":
       await span("customer.subscription.updated", () =>
         handleSubscriptionCreatedOrUpdated(event)
+      );
+      break;
+    case "customer.subscription.deleted":
+      await span("customer.subscription.deleted", () =>
+        handleSubscriptionDeleted(event)
       );
       break;
     default:

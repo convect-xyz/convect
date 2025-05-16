@@ -1,0 +1,1 @@
+ALTER TYPE "plan_type" ADD VALUE 'BASE';

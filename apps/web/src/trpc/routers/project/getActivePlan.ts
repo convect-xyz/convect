@@ -2,6 +2,7 @@ import { schema } from "@convect-xyz/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure } from "~/trpc/trpc";
+import { throwIfNotProjectCollaborator } from "../permissions";
 
 export const getActivePlan = protectedProcedure
   .input(
@@ -23,6 +24,11 @@ export const getActivePlan = protectedProcedure
     if (!project) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
+
+    await throwIfNotProjectCollaborator({
+      projectId: input.projectId,
+      userId: ctx.session.user.id,
+    });
 
     return {
       name: project.planType,
