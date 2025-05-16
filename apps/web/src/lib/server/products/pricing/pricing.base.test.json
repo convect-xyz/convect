@@ -11,7 +11,7 @@
       "stripePriceId": ""
     },
     {
-      "key": "gbHours",
+      "key": "mbSeconds",
       "price": {
         "_type": "tiered",
         "includedFree": 0,
@@ -32,7 +32,7 @@
       "key": "convectFunctions",
       "price": {
         "_type": "tiered",
-        "includedFree": 2,
+        "includedFree": 0,
         "priceInCentsPerAdditionalUnit": 0
       },
       "stripePriceId": ""

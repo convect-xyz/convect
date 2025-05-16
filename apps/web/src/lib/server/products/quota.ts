@@ -19,7 +19,7 @@ class QuotaService {
 
   async byPlanType(
     productKey: ExtendedPricing["key"],
-    planType: "HOBBY" | "PRO",
+    planType: "BASE" | "HOBBY" | "PRO",
   ) {
     return this.byPlan(productKey, await planLoader.byPlanType(planType));
   }

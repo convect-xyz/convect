@@ -42,7 +42,9 @@ export const createFunction = protectedProcedure
     }
     if (hasUsedQuota) {
       throw new AppError(
-        `You have reached the limit of ${quota} functions for this project. Upgrade your plan to add more functions.`,
+        project.planType === "BASE"
+          ? `You do not have an active subscription. Upgrade your plan to create Convect Functions.`
+          : `You have reached the limit of ${quota} functions for this project. Upgrade your plan to add more Convect Functions.`,
         "FUNCTION_QUOTA_EXCEEDED",
       );
     }
