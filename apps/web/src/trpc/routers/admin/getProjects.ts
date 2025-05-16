@@ -15,7 +15,7 @@ export const getProjects = adminProcedure
         z.object({
           id: z.number(),
           name: z.string(),
-          planType: z.enum(["HOBBY", "PRO", "ENTERPRISE"]),
+          planType: z.enum(["BASE", "HOBBY", "PRO", "ENTERPRISE"]),
         }),
       ),
       nextCursor: z.number().nullish(),
