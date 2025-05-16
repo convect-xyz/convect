@@ -2,6 +2,7 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { getReactQueryHelper } from "~/trpc/server";
 import BackToSettings from "../(components)/BackToSettings";
 import ActivePlan from "./ActivePlan";
+import CancelPlan from "./CancelPlan";
 import PaymentMethods from "./PaymentMethods";
 import Usage from "./Usage";
 
@@ -29,6 +30,9 @@ export default async function Page(props: { params: { projectId: string } }) {
           </div>
           <div className="mt-4">
             <Usage />
+          </div>
+          <div className="mt-4">
+            <CancelPlan />
           </div>
         </div>
       </div>

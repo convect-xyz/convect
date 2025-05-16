@@ -111,8 +111,15 @@ class PlanLoader {
   }
 
   async byPlanType(
-    plan: "HOBBY" | "PRO",
+    plan: "BASE" | "HOBBY" | "PRO",
   ): Promise<z.infer<typeof xPlanSchema>> {
+    if (plan === "BASE") {
+      const pricing = require(
+        `./pricing/pricing.base.${env.PLAN_ENVIRONMENT}.json`,
+      );
+      return xPlanSchema.parse(pricing);
+    }
+
     if (plan === "HOBBY") {
       const pricing = require(
         `./pricing/pricing.hobby.${env.PLAN_ENVIRONMENT}.json`,
@@ -133,12 +140,8 @@ class PlanLoader {
   async byProject(
     project: InferSelectModel<typeof schema.projects>,
   ): Promise<z.infer<typeof xPlanSchema>> {
-    if (project.planType === "HOBBY") {
-      return this.byPlanType("HOBBY");
-    }
-
-    if (project.planType === "PRO") {
-      return this.byPlanType("PRO");
+    if (project.planType !== "ENTERPRISE") {
+      return this.byPlanType(project.planType);
     }
 
     return xPlanSchema.parse(project.plan);
