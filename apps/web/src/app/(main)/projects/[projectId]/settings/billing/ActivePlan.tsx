@@ -3,6 +3,7 @@
 import { DialogProps } from "@radix-ui/react-dialog";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   PricingCard,
   PricingDescription,
@@ -159,6 +160,9 @@ function ChangePlanButton(props: {
         refetchActivePlan();
         refetchUsage();
         props.onPlanChanged();
+      },
+      onError: (error) => {
+        toast.error(error.message);
       },
     });
 

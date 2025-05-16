@@ -2,6 +2,7 @@
 
 import { DialogProps } from "@radix-ui/react-dialog";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,15 +17,18 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { api } from "~/trpc/react";
 import { useParams } from "../../hooks/useParams";
-import { useProject } from "../../hooks/useProject";
 import { useActivePlan } from "./hooks/useActivePlan";
 import { useUsage } from "./hooks/useUsage";
 
 export default function CancelPlan() {
   const [open, setOpen] = useState(false);
-  const { data: activePlan } = useActivePlan();
-  const { data: project } = useProject();
-
+  const { projectId } = useParams();
+  const { mutateAsync: cancelPlan, isPending } =
+    api.billing.cancelPlan.useMutation({
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   return (
     <>
       <div className="flex flex-col gap-4">
@@ -33,29 +37,24 @@ export default function CancelPlan() {
             <div className="flex items-center justify-between">
               <div className="flex flex-1 items-center gap-2">
                 <div className="">Cancel Plan</div>
-                <div className="rounded-full border bg-background px-2 py-[2px] text-xs text-muted-foreground">
-                  {activePlan?.name}
-                </div>
               </div>
-              <Button onClick={() => setOpen(true)}>Cancel Plan</Button>
+              <Button onClick={() => setOpen(true)} isLoading={isPending}>
+                Cancel Plan
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
-      <CancelPlanDialog open={open} onOpenChange={setOpen} />
+      <CancelPlanDialog
+        open={open}
+        onOpenChange={setOpen}
+        onConfirm={() => cancelPlan({ projectId })}
+      />
     </>
   );
 }
 
-function CancelPlanDialog(props: DialogProps) {
-  const { projectId } = useParams();
-  const { mutateAsync: cancelPlan, isPending } =
-    api.billing.cancelPlan.useMutation({
-      onSuccess: () => {
-        props.onOpenChange?.(false);
-      },
-    });
-
+function CancelPlanDialog(props: DialogProps & { onConfirm: () => void }) {
   return (
     <AlertDialog {...props}>
       <AlertDialogContent>
@@ -68,10 +67,7 @@ function CancelPlanDialog(props: DialogProps) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => cancelPlan({ projectId })}
-            disabled={isPending}
-          >
+          <AlertDialogAction onClick={() => props.onConfirm()}>
             Confirm
           </AlertDialogAction>
         </AlertDialogFooter>

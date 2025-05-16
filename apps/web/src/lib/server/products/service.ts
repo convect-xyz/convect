@@ -1,12 +1,21 @@
 import "server-only";
 
 import { schema } from "@convect-xyz/server";
+import { TRPCError } from "@trpc/server";
 import { eq, InferSelectModel } from "drizzle-orm";
 import Stripe from "stripe";
 import { z } from "zod";
 import { db } from "~/server/db";
 import { stripe } from "../stripe";
 import { ExtendedPricing, planLoader, planSchema, xPlanSchema } from "./loader";
+import { quotaService } from "./quota";
+import { currentMonthUsage } from "./usage";
+
+const planOrder = ["BASE", "HOBBY", "PRO", "ENTERPRISE"] as const;
+
+const getPlanIndex = (planType: "HOBBY" | "PRO" | "ENTERPRISE") => {
+  return planOrder.indexOf(planType);
+};
 
 async function createSubscription(
   planType: "HOBBY" | "PRO" | "ENTERPRISE",
@@ -177,6 +186,8 @@ class PlanService {
       };
     },
   ) {
+    await this.ensureDowngradeCompliance(project, newPlan);
+
     const plan =
       newPlan === "ENTERPRISE"
         ? await planLoader.customPlanByProjectId(project.id)
@@ -211,7 +222,44 @@ class PlanService {
       return;
     }
 
+    await this.ensureDowngradeCompliance(project, "BASE");
+
     await stripe.subscriptions.cancel(project.stripeSubscriptionId);
+
+    await db
+      .update(schema.projects)
+      .set({
+        stripeSubscriptionId: null,
+        planType: "BASE",
+      })
+      .where(eq(schema.projects.id, project.id));
+  }
+
+  async ensureDowngradeCompliance(
+    project: InferSelectModel<typeof schema.projects>,
+    newPlan: "BASE" | "HOBBY" | "PRO" | "ENTERPRISE",
+  ) {
+    const convectFunctionsUsage = await currentMonthUsage
+      .convectFunctions(project.id)
+      .then((d) => d.usage);
+    const allowedFunctionsForPlan =
+      newPlan === "ENTERPRISE"
+        ? await quotaService.byPlan(
+            "convectFunctions",
+            xPlanSchema.parse(project.plan),
+          )
+        : await quotaService.byPlanType("convectFunctions", newPlan);
+
+    if (convectFunctionsUsage > allowedFunctionsForPlan) {
+      const message =
+        newPlan === "BASE"
+          ? "To cancel your plan you need to delete all Convect Functions first."
+          : `To switch to a ${newPlan} plan, you must have at-most ${allowedFunctionsForPlan} Convect Functions.`;
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message,
+      });
+    }
   }
 }
 
