@@ -26,6 +26,23 @@ export default function ActivePlan() {
   const [open, setOpen] = useState(false);
   const { data: activePlan } = useActivePlan();
   const { data: project } = useProject();
+
+  if (activePlan?.isActive("BASE")) {
+    return (
+      <>
+        <Card className="bg-background">
+          <CardContent className="p-8">
+            <div className="flex flex-col items-center justify-between gap-4">
+              <div className="">You don't have an active plan.</div>
+              <Button onClick={() => setOpen(true)}>Activate Plan</Button>
+            </div>
+          </CardContent>
+        </Card>{" "}
+        <ChangePlanDialog open={open} onOpenChange={setOpen} />
+      </>
+    );
+  }
+
   return (
     <>
       <div className="mb-4">

@@ -11,7 +11,8 @@ export function useActivePlan() {
       refetchInterval: 1000 * 5,
       select: (data) => ({
         ...data,
-        isActive: (plan: "HOBBY" | "PRO" | "ENTERPRISE") => data.name === plan,
+        isActive: (plan: "BASE" | "HOBBY" | "PRO" | "ENTERPRISE") =>
+          data.name === plan,
       }),
     },
   );

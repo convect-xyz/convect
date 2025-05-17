@@ -5,14 +5,18 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { formatCurrency } from "~/lib/shared/utils/formatting";
 import { RouterOutputs } from "~/trpc/shared";
-import { useParams } from "../../hooks/useParams";
+import { useActivePlan } from "./hooks/useActivePlan";
 import { useUsage } from "./hooks/useUsage";
 
 type UsageMetric = RouterOutputs["project"]["getUsage"][number];
 
 export default function Usage() {
-  const { projectId } = useParams();
   const { data: usage } = useUsage();
+  const { data: activePlan } = useActivePlan();
+
+  if (activePlan?.isActive("BASE")) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-4">
