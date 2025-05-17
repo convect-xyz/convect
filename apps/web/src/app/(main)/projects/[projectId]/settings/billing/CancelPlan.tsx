@@ -23,12 +23,24 @@ import { useUsage } from "./hooks/useUsage";
 export default function CancelPlan() {
   const [open, setOpen] = useState(false);
   const { projectId } = useParams();
+  const { data: activePlan, refetch: refetchActivePlan } = useActivePlan();
+  const { refetch: refetchUsage } = useUsage();
   const { mutateAsync: cancelPlan, isPending } =
     api.billing.cancelPlan.useMutation({
+      onSuccess: () => {
+        toast.success("Your plan has been cancelled.");
+        refetchActivePlan();
+        refetchUsage();
+      },
       onError: (error) => {
         toast.error(error.message);
       },
     });
+
+  if (activePlan?.isActive("BASE")) {
+    return null;
+  }
+
   return (
     <>
       <div className="flex flex-col gap-4">
