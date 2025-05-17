@@ -1,3 +1,4 @@
+import { schema } from "@convect-xyz/server";
 import Stripe from "stripe";
 import { z } from "zod";
 import {
@@ -20,7 +21,7 @@ export const getProject = adminProcedure
       id: z.number(),
       name: z.string(),
       stripeSubscription: z.custom<Stripe.Subscription>().nullable(),
-      planType: z.enum(["HOBBY", "PRO", "ENTERPRISE"]),
+      planType: z.enum(schema.planEnum.enumValues),
       plan: planSchema.transform((data) => {
         return {
           ...data,

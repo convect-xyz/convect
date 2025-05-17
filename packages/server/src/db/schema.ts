@@ -16,7 +16,12 @@ import { type AdapterAccount } from "next-auth/adapters";
 
 export const createTable = pgTableCreator((name) => `web_${name}`);
 
-export const planEnum = pgEnum("plan_type", ["HOBBY", "PRO", "ENTERPRISE"]);
+export const planEnum = pgEnum("plan_type", [
+  "BASE",
+  "HOBBY",
+  "PRO",
+  "ENTERPRISE",
+]);
 
 export type PlanType = (typeof planEnum.enumValues)[number];
 
@@ -137,7 +142,7 @@ export const projects = createTable(
     stripeSubscriptionId: varchar("stripe_subscription_id", {
       length: 255,
     }).unique(),
-    planType: planEnum("plan_type").default("HOBBY").notNull(),
+    planType: planEnum("plan_type").default("BASE").notNull(),
     planUrl: varchar("plan_url", { length: 255 }),
     plan: json("plan"),
     billingStatus: text("billing_status", {

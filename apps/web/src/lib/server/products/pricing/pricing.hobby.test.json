@@ -11,7 +11,7 @@
       "stripePriceId": "price_1RMFe7Ru90pWJjEEeSP33VZN"
     },
     {
-      "key": "gbHours",
+      "key": "mbSeconds",
       "price": {
         "_type": "tiered",
         "includedFree": 100,

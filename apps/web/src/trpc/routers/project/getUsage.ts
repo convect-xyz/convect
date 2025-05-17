@@ -52,7 +52,7 @@ export const getUsage = protectedProcedure
     const results = await Promise.all([
       execute(usage.convectFunctions),
       execute(usage.processedTransactions),
-      execute(usage.gbHours),
+      execute(usage.mbSeconds),
       execute(usage.invocations),
     ]);
 

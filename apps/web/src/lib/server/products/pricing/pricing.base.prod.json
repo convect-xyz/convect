@@ -1,0 +1,49 @@
+{
+  "id": "base-test",
+  "pricing": [
+    {
+      "key": "processedTransactions",
+      "price": {
+        "_type": "tiered",
+        "includedFree": 0,
+        "priceInCentsPerAdditionalUnit": 0
+      },
+      "stripePriceId": ""
+    },
+    {
+      "key": "mbSeconds",
+      "price": {
+        "_type": "tiered",
+        "includedFree": 0,
+        "priceInCentsPerAdditionalUnit": 0
+      },
+      "stripePriceId": ""
+    },
+    {
+      "key": "invocations",
+      "price": {
+        "_type": "tiered",
+        "includedFree": 0,
+        "priceInCentsPerAdditionalUnit": 0
+      },
+      "stripePriceId": ""
+    },
+    {
+      "key": "convectFunctions",
+      "price": {
+        "_type": "tiered",
+        "includedFree": 0,
+        "priceInCentsPerAdditionalUnit": 0
+      },
+      "stripePriceId": ""
+    },
+    {
+      "key": "basePlan",
+      "price": {
+        "_type": "fixed",
+        "priceInCents": 0
+      },
+      "stripePriceId": ""
+    }
+  ]
+}

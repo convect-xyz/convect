@@ -17,13 +17,13 @@ export type UsageFn = (options: UsageOptions) => Promise<{
   usage: number;
 }>;
 
-const getGbHoursAndInvocations = cache(
+const getMbSecondsAndInvocations = cache(
   async (projectId: number, periodStart: number, periodEnd: number) => {
     return analysisDb
       .select({
-        gbHour:
-          sql<string>`SUM((billed_duration_ms / 3600000.0) * (memory_size_mb / 1024.0))`.as(
-            "gbHour",
+        mbSeconds:
+          sql<string>`SUM((billed_duration_ms / 1000.0) * memory_size_mb)`.as(
+            "mbSeconds",
           ),
         numInvocations: count(analysisSchema.reportedMetrics.id),
       })
@@ -67,18 +67,18 @@ const _usage: Record<
 
     return numProcessedTransactions[0]?.count ?? 0;
   },
-  gbHours: async ({ projectId, periodStart, periodEnd }) => {
-    const gbHours = await getGbHoursAndInvocations(
+  mbSeconds: async ({ projectId, periodStart, periodEnd }) => {
+    const mbSeconds = await getMbSecondsAndInvocations(
       projectId,
       periodStart,
       periodEnd,
     );
-    const result = gbHours.pop()!;
+    const result = mbSeconds.pop()!;
 
-    return Number(result.gbHour);
+    return Number(result.mbSeconds);
   },
   invocations: async ({ projectId, periodStart, periodEnd }) => {
-    const invocations = await getGbHoursAndInvocations(
+    const invocations = await getMbSecondsAndInvocations(
       projectId,
       periodStart,
       periodEnd,
