@@ -8,6 +8,7 @@
  */
 
 import { initTRPC, TRPCError } from "@trpc/server";
+import { TRPC_ERROR_CODES_BY_KEY } from "@trpc/server/unstable-core-do-not-import";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { auth } from "~/auth";
@@ -49,8 +50,17 @@ export type Context = Awaited<ReturnType<typeof createTRPCContext>>;
 const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
+    if (shape.code === TRPC_ERROR_CODES_BY_KEY.INTERNAL_SERVER_ERROR) {
+      // TODO: Send error to Sentry
+      console.error(error);
+    }
+
     return {
       ...shape,
+      message:
+        shape.code === TRPC_ERROR_CODES_BY_KEY.INTERNAL_SERVER_ERROR
+          ? "An unexpected error occurred."
+          : shape.message,
       data: {
         ...shape.data,
         appCode: error.cause instanceof AppError ? error.cause.appCode : null,
