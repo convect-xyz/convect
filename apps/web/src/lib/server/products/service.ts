@@ -176,7 +176,7 @@ class PlanService {
       .where(eq(schema.projects.id, project.id));
   }
 
-  async switchPlan(
+  async _switchPlan(
     project: InferSelectModel<typeof schema.projects>,
     newPlan: "HOBBY" | "PRO" | "ENTERPRISE",
     options?: {
@@ -215,6 +215,32 @@ class PlanService {
         planType: newPlan,
       })
       .where(eq(schema.projects.id, project.id));
+  }
+
+  async switchPlan(
+    project: InferSelectModel<typeof schema.projects>,
+    newPlan: "HOBBY" | "PRO" | "ENTERPRISE",
+    options?: {
+      create?: {
+        backdateStartDateSecs?: number;
+        billingCycleAnchorSecs?: number;
+      };
+    },
+  ) {
+    try {
+      return await this._switchPlan(project, newPlan, options);
+    } catch (e) {
+      if (e instanceof Stripe.errors.StripeError) {
+        if (e.type === "StripeInvalidRequestError") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Attach a valid payment method to your account.",
+          });
+        }
+      }
+
+      throw e;
+    }
   }
 
   async cancelSubscription(project: InferSelectModel<typeof schema.projects>) {
