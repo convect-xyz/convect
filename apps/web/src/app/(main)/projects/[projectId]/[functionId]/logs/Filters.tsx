@@ -9,11 +9,13 @@ import {
 import { ActiveDeployments } from "../(components)/ActiveDeployments";
 import { Chain } from "../(components)/Chain";
 import { LogLevelFilter } from "./(components)/LogLevelFilter";
+import { TimestampRangeFilter } from "./(components)/TimestampRangeFilter";
 
 export function Filters() {
   const filters = {
     chain: "chain",
     level: "level",
+    timeRange: "timeRange",
   };
 
   return (
@@ -33,6 +35,14 @@ export function Filters() {
         </div>
         <hr />
         <Accordion type="multiple">
+          <AccordionItem value={filters.timeRange}>
+            <AccordionTrigger className="w-full">Timestamp</AccordionTrigger>
+            <AccordionContent>
+              <div className="max-h-[200px] overflow-y-auto">
+                <TimestampRangeFilter />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
           <AccordionItem value={filters.level}>
             <AccordionTrigger className="w-full">Log Level</AccordionTrigger>
             <AccordionContent>
