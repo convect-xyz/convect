@@ -116,7 +116,7 @@ export const chains = [
     id: 2741,
     name: "Abstract Mainnet",
     polling_urls: [
-      "https://abstract-mainnet.g.alchemy.com/v2/REDACTED",
+      "https://abstract-testnet.g.alchemy.com/v2/REDACTED",
     ],
     ws_url: "wss://api.mainnet.abs.xyz/ws",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
