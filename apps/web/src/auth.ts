@@ -1,6 +1,7 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth, { DefaultSession } from "next-auth";
 import GitHub from "next-auth/providers/github";
+import { env } from "./env";
 import { db } from "./server/db";
 import schema from "./server/db/schema";
 
@@ -18,7 +19,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     sessionsTable: schema.sessions,
     accountsTable: schema.accounts,
   }),
-  providers: [GitHub],
+  providers: [
+    GitHub({
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
+    }),
+  ],
   pages: {
     signIn: "/login",
   },
