@@ -54,6 +54,22 @@ const _productMetadata = {
       test: "prod_SGmxyGyvPFVKAp",
     }),
   },
+  gbHours: {
+    name: "GB Hours",
+    billing: {
+      _type: "tiered",
+      stripeMeterId: stripeEnv({
+        live: "mtr_61SVvf7xra8a21F8q412LJct0ubJ3CQK",
+        test: "mtr_test_61SVdJZtFpAtSv84541Ru90pWJjEEJua",
+      }),
+    },
+    unitSymbol: "GB-Hours",
+    unitSize: 1,
+    stripeProductId: stripeEnv({
+      live: "prod_SH5tWNMU8isZoF",
+      test: "prod_SGmxyGyvPFVKAp",
+    }),
+  },
   invocations: {
     name: "Invocations",
     billing: {
