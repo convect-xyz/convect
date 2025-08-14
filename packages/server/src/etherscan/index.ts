@@ -41,6 +41,8 @@ export class EtherscanProvider {
         },
       });
 
+      console.log(response.data);
+
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       for (const result of schema.parse(response.data).result) {
