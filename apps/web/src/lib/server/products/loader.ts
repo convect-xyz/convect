@@ -5,7 +5,7 @@ import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
 import { db } from "~/server/db";
-import { productMetadata } from "./products";
+import { availableProducts, productMetadata } from "./products";
 
 export const planSchema = z.object({
   id: z.string().default(""),
@@ -13,7 +13,7 @@ export const planSchema = z.object({
     .array(
       z
         .object({
-          key: z.string(),
+          key: z.nativeEnum(availableProducts),
           stripePriceId: z.string(),
           price: z
             .object({
