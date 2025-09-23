@@ -34,7 +34,7 @@ export class EtherscanProvider {
 
       const response = await axios.get("/v2/api", {
         params: {
-          chainId: chain.id,
+          chainid: chain.id,
           module: "contract",
           action: "getcontractcreation",
           contractaddresses: batch.join(","),
