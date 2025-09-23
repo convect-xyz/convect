@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use chrono::Utc;
+use futures::future::join_all;
 use shared::sns::Sns;
 use std::collections::HashMap;
 use tokio::time;
@@ -35,44 +36,53 @@ impl<N: IssueNotifier + 'static, S: Sns + 'static> ListenerImpl<N, S> {
 #[async_trait]
 impl<N: IssueNotifier + 'static, S: Sns + 'static> Listener for ListenerImpl<N, S> {
     async fn listen(&self) -> Result<(), errors::ListenerError> {
-        let mut interval: time::Interval = time::interval(time::Duration::from_millis(100));
+        let mut interval: time::Interval = time::interval(time::Duration::from_millis(1000));
 
         loop {
             interval.tick().await;
 
-            let mut current_blocks = HashMap::new();
-            for module in self.producer_modules.iter() {
-                let network = module.network();
-                let (current_block, last_updated_at) = module.get_current().await;
-                if let Some(current_block) = current_block {
-                    current_blocks.insert(network.id, current_block);
-                }
+            let mut current_blocks =
+                join_all(self.producer_modules.iter().map(|module| async move {
+                    (module.network().id, module.get_block_number().await)
+                }))
+                .await
+                .into_iter()
+                .map(|(id, res)| (id, res.ok()))
+                .filter(|(_, res)| res.is_some())
+                .map(|(id, res)| (id, res.unwrap()))
+                .collect::<HashMap<_, _>>();
+            // for module in self.producer_modules.iter() {
+            //     let network = module.network();
+            //     let (current_block, last_updated_at) = module.get_current().await;
+            //     if let Some(current_block) = current_block {
+            //         current_blocks.insert(network.id, current_block);
+            //     }
 
-                let now = Utc::now();
+            //     let now = Utc::now();
 
-                if let Some(last_updated_at) = last_updated_at {
-                    // If last updated at is more than 60 seconds ago, send an email
-                    if now.timestamp() - last_updated_at.timestamp() > 60 {
-                        let _ = self
-                            .notifier
-                            .notify_producer_module_issue(ProducerModuleIssue::BlockNotChanged(
-                                network.clone(),
-                                current_block,
-                                last_updated_at,
-                            ))
-                            .await;
-                    }
-                }
+            //     if let Some(last_updated_at) = last_updated_at {
+            //         // If last updated at is more than 60 seconds ago, send an email
+            //         if now.timestamp() - last_updated_at.timestamp() > 60 {
+            //             let _ = self
+            //                 .notifier
+            //                 .notify_producer_module_issue(ProducerModuleIssue::BlockNotChanged(
+            //                     network.clone(),
+            //                     current_block,
+            //                     last_updated_at,
+            //                 ))
+            //                 .await;
+            //         }
+            //     }
 
-                if last_updated_at.is_none() {
-                    let _ = self
-                        .notifier
-                        .notify_producer_module_issue(ProducerModuleIssue::NoCurrentBlock(
-                            network.clone(),
-                        ))
-                        .await;
-                }
-            }
+            //     if last_updated_at.is_none() {
+            //         let _ = self
+            //             .notifier
+            //             .notify_producer_module_issue(ProducerModuleIssue::NoCurrentBlock(
+            //                 network.clone(),
+            //             ))
+            //             .await;
+            //     }
+            // }
 
             self.sns_client
                 .publish(

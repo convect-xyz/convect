@@ -32,8 +32,9 @@ export class EtherscanProvider {
     for (const batch of chunk([...addresses], 5)) {
       const axios = buildEtherscanAxios(chain.etherscan_like);
 
-      const response = await axios.get("/api", {
+      const response = await axios.get("/v2/api", {
         params: {
+          chainId: chain.id,
           module: "contract",
           action: "getcontractcreation",
           contractaddresses: batch.join(","),

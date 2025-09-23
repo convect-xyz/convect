@@ -1,14 +1,17 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use alloy::providers::{Provider, ProviderBuilder, WsConnect};
+use alloy::providers::{Provider, ProviderBuilder, RootProvider, WsConnect};
 use alloy::pubsub::{ConnectionHandle, PubSubConnect, SubscriptionItem};
-use alloy::rpc::client::ClientBuilder;
+use alloy::rpc::client::{ClientBuilder, RpcClient};
+use alloy::transports::http::{Client, Http};
 use alloy::transports::TransportResult;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use shared::networks::SupportedNetwork;
+use shared::configuration::SupportedNetwork;
+use shared::fetcher::web3;
+use shared::fetcher::web3::client::Web3Client;
 use tokio::sync::Mutex;
 use tokio::time;
 use tokio_retry::strategy::jitter;
@@ -18,20 +21,23 @@ use tokio_retry::Retry;
 pub trait ProducerModule: Send + Sync {
     async fn produce_async(&self) -> Result<(), errors::ProducerError>;
     async fn get_current(&self) -> (Option<u64>, Option<DateTime<Utc>>);
+    async fn get_block_number(&self) -> Result<u64, errors::ProducerError>;
     fn network(&self) -> &SupportedNetwork;
 }
 
 #[derive(Clone)]
 pub struct ProducerModuleImpl {
     network: SupportedNetwork,
+    web3_client: Box<dyn Web3Client>,
     current: Arc<Mutex<Option<u64>>>,
     last_updated_at: Arc<Mutex<Option<DateTime<Utc>>>>,
 }
 
 impl ProducerModuleImpl {
-    pub fn new(network: SupportedNetwork) -> ProducerModuleImpl {
+    pub fn new(network: SupportedNetwork, web3_client: Box<dyn Web3Client>) -> ProducerModuleImpl {
         ProducerModuleImpl {
             network,
+            web3_client,
             current: Arc::new(Mutex::new(None)),
             last_updated_at: Arc::new(Mutex::new(None)),
         }
@@ -48,11 +54,9 @@ impl ProducerModule for ProducerModuleImpl {
         let func = || async {
             tracing::info!("[{:?}] Producing", network.name);
             let ws = RetryWsConnect(WsConnect::new(network.ws_url.clone()), network.clone());
-            let client = ClientBuilder::default().pubsub(ws).await?;
+            let client = ClientBuilder::default().http(ws).await?;
 
-            let provider = ProviderBuilder::new()
-                .with_recommended_fillers()
-                .on_client(client);
+            let provider = ProviderBuilder::new().on_http(url);
             let mut subscription = provider.subscribe_blocks().await?;
 
             while let Ok(SubscriptionItem::Item(block)) = subscription.recv_any().await {
@@ -87,6 +91,10 @@ impl ProducerModule for ProducerModuleImpl {
             self.current.lock().await.clone(),
             self.last_updated_at.lock().await.clone(),
         )
+    }
+
+    async fn get_block_number(&self) -> Result<u64, errors::ProducerError> {
+        Ok(self.web3_client.get_current_block_number().await?)
     }
 
     fn network(&self) -> &SupportedNetwork {
@@ -130,5 +138,7 @@ pub mod errors {
         PublishError(#[from] SdkError<PublishError, aws_smithy_runtime_api::http::Response>),
         #[error("Join error {0}")]
         JoinError(#[from] JoinError),
+        #[error("Web3 error {0}")]
+        Web3Error(#[from] web3::errors::Web3ClientError),
     }
 }

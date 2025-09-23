@@ -50,37 +50,37 @@ async fn main() {
     let producer_modules: Vec<_> = get_supported_networks()
         .await
         .into_iter()
-        .map(|network| ProducerModuleImpl::new(network))
+        .map(|network| ProducerModuleImpl::new(network, web3::Web3Client::new(network.clone())))
         .collect();
 
-    let producer_task_handles: Vec<_> = producer_modules
-        .iter()
-        .map(|module| {
-            let retry_strategy = tokio_retry::strategy::ExponentialBackoff::from_millis(15)
-                .map(jitter)
-                .take(usize::MAX);
+    // let producer_task_handles: Vec<_> = producer_modules
+    //     .iter()
+    //     .map(|module| {
+    //         let retry_strategy = tokio_retry::strategy::ExponentialBackoff::from_millis(15)
+    //             .map(jitter)
+    //             .take(usize::MAX);
 
-            let func = move || async move {
-                let module = module.clone();
-                let name = module.network().name.clone();
-                tokio::spawn(async move {
-                    module.produce_async().await?;
-                    Ok::<(), producer::errors::ProducerError>(())
-                })
-                .await
-                .inspect_err(|e| {
-                    tracing::error!("[{:?}] Producer task failed: {:?}", &name, e);
-                })?
-                .inspect_err(|e| {
-                    tracing::error!("[{:?}] Producer task failed #2: {:?}", &name, e);
-                })?;
+    //         let func = move || async move {
+    //             let module = module.clone();
+    //             let name = module.network().name.clone();
+    //             tokio::spawn(async move {
+    //                 module.produce_async().await?;
+    //                 Ok::<(), producer::errors::ProducerError>(())
+    //             })
+    //             .await
+    //             .inspect_err(|e| {
+    //                 tracing::error!("[{:?}] Producer task failed: {:?}", &name, e);
+    //             })?
+    //             .inspect_err(|e| {
+    //                 tracing::error!("[{:?}] Producer task failed #2: {:?}", &name, e);
+    //             })?;
 
-                Ok::<(), producer::errors::ProducerError>(())
-            };
+    //             Ok::<(), producer::errors::ProducerError>(())
+    //         };
 
-            Retry::spawn(retry_strategy, func)
-        })
-        .collect();
+    //         Retry::spawn(retry_strategy, func)
+    //     })
+    //     .collect();
 
     let listener = listener::ListenerImpl::new(
         producer_modules
@@ -92,14 +92,16 @@ async fn main() {
         )),
         aws_sdk_sns::Client::new(&aws_config::load_defaults(BehaviorVersion::latest()).await),
     );
-    let listener_handle = tokio::spawn(async move { listener.listen().await.unwrap() });
+    tokio::spawn(async move { listener.listen().await.unwrap() })
+        .await
+        .unwrap();
 
-    for handle in join_all(producer_task_handles).await.into_iter() {
-        match handle {
-            Ok(_) => tracing::info!("Handler finished"),
-            Err(e) => tracing::error!("Handler failed: {:?}", e),
-        }
-    }
+    // for handle in join_all(producer_task_handles).await.into_iter() {
+    //     match handle {
+    //         Ok(_) => tracing::info!("Handler finished"),
+    //         Err(e) => tracing::error!("Handler failed: {:?}", e),
+    //     }
+    // }
 
     listener_handle.await.unwrap();
 }
