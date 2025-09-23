@@ -18,7 +18,7 @@ export const chains = [
     ws_url:
       "wss://eth-sepolia.g.alchemy.com/v2/REDACTED",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:eth-sepolia",
-    etherscan_like: "https://api-sepolia.etherscan.io",
+    etherscan_like: "https://api.etherscan.io",
     etherscan_api_key: "REDACTED",
     slug: "eth-sepolia",
     fetch_strategy: "jsonrpc",
@@ -32,7 +32,7 @@ export const chains = [
     ws_url:
       "wss://polygon-mainnet.g.alchemy.com/v2/REDACTED",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:polygon-mainnet",
-    etherscan_like: "https://api.polygonscan.com",
+    etherscan_like: "https://api.etherscan.io",
     etherscan_api_key: "REDACTED",
     slug: "polygon-mainnet",
     fetch_strategy: "jsonrpc",
@@ -46,7 +46,7 @@ export const chains = [
     ws_url:
       "wss://polygon-amoy.g.alchemy.com/v2/REDACTED",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:polygon-amoy",
-    etherscan_like: "https://api-amoy.polygonscan.com",
+    etherscan_like: "https://api.etherscan.io",
     etherscan_api_key: "REDACTED",
     slug: "polygon-amoy",
     fetch_strategy: "jsonrpc",
@@ -58,7 +58,7 @@ export const chains = [
     ws_url:
       "wss://blast-mainnet.g.alchemy.com/v2/REDACTED",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:blast",
-    etherscan_like: "https://api.blastscan.io",
+    etherscan_like: "https://api.etherscan.io",
     etherscan_api_key: "REDACTED",
     slug: "blast-mainnet",
     fetch_strategy: "graphql",
@@ -70,7 +70,7 @@ export const chains = [
     ws_url:
       "wss://blast-sepolia.g.alchemy.com/v2/REDACTED",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:blast",
-    etherscan_like: "https://api.blastscan.io",
+    etherscan_like: "https://api.etherscan.io",
     etherscan_api_key: "REDACTED",
     slug: "blast-sepolia",
     fetch_strategy: "graphql",
@@ -82,7 +82,7 @@ export const chains = [
     ws_url:
       "wss://base-mainnet.g.alchemy.com/v2/REDACTED",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:base-mainnet",
-    etherscan_like: "https://api.basescan.org",
+    etherscan_like: "https://api.etherscan.io",
     etherscan_api_key: "REDACTED",
     slug: "base-mainnet",
     fetch_strategy: "jsonrpc",
@@ -94,7 +94,7 @@ export const chains = [
     ws_url:
       "wss://base-sepolia.g.alchemy.com/v2/REDACTED",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
-    etherscan_like: "https://api-sepolia.basescan.org",
+    etherscan_like: "https://api.etherscan.io",
     etherscan_api_key: "REDACTED",
     slug: "base-sepolia",
     fetch_strategy: "jsonrpc",
@@ -107,7 +107,7 @@ export const chains = [
     ],
     ws_url: "wss://api.testnet.abs.xyz/ws",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
-    etherscan_like: "https://api-sepolia.abscan.org",
+    etherscan_like: "https://api.etherscan.io",
     etherscan_api_key: "REDACTED",
     slug: "abstract-testnet",
     fetch_strategy: "jsonrpc",
@@ -120,7 +120,7 @@ export const chains = [
     ],
     ws_url: "wss://api.mainnet.abs.xyz/ws",
     sns_topic: "arn:aws:sns:eu-west-1:730335604495:base-sepolia",
-    etherscan_like: "https://api.abscan.org",
+    etherscan_like: "https://api.etherscan.io",
     etherscan_api_key: "REDACTED",
     slug: "abstract-mainnet",
     fetch_strategy: "jsonrpc",
