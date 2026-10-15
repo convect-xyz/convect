@@ -6,7 +6,7 @@ import { env } from "~/env";
 import { db } from "~/server/db";
 
 const stripe = new Stripe(env.STRIPE_API_KEY);
-const WEBHOOK_SECRET = "REDACTED";
+const WEBHOOK_SECRET = "whsec_REDACTED";
 
 export const POST = async (req: NextRequest) => {
   const { data: event, err } = await parseBody(req);
